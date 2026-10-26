@@ -1,0 +1,123 @@
+/* ProductCardActions.css · estilos del contador y del botón de ordenar de la tarjeta · solo usa tokens de styles/tokens.css */
+
+.product-card-action-row {
+    margin-top: var(--space-3);
+    display: flex;
+    align-items: stretch;
+    gap: var(--space-2);
+}
+
+.product-card-quantity-stepper {
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+    border-radius: var(--radius-sm);
+    background: var(--c-white);
+    overflow: hidden;
+}
+
+.product-card-stepper-btn {
+    width: 28px;
+    height: 100%;
+    border: none;
+    background: transparent;
+    color: var(--c-product-card-name);
+    font-family: inherit;
+    font-size: var(--text-md);
+    font-weight: var(--font-weight-bold);
+    cursor: pointer;
+    transition: background-color var(--motion-fast);
+}
+
+.product-card-stepper-btn:hover:not(:disabled) {
+    background: var(--c-product-card-hover-bg);
+}
+
+.product-card-stepper-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.product-card-stepper-btn:focus-visible {
+    outline: var(--focus-outline);
+}
+
+/* ojo: ahora es un <input> (antes un <span>); mismo tamaño y tipografía, solo se le quitan el borde y el fondo del navegador */
+.product-card-stepper-count {
+    width: 34px;
+    min-width: 34px;
+    height: 100%;
+    padding: 0;
+    border: none;
+    background: transparent;
+    text-align: center;
+    font-family: inherit;
+    color: var(--c-product-card-title);
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-semibold);
+}
+
+/* el contador recorta lo que sobresale (overflow hidden), por eso el anillo de foco va hacia adentro */
+.product-card-stepper-count:focus-visible {
+    outline: var(--focus-outline);
+    outline-offset: -2px;
+}
+
+.product-card-stepper-count:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+/* botón azul de ordenar: fuente condensada en mayúsculas, como el botón de comprar de Yamaha */
+.product-card-btn-add-to-cart {
+    flex: 1;
+    min-height: 36px;
+    padding: 4px var(--space-2);
+    border: none;
+    border-radius: var(--radius-sm);
+    background: var(--c-product-card-action);
+    color: var(--c-product-card-action-text, var(--c-brand-charcoal));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color var(--motion-fast), box-shadow var(--motion-fast);
+}
+
+.product-card-btn-add-to-cart:hover:not(:disabled) {
+    background: var(--c-product-card-action-hover);
+    box-shadow: var(--shadow-product-card-menu);
+}
+
+.product-card-btn-add-to-cart:focus-visible {
+    outline: var(--focus-outline);
+    outline-offset: 2px;
+}
+
+.product-card-btn-add-to-cart:disabled {
+    background: var(--c-product-card-disabled-bg);
+    color: var(--c-product-card-disabled-text);
+    cursor: not-allowed;
+}
+
+.product-card-btn-add-to-cart.product-card-already-ordered,
+.product-card-btn-add-to-cart.product-card-already-ordered:hover:not(:disabled) {
+    background: var(--c-product-card-ordered);
+}
+
+.product-card-btn-label {
+    font-family: var(--font-family-display);
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-bold);
+    line-height: var(--leading-tight);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+}
+
+.product-card-btn-note {
+    font-size: var(--text-xs);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--leading-snug);
+    opacity: 0.9;
+}

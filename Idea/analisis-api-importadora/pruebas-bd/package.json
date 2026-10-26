@@ -1,0 +1,13 @@
+{
+  "name": "pruebas-bd",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Ejecuta V3-esquema-borrador.sql en un PostgreSQL real (PGlite) y corre los 101 escenarios",
+  "type": "module",
+  "scripts": {
+    "test": "node run_sql.mjs ../V3-esquema-borrador.sql escenarios.sql"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.5.11"
+  }
+}

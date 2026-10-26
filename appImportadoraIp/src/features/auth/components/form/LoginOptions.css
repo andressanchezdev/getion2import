@@ -1,0 +1,25 @@
+/* LoginOptions.css · estilos de la fila recordarme / olvidé mi contraseña (copia del diseño de importadora-online) · solo usa tokens de styles/tokens.css */
+.login-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 1.25rem;
+}
+
+.login-options-remember {
+  width: 50%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  cursor: pointer;
+}
+
+.login-options-text {
+  color: var(--alpha-brand-charcoal-60);
+}
+
+.login-options-forgot {
+  width: 50%;
+  text-align: end;
+  cursor: pointer;
+}

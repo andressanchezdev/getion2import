@@ -1,0 +1,48 @@
+/* ShopCatalogStatus.css · estilos del aviso de carga y de error del catálogo · solo usa tokens de styles/tokens.css */
+.shop-catalog-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem var(--space-6);
+  background: var(--bg-card);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  text-align: center;
+}
+
+.shop-catalog-status-error {
+  border-color: var(--c-red-200);
+  background: var(--c-red-50);
+}
+
+.shop-catalog-status-title {
+  margin-bottom: 0.375rem;
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--c-red-700);
+}
+
+.shop-catalog-status-desc {
+  max-width: 400px;
+  margin-bottom: var(--space-3);
+  font-size: var(--text-md);
+  color: var(--color-text-secondary);
+}
+
+.shop-catalog-status-btn {
+  padding: 0.625rem 1.25rem;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--c-blue-600);
+  color: var(--c-white);
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  box-shadow: var(--shadow-rest);
+  transition: background var(--motion-fast);
+}
+
+.shop-catalog-status-btn:hover {
+  background: var(--c-blue-700);
+}

@@ -1,0 +1,91 @@
+/* WarehouseSelector.css · estilos del botón selector de bodega del encabezado · solo usa tokens de styles/tokens.css */
+/* ojo: antes estas reglas estaban en AppHeader.css (se separó para que cada archivo haga una sola cosa) */
+/* Selector de Bodega en el Header (Custom Dropdown) */
+.app-header-warehouse-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.app-header-warehouse-title {
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+}
+
+.app-header-warehouse-relative {
+  position: relative;
+}
+
+/* Botón Cápsula Trigger */
+.app-header-warehouse-btn {
+  width: 240px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 36px;
+  padding: 0 0.75rem;
+  background-color: var(--bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 1px 2px var(--alpha-black-4);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: all var(--motion-fast);
+  user-select: none;
+}
+
+.app-header-warehouse-btn:hover {
+  background-color: var(--bg-card-inner);
+  border-color: var(--c-gray-300);
+  box-shadow: 0 2px 4px var(--alpha-black-6);
+}
+
+.app-header-warehouse-btn-active {
+  background-color: var(--bg-card-inner);
+  border-color: var(--color-text-primary);
+  box-shadow: 0 0 0 2px var(--alpha-ip-gray-900-8);
+}
+
+.app-header-warehouse-icon {
+  width: 15px;
+  height: 15px;
+  object-fit: contain;
+  opacity: 0.65;
+  flex-shrink: 0;
+  transition: opacity var(--motion-fast);
+}
+
+.app-header-warehouse-btn:hover .app-header-warehouse-icon {
+  opacity: 0.9;
+}
+
+.app-header-warehouse-name {
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+}
+
+.app-header-warehouse-badge {
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  font-family: var(--font-family-mono);
+  padding: 0.1rem 0.4rem;
+  border-radius: var(--radius-pill);
+  background-color: var(--bg-card-inner);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
+
+.app-header-warehouse-chevron {
+  color: var(--color-text-secondary);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), color var(--motion-fast);
+}
+
+.app-header-warehouse-chevron-open {
+  transform: rotate(180deg);
+  color: var(--color-text-primary);
+}

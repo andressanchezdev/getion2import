@@ -1,0 +1,10 @@
+/* LoginHero.css · estilos de la ilustración del login (copia del diseño de importadora-online) · solo usa tokens de styles/tokens.css */
+.login-hero {
+  position: absolute;
+  left: 7.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 5;
+  width: 45%;
+  object-fit: contain;
+}

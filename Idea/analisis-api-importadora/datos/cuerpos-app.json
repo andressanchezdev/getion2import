@@ -1,0 +1,641 @@
+{
+  "nota": "Peticiones exactas que arman los services de la app (generado sin red). \"lecturas\" se reproducen con node sonda.mjs reproducir; \"escrituras\" solo se revisan.",
+  "lecturas": [
+    {
+      "servicio": "catalogs.fetchBrands",
+      "metodo": "POST",
+      "ruta": "/brands",
+      "cuerpo": {
+        "companyId": 1,
+        "page": 1,
+        "pageSize": 500
+      },
+      "resultado": {
+        "fecha": "2026-10-24T23:19:26.365Z",
+        "estado": 200,
+        "ms": 825,
+        "correcto": true,
+        "filas": 130,
+        "mensaje": "Brands successfully obtained"
+      }
+    },
+    {
+      "servicio": "catalogs.fetchCategories",
+      "metodo": "POST",
+      "ruta": "/categories",
+      "cuerpo": {
+        "companyId": 1,
+        "page": 1,
+        "pageSize": 500
+      },
+      "resultado": {
+        "fecha": "2026-10-24T23:19:27.150Z",
+        "estado": 200,
+        "ms": 382,
+        "correcto": true,
+        "filas": 500,
+        "mensaje": "Categories successfully obtained"
+      }
+    },
+    {
+      "servicio": "catalogs.fetchMotoModels",
+      "metodo": "POST",
+      "ruta": "/models",
+      "cuerpo": {
+        "companyId": 1,
+        "page": 1,
+        "pageSize": 500
+      },
+      "resultado": {
+        "fecha": "2026-10-24T23:19:27.887Z",
+        "estado": 200,
+        "ms": 323,
+        "correcto": true,
+        "filas": 500,
+        "mensaje": "Models successfully obtained"
+      }
+    },
+    {
+      "servicio": "warehouses.fetchWarehouses",
+      "metodo": "POST",
+      "ruta": "/warehouses",
+      "cuerpo": {
+        "companyId": 1,
+        "page": 1,
+        "pageSize": 100
+      },
+      "resultado": {
+        "fecha": "2026-10-24T23:19:28.605Z",
+        "estado": 200,
+        "ms": 310,
+        "correcto": true,
+        "filas": 6,
+        "mensaje": "Warehouses successfully obtained"
+      }
+    },
+    {
+      "servicio": "shop.fetchProductsPage",
+      "metodo": "POST",
+      "ruta": "/products",
+      "cuerpo": {
+        "companyId": 1,
+        "page": 1,
+        "pageSize": 5,
+        "isActive": true,
+        "warehouseId": 1,
+        "hasStock": true
+      },
+      "resultado": {
+        "fecha": "2026-10-24T23:19:29.672Z",
+        "estado": 200,
+        "ms": 658,
+        "correcto": true,
+        "filas": 5,
+        "mensaje": "Products successfully obtained"
+      }
+    },
+    {
+      "servicio": "shop.searchProducts",
+      "metodo": "POST",
+      "ruta": "/inventory/search",
+      "cuerpo": {
+        "companyId": 1,
+        "limit": 20,
+        "query": "filtro",
+        "type": "product"
+      },
+      "resultado": {
+        "fecha": "2026-10-24T23:19:30.735Z",
+        "estado": 200,
+        "ms": 660,
+        "correcto": true,
+        "filas": 20,
+        "mensaje": "Products successfully obtained"
+      }
+    },
+    {
+      "servicio": "inventory.fetchInventoryPage",
+      "metodo": "POST",
+      "ruta": "/inventory/filter",
+      "cuerpo": {
+        "companyId": 1,
+        "page": 1,
+        "pageSize": 5,
+        "warehouseId": 1,
+        "hasStock": true
+      },
+      "resultado": {
+        "fecha": "2026-10-24T23:19:31.619Z",
+        "estado": 200,
+        "ms": 478,
+        "correcto": true,
+        "filas": 5,
+        "mensaje": "Products successfully obtained"
+      }
+    },
+    {
+      "servicio": "inventory.searchInventory",
+      "metodo": "POST",
+      "ruta": "/inventory/search",
+      "cuerpo": {
+        "companyId": 1,
+        "limit": 20,
+        "query": "filtro",
+        "type": "product"
+      },
+      "resultado": {
+        "fecha": "2026-10-24T23:19:32.380Z",
+        "estado": 200,
+        "ms": 346,
+        "correcto": true,
+        "filas": 20,
+        "mensaje": "Products successfully obtained"
+      }
+    },
+    {
+      "servicio": "transfers.searchProductsMultibodega(texto)",
+      "metodo": "POST",
+      "ruta": "/search",
+      "cuerpo": {
+        "companyId": 1,
+        "limit": 40,
+        "query": "filtro",
+        "type": "product"
+      },
+      "resultado": {
+        "fecha": "2026-10-24T23:19:33.628Z",
+        "estado": 200,
+        "ms": 847,
+        "correcto": true,
+        "filas": 40,
+        "mensaje": "Search completed successfully"
+      }
+    },
+    {
+      "servicio": "transfers.fetchTraslades",
+      "metodo": "POST",
+      "ruta": "/sales/traslades",
+      "cuerpo": {
+        "warehouseId": 1,
+        "page": 1,
+        "pageSize": 20
+      },
+      "resultado": {
+        "fecha": "2026-10-24T23:19:34.604Z",
+        "estado": 200,
+        "ms": 563,
+        "correcto": true,
+        "filas": 20,
+        "mensaje": "Traslades successfully obteined"
+      }
+    },
+    {
+      "servicio": "customers.fetchCustomersPage",
+      "metodo": "POST",
+      "ruta": "/users",
+      "cuerpo": {
+        "companyId": 1,
+        "page": 1,
+        "pageSize": 5
+      },
+      "resultado": {
+        "fecha": "2026-10-24T23:19:35.431Z",
+        "estado": 200,
+        "ms": 422,
+        "correcto": true,
+        "filas": 5,
+        "mensaje": "Users successfully obtained"
+      }
+    },
+    {
+      "servicio": "customers.fetchCustomerDetail",
+      "metodo": "GET",
+      "ruta": "/users/948",
+      "resultado": {
+        "fecha": "2026-10-24T23:19:36.256Z",
+        "estado": 200,
+        "ms": 420,
+        "correcto": true,
+        "filas": 1,
+        "mensaje": "User retrieved successfully"
+      }
+    },
+    {
+      "servicio": "customers.fetchDirections",
+      "metodo": "POST",
+      "ruta": "/directions",
+      "cuerpo": {
+        "userId": 948,
+        "page": 1,
+        "pageSize": 50
+      },
+      "resultado": {
+        "fecha": "2026-10-24T23:19:36.970Z",
+        "estado": 200,
+        "ms": 311,
+        "correcto": true,
+        "filas": 1,
+        "mensaje": "Directions successfully obtained"
+      }
+    },
+    {
+      "servicio": "customers.fetchDiscounts",
+      "metodo": "POST",
+      "ruta": "/discounts",
+      "cuerpo": {
+        "userId": 948,
+        "page": 1,
+        "pageSize": 50
+      },
+      "resultado": {
+        "fecha": "2026-10-24T23:19:37.691Z",
+        "estado": 200,
+        "ms": 311,
+        "correcto": true,
+        "filas": 0,
+        "mensaje": "Discounts successfully obtained"
+      }
+    },
+    {
+      "servicio": "employees.fetchEmployeesList",
+      "metodo": "POST",
+      "ruta": "/employees",
+      "cuerpo": {
+        "companyId": 1
+      },
+      "resultado": {
+        "fecha": "2026-10-24T23:19:38.645Z",
+        "estado": 200,
+        "ms": 543,
+        "correcto": true,
+        "filas": 26,
+        "mensaje": "Employees retrieved successfully"
+      }
+    },
+    {
+      "servicio": "employees.fetchEmployeePermissions",
+      "metodo": "POST",
+      "ruta": "/employees/permissions",
+      "cuerpo": {
+        "employeeId": 1
+      },
+      "resultado": {
+        "fecha": "2026-10-24T23:19:39.700Z",
+        "estado": 200,
+        "ms": 649,
+        "correcto": true,
+        "filas": 1,
+        "mensaje": "Employee permissions retrieved successfully"
+      }
+    },
+    {
+      "servicio": "employees.fetchEmployeeRoles",
+      "metodo": "GET",
+      "ruta": "/employees/roles",
+      "params": {
+        "companyId": 1
+      },
+      "resultado": {
+        "fecha": "2026-10-24T23:19:41.221Z",
+        "estado": 200,
+        "ms": 1108,
+        "correcto": true,
+        "filas": 5,
+        "mensaje": "Areas with roles"
+      }
+    },
+    {
+      "servicio": "wallet.fetchWalletPage",
+      "metodo": "POST",
+      "ruta": "/wallet",
+      "cuerpo": {
+        "companyId": 1,
+        "page": 1,
+        "pageSize": 5,
+        "warehouseId": 1
+      },
+      "resultado": {
+        "fecha": "2026-10-24T23:19:42.072Z",
+        "estado": 200,
+        "ms": 444,
+        "correcto": true,
+        "filas": 5,
+        "mensaje": "Users successfully obtained"
+      }
+    },
+    {
+      "servicio": "wallet.fetchWalletSummary",
+      "metodo": "POST",
+      "ruta": "/wallet/summary",
+      "cuerpo": {
+        "companyId": 1,
+        "warehouseId": 1
+      },
+      "resultado": {
+        "fecha": "2026-10-24T23:19:42.911Z",
+        "estado": 500,
+        "ms": 436,
+        "correcto": false,
+        "filas": 0,
+        "mensaje": "Error interno del servidor",
+        "error": "Wallet summary could not be retrieved: failed to retrieve wallet summary"
+      }
+    },
+    {
+      "servicio": "wallet.fetchCustomerInvoices",
+      "metodo": "POST",
+      "ruta": "/wallet/internal",
+      "cuerpo": {
+        "companyId": 1,
+        "userId": 217,
+        "page": 1,
+        "pageSize": 50,
+        "warehouseId": 1
+      },
+      "resultado": {
+        "fecha": "2026-10-24T23:19:43.619Z",
+        "estado": 200,
+        "ms": 304,
+        "correcto": true,
+        "filas": 0,
+        "mensaje": "Wallet by ID obtained successfully"
+      }
+    },
+    {
+      "servicio": "sales.fetchSalesHistory",
+      "metodo": "POST",
+      "ruta": "/sales/history",
+      "cuerpo": {
+        "companyId": 1,
+        "warehouseId": 1,
+        "page": 1,
+        "pageSize": 5
+      },
+      "resultado": {
+        "fecha": "2026-10-24T23:19:44.273Z",
+        "estado": 500,
+        "ms": 239,
+        "correcto": false,
+        "filas": 0,
+        "mensaje": "Error interno del servidor",
+        "error": "Histories could not recovered: failed to retrieve histories"
+      }
+    },
+    {
+      "servicio": "sales.fetchPendingCarts",
+      "metodo": "POST",
+      "ruta": "/sales/pendings",
+      "cuerpo": {
+        "userId": 948,
+        "warehouseId": 1,
+        "page": 1,
+        "pageSize": 5
+      },
+      "resultado": {
+        "fecha": "2026-10-24T23:19:45.001Z",
+        "estado": 200,
+        "ms": 325,
+        "correcto": true,
+        "filas": 0,
+        "mensaje": "Pendings successfully obteined"
+      }
+    },
+    {
+      "servicio": "management.fetchPipeline",
+      "metodo": "POST",
+      "ruta": "/management",
+      "cuerpo": {
+        "companyId": 1,
+        "warehouseId": 1,
+        "state": "verification"
+      },
+      "resultado": {
+        "fecha": "2026-10-24T23:19:45.764Z",
+        "estado": 200,
+        "ms": 351,
+        "correcto": true,
+        "filas": 1,
+        "mensaje": "Management count successfully obtained"
+      }
+    },
+    {
+      "servicio": "reports.fetchSalesSummary",
+      "metodo": "POST",
+      "ruta": "/sales/summary",
+      "cuerpo": {
+        "companyId": 1,
+        "startDate": "2026-10-01",
+        "endDate": "2026-10-24",
+        "warehouseId": 1
+      },
+      "resultado": {
+        "fecha": "2026-10-24T23:19:46.699Z",
+        "estado": 200,
+        "ms": 523,
+        "correcto": true,
+        "filas": 1,
+        "mensaje": "Sales summary retrieved successfully"
+      }
+    },
+    {
+      "servicio": "reports.fetchFinancialReport",
+      "metodo": "POST",
+      "ruta": "/reports/financial",
+      "cuerpo": {
+        "companyId": 1,
+        "startDate": "2026-10-01",
+        "endDate": "2026-10-24"
+      },
+      "resultado": {
+        "fecha": "2026-10-24T23:19:47.410Z",
+        "estado": 200,
+        "ms": 306,
+        "correcto": true,
+        "filas": 1,
+        "mensaje": "Financial report generated successfully"
+      }
+    },
+    {
+      "servicio": "reports.fetchCustomerReport",
+      "metodo": "POST",
+      "ruta": "/reports/customers",
+      "cuerpo": {
+        "companyId": 1,
+        "startDate": "2026-10-01",
+        "endDate": "2026-10-24"
+      },
+      "resultado": {
+        "fecha": "2026-10-24T23:19:48.478Z",
+        "estado": 200,
+        "ms": 658,
+        "correcto": true,
+        "filas": 1,
+        "mensaje": "Customer report generated successfully"
+      }
+    },
+    {
+      "servicio": "reports.fetchInventoryReport",
+      "metodo": "POST",
+      "ruta": "/reports/inventory",
+      "cuerpo": {
+        "companyId": 1,
+        "warehouseId": 1
+      },
+      "resultado": {
+        "fecha": "2026-10-24T23:19:49.313Z",
+        "estado": 200,
+        "ms": 433,
+        "correcto": true,
+        "filas": 1,
+        "mensaje": "Inventory report generated successfully"
+      }
+    },
+    {
+      "servicio": "suppliers.fetchSuppliersPage",
+      "metodo": "POST",
+      "ruta": "/suppliers/list",
+      "cuerpo": {
+        "companyId": 1,
+        "page": 1,
+        "pageSize": 5
+      },
+      "resultado": {
+        "fecha": "2026-10-24T23:19:50.034Z",
+        "estado": 200,
+        "ms": 308,
+        "correcto": true,
+        "filas": 5,
+        "mensaje": "Suppliers retrieved successfully"
+      }
+    },
+    {
+      "servicio": "suppliers.fetchSuppliersSummary",
+      "metodo": "GET",
+      "ruta": "/suppliers/summary",
+      "params": {
+        "companyId": 1
+      },
+      "resultado_anterior": {
+        "fecha": "2026-10-24T23:19:50.523Z",
+        "estado": 400,
+        "ms": 82,
+        "correcto": false,
+        "filas": 0,
+        "mensaje": "Solicitud inválida",
+        "error": "companyId is required"
+      }
+    },
+    {
+      "servicio": "shop.fetchCartItems",
+      "metodo": "POST",
+      "ruta": "/carts",
+      "cuerpo": {
+        "companyId": 1,
+        "userId": 948,
+        "sellerId": 948,
+        "uuid": "uuid-de-prueba",
+        "warehouseId": 1
+      }
+    }
+  ],
+  "escrituras": [
+    {
+      "servicio": "shop.addCartItem",
+      "metodo": "POST",
+      "ruta": "/carts/register",
+      "cuerpo": {
+        "companyId": 1,
+        "userId": 948,
+        "sellerId": 948,
+        "typeCart": "sale",
+        "discount": 0,
+        "uuid": "u",
+        "warehouseId": 1,
+        "productId": 5,
+        "quantity": 1,
+        "price": 100
+      }
+    },
+    {
+      "servicio": "shop.registerSale",
+      "metodo": "POST",
+      "ruta": "/sales/register",
+      "cuerpo": {
+        "companyId": 1,
+        "userId": 948,
+        "sellerId": 948,
+        "warehouseId": 1,
+        "uuid": "u",
+        "saleType": "sale",
+        "paymentMethod": "cash",
+        "totalAmount": 100
+      }
+    },
+    {
+      "servicio": "wallet.registerPayment",
+      "metodo": "POST",
+      "ruta": "/payments/register",
+      "cuerpo": {
+        "companyId": 1,
+        "userId": 217,
+        "userVerifyId": 948,
+        "paymentMethod": "cash",
+        "reference": "",
+        "saleId": 1,
+        "amount": 10,
+        "remainingAmount": 5,
+        "warehouseId": 1
+      }
+    },
+    {
+      "servicio": "wallet.updateCredit",
+      "metodo": "PUT",
+      "ruta": "/users/credit",
+      "cuerpo": {
+        "userId": 217,
+        "quota": 1000,
+        "days": 30,
+        "isCredit": true
+      }
+    },
+    {
+      "servicio": "employees.saveEmployeePermissions",
+      "metodo": "POST",
+      "ruta": "/employees/permissions/modules",
+      "cuerpo": {
+        "employeeId": 1,
+        "modules": []
+      }
+    },
+    {
+      "servicio": "transfers.createTransfer",
+      "metodo": "POST",
+      "ruta": "/carts/register",
+      "cuerpo": {
+        "companyId": 1,
+        "userId": 948,
+        "warehouseId": 1,
+        "auxWarehouseId": 4,
+        "uuid": "b918ea85-1a77-4596-859f-2708cd19410e",
+        "productId": 5,
+        "price": 0,
+        "quantity": 1,
+        "typeCart": "traslade"
+      }
+    },
+    {
+      "servicio": "transfers.createTransfer",
+      "metodo": "POST",
+      "ruta": "/sales/register",
+      "cuerpo": {
+        "companyId": 1,
+        "userId": 948,
+        "warehouseId": 1,
+        "auxWarehouseId": 4,
+        "uuid": "b918ea85-1a77-4596-859f-2708cd19410e",
+        "saleType": "traslade",
+        "invoiceStatus": "pendiente"
+      }
+    }
+  ]
+}

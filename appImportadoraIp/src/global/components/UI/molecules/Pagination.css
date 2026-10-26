@@ -1,0 +1,35 @@
+/* Pagination.css · estilos del paginador reutilizable · solo usa tokens de styles/tokens.css */
+.global-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-4) 0;
+}
+
+.global-pagination-info {
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+}
+
+.global-pagination-btn {
+  padding: 0.45rem var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--c-white);
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: background-color var(--motion-fast);
+}
+
+.global-pagination-btn:hover:not(:disabled) {
+  background: var(--bg-card-inner);
+}
+
+.global-pagination-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

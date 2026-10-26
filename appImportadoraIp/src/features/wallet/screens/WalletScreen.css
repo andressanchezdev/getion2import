@@ -1,0 +1,8 @@
+/* WalletScreen.css · estilos de la pantalla de cartera · solo usa tokens de styles/tokens.css */
+/* src/features/wallet/screens/WalletScreen.css */
+
+.wallet-screen {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}

@@ -1,0 +1,31 @@
+/* StageOrders.css · estilos de la lista de pedidos de una etapa (indicadores de control) · solo usa tokens de styles/tokens.css */
+.stage-orders {
+  display: flex;
+  flex-direction: column;
+}
+
+.stage-orders-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.stage-orders-flag {
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--c-slate-50);
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
+.stage-orders-flag-ok {
+  background: var(--c-green-50, var(--c-slate-50));
+  color: var(--c-green-700, var(--color-text-primary));
+}
+
+.stage-orders-flag-warn {
+  background: var(--c-red-50);
+  color: var(--c-red-500);
+}

@@ -1,0 +1,18 @@
+/* LoginInput.css · estilos del campo del login (copia del diseño de importadora-online) · solo usa tokens de styles/tokens.css */
+.login-input {
+  width: 100%;
+  height: 60px;
+  padding-left: var(--space-2);
+  padding-bottom: 1.25rem;
+  border: 1px solid var(--c-gray-300);
+  border-left: 5px solid var(--c-brand-yellow);
+  background-color: transparent;
+  font-size: var(--text-base);
+  color: var(--c-brand-charcoal);
+  outline: none;
+  box-shadow: 0 1px 3px 0 var(--alpha-black-10), 0 1px 2px -1px var(--alpha-black-10);
+}
+
+.login-input:focus {
+  border-color: var(--c-brand-yellow);
+}

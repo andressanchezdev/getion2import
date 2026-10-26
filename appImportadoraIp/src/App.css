@@ -1,0 +1,153 @@
+/* App.css · reset y estilos base de la app; importa los tokens · solo usa tokens de styles/tokens.css */
+@import './styles/tokens.css';
+
+/* ============================================================================
+   RESET Y ESTILOS BASE
+   ============================================================================ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  font-family: var(--font-family-base);
+  background-color: var(--bg-app);
+  color: var(--color-text-primary);
+}
+
+/* ojo: botones y campos heredaban la fuente del navegador (13.33px); ahora usan la fuente y el tamaño base de la app */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: var(--text-sm);
+}
+
+/* roles de texto base: títulos y letra pequeña sin clase propia siguen la escala de tokens.css
+   h1 título de pantalla · h2 subtítulo · h3 sección · h4-h6 etiqueta de grupo · small letra pequeña · th encabezado de tabla */
+/* ojo: p y label NO llevan tamaño base a propósito: heredan el tamaño de su contenedor (el login depende de eso);
+   si un p o label nuevo necesita tamaño propio, se lo da su clase con var(--text-*) */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--leading-snug);
+}
+
+h1 {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--tracking-tight);
+}
+
+h2 {
+  font-size: var(--text-lg);
+}
+
+h3 {
+  font-size: var(--text-md);
+}
+
+h4,
+h5,
+h6 {
+  font-size: var(--text-sm);
+}
+
+small {
+  font-size: var(--text-xs);
+}
+
+th {
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* foco visible al navegar con teclado (antes no había estilo de foco) */
+:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: 2px;
+}
+
+/* animación compartida de "latido" (punto de estado de la API y esqueletos de carga); antes estaba en AppHeader.css */
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.shop-catalog-filter-pills-scroll {
+  display: flex;
+  gap: 0.5rem;
+  padding-bottom: 0.5rem;
+  padding-right: 0.5rem;
+  scrollbar-gutter: stable;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  background-color: transparent;
+}
+
+.shop-catalog-filter-pills-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* ============================================================================
+   ESTILOS GLOBALES DE SCROLLBAR
+   Barras verticales transparentes/invisibles · Barras horizontales visibles y estilizadas
+   ============================================================================ 
+/* Dimensiones base: ancho 0 para vertical (oculto), alto para horizontal */
+::-webkit-scrollbar {
+  width: 0px;
+  height: 6px;
+}
+
+/* Scrollbar vertical: completamente invisible y transparente en toda la app */
+::-webkit-scrollbar:vertical {
+  display: none;
+  width: 0px;
+  background: transparent;
+}
+
+::-webkit-scrollbar-track:vertical {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb:vertical {
+  background: transparent;
+}
+
+/* Scrollbar horizontal: visible, estilizada con tokens */
+::-webkit-scrollbar:horizontal {
+  height: 6px;
+}
+
+::-webkit-scrollbar-track:horizontal {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb:horizontal {
+  background: var(--color-border);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:horizontal:hover {
+  background: var(--color-text-tertiary);
+}

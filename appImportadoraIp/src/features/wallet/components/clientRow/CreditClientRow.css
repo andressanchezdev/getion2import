@@ -1,0 +1,96 @@
+/* CreditClientRow.css · estilos de cada fila de cliente (datos, uso de cupo, estado y botón) · solo usa tokens de styles/tokens.css */
+/* ojo: antes estas reglas estaban en CreditClientsTable.css (se separó para que cada archivo haga una sola cosa) */
+.credit-table-row {
+  cursor: pointer;
+  transition: background var(--motion-fast);
+}
+
+.credit-table-row:hover {
+  background: var(--c-slate-50);
+}
+
+/* ojo: antes usaba; ahora gana por especificidad */
+.credit-table-row.credit-table-row-selected {
+  background: var(--c-blue-50);
+}
+
+.credit-table-cust-business-name {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary, var(--c-slate-900));
+}
+
+.credit-table-cust-document {
+  font-size: var(--text-xs);
+  color: var(--c-slate-600);
+  font-family: var(--font-family-mono);
+  margin-top: 2px;
+}
+
+.credit-table-cust-contact {
+  color: var(--color-text-primary, var(--c-slate-800));
+  font-weight: var(--font-weight-medium);
+}
+
+.credit-table-cust-city {
+  font-size: var(--text-xs);
+  color: var(--c-slate-600);
+  margin-top: 2px;
+}
+
+.credit-table-cust-currency {
+  white-space: nowrap;
+  font-size: var(--text-sm);
+}
+
+.credit-table-font-mono {
+  font-family: var(--font-family-mono);
+}
+
+.credit-table-font-semibold {
+  font-weight: var(--font-weight-semibold);
+}
+
+.credit-table-text-rose {
+  color: var(--c-rose-700);
+}
+
+.credit-table-text-emerald {
+  color: var(--c-emerald-700);
+}
+
+.credit-table-btn-detail {
+  background: var(--c-white);
+  border: 1px solid var(--color-border, var(--c-slate-300));
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--c-blue-600);
+  cursor: pointer;
+  transition: all var(--motion-fast);
+  padding: 0;
+}
+
+.credit-table-btn-detail:hover {
+  background: var(--c-blue-50);
+  border-color: var(--c-blue-300);
+  transform: translateY(-1px);
+}
+
+.credit-table-btn-detail-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  opacity: 0.85;
+}
+
+.credit-table-btn-detail:hover .credit-table-btn-detail-icon {
+  opacity: 1;
+}
+
+/* ojo: misma regla que la columna Acciones de la tabla, con su propio nombre para no depender del CSS de otro componente */
+.credit-table .credit-table-cell-right {
+  text-align: right;
+}

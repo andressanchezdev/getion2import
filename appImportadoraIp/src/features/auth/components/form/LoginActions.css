@@ -1,0 +1,32 @@
+/* LoginActions.css · estilos de los botones del login (copia del diseño de importadora-online) · solo usa tokens de styles/tokens.css */
+.login-actions {
+  display: flex;
+  gap: 1.25rem;
+  margin-top: var(--space-6);
+}
+
+.login-actions-submit,
+.login-actions-register {
+  width: 150px;
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-base);
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+}
+
+.login-actions-submit {
+  border: none;
+  background-color: var(--c-brand-yellow);
+  color: var(--c-white);
+}
+
+.login-actions-submit:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.login-actions-register {
+  border: 2px solid var(--alpha-brand-charcoal-60);
+  background-color: transparent;
+  color: var(--alpha-brand-charcoal-60);
+}

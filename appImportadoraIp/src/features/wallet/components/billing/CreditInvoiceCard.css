@@ -1,0 +1,95 @@
+/* CreditInvoiceCard.css · estilos de la tarjeta de cada factura pendiente · solo usa tokens de styles/tokens.css */
+/* ojo: antes estas reglas estaban en CreditAccountDrawer.css (se separó para que cada archivo haga una sola cosa) */
+.credit-drawer-invoice-item-card {
+  background: var(--c-white);
+  border: 1px solid var(--color-border, var(--c-slate-200));
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.credit-drawer-invoice-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.credit-drawer-invoice-num {
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-bold);
+  font-family: var(--font-family-mono);
+  color: var(--color-text-primary, var(--c-slate-900));
+}
+
+.credit-drawer-invoice-order {
+  font-size: var(--text-xs);
+  color: var(--c-slate-600);
+  margin-left: var(--space-1);
+}
+
+.credit-drawer-invoice-status-chip {
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  padding: 0.125rem 0.375rem;
+  border-radius: var(--radius-sm);
+}
+
+.credit-drawer-status-overdue {
+  background: var(--c-red-50);
+  color: var(--c-red-700);
+  border: 1px solid var(--c-red-200);
+}
+
+.credit-drawer-status-current {
+  background: var(--c-blue-50);
+  color: var(--c-blue-600);
+  border: 1px solid var(--c-blue-200);
+}
+
+.credit-drawer-invoice-item-dates {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-xs);
+  color: var(--c-slate-600);
+}
+
+.credit-drawer-invoice-item-balances {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--c-slate-50);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+}
+
+.credit-drawer-balance-row {
+  display: flex;
+  justify-content: space-between;
+  color: var(--c-slate-600);
+}
+
+.credit-drawer-invoice-pay-btn {
+  background: var(--c-white);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-bold);
+  padding: 0.375rem 0.625rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--motion-fast);
+}
+
+.credit-drawer-invoice-pay-btn:hover {
+  background: var(--c-brand-yellow);
+  border-color: var(--c-brand-yellow);
+  color: var(--c-brand-charcoal);
+}
+
+/* ojo: misma regla que el saldo rojo de las métricas, con su propio nombre para no depender del CSS de otro componente */
+.credit-drawer-invoice-text-rose {
+  color: var(--c-rose-700);
+}

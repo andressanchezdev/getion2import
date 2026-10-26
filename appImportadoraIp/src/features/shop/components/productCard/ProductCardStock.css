@@ -1,0 +1,46 @@
+/* ProductCardStock.css · estilos de la disponibilidad de stock de la tarjeta · solo usa tokens de styles/tokens.css */
+/* ojo: antes estas reglas estaban en ProductCard.css (se separó para que cada archivo haga una sola cosa) */
+/* Estado de Stock en Bodega */
+.product-card-stock-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: auto;
+    padding-top: 6px;
+    border-top: 1px dashed var(--c-slate-100);
+}
+
+.product-card-stock-badge {
+    font-size: var(--text-xs);
+    font-weight: var(--font-weight-semibold);
+    padding: 3px var(--space-2);
+    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.product-card-stock-in {
+    background-color: var(--c-emerald-50);
+    color: var(--c-emerald-700);
+    border: 1px solid var(--c-emerald-200);
+}
+
+.product-card-stock-low {
+    background-color: var(--c-amber-50);
+    color: var(--c-amber-700);
+    border: 1px solid var(--c-amber-200);
+}
+
+.product-card-stock-out {
+    background-color: var(--c-red-50);
+    color: var(--c-red-700);
+    border: 1px solid var(--c-red-200);
+}
+
+.product-card-stock-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: var(--radius-circle);
+    background-color: currentColor;
+}

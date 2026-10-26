@@ -1,0 +1,1625 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>IP Online · Introducción para no desarrolladores</title>
+<meta name="description" content="Guía visual de IP Online: qué es, cómo opera, sus flujos, estado actual y ruta de desarrollo." />
+<style>
+  /* =========================================================
+     1. VARIABLES Y RESET
+     ========================================================= */
+  :root {
+    --bg: #f6f8fc;
+    --surface: #ffffff;
+    --surface-2: #eef2fb;
+    --ink: #0f172a;
+    --ink-soft: #475569;
+    --ink-mute: #7b8aa3;
+    --line: #e2e8f0;
+
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --primary-soft: #dbeafe;
+
+    --accent: #f59e0b;
+
+    --red: #ef4444;
+    --orange: #f97316;
+    --yellow: #eab308;
+    --green: #10b981;
+
+    --radius: 16px;
+    --radius-sm: 10px;
+    --shadow: 0 6px 24px rgba(15, 23, 42, .08);
+    --shadow-sm: 0 2px 8px rgba(15, 23, 42, .06);
+
+    --font: "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; scroll-padding-top: 90px; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  img { max-width: 100%; display: block; }
+  a { color: var(--primary); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* =========================================================
+     2. BARRA DE PROGRESO DE LECTURA
+     ========================================================= */
+  #progress-bar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 4px;
+    width: 0%;
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+    z-index: 1000;
+    transition: width .1s linear;
+  }
+
+  /* =========================================================
+     3. HERO
+     ========================================================= */
+  .hero {
+    background:
+      radial-gradient(900px 420px at 15% -10%, rgba(37,99,235,.35), transparent 60%),
+      radial-gradient(700px 380px at 90% 0%, rgba(245,158,11,.25), transparent 60%),
+      linear-gradient(160deg, #0b1220 0%, #111c33 55%, #14264a 100%);
+    color: #fff;
+    padding: 90px 24px 110px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: linear-gradient(to bottom, #000 20%, transparent 90%);
+    pointer-events: none;
+  }
+
+  .hero-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.22);
+    color: #dbeafe;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: .78rem;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 22px;
+    backdrop-filter: blur(6px);
+  }
+
+  .badge .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 4px rgba(245,158,11,.25);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 4px rgba(245,158,11,.25); }
+    50%      { box-shadow: 0 0 0 8px rgba(245,158,11,.05); }
+  }
+
+  .hero h1 {
+    font-size: clamp(2rem, 4.6vw, 3.4rem);
+    line-height: 1.12;
+    letter-spacing: -.02em;
+    font-weight: 800;
+    margin-bottom: 20px;
+  }
+
+  .hero h1 span {
+    background: linear-gradient(90deg, #60a5fa, #fbbf24);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .hero p.lead {
+    font-size: clamp(1rem, 1.5vw, 1.18rem);
+    color: #c7d2e6;
+    max-width: 760px;
+    margin-bottom: 18px;
+  }
+
+  .hero .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 26px;
+  }
+
+  .chip {
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.16);
+    padding: 7px 14px;
+    border-radius: 999px;
+    font-size: .82rem;
+    color: #e2e8f0;
+  }
+
+  /* =========================================================
+     4. NAVEGACIÓN STICKY
+     ========================================================= */
+  .navbar {
+    position: sticky;
+    top: 0;
+    z-index: 900;
+    background: rgba(255,255,255,.88);
+    backdrop-filter: saturate(180%) blur(14px);
+    border-bottom: 1px solid var(--line);
+    transition: box-shadow .25s ease;
+  }
+
+  .navbar.scrolled { box-shadow: var(--shadow-sm); }
+
+  .nav-inner {
+    max-width: 1150px;
+    margin: 0 auto;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .nav-inner::-webkit-scrollbar { display: none; }
+
+  .nav-brand {
+    font-weight: 800;
+    font-size: .95rem;
+    letter-spacing: -.01em;
+    color: var(--ink);
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-right: 8px;
+  }
+
+  .nav-brand .logo {
+    width: 26px; height: 26px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--primary), #7c3aed);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    font-size: .72rem;
+    font-weight: 800;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 4px;
+    list-style: none;
+  }
+
+  .nav-links a {
+    display: block;
+    padding: 8px 13px;
+    border-radius: 999px;
+    font-size: .85rem;
+    font-weight: 600;
+    color: var(--ink-soft);
+    white-space: nowrap;
+    transition: all .2s ease;
+    text-decoration: none;
+  }
+
+  .nav-links a:hover { background: var(--surface-2); color: var(--primary); text-decoration: none; }
+  .nav-links a.active { background: var(--primary); color: #fff; }
+
+  /* =========================================================
+     5. LAYOUT GENERAL
+     ========================================================= */
+  main {
+    max-width: 1150px;
+    margin: 0 auto;
+    padding: 60px 20px 100px;
+  }
+
+  section { margin-bottom: 74px; scroll-margin-top: 90px; }
+
+  .section-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .section-num {
+    flex: 0 0 auto;
+    width: 46px; height: 46px;
+    border-radius: 14px;
+    background: var(--primary-soft);
+    color: var(--primary-dark);
+    display: grid;
+    place-items: center;
+    font-weight: 800;
+    font-size: 1.05rem;
+    border: 1px solid #bfdbfe;
+  }
+
+  .section-head h2 {
+    font-size: clamp(1.4rem, 2.4vw, 1.95rem);
+    line-height: 1.2;
+    letter-spacing: -.02em;
+    font-weight: 800;
+  }
+
+  .section-head p {
+    color: var(--ink-soft);
+    font-size: .95rem;
+    margin-top: 4px;
+    max-width: 720px;
+  }
+
+  /* =========================================================
+     6. TARJETAS
+     ========================================================= */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 26px 28px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .card + .card { margin-top: 20px; }
+
+  .grid {
+    display: grid;
+    gap: 18px;
+  }
+  .grid-2 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+  .grid-3 { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+  .grid-4 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+
+  .tile {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 20px;
+    box-shadow: var(--shadow-sm);
+    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+  }
+
+  .tile:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow);
+    border-color: #c7d2fe;
+  }
+
+  .tile .icon {
+    width: 42px; height: 42px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    font-size: 1.25rem;
+    margin-bottom: 12px;
+    background: var(--primary-soft);
+    color: var(--primary-dark);
+  }
+
+  .tile h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .tile p {
+    font-size: .88rem;
+    color: var(--ink-soft);
+  }
+
+  .callout {
+    border-left: 4px solid var(--primary);
+    background: #f0f6ff;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    padding: 16px 20px;
+    margin: 18px 0;
+    font-size: .92rem;
+    color: #1e3a8a;
+  }
+
+  .callout.warn {
+    border-left-color: var(--orange);
+    background: #fff7ed;
+    color: #7c2d12;
+  }
+
+  .callout strong { font-weight: 700; }
+
+  /* =========================================================
+     7. FLUJOS (ACORDEÓN)
+     ========================================================= */
+  .flow {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    margin-bottom: 14px;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .flow-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 22px;
+    cursor: pointer;
+    user-select: none;
+    transition: background .2s ease;
+  }
+
+  .flow-header:hover { background: var(--surface-2); }
+
+  .flow-header .f-icon {
+    width: 38px; height: 38px;
+    flex: 0 0 auto;
+    border-radius: 11px;
+    background: linear-gradient(135deg, var(--primary), #7c3aed);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    font-size: 1.05rem;
+  }
+
+  .flow-header h3 {
+    font-size: 1.02rem;
+    font-weight: 700;
+    flex: 1;
+  }
+
+  .flow-header .f-toggle {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--surface-2);
+    display: grid;
+    place-items: center;
+    color: var(--ink-soft);
+    font-weight: 700;
+    transition: transform .3s ease, background .3s ease;
+    flex: 0 0 auto;
+  }
+
+  .flow.open .flow-header .f-toggle {
+    transform: rotate(45deg);
+    background: var(--primary);
+    color: #fff;
+  }
+
+  .flow-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height .4s ease;
+  }
+
+  .flow.open .flow-body { max-height: 900px; }
+
+  .flow-body-inner {
+    padding: 4px 22px 24px 22px;
+    border-top: 1px dashed var(--line);
+    margin-top: 0;
+  }
+
+  .flow-body-inner p {
+    color: var(--ink-soft);
+    font-size: .92rem;
+    margin: 14px 0 10px;
+  }
+
+  .steps {
+    list-style: none;
+    counter-reset: step;
+    margin-top: 12px;
+  }
+
+  .steps li {
+    counter-increment: step;
+    position: relative;
+    padding: 10px 0 10px 46px;
+    font-size: .9rem;
+    color: var(--ink);
+    border-bottom: 1px dashed var(--line);
+  }
+  .steps li:last-child { border-bottom: none; }
+
+  .steps li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0; top: 9px;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--primary-soft);
+    color: var(--primary-dark);
+    display: grid;
+    place-items: center;
+    font-weight: 700;
+    font-size: .8rem;
+    border: 1px solid #bfdbfe;
+  }
+
+  /* =========================================================
+     8. DIAGRAMA DE PIPELINE
+     ========================================================= */
+  .pipeline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin: 20px 0;
+  }
+
+  .pipeline .node {
+    flex: 1 1 150px;
+    background: linear-gradient(160deg, #eff6ff, #dbeafe);
+    border: 1px solid #bfdbfe;
+    border-radius: 12px;
+    padding: 14px 12px;
+    text-align: center;
+    font-weight: 700;
+    font-size: .86rem;
+    color: #1e3a8a;
+    position: relative;
+  }
+
+  .pipeline .arrow {
+    flex: 0 0 auto;
+    color: var(--primary);
+    font-size: 1.2rem;
+    font-weight: 800;
+  }
+
+  /* =========================================================
+     9. MAPA DE CONEXIONES (DIAGRAMA SIMPLE)
+     ========================================================= */
+  .map {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+    margin-top: 20px;
+  }
+
+  .map .box {
+    border-radius: 12px;
+    padding: 16px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    font-size: .85rem;
+    text-align: center;
+    font-weight: 600;
+    color: var(--ink);
+    transition: transform .2s ease, border-color .2s ease;
+  }
+
+  .map .box:hover {
+    transform: translateY(-3px);
+    border-color: var(--primary);
+  }
+
+  .map .box small {
+    display: block;
+    font-weight: 400;
+    color: var(--ink-mute);
+    font-size: .76rem;
+    margin-top: 4px;
+  }
+
+  .map .box.root {
+    grid-column: 1 / -1;
+    background: linear-gradient(135deg, #1e3a8a, #2563eb);
+    color: #fff;
+    border: none;
+  }
+  .map .box.root small { color: #c7d2e6; }
+
+  /* =========================================================
+     10. TABLA DE ESTADO
+     ========================================================= */
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .filter-btn {
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink-soft);
+    padding: 7px 14px;
+    border-radius: 999px;
+    font-size: .82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s ease;
+    font-family: inherit;
+  }
+
+  .filter-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .filter-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+  .table-wrap {
+    overflow-x: auto;
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .88rem;
+    min-width: 720px;
+  }
+
+  thead th {
+    text-align: left;
+    background: var(--surface-2);
+    padding: 13px 16px;
+    font-weight: 700;
+    font-size: .8rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--ink-mute);
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+
+  tbody td {
+    padding: 13px 16px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: #fafbff; }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 11px;
+    border-radius: 999px;
+    font-size: .74rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .pill.red    { background: #fee2e2; color: #991b1b; }
+  .pill.orange { background: #ffedd5; color: #9a3412; }
+  .pill.yellow { background: #fef9c3; color: #854d0e; }
+
+  /* =========================================================
+     11. PRIORIDADES / RUTA
+     ========================================================= */
+  .priority {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 24px 26px;
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .priority::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 6px;
+  }
+
+  .priority.p1::before { background: var(--red); }
+  .priority.p2::before { background: var(--orange); }
+  .priority.p3::before { background: var(--yellow); }
+  .priority.p4::before { background: var(--green); }
+
+  .priority h3 {
+    font-size: 1.05rem;
+    font-weight: 800;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .priority .tag {
+    font-size: .7rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+
+  .priority.p1 .tag { background: #fee2e2; color: #991b1b; }
+  .priority.p2 .tag { background: #ffedd5; color: #9a3412; }
+  .priority.p3 .tag { background: #fef9c3; color: #854d0e; }
+  .priority.p4 .tag { background: #d1fae5; color: #065f46; }
+
+  .priority ul {
+    list-style: none;
+    margin-top: 14px;
+  }
+
+  .priority ul li {
+    position: relative;
+    padding: 6px 0 6px 26px;
+    font-size: .9rem;
+    color: var(--ink-soft);
+  }
+
+  .priority ul li::before {
+    content: "✓";
+    position: absolute;
+    left: 0; top: 6px;
+    color: var(--green);
+    font-weight: 800;
+  }
+
+  /* =========================================================
+     12. GLOSARIO
+     ========================================================= */
+  .glossary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 14px;
+  }
+
+  .glossary .term {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 16px 18px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .glossary .term dt {
+    font-weight: 800;
+    color: var(--primary-dark);
+    font-size: .92rem;
+    margin-bottom: 4px;
+  }
+
+  .glossary .term dd {
+    font-size: .85rem;
+    color: var(--ink-soft);
+  }
+
+  /* =========================================================
+     13. CONCLUSIÓN
+     ========================================================= */
+  .conclusion {
+    background: linear-gradient(160deg, #0b1220, #14264a);
+    color: #e2e8f0;
+    border-radius: var(--radius);
+    padding: 44px 38px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .conclusion::after {
+    content: "";
+    position: absolute;
+    right: -60px; top: -60px;
+    width: 260px; height: 260px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(37,99,235,.45), transparent 70%);
+  }
+
+  .conclusion h2 {
+    color: #fff;
+    font-size: clamp(1.3rem, 2.3vw, 1.8rem);
+    margin-bottom: 14px;
+    letter-spacing: -.02em;
+    position: relative;
+    z-index: 1;
+  }
+
+  .conclusion p {
+    color: #c7d2e6;
+    font-size: .96rem;
+    max-width: 780px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .conclusion p + p { margin-top: 12px; }
+
+  /* =========================================================
+     14. FOOTER
+     ========================================================= */
+  footer {
+    border-top: 1px solid var(--line);
+    background: var(--surface);
+    padding: 34px 20px;
+    text-align: center;
+  }
+
+  footer p {
+    font-size: .82rem;
+    color: var(--ink-mute);
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  footer strong { color: var(--ink-soft); }
+
+  /* =========================================================
+     15. BOTÓN VOLVER ARRIBA
+     ========================================================= */
+  #to-top {
+    position: fixed;
+    right: 22px; bottom: 22px;
+    width: 46px; height: 46px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    font-size: 1.15rem;
+    box-shadow: var(--shadow);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(12px);
+    transition: all .3s ease;
+    z-index: 950;
+  }
+
+  #to-top.show { opacity: 1; visibility: visible; transform: translateY(0); }
+  #to-top:hover { background: var(--primary-dark); }
+
+  /* =========================================================
+     16. RESPONSIVE
+     ========================================================= */
+  @media (max-width: 720px) {
+    .hero { padding: 64px 18px 80px; }
+    main { padding: 40px 16px 70px; }
+    section { margin-bottom: 54px; }
+    .section-head { gap: 12px; }
+    .section-num { width: 40px; height: 40px; font-size: .95rem; border-radius: 12px; }
+    .card { padding: 20px 18px; }
+    .priority { padding: 20px 18px; }
+    .conclusion { padding: 30px 22px; }
+    .nav-brand span { display: none; }
+  }
+
+  /* =========================================================
+     17. IMPRESIÓN
+     ========================================================= */
+  @media print {
+    .navbar, #to-top, #progress-bar { display: none; }
+    .flow-body { max-height: none !important; }
+    body { background: #fff; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Barra de progreso de lectura -->
+<div id="progress-bar"></div>
+
+<!-- =========================================================
+     HERO
+     ========================================================= -->
+<header class="hero">
+  <div class="hero-inner">
+    <div class="badge"><span class="dot"></span> Documento de introducción · Estado 2026</div>
+    <h1>IP Online: <span>guía para entender el sistema</span> sin ser desarrollador</h1>
+    <p class="lead">
+      Esta página traduce a lenguaje sencillo el estado actual de <strong>IP Online</strong>, el ERP
+      de una importadora-distribuidora de repuestos de moto. Explica qué hace el sistema, cómo opera,
+      qué flujos de negocio cubre, en qué estado está y en qué orden conviene mejorarlo.
+    </p>
+    <p class="lead" style="color:#9fb0cc;font-size:.95rem;">
+      Dirigido a dueños, gerentes, jefes de operación, área comercial, cartera, bodega y recursos
+      humanos. No requiere conocimientos técnicos.
+    </p>
+    <div class="meta">
+      <span class="chip">🏢 ERP / Back-office</span>
+      <span class="chip">🛒 POS · Inventario · Cartera</span>
+      <span class="chip">🧩 Maqueta funcional</span>
+      <span class="chip">🛠️ Ruta de refactor</span>
+    </div>
+  </div>
+</header>
+
+<!-- =========================================================
+     NAVEGACIÓN
+     ========================================================= -->
+<nav class="navbar" id="navbar">
+  <div class="nav-inner">
+    <div class="nav-brand"><span class="logo">IP</span> <span>IP Online</span></div>
+    <ul class="nav-links">
+      <li><a href="#que-es" class="nav-link">¿Qué es?</a></li>
+      <li><a href="#quienes" class="nav-link">Usuarios</a></li>
+      <li><a href="#flujos" class="nav-link">Flujos</a></li>
+      <li><a href="#conexion" class="nav-link">Conexiones</a></li>
+      <li><a href="#especificaciones" class="nav-link">Especificaciones</a></li>
+      <li><a href="#estado" class="nav-link">Estado actual</a></li>
+      <li><a href="#ruta" class="nav-link">Ruta</a></li>
+      <li><a href="#conclusion" class="nav-link">Conclusión</a></li>
+      <li><a href="#glosario" class="nav-link">Glosario</a></li>
+    </ul>
+  </div>
+</nav>
+
+<main>
+
+  <!-- =========================================================
+       1. ¿QUÉ ES?
+       ========================================================= -->
+  <section id="que-es">
+    <div class="section-head">
+      <div class="section-num">1</div>
+      <div>
+        <h2>¿Qué es IP Online?</h2>
+        <p>Un sistema central para administrar casi todo el negocio de la importadora.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <p>
+        IP Online es un <strong>ERP</strong>: un sistema de gestión que concentra la información y las
+        operaciones de la empresa en un solo lugar. En la práctica funciona como un
+        <strong>back-office</strong> para vender repuestos (mostrador y en línea), controlar inventario
+        en varias bodegas, surtir y despachar pedidos, cobrar, llevar la cartera de crédito de los
+        clientes y administrar el personal.
+      </p>
+      <p style="margin-top:12px;">
+        La idea es que ventas, bodega, caja, cartera y administración trabajen sobre una misma
+        información, con trazabilidad de lo que pasa en cada etapa.
+      </p>
+    </div>
+
+    <div class="grid grid-3" style="margin-top:18px;">
+      <div class="tile">
+        <div class="icon">🛒</div>
+        <h3>Vender</h3>
+        <p>POS para armar pedidos, con precios por nivel y venta a crédito o de contado.</p>
+      </div>
+      <div class="tile">
+        <div class="icon">📦</div>
+        <h3>Surtir y despachar</h3>
+        <p>Pedido por etapas: verificación, picking, facturación y despacho.</p>
+      </div>
+      <div class="tile">
+        <div class="icon">🏬</div>
+        <h3>Controlar inventario</h3>
+        <p>Multi-bodega, con ubicación por estante y niveles de precio.</p>
+      </div>
+      <div class="tile">
+        <div class="icon">🔁</div>
+        <h3>Mover stock</h3>
+        <p>Traslados entre bodegas y recepción en destino.</p>
+      </div>
+      <div class="tile">
+        <div class="icon">💵</div>
+        <h3>Cobrar y facturar</h3>
+        <p>Factura carta, ticket o electrónica desde Caja.</p>
+      </div>
+      <div class="tile">
+        <div class="icon">📊</div>
+        <h3>Gestionar cartera</h3>
+        <p>Cupo de crédito, saldos, recaudo y conciliación de pagos online.</p>
+      </div>
+      <div class="tile">
+        <div class="icon">👥</div>
+        <h3>Administrar personal</h3>
+        <p>Empleados, cargos, sucursales, roles y permisos por módulo.</p>
+      </div>
+      <div class="tile">
+        <div class="icon">🧾</div>
+        <h3>Reportar ventas</h3>
+        <p>Utilidad, IVA y detalle por documento y por línea.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       2. USUARIOS
+       ========================================================= -->
+  <section id="quienes">
+    <div class="section-head">
+      <div class="section-num">2</div>
+      <div>
+        <h2>¿Quiénes usan el sistema?</h2>
+        <p>Cada área tiene un rol y una responsabilidad dentro del flujo.</p>
+      </div>
+    </div>
+
+    <div class="grid grid-3">
+      <div class="tile">
+        <div class="icon">🧑‍💼</div>
+        <h3>Vendedores / mostrador</h3>
+        <p>Arman pedidos y venden desde el POS.</p>
+      </div>
+      <div class="tile">
+        <div class="icon">📦</div>
+        <h3>Bodega</h3>
+        <p>Alistan (picking), hacen traslados y reciben mercancía.</p>
+      </div>
+      <div class="tile">
+        <div class="icon">💰</div>
+        <h3>Caja / facturación</h3>
+        <p>Cobran y emiten facturas.</p>
+      </div>
+      <div class="tile">
+        <div class="icon">📈</div>
+        <h3>Cartera</h3>
+        <p>Controlan crédito, recaudo y pagos online.</p>
+      </div>
+      <div class="tile">
+        <div class="icon">🏢</div>
+        <h3>Administración / RRHH</h3>
+        <p>Gestionan productos, catálogos, proveedores y empleados con permisos.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       3. FLUJOS
+       ========================================================= -->
+  <section id="flujos">
+    <div class="section-head">
+      <div class="section-num">3</div>
+      <div>
+        <h2>Flujos principales de operación</h2>
+        <p>Un <strong>flujo</strong> es una secuencia de pasos que sigue el negocio para completar una tarea. Haz clic en cada tarjeta para ver el detalle.</p>
+      </div>
+    </div>
+
+    <!-- Flujo 1: Venta POS -->
+    <article class="flow open">
+      <div class="flow-header" onclick="toggleFlow(this)">
+        <div class="f-icon">🛒</div>
+        <h3>Flujo de venta en tienda (POS)</h3>
+        <div class="f-toggle">+</div>
+      </div>
+      <div class="flow-body">
+        <div class="flow-body-inner">
+          <p><strong>Idea:</strong> armar un pedido para un cliente desde el catálogo.</p>
+          <ol class="steps">
+            <li>Seleccionar el cliente. Eso define el nivel de precio que se le aplicará.</li>
+            <li>Buscar o filtrar el catálogo por marca, categoría, modelo o familia.</li>
+            <li>Por cada producto: fijar cantidad y precio, y agregarlo a la orden.</li>
+            <li>La línea entra al carrito (con usuario y bodega asociados).</li>
+            <li>Revisar el carrito: ajustar cantidades, quitar líneas, ver el total en vivo.</li>
+            <li>“Finalizar carrito” convierte el carrito en un pedido o venta.</li>
+          </ol>
+          <div class="callout">
+            <strong>Detalle útil:</strong> el precio es editable en el POS. Las tarjetas muestran si el
+            producto está <em>Ordenado</em> (en carrito) o <em>Agotado</em> (sin stock).
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- Flujo 2: Surtido -->
+    <article class="flow">
+      <div class="flow-header" onclick="toggleFlow(this)">
+        <div class="f-icon">🏭</div>
+        <h3>Flujo de surtido del pedido</h3>
+        <div class="f-toggle">+</div>
+      </div>
+      <div class="flow-body">
+        <div class="flow-body-inner">
+          <p><strong>Idea:</strong> llevar el pedido desde que se confirma hasta que se despacha, midiendo tiempos.</p>
+          <div class="pipeline">
+            <div class="node">Verificación</div>
+            <div class="arrow">→</div>
+            <div class="node">Picking</div>
+            <div class="arrow">→</div>
+            <div class="node">Facturación</div>
+            <div class="arrow">→</div>
+            <div class="node">Despacho</div>
+          </div>
+          <ul style="list-style:none;font-size:.9rem;color:var(--ink-soft);">
+            <li>• <strong>Pendientes:</strong> pedidos por procesar. Opciones: compartir, imprimir, descargar, subir productos, eliminar carrito.</li>
+            <li>• <strong>Picking inmediato:</strong> cola de alistamiento con estados Disponible / Ocupado / Pausa.</li>
+            <li>• <strong>Drawer de picking:</strong> muestra productos, avance por color y acciones (liberar, autocompletar, reestablecer, verificar faltantes).</li>
+            <li>• <strong>Historial y movimientos:</strong> registra cada etapa con entrada, salida, agente responsable y tiempo en minutos.</li>
+          </ul>
+        </div>
+      </div>
+    </article>
+
+    <!-- Flujo 3: Traslados -->
+    <article class="flow">
+      <div class="flow-header" onclick="toggleFlow(this)">
+        <div class="f-icon">🔁</div>
+        <h3>Flujo de traslados entre bodegas</h3>
+        <div class="f-toggle">+</div>
+      </div>
+      <div class="flow-body">
+        <div class="flow-body-inner">
+          <p><strong>Idea:</strong> mover stock de una bodega a otra y recibirlo en destino.</p>
+          <ol class="steps">
+            <li>En <strong>Traslados general</strong> se elige origen y destino.</li>
+            <li>Se arma un “carrito” de productos a trasladar, con cantidades editables.</li>
+            <li>“Finalizar carrito” confirma el movimiento.</li>
+            <li>En <strong>Ingreso traslado</strong>, la bodega destino recibe o rechaza.</li>
+            <li>Se digita el código de entrega y se acepta: el stock entra al destino.</li>
+            <li>Se puede apoyar con escáner de código de barras.</li>
+          </ol>
+        </div>
+      </div>
+    </article>
+
+    <!-- Flujo 4: Caja -->
+    <article class="flow">
+      <div class="flow-header" onclick="toggleFlow(this)">
+        <div class="f-icon">💵</div>
+        <h3>Flujo de caja y facturación</h3>
+        <div class="f-toggle">+</div>
+      </div>
+      <div class="flow-body">
+        <div class="flow-body-inner">
+          <p><strong>Idea:</strong> verificar y cobrar el pedido, emitir la factura.</p>
+          <ol class="steps">
+            <li>Caja abre el pedido y muestra el panel de <strong>Verificación</strong>.</li>
+            <li>Paso 1: verificar dirección de entrega, medio de pago y tipo de facturación.</li>
+            <li>Paso 2: finalizar eligiendo formato (carta, ticket, ninguna o descargar factura).</li>
+            <li>El pedido queda facturado y listo para despacho.</li>
+          </ol>
+          <div class="callout">
+            <strong>Opciones del pedido en caja:</strong> liberar pedido, modificar carrito o eliminar pedido.
+            Estados en la tabla: Facturar / Picking / Pausa / Ocupado.
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- Flujo 5: Cartera -->
+    <article class="flow">
+      <div class="flow-header" onclick="toggleFlow(this)">
+        <div class="f-icon">📊</div>
+        <h3>Flujo de cartera y pagos</h3>
+        <div class="f-toggle">+</div>
+      </div>
+      <div class="flow-body">
+        <div class="flow-body-inner">
+          <p><strong>Idea:</strong> controlar cuánto debe cada cliente y registrar los pagos.</p>
+          <ol class="steps">
+            <li>Una venta a crédito genera saldo en cartera y baja el cupo disponible del cliente.</li>
+            <li>Cartera lista clientes con cupo, adeudado, último pago y estado de contacto.</li>
+            <li>Al abrir un cliente se ve el estado de cuenta (aging): pedidos, pagos verificados, por verificar, pendiente y fecha límite.</li>
+            <li>Se puede “distribuir a más antiguos” o pagar el total.</li>
+            <li>Los pagos online se verifican (banco, fecha, valor, comprobante) o se rechazan.</li>
+            <li>Todo queda en el historial de pagos con agente verificador y estado.</li>
+          </ol>
+        </div>
+      </div>
+    </article>
+
+    <!-- Flujo 6: Inventario -->
+    <article class="flow">
+      <div class="flow-header" onclick="toggleFlow(this)">
+        <div class="f-icon">🏬</div>
+        <h3>Flujo de inventario</h3>
+        <div class="f-toggle">+</div>
+      </div>
+      <div class="flow-body">
+        <div class="flow-body-inner">
+          <p><strong>Idea:</strong> mantener el catálogo maestro, el stock por ubicación y los maestros de clasificación.</p>
+          <ol class="steps">
+            <li>Productos: columnas de marca, precios P0–P3, ubicaciones, estados y cantidades.</li>
+            <li>Menú de acciones: crear, registro inmediato, registro masivo, clonación y configuración global.</li>
+            <li>Crear o editar producto: imagen, códigos, categoría, modelo, marca, familia, costos, topes, dimensiones, peso y flags.</li>
+            <li>Submaestros: marcas, categorías, grupos, modelos, ubicaciones, movimientos y reportes.</li>
+            <li>Configuración global: IVA 19%, peso en kg, tope de cantidad y flags por defecto.</li>
+            <li>Ubicación IA: el sistema sugiere o asigna un estante.</li>
+          </ol>
+        </div>
+      </div>
+    </article>
+
+    <!-- Flujo 7: Empleados -->
+    <article class="flow">
+      <div class="flow-header" onclick="toggleFlow(this)">
+        <div class="f-icon">👥</div>
+        <h3>Flujo de empleados y permisos</h3>
+        <div class="f-toggle">+</div>
+      </div>
+      <div class="flow-body">
+        <div class="flow-body-inner">
+          <p><strong>Idea:</strong> administrar personal, sucursales, cargos y permisos.</p>
+          <ol class="steps">
+            <li>Listado con usuario, sucursales, cargos y modalidad de trabajo.</li>
+            <li>Crear empleado en 3 pasos: datos personales, información contractual y foto.</li>
+            <li>Se asignan sucursales, cargos, áreas y jefe inmediato.</li>
+            <li>Cada rol pertenece a un área y tiene permisos por módulo.</li>
+            <li>Los permisos definen si puede crear, leer, actualizar o eliminar en cada módulo.</li>
+          </ol>
+        </div>
+      </div>
+    </article>
+
+    <!-- Flujo 8: Terceros -->
+    <article class="flow">
+      <div class="flow-header" onclick="toggleFlow(this)">
+        <div class="f-icon">🧾</div>
+        <h3>Flujo de terceros</h3>
+        <div class="f-toggle">+</div>
+      </div>
+      <div class="flow-body">
+        <div class="flow-body-inner">
+          <p><strong>Idea:</strong> administrar todos los actores externos desde un mismo módulo.</p>
+          <ul style="list-style:none;font-size:.9rem;color:var(--ink-soft);">
+            <li>• <strong>Clientes</strong> y <strong>Por verificar</strong> (registros pendientes de validación).</li>
+            <li>• <strong>Proveedores</strong> con términos de pago y cupo de crédito.</li>
+            <li>• <strong>Transportadora</strong> (transportadoras y envíos).</li>
+            <li>• <strong>Empleados</strong> (directorio distinto al módulo de RRHH).</li>
+            <li>• <strong>Usuarios</strong> (cuentas de acceso al sistema).</li>
+          </ul>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <!-- =========================================================
+       4. CONEXIONES
+       ========================================================= -->
+  <section id="conexion">
+    <div class="section-head">
+      <div class="section-num">4</div>
+      <div>
+        <h2>¿Cómo se conectan todos los datos?</h2>
+        <p>Una vista simple de cómo fluye la información entre las piezas del sistema.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <p style="color:var(--ink-soft);font-size:.95rem;">
+        De forma simple: una <strong>empresa</strong> tiene <strong>bodegas</strong> y
+        <strong>catálogos</strong>; los catálogos clasifican los <strong>productos</strong>; cada
+        producto tiene precios, stock por ubicación e inventario. Un <strong>cliente</strong> arma un
+        <strong>carrito</strong> que se convierte en <strong>pedido</strong>; el pedido recorre el
+        pipeline de surtido y termina en <strong>facturación/Caja</strong>. Si es a crédito, genera
+        saldo en <strong>Cartera</strong>; los pagos entran por <strong>Pagos online</strong> y quedan
+        en el <strong>Historial de pagos</strong>. Los <strong>empleados</strong> tienen roles y
+        permisos; los <strong>proveedores</strong> abastecen el inventario; y los
+        <strong>traslados</strong> mueven stock entre bodegas.
+      </p>
+
+      <div class="map">
+        <div class="box root">EMPRESA <small>tenant raíz del sistema</small></div>
+        <div class="box">Bodegas <small>con ubicaciones y estantes</small></div>
+        <div class="box">Catálogos <small>marcas, categorías, modelos, familias</small></div>
+        <div class="box">Productos <small>precios y stock por ubicación</small></div>
+        <div class="box">Clientes <small>definen nivel de precio</small></div>
+        <div class="box">Carrito <small>se convierte en pedido</small></div>
+        <div class="box">Pedido / Venta <small>pipeline de surtido</small></div>
+        <div class="box">Facturación / Caja <small>cobro y emisión</small></div>
+        <div class="box">Cartera <small>crédito y saldos</small></div>
+        <div class="box">Pagos online <small>verificación y rechazo</small></div>
+        <div class="box">Historial de pagos <small>bitácora con agente</small></div>
+        <div class="box">Empleados <small>roles y permisos</small></div>
+        <div class="box">Proveedores <small>abastecen inventario</small></div>
+        <div class="box">Traslados <small>mueven stock entre bodegas</small></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       5. ESPECIFICACIONES
+       ========================================================= -->
+  <section id="especificaciones">
+    <div class="section-head">
+      <div class="section-num">5</div>
+      <div>
+        <h2>Especificaciones que definen el sistema hoy</h2>
+        <p>Sin tecnicismos: cómo está construido y qué reglas sigue.</p>
+      </div>
+    </div>
+
+    <div class="grid grid-2">
+      <div class="tile">
+        <div class="icon">🏢</div>
+        <h3>Multiempresa</h3>
+        <p>Cada dato pertenece a una empresa. El sistema puede atender varias a la vez sin mezclar información.</p>
+      </div>
+      <div class="tile">
+        <div class="icon">🏬</div>
+        <h3>Multibodega</h3>
+        <p>Casi todo opera por bodega: stock, traslados, pedidos y despachos.</p>
+      </div>
+      <div class="tile">
+        <div class="icon">👤</div>
+        <h3>Multiusuario</h3>
+        <p>Cada acción queda asociada a un usuario responsable.</p>
+      </div>
+      <div class="tile">
+        <div class="icon">🔐</div>
+        <h3>Acceso con token</h3>
+        <p>Se ingresa con usuario y contraseña; luego se usa un token de seguridad para cada acción.</p>
+      </div>
+      <div class="tile">
+        <div class="icon">☁️</div>
+        <h3>Servicios en la nube</h3>
+        <p>La interfaz está en Vercel, el servidor en Railway y los archivos en Cloudflare R2.</p>
+      </div>
+      <div class="tile">
+        <div class="icon">🔁</div>
+        <h3>Comunicación uniforme</h3>
+        <p>Casi todas las comunicaciones usan POST, incluso para consultar datos.</p>
+      </div>
+      <div class="tile">
+        <div class="icon">📦</div>
+        <h3>Respuestas estándar</h3>
+        <p>Las respuestas suelen tener el formato éxito, mensaje y datos.</p>
+      </div>
+      <div class="tile">
+        <div class="icon">📄</div>
+        <h3>Paginación</h3>
+        <p>Los listados se entregan por páginas, con totales y navegación.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       6. ESTADO ACTUAL
+       ========================================================= -->
+  <section id="estado">
+    <div class="section-head">
+      <div class="section-num">6</div>
+      <div>
+        <h2>Estado actual: una maqueta funcional incompleta</h2>
+        <p>Hoy IP Online es una maqueta/MVP. La interfaz está bastante construida y muchos listados cargan datos, pero <strong>muchas acciones no funcionan</strong>. Filtra los hallazgos por gravedad.</p>
+      </div>
+    </div>
+
+    <div class="filters">
+      <button class="filter-btn active" data-filter="all">Todos</button>
+      <button class="filter-btn" data-filter="red">🔴 Crítico</button>
+      <button class="filter-btn" data-filter="orange">🟠 Importante</button>
+      <button class="filter-btn" data-filter="yellow">🟡 Menor</button>
+    </div>
+
+    <div class="table-wrap">
+      <table id="status-table">
+        <thead>
+          <tr>
+            <th>Área</th>
+            <th>Hallazgo</th>
+            <th>Gravedad</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-level="red">
+            <td>Traslados general (drawer detalle)</td>
+            <td>Ninguna acción funciona: botones y menú no responden.</td>
+            <td><span class="pill red">🔴 Crítico</span></td>
+          </tr>
+          <tr data-level="red">
+            <td>Ingreso traslado</td>
+            <td>Ninguna acción funciona en la vista.</td>
+            <td><span class="pill red">🔴 Crítico</span></td>
+          </tr>
+          <tr data-level="red">
+            <td>Historial de pedidos (Tienda)</td>
+            <td>Vista vacía, sin datos y duplicada con la de Cartera.</td>
+            <td><span class="pill red">🔴 Crítico</span></td>
+          </tr>
+          <tr data-level="orange">
+            <td>Historial de pedidos (Tienda)</td>
+            <td>El filtro es el del catálogo, no filtros de pedidos.</td>
+            <td><span class="pill orange">🟠 Importante</span></td>
+          </tr>
+          <tr data-level="orange">
+            <td>Empleados (menú superior)</td>
+            <td>Arranca con “Información no disponible” y carga con retraso.</td>
+            <td><span class="pill orange">🟠 Importante</span></td>
+          </tr>
+          <tr data-level="orange">
+            <td>Pagos online (Verificar)</td>
+            <td>La referencia de pago muestra <code>RFP-undefined</code>.</td>
+            <td><span class="pill orange">🟠 Importante</span></td>
+          </tr>
+          <tr data-level="orange">
+            <td>Pagos online (Rechazar)</td>
+            <td>La notificación al cliente muestra el número de cuenta bancaria en claro.</td>
+            <td><span class="pill orange">🟠 Importante</span></td>
+          </tr>
+          <tr data-level="orange">
+            <td>Datos</td>
+            <td>Datos de prueba mezclados en producción (empleados y productos de ejemplo).</td>
+            <td><span class="pill orange">🟠 Importante</span></td>
+          </tr>
+          <tr data-level="orange">
+            <td>Inventario (productos)</td>
+            <td>Se observan stocks negativos por ubicación.</td>
+            <td><span class="pill orange">🟠 Importante</span></td>
+          </tr>
+          <tr data-level="orange">
+            <td>Multi-tenant</td>
+            <td>El identificador de empresa viaja en el cuerpo del cliente; validar que el backend lo tome del token.</td>
+            <td><span class="pill orange">🟠 Importante</span></td>
+          </tr>
+          <tr data-level="yellow">
+            <td>Inventario → Config. globales</td>
+            <td>Etiqueta “Visla” (typo de “Vista”).</td>
+            <td><span class="pill yellow">🟡 Menor</span></td>
+          </tr>
+          <tr data-level="yellow">
+            <td>Crear/Editar producto</td>
+            <td>Títulos en inglés (“Create New Product” / “Edit Product”).</td>
+            <td><span class="pill yellow">🟡 Menor</span></td>
+          </tr>
+          <tr data-level="red">
+            <td>Endpoint /families</td>
+            <td>Responde 404: el catálogo de familias/grupos no está implementado.</td>
+            <td><span class="pill red">🔴 Crítico</span></td>
+          </tr>
+          <tr data-level="red">
+            <td>Endpoint /sales/history</td>
+            <td>Responde 500.</td>
+            <td><span class="pill red">🔴 Crítico</span></td>
+          </tr>
+          <tr data-level="red">
+            <td>Endpoint /inventory/createProduct</td>
+            <td>Responde 400 con el payload capturado: contrato incompleto.</td>
+            <td><span class="pill red">🔴 Crítico</span></td>
+          </tr>
+          <tr data-level="yellow">
+            <td>API (diseño)</td>
+            <td>Casi todo por POST, incluso lecturas; REST inconsistente.</td>
+            <td><span class="pill yellow">🟡 Menor</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout warn" style="margin-top:18px;">
+      <strong>En resumen:</strong> la idea está, la interfaz está, pero la operación real todavía no está cerrada.
+      Hay acciones muertas, vistas duplicadas, datos de prueba en producción y riesgos de seguridad y privacidad.
+    </div>
+  </section>
+
+  <!-- =========================================================
+       7. RUTA DE DESARROLLO
+       ========================================================= -->
+  <section id="ruta">
+    <div class="section-head">
+      <div class="section-num">7</div>
+      <div>
+        <h2>Ruta de desarrollo recomendada</h2>
+        <p>Para convertir IP Online en un sistema confiable, avanzamos por prioridades. Primero que funcione, luego datos y seguridad, después consistencia y por último producto.</p>
+      </div>
+    </div>
+
+    <div class="grid grid-2">
+      <div class="priority p1">
+        <h3>Prioridad 1 · Que funcione <span class="tag">Crítico</span></h3>
+        <ul>
+          <li>Reparar acciones muertas en Traslados general e Ingreso traslado.</li>
+          <li>Corregir endpoints con error: familias, historial de ventas y alta de producto.</li>
+          <li>Unificar los dos “Historial de pedidos” en una sola vista con filtros propios.</li>
+          <li>Añadir estados de carga para evitar el mensaje temporal “Información no disponible”.</li>
+        </ul>
+      </div>
+
+      <div class="priority p2">
+        <h3>Prioridad 2 · Datos y seguridad <span class="tag">Importante</span></h3>
+        <ul>
+          <li>Separar producción de datos de prueba y limpiar registros basura.</li>
+          <li>Hacer que el backend tome el identificador de empresa del token, no del cuerpo.</li>
+          <li>Enmascarar números de cuenta bancaria en notificaciones.</li>
+          <li>Corregir stocks negativos con validaciones de inventario.</li>
+        </ul>
+      </div>
+
+      <div class="priority p3">
+        <h3>Prioridad 3 · Consistencia y arquitectura <span class="tag">Menor</span></h3>
+        <ul>
+          <li>Traducir textos pendientes y corregir typos como “Visla” → “Vista”.</li>
+          <li>Normalizar la API: consultar con GET, actualizar con PUT/PATCH y borrar con DELETE.</li>
+          <li>Consolidar tablas, drawers y filtros duplicados en componentes reutilizables.</li>
+        </ul>
+      </div>
+
+      <div class="priority p4">
+        <h3>Prioridad 4 · Producto y negocio <span class="tag">Valor</span></h3>
+        <ul>
+          <li>Potenciar la Ubicación IA y el control de tiempos por etapa.</li>
+          <li>Crear tableros con KPIs: tasa de entrega, tiempos de picking, cartera vencida y rotación por bodega.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       8. CONCLUSIÓN
+       ========================================================= -->
+  <section id="conclusion">
+    <div class="section-head">
+      <div class="section-num">8</div>
+      <div>
+        <h2>Conclusión</h2>
+        <p>Qué significa todo esto para el negocio.</p>
+      </div>
+    </div>
+
+    <div class="conclusion">
+      <h2>IP Online tiene base, pero todavía no es un sistema operativo completo</h2>
+      <p>
+        La plataforma ya cuenta con una interfaz avanzada y una idea clara de cómo debería funcionar la
+        operación: vender, surtir, cobrar, controlar inventario y administrar personal. Sin embargo,
+        hoy es una maqueta: muchas acciones no responden, hay vistas duplicadas y conviven datos de
+        prueba con datos reales.
+      </p>
+      <p>
+        El objetivo del refactor no es solo “arreglar pantallas”, sino convertir la maqueta en una
+        herramienta real para el negocio, con seguridad, trazabilidad y datos confiables. Si se sigue
+        la ruta por prioridades, IP Online puede pasar de ser una demo a ser el sistema que sostiene
+        la operación diaria de la importadora.
+      </p>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       9. GLOSARIO
+       ========================================================= -->
+  <section id="glosario">
+    <div class="section-head">
+      <div class="section-num">9</div>
+      <div>
+        <h2>Glosario mínimo</h2>
+        <p>Términos que aparecen en el documento, explicados en una línea.</p>
+      </div>
+    </div>
+
+    <div class="glossary">
+      <dl class="term"><dt>ERP</dt><dd>Sistema central que integra varias áreas del negocio.</dd></dl>
+      <dl class="term"><dt>POS</dt><dd>Punto de venta: la tienda o caja donde se arma y cobra un pedido.</dd></dl>
+      <dl class="term"><dt>MVP / Maqueta</dt><dd>Versión inicial incompleta, hecha para validar la idea.</dd></dl>
+      <dl class="term"><dt>Pipeline</dt><dd>Secuencia de etapas por las que pasa un pedido.</dd></dl>
+      <dl class="term"><dt>Picking</dt><dd>Alistamiento físico de productos en bodega.</dd></dl>
+      <dl class="term"><dt>Endpoint</dt><dd>Puerta de comunicación entre la interfaz y el servidor.</dd></dl>
+      <dl class="term"><dt>API</dt><dd>Conjunto de reglas que permite que dos programas se comuniquen.</dd></dl>
+      <dl class="term"><dt>Token / JWT</dt><dd>Credencial digital que confirma que un usuario ya inició sesión.</dd></dl>
+      <dl class="term"><dt>Multiempresa / Multi-tenant</dt><dd>Un mismo sistema atiende a varias empresas separadas.</dd></dl>
+      <dl class="term"><dt>R2</dt><dd>Servicio de almacenamiento de archivos en la nube.</dd></dl>
+      <dl class="term"><dt>Cartera</dt><dd>Control de cupos, saldos y recaudo de clientes con crédito.</dd></dl>
+      <dl class="term"><dt>Aging</dt><dd>Clasificación de la deuda por antigüedad de pago.</dd></dl>
+    </div>
+  </section>
+
+</main>
+
+<!-- =========================================================
+     FOOTER
+     ========================================================= -->
+<footer>
+  <p>
+    <strong>IP Online · Introducción para no desarrolladores.</strong>
+    Documento consolidado del estado actual del sistema para el refactor: estructura, lógica,
+    procesos, endpoints y modelos. Sin datos personales reales ni credenciales.
+  </p>
+  <p style="margin-top:10px;">
+    Documentos de apoyo: <em>documentación detallada de endpoints</em>, <em>recorrido vista por vista</em> y
+    <em>reporte de reconocimiento funcional</em>.
+  </p>
+</footer>
+
+<!-- Botón volver arriba -->
+<button id="to-top" aria-label="Volver arriba" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<script>
+/* =========================================================
+   1. ACORDEÓN DE FLUJOS
+   ========================================================= */
+function toggleFlow(header) {
+  const flow = header.closest('.flow');
+  flow.classList.toggle('open');
+}
+
+/* =========================================================
+   2. FILTRO DE LA TABLA DE ESTADO
+   ========================================================= */
+const filterButtons = document.querySelectorAll('.filter-btn');
+const rows = document.querySelectorAll('#status-table tbody tr');
+
+filterButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    filterButtons.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    const filter = btn.dataset.filter;
+    rows.forEach(row => {
+      const level = row.dataset.level;
+      const show = (filter === 'all') || (level === filter);
+      row.style.display = show ? '' : 'none';
+    });
+  });
+});
+
+/* =========================================================
+   3. SCROLL SPY (resaltar enlace activo)
+   ========================================================= */
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.nav-link');
+
+const spy = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const id = entry.target.id;
+      navLinks.forEach(link => {
+        link.classList.toggle('active', link.getAttribute('href') === '#' + id);
+      });
+    }
+  });
+}, { rootMargin: '-45% 0px -50% 0px', threshold: 0 });
+
+sections.forEach(section => spy.observe(section));
+
+/* =========================================================
+   4. BARRA DE PROGRESO Y BOTÓN VOLVER ARRIBA
+   ========================================================= */
+const progressBar = document.getElementById('progress-bar');
+const toTop = document.getElementById('to-top');
+const navbar = document.getElementById('navbar');
+
+function onScroll() {
+  const scrollTop = window.scrollY;
+  const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+  const progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+  progressBar.style.width = progress + '%';
+
+  toTop.classList.toggle('show', scrollTop > 500);
+  navbar.classList.toggle('scrolled', scrollTop > 10);
+}
+
+window.addEventListener('scroll', onScroll, { passive: true });
+onScroll();
+
+/* =========================================================
+   5. NAVEGACIÓN SUAVE (refuerzo para navegadores antiguos)
+   ========================================================= */
+navLinks.forEach(link => {
+  link.addEventListener('click', (e) => {
+    const target = document.querySelector(link.getAttribute('href'));
+    if (target) {
+      e.preventDefault();
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+});
+</script>
+
+</body>
+</html>

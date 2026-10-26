@@ -1,0 +1,12 @@
+/* LoginForm.css · estilos del formulario del login (copia del diseño de importadora-online) · solo usa tokens de styles/tokens.css */
+.login-form {
+  width: 500px;
+  margin-left: 5rem;
+}
+
+.login-form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: 2.5rem;
+}

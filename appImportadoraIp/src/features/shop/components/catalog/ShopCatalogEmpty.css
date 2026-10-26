@@ -1,0 +1,53 @@
+/* ShopCatalogEmpty.css · estilos del estado vacío del catálogo · solo usa tokens de styles/tokens.css */
+/* ojo: antes estas reglas estaban en ShopCatalogScreen.css (se separó para que cada archivo haga una sola cosa) */
+/* ==========================================================================
+   3. ESTADO VACÍO (EMPTY STATE)
+   ========================================================================== */
+
+.shop-catalog-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem var(--space-6);
+  background: var(--bg-card, var(--c-white));
+  border: 1px dashed var(--color-border, var(--c-slate-300));
+  border-radius: var(--radius-lg);
+  text-align: center;
+}
+
+.shop-catalog-empty-state-icon {
+  font-size: var(--text-icon);
+  margin-bottom: var(--space-3);
+}
+
+.shop-catalog-empty-state-title {
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary, var(--c-slate-900));
+  margin-bottom: 0.375rem;
+}
+
+.shop-catalog-empty-state-desc {
+  font-size: var(--text-md);
+  color: var(--color-text-secondary, var(--c-slate-500));
+  max-width: 400px;
+  margin-bottom: 1.25rem;
+}
+
+.shop-catalog-empty-state-btn {
+  background: var(--c-blue-600);
+  color: var(--c-white);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 0.625rem 1.25rem;
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  box-shadow: var(--shadow-rest);
+  transition: background var(--motion-fast);
+}
+
+.shop-catalog-empty-state-btn:hover {
+  background: var(--c-blue-700);
+}

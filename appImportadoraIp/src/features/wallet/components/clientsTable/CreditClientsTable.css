@@ -1,0 +1,72 @@
+/* CreditClientsTable.css · estilos de la tabla de clientes · solo usa tokens de styles/tokens.css */
+/* src/features/wallet/components/CreditClientsTable.css */
+
+.credit-table-clients-card {
+  background: var(--bg-card, var(--c-white));
+  border: 1px solid var(--color-border, var(--c-slate-200));
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-rest);
+  display: flex;
+  flex-direction: column;
+}
+
+/* KPIs integrados en la tarjeta única */
+.credit-table-kpis-wrapper {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border, var(--c-slate-200));
+  background: var(--bg-card, var(--c-white));
+}
+
+/* Table */
+.credit-table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.credit-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: var(--text-sm);
+}
+
+.credit-table th {
+  background: var(--c-slate-50);
+  color: var(--color-text-secondary, var(--c-slate-500));
+  font-weight: var(--font-weight-semibold);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border, var(--c-slate-200));
+  white-space: nowrap;
+}
+
+.credit-table td {
+  padding: 0.875rem var(--space-4);
+  border-bottom: 1px solid var(--color-border, var(--c-slate-100));
+  vertical-align: middle;
+}
+
+/* Empty State */
+.credit-table-empty-td {
+  padding: 3rem var(--space-4);
+  text-align: center;
+}
+
+.credit-table-empty-text {
+  color: var(--color-text-secondary, var(--c-slate-500));
+  font-size: var(--text-md);
+  margin-bottom: var(--space-2);
+}
+
+.credit-table-reset-link {
+  background: none;
+  border: none;
+  color: var(--c-blue-600);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+}
+
+.credit-table .credit-table-align-right {
+  text-align: right;
+}

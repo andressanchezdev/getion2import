@@ -1,0 +1,36 @@
+/* ProductCardMedia.css · estilos de la imagen y de los iconos flotantes de la tarjeta · solo usa tokens de styles/tokens.css */
+
+.product-card-media {
+    position: relative;
+    width: 100%;
+    min-height: var(--product-card-media-height);
+    padding: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.product-card-image {
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: var(--product-card-media-height);
+    object-fit: contain;
+    border-radius: var(--radius-sm);
+}
+
+.product-card-emoji {
+    font-size: var(--size-product-card-emoji);
+    line-height: 1;
+    user-select: none;
+}
+
+/* icono de tarifas flotante sobre la imagen, en la esquina superior derecha */
+.product-card-floating-actions {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: var(--z-dropdown);
+    display: flex;
+    flex-direction: column;
+}

@@ -1,0 +1,98 @@
+/* FormInputs.css · estilos de inputs blindados de formulario · tokens de styles/tokens.css */
+.form-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  width: 100%;
+}
+
+.form-field-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.form-field-label {
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.form-field-required {
+  color: var(--color-danger);
+  font-weight: var(--font-weight-bold);
+}
+
+.form-field-counter {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-mono);
+}
+
+.form-field-counter-warning {
+  color: var(--color-danger);
+  font-weight: var(--font-weight-semibold);
+}
+
+.form-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.form-input-control {
+  width: 100%;
+  height: 2.375rem;
+  padding: 0 0.75rem;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: border-color var(--duration-fast) var(--ease-default), box-shadow var(--duration-fast) var(--ease-default);
+}
+
+.form-input-control:hover:not(:disabled) {
+  border-color: var(--color-text-secondary);
+}
+
+.form-input-control:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-light);
+}
+
+.form-input-control:disabled {
+  background-color: var(--bg-surface-secondary);
+  color: var(--color-text-disabled);
+  cursor: not-allowed;
+}
+
+.form-input-error {
+  border-color: var(--color-danger) !important;
+  background-color: var(--color-danger-light);
+}
+
+.form-input-error:focus {
+  box-shadow: 0 0 0 2px var(--color-danger-light);
+}
+
+.form-field-error-msg {
+  font-size: var(--text-xs);
+  color: var(--color-danger);
+  margin-top: 0.125rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  line-height: var(--leading-tight);
+}
+
+.form-field-helper-msg {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  margin-top: 0.125rem;
+}

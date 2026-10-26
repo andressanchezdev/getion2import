@@ -1,0 +1,17 @@
+/* ErpLayout.css · estilos del layout del ERP (header, cuerpo con menú, contenido y drawer) · solo usa tokens de styles/tokens.css */
+.store-app-layout {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100%;
+    overflow: hidden;
+    background-color: var(--bg-app);
+    color: var(--color-text-primary);
+    user-select: none;
+}
+
+.store-app-body {
+    display: flex;
+    flex: 1 1 0%;
+    overflow: hidden;
+}

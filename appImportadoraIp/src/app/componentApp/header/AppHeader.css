@@ -1,0 +1,86 @@
+/* AppHeader.css · estilos de la barra superior · solo usa tokens de styles/tokens.css */
+.app-header {
+  height: var(--header-height);
+  background-color: var(--bg-header);
+  border-bottom: 1px solid var(--color-border);
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: var(--z-header);
+  box-shadow: 0 1px 3px var(--alpha-black-2);
+}
+
+/* Marca / Logo */
+.app-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.app-header-logo {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: var(--font-weight-black);
+  color: var(--c-white);
+  font-size: var(--text-md);
+  letter-spacing: var(--tracking-tight);
+}
+
+.app-header-title {
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  line-height: var(--leading-snug);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.app-header-badge {
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+}
+
+/* Controles y Acciones */
+.app-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Botón Configuración (Engranaje) */
+.app-header-settings-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-sm);
+  background-color: transparent;
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-default), border-color var(--duration-fast) var(--ease-default);
+}
+
+.app-header-settings-btn:hover {
+  background-color: var(--color-bg-hover);
+  border-color: var(--color-text-secondary);
+}
+
+.app-header-settings-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+

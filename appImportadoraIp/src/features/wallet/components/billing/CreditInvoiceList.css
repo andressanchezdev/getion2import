@@ -1,0 +1,30 @@
+/* CreditInvoiceList.css · estilos de la sección de facturas pendientes · solo usa tokens de styles/tokens.css */
+/* ojo: antes estas reglas estaban en CreditAccountDrawer.css (se separó para que cada archivo haga una sola cosa) */
+/* Invoices */
+.credit-drawer-invoices-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.credit-drawer-invoices-section-title {
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary, var(--c-slate-900));
+}
+
+.credit-drawer-invoices-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.credit-drawer-invoices-empty {
+  padding: var(--space-5);
+  text-align: center;
+  background: var(--c-slate-50);
+  border: 1px dashed var(--color-border, var(--c-slate-300));
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--c-slate-600);
+}

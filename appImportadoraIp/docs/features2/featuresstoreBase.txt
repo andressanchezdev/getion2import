@@ -1,0 +1,615 @@
+IP ONLINE - FEATURES BASE
+=========================
+
+Proposito
+---------
+Este archivo documenta el codigo fuente existente en src/features del repositorio importadora-online. Sirve como mapa para seleccionar e integrar capacidades en el proyecto nuevo. No copia ni activa logica de negocio. Los nombres de futuras funciones, endpoints y acciones deben definirse al integrar cada capacidad.
+
+Alcance verificado: 65 directorios de features y 1.030 archivos en el repositorio fuente. El arbol de carpetas se replica como referencia; las pruebas existentes no se trasladan. La descripcion indica la responsabilidad predominante, no garantiza que toda accion de ese modulo este conectada al backend.
+
+NIVELES Y PATRONES
+------------------
+CLASICO: pantalla, tabla, modal o adaptador de presentacion con pocas capas. Puede consumir datos mock.
+INTERMEDIO: varias pantallas/componentes, servicio o interaccion coordinada, pero sin gran estado global propio.
+COMPLEJO: estado compartido, multiples operaciones asincronas, flujos por pasos o dependencia amplia entre features.
+
+Patrones mencionados:
+- Ruta -> pantalla -> componentes/slots: modulo visible navegable y armado por piezas.
+- API -> service -> thunk -> slice -> selector -> UI: flujo de datos con Redux Toolkit.
+- Modal por pasos: componente orquestador, mapa de transiciones y pantallas independientes.
+- Estado local: estado React del contenedor pasado a sus pantallas mediante props.
+- Tabla compuesta: datos transformados en filas y celdas reutilizables.
+
+A. INVENTARIO COMPLETO DE FEATURES
+==================================
+
+1. accessPermissions | COMPLEJO
+Funcion: lista empleados y permisos de acceso; al seleccionar empleado abre gestion de sucursales/permisos.
+Composicion: pantalla/tabla -> thunk con cache -> service -> API -> slice/selectors; composicion con modalBranchesPayments.
+Carpetas: api, components, routes, selectors, services, slices, thunks, types.
+Nota: el endpoint abierto hace POST; su README lo describe como GET. Verificar contrato antes de portar.
+
+2. auth | INTERMEDIO
+Funcion: autenticacion, rutas de login, servicios y estado de sesion.
+Composicion: rutas/pantallas -> services/API -> slice; la sesion se registra como state.user.
+Carpetas: api, components, helpers, routes, services, slices, types.
+
+3. brands | COMPLEJO
+Funcion: crear, listar, buscar y editar marcas con formulario, imagenes y navegacion del modal.
+Composicion: API/service -> thunks/slice/selectors -> estrategias -> screens/templates/componentes; modal multipaso.
+Carpetas: api, components/organisms, components/template, hooks, screen, selectors, service, slices, strategies, thunks, types.
+
+4. brandsTable | CLASICO
+Funcion: pantalla/tabla de marcas y controles de su encabezado y pie.
+Composicion: ruta -> tabla/pantalla + slots reutilizados por el header global; abre brands.
+Carpetas: routes, slots, types.
+
+5. carriers | INTERMEDIO
+Funcion: listado visual de transportadoras con contacto, ubicacion, integracion y estado.
+Composicion: ruta -> pantalla -> tabla compartida -> celdas + slots. Hoy la tabla usa mockCarriers; no tiene API/slice propios.
+Carpetas: components, routes, screens, services, slots, types.
+
+6. cashRegister | INTERMEDIO
+Funcion: listado y gestion visual de pedidos en caja.
+Composicion: ruta -> screens/components -> helpers/tipos; la pantalla de tabla usa datos mock.
+Carpetas: components, helpers, routes, screens, types.
+
+7. categories | COMPLEJO
+Funcion: CRUD de categorias, grupos y referencias asociadas.
+Composicion: modal multipaso -> screens/templates -> estrategias -> thunks -> services/API; borrador y seleccion en Redux.
+Carpetas: api, components/organisms, components/template, hooks, screen, selectors, service, slices, strategies, thunks, types.
+
+8. categoriesTable | CLASICO
+Funcion: tabla de categorias y acciones de interfaz.
+Composicion: ruta -> tabla + slots, que llaman al feature categories.
+Carpetas: routes, slots, types.
+
+9. customerControl | INTERMEDIO
+Funcion: vista de control/listado de clientes.
+Composicion: ruta -> pantalla/componentes + helpers; actualmente importa datos mock.
+Carpetas: components, helpers, routes, screens, types.
+
+10. customersToBeVerified | INTERMEDIO
+Funcion: listado de clientes que requieren verificacion.
+Composicion: ruta -> pantalla -> helper con datos mock; el modal de verificacion consume ese mismo origen.
+Carpetas: helpers, routes, screens, types.
+
+11. employees | CLASICO
+Funcion: tabla de empleados con nacionalidad, contacto, residencia y estado laboral.
+Composicion: ruta -> tabla -> componentes compartidos; importa employeesMock.json directamente, no consulta API.
+Carpetas: components/organism, routes, services, slots, types.
+
+12. families | COMPLEJO
+Funcion: CRUD y consulta de familias de productos.
+Composicion: API/service -> thunks/slice/selectors -> pantalla/componentes.
+Carpetas: api, components/organisms, components/templates, screen, selectors, service, slices, thunks, types.
+
+13. filterByDate | INTERMEDIO
+Funcion: selector de fechas y filtros rapidos compartidos por reportes/movimientos.
+Composicion: helpers/hooks -> pantallas de seleccion; consumido desde otros features.
+Carpetas: helpers, hooks, screens, types.
+
+14. groups | COMPLEJO
+Funcion: CRUD de grupos de productos.
+Composicion: modal/pantallas -> slice/thunks -> services; actualmente los services de listar/crear/editar simulan respuestas, no llaman API.
+Carpetas: components/template, hooks, screen, selectors, service, slices, strategies, thunks, types.
+
+15. groupsTable | CLASICO
+Funcion: tabla/listado de grupos y acciones de interfaz.
+Composicion: ruta -> tabla + slots que invocan groups.
+Carpetas: routes, slots, types.
+
+16. incomeTransfer | INTERMEDIO
+Funcion: consulta/gestion de transferencia de ingresos.
+Composicion: API/services -> thunks/slice/selectors -> ruta y componente de pantalla.
+Carpetas: api, hooks, routes, selectors, services, slices, thunks, types.
+
+17. inmediatePicking | INTERMEDIO
+Funcion: pantalla/ruta de picking inmediato.
+Composicion: ruta -> pantalla -> service; actualmente usa JSON mock.
+Carpetas: routes, services, types.
+
+18. inventoryControl | COMPLEJO
+Funcion: pantalla principal para control/listado de inventario y operaciones relacionadas.
+Composicion: ruta -> screens/components/slots -> API/services -> thunks/slice/selectors.
+Carpetas: api, components/atoms, helpers, routes, screens, selectors, services, slices, slots, thunks, types.
+
+19. locations | COMPLEJO
+Funcion: CRUD/consulta de ubicaciones.
+Composicion: API/services -> thunks/slice/selectors/hooks -> screens/components/templates; modal de gestion.
+Carpetas: api, components/molecules, components/organisms, components/template, hooks, screen, selectors, services, slices, thunks, types.
+
+20. locationsTable | CLASICO
+Funcion: tabla/listado de ubicaciones y controles de interfaz.
+Composicion: ruta -> tabla + slots; usa el feature locations.
+Carpetas: routes, slots, types.
+
+21. modalBranchesPayments | COMPLEJO
+Funcion: asignar sucursales, cargos/modulos y permisos a empleados.
+Composicion: modal multipantalla -> hooks/services/API/thunks/slices/selectors. El listado de modulos y la accion guardar tienen mocks; una carga de permisos si llama al servicio API.
+Carpetas: api, helpers, hooks, screens, selectors, services, slices, thunks, types.
+
+22. modalCarriers | CLASICO
+Funcion: modal de detalle/gestion visual de transportadoras.
+Composicion: wrapper -> pantalla(s), consumido desde carriers.
+Carpetas: screens, types.
+
+23. modalCashRegister | INTERMEDIO
+Funcion: detalle de caja, cliente, direcciones y edicion de carrito.
+Composicion: modal -> screens/components/hooks/services; parte de la informacion es mock local.
+Carpetas: components, hooks, screens, services, types.
+
+24. modalClientsAllCreateUser | CLASICO
+Funcion: alta de usuario desde el flujo de clientes.
+Composicion: modal wrapper -> pantalla + tipos.
+Carpetas: screens, types.
+
+25. modalCustomerControlProfile | INTERMEDIO
+Funcion: perfil de cliente y operaciones de consulta/retiro relacionadas.
+Composicion: modal -> muchas pantallas; algunos destinos, origenes y recibos estan mockeados dentro de TSX.
+Carpetas: screens, types.
+
+26. modalCustomerManagementMode | COMPLEJO
+Funcion: buscar, crear, editar y reasignar clientes; maneja datos personales, direccion y documentos.
+Composicion: API/services -> thunks/slice/selectors/hooks/helpers -> modal multipantalla y formularios.
+Carpetas: api, components, helpers, hooks, screens, selectors, services, slices, thunks, types.
+
+27. modalDownloadPriceList | INTERMEDIO
+Funcion: preparar y descargar una lista de precios.
+Composicion: modal/pantalla -> hook de descarga; vinculado a datos de shop.
+Carpetas: hooks, screens, types.
+
+28. modalEmployees | COMPLEJO
+Funcion: flujo de administracion/registro de empleados y asignaciones.
+Composicion: modal multipantalla -> API/services/thunks/slices/selectors/hooks/helpers; incluye datos mock de cargos y usuario en algunas vistas.
+Carpetas: api, helpers, hooks, screens, selectors, services, slices, thunks, types.
+
+29. modalFilterInventoryControl | CLASICO
+Funcion: interfaz compacta de filtros para inventario.
+Composicion: modal wrapper/tipos; consume datos de catalogos.
+Carpetas: types.
+
+30. modalFilterMovements | CLASICO
+Funcion: elegir criterios/tipo de filtro de movimientos.
+Composicion: modal -> pantalla + tipos; se usa desde movementsTable.
+Carpetas: screen, types.
+
+31. modalFilterShop | CLASICO
+Funcion: interfaz de filtro de productos de tienda.
+Composicion: modal wrapper/tipos; consume catalogos.
+Carpetas: types.
+
+32. modalGeneralRelocation | INTERMEDIO
+Funcion: seleccionar ubicacion/productos para una relocalizacion general.
+Composicion: modal multipantalla -> Redux slices/thunks/selectors; la pantalla general importa el carrito mock.
+Carpetas: screens, selectors, slices, thunks, types.
+
+33. modalHistoryPayment | INTERMEDIO
+Funcion: mostrar registro/historial de pedido y pagos.
+Composicion: modal wrapper -> pantallas de historial/detalle.
+Carpetas: screens, types.
+
+34. modalIncomeTransfer | CLASICO
+Funcion: interfaz de detalle/operacion de transferencia de ingresos.
+Composicion: modal wrapper -> pantalla + tipos.
+Carpetas: screens, types.
+
+35. modalInmediatePicking | INTERMEDIO
+Funcion: pantallas de proceso para picking inmediato.
+Composicion: modal -> componentes/screens/services; existe JSON mock.
+Carpetas: components, screens, services, types.
+
+36. modalInventoryControl | COMPLEJO
+Funcion: alta y edicion de productos, proveedores, catalogo y ubicaciones.
+Composicion: orquestador modal con muchas pantallas y mapa de pasos; API/services + Redux/thunks/selectors + estrategias/hooks/helpers. Parte del estado/datos de proveedor y producto es mock.
+Carpetas: api, components/atom, components/molecules, components/organisms, constants, helpers, hooks, screens, selectors, services, slices, strategies, tests/selectors, tests/slices, thunks, types.
+Nota: no trasladar tests existentes al proyecto nuevo por ahora.
+
+37. modalOrderBadges | CLASICO
+Funcion: componentes de distintivos/estados de pedido.
+Composicion: wrapper -> componentes visuales.
+Carpetas: components.
+
+38. modalPayment | COMPLEJO
+Funcion: capturar pagos, seleccionar metodos, procesar transferencias y mostrar recibo/opciones.
+Composicion: modal por pasos con estado local React; distribuye datos/handlers a pantallas. No usa slice propio para el flujo principal.
+Carpetas: api, components, helpers, hooks, screens, services, styles, types, utils.
+
+39. modalProfile | INTERMEDIO
+Funcion: vistas y acciones del perfil del cliente.
+Composicion: modal wrapper -> screens/components; integra pantallas de descuentos.
+Carpetas: components, screens, types.
+
+40. modalReports | INTERMEDIO
+Funcion: detalle de reportes/picking con cantidades editables.
+Composicion: pantallas/componentes; Reports importa reportsData.json y modifica cantidades con estado local.
+Carpetas: components/molecules, components/organisms, screens, services, types.
+
+41. ModalSalesReportsCreditNote | CLASICO
+Funcion: modal de nota credito de un paso.
+Composicion: modal/shell + pantalla + tipos. Tiene una referencia desde un slot, pero no se encontro en la cadena estatica activa del router/header.
+Carpetas: screens, types.
+
+42. modalSalesReportsOrders | CLASICO
+Funcion: modal de detalle de pedidos en reportes de ventas.
+Composicion: wrapper -> pantalla + tipos.
+Carpetas: screens, types.
+
+43. modalSalesReportsPaymentsMethods | CLASICO
+Funcion: modal de detalle de metodos de pago en reportes.
+Composicion: wrapper -> pantalla + tipos.
+Carpetas: screens, types.
+
+44. modalSelectEmployee | INTERMEDIO
+Funcion: seleccionar empleado y consultar/editar permisos asociados.
+Composicion: pantalla + selectors/slice; contiene empleados/permisos iniciales mock.
+Carpetas: screens, selectors, slices, types.
+
+45. modalShoppingCart | COMPLEJO
+Funcion: carrito, cantidades, direcciones de entrega y finalizar venta.
+Composicion: API/services -> thunks + dos slices/selectors -> modal multipantalla; Redux Persist incluye carrito y direcciones.
+Carpetas: api, helpers, hooks, screens, selectors, services, slices, thunks, types.
+
+46. modalSuppliers | CLASICO
+Funcion: interfaz/modal de proveedores.
+Composicion: wrapper -> pantallas + tipos; la lista principal suppliers vive en otro feature.
+Carpetas: screens, types.
+
+47. ModalToBeVerifiedVerification | INTERMEDIO
+Funcion: verificar cliente individual desde la lista de pendientes.
+Composicion: wrapper -> pantalla; consume datos mock de customersToBeVerified.
+Carpetas: screens, types.
+
+48. modalTransfer | INTERMEDIO
+Funcion: transferir entre bodegas/sucursales.
+Composicion: API/services -> thunks/slice -> pantallas; el estado de bodegas se registra globalmente.
+Carpetas: api, helpers, screens, services, slices, thunks, types.
+
+49. modalVerifiedPayment | INTERMEDIO
+Funcion: revisar/verificar pagos.
+Composicion: screens/components/hooks + slice local al dominio.
+Carpetas: components, hooks, screens, slices, types.
+
+50. modelsProducts | COMPLEJO
+Funcion: CRUD de modelos asociados a productos.
+Composicion: API/services -> thunks/slice/selectors -> strategies/hooks/screens/components.
+Carpetas: api, components/organism, components/template, hooks, screen, selectors, services, slices, strategies, thunks, types.
+
+51. modelsTable | CLASICO
+Funcion: tabla/listado de modelos y controles de interfaz.
+Composicion: ruta -> tabla + slots; utiliza modelsProducts.
+Carpetas: routes, slots, types.
+
+52. movementsTable | INTERMEDIO
+Funcion: tabla de movimientos, detalle interno y seleccion para vistas relacionadas.
+Composicion: tabla -> componentes/slots -> slice/selectors/services; las pantallas/services revisados usan JSON local en vez de API.
+Carpetas: components/atoms, components/molecules, routes, screens, selectors, services, slices, slots, types.
+
+53. onlinePayments | INTERMEDIO
+Funcion: tabla/listado de pagos en linea.
+Composicion: ruta -> screen/componentes/services; la pantalla importa mockOnlinePayments.
+Carpetas: components, routes, screens, services, types.
+
+54. orderHistory | INTERMEDIO
+Funcion: historial de pedidos con carga asincrona.
+Composicion: API/services -> thunks/slice -> ruta y pantalla.
+Carpetas: api, routes, services, slice, thunks, types.
+
+55. orderRecord | INTERMEDIO
+Funcion: detalle, historial y generacion de documentos PDF de pedidos.
+Composicion: ruta -> screens/components/hooks -> services/API.
+Carpetas: api, components, hooks, routes, screens, services, types.
+
+56. paymentRecord | INTERMEDIO
+Funcion: historial/listado de pagos.
+Composicion: ruta -> pantalla/componentes; hoy importa mockData.json desde wallet.
+Carpetas: components, routes, screens, types.
+
+57. pending | INTERMEDIO
+Funcion: listar y operar pedidos pendientes.
+Composicion: API/services -> thunks/slice/selectors/hooks -> componentes/ruta.
+Carpetas: api, components, hooks, routes, selectors, services, slice, thunks, types.
+
+58. relocation | INTERMEDIO
+Funcion: vista/listado de relocalizacion.
+Composicion: ruta -> pantalla/componentes/service; pantalla importa mockRelocation.json.
+Carpetas: components, routes, services, types.
+
+59. reportsTable | INTERMEDIO
+Funcion: tabla/listado de reportes.
+Composicion: ruta -> screens/components/slots -> slice/selectors/service; getReportsService devuelve JSON mock.
+Carpetas: components/atoms, routes, screens, selectors, services, slices, slots, types.
+
+60. salesReports | COMPLEJO
+Funcion: reportes de ventas, filtros y vistas relacionadas.
+Composicion: API/services -> thunks/slice/selectors/hooks -> rutas/pantallas/componentes; usa filterByDate.
+Carpetas: api, components, hooks, routes, screens, selectors, services, slices, thunks, types.
+
+61. search | INTERMEDIO
+Funcion: busqueda compartida usada por pantallas y slots de distintas areas.
+Composicion: servicio + slice + componente exportado; feature transversal.
+Carpetas: components, services, slices, types.
+
+62. shop | COMPLEJO
+Funcion: catalogo de tienda, busqueda/filtros de productos y orden de productos.
+Composicion: API/services -> thunks/slices/selectors/hooks/helpers -> rutas/componentes. Incluye tests propios que no se copiaran.
+Carpetas: api, components, helpers, hooks, routes, selectors, services, slices, tests/fixtures, tests/selectors, tests/slices, thunks, types.
+
+63. suppliers | INTERMEDIO
+Funcion: listado visual de proveedores.
+Composicion: ruta -> tabla/screens/components/slots; actualmente la pantalla consume mockSuppliers.
+Carpetas: components, routes, screens, services, slots, types.
+
+64. userControl | COMPLEJO
+Funcion: administracion de usuarios/roles.
+Composicion: API/services -> thunks/slice/selectors/hooks -> componentes y rutas; hay archivos mockRoles/mockUserControl.
+Carpetas: api, components, hooks, routes, selectors, services, slices, thunks, types.
+
+65. wallet | COMPLEJO
+Funcion: cartera general/interna, paginacion, filtros y detalle de saldos/pagos.
+Composicion: API/services -> hooks/helpers + slices; los services mezclan datos de API con mocks para ciertos escenarios.
+Carpetas: api, components, helpers, hooks, routes, screens, services, slices, types.
+
+B. ARBOL DE SRC DEL REPOSITORIO FUENTE
+=====================================
+La estructura principal a conservar al crear la app nueva es:
+
+src/
+  api/                     transporte HTTP, errores, headers y tipos de respuesta
+  app/store/               Redux global y hooks tipados
+  assets/                  recursos visuales de la aplicacion
+  features/                dominios/modulos; ver inventario anterior
+  global/                  componentes, layout, helpers, hooks, configuracion y tipos compartidos
+  routes/                  router raiz y proteccion de rutas
+  services/                servicios transversales (por ejemplo IndexedDB/WebSocket)
+  test/                    pruebas y utilidades de prueba del proyecto actual; NO copiar por ahora
+  AppInitializer.tsx       inicializacion transversal de la app
+  index.css                estilos globales
+  main.tsx                 punto de entrada React
+  tailwind.config.js       configuracion heredada de estilos
+  vite-env.d.ts            tipos de Vite
+
+Capas internas recomendadas para cada nuevo feature, solo cuando sean necesarias:
+  api/          llamada HTTP tipada; no contiene JSX ni reglas de presentacion
+  services/     adapta/cohesiona acceso a datos y reglas de aplicacion
+  thunks/       coordina async, dispatch y lectura de estado cuando usa Redux
+  slices/       estado y reducers sin llamadas HTTP
+  selectors/    consultas derivadas al RootState
+  hooks/        logica reutilizable de React
+  screens/      pantallas/composicion de interfaz
+  components/   piezas visuales especificas del dominio
+  routes/       rutas propias del dominio cuando correspondan
+  types/        contratos TS del feature
+  helpers/      transformaciones puras y utilidades locales
+  strategies/   variaciones de comportamiento intercambiables cuando existe ese caso
+
+No crear todas estas carpetas por plantilla obligatoria: comenzar por la necesidad concreta y evitar capas vacias.
+
+C. REDUX: COMO LEER Y EXTENDER EL STORE
+======================================
+En el store fuente:
+1. Cada slice del feature exporta su reducer.
+2. El objeto entregado a combineReducers forma rootReducer. Las claves del objeto son los nombres de state (por ejemplo state.categories), aunque el archivo importado tenga otro nombre.
+3. persistReducer(persistConfig, rootReducer) produce persistedReducer. Este wrapper rehidrata/guarda en storage solo las claves de whitelist.
+4. configureStore recibe persistedReducer y crea el store con middleware Redux Toolkit.
+5. persistStore(store) crea persistor; PersistGate espera la rehidratacion antes de mostrar la interfaz.
+
+Diferencia central:
+- combineReducers une reducers; no instala middleware ni hace persistencia.
+- rootReducer es el reducer combinado sin persistencia.
+- persistedReducer es rootReducer envuelto por redux-persist.
+- store es la instancia configurada; persistor administra persistencia.
+
+Whitelist fuente actual: users, user, directionsCart, orderedProducts, shoppingCart. No copiar esta lista automaticamente: cada dato debe justificarse segun sensibilidad, vigencia y necesidad de sobrevivir recargas. La app fuente guarda en localStorage.
+
+Integracion incremental propuesta:
+1. Crear/validar el slice dentro del feature autorizado.
+2. Importar su reducer en app/store/store.ts.
+3. Agregar una clave estable al objeto combineReducers.
+4. Actualizar tipos RootState/AppDispatch derivados del store.
+5. Agregar la clave a whitelist solo si se decide persistirla.
+6. Verificar selector, thunk, Provider y comportamiento de rehidratacion.
+
+No agregar reducers actuales de la aplicacion fuente hasta que se seleccione su funcionalidad. Un reducer importado que no exista en la nueva base hace fallar TypeScript/build.
+
+D. CONTRATO API PARA EL PROYECTO NUEVO
+=====================================
+Conservar el flujo conceptual de globalApiRequest. El objeto de cada solicitud debe expresar los campos acordados: data, endpoint, method y baseURL. El transporte central debe ocuparse de Axios/HTTP y el feature debe consumir la respuesta tipada a traves de sus capas.
+
+No inventar funciones, endpoints, acciones, slice keys o nombres de dominio en la nueva app. El usuario define los identificadores al seleccionar una capacidad. Las respuestas de API deben tiparse, tratar errores de forma consistente y separar adaptacion de datos de JSX.
+
+E. STACK: VERSIONES CONSULTADAS EN REGISTRO NPM
+==============================================
+Consulta realizada el 2026-10-14. Versiones latest observadas; comprobar nuevamente al iniciar porque las etiquetas cambian.
+
+BASE PARA LA ARQUITECTURA:
+  react                         19.3.1
+  react-dom                     19.3.1
+  react-router-dom              7.18.4
+  @reduxjs/toolkit              2.13.0
+  react-redux                   9.3.0
+  redux                         5.0.1 (peer requerido por react-redux)
+  redux-persist                 6.0.0
+  axios                         1.20.0
+  vite                          8.3.4
+  @vitejs/plugin-react-swc      4.3.3
+  tailwindcss                   4.3.3
+  @tailwindcss/vite              4.3.3
+  typescript                    6.0.3 (compatible con typescript-eslint; no usar TS 7.0.2 aun)
+
+HERRAMIENTAS DE DESARROLLO:
+  eslint                        10.12.0
+  @eslint/js                    10.0.1
+  typescript-eslint             8.71.2 (peer TypeScript >=4.8.4 <6.1.0)
+  eslint-plugin-react-hooks      7.1.1
+  eslint-plugin-react-refresh    0.5.7
+  globals                       17.13.0
+  @types/node                   26.6.5
+  @types/react                  19.3.0
+  @types/react-dom              19.3.0
+
+Instalar solo al integrar el caso de uso:
+  @hello-pangea/dnd              18.0.1
+  @hookform/resolvers            5.9.1
+  class-variance-authority       0.7.1
+  clsx                           2.1.1
+  framer-motion                  14.2.0
+  html2canvas                    1.4.1
+  jspdf                          4.2.1
+  lodash-es                      4.18.1
+  lucide-react                   1.57.0
+  react-csv                      2.2.2
+  react-hook-form                7.90.0
+  sweetalert2                    11.26.25
+  sweetalert2-react-content      5.1.2
+  tailwind-scrollbar             4.0.2 (peer Tailwind 4)
+  typescript-cookie              1.0.6
+  uuid                           14.0.3 (ESM; proyecto type module)
+  xlsx                           0.18.5 (ultima publicada en el registro consultado; no es una version reciente)
+
+TIPOS/PAQUETES A REVISAR ANTES DE AÑADIR:
+  @types/jspdf y @types/html2canvas: verificar si hacen falta; las versiones consultadas de las librerias pueden incluir tipos propios.
+  @types/react-csv y @types/lodash-es: instalar solo si esas librerias se integran.
+  No migrar pruebas ahora: vitest 5.0.4, jsdom 30.1.2, Testing Library 16.3.3, jest-dom 7.0.1, user-event 14.6.8, MSW 3.0.3 y @vitest/coverage-v8 5.0.4 quedan como opciones futuras, no dependencias iniciales.
+
+Compatibilidad consultada:
+- Node local v24.19.0 satisface Vite 8 y jsdom 30.
+- TypeScript latest consultado fue 7.0.2, pero typescript-eslint 8.71.2 declara soporte hasta <6.1.0. La seleccion conservadora compatible es TypeScript 6.0.3.
+- React Router latest es major 7; revisar imports y cambios de API antes de copiar codigo escrito para v6.
+- Vite 8 necesita Node ^20.19 o >=22.12; establecer Node 24 LTS para el equipo.
+- Version latest no significa necesariamente que debamos instalar la dependencia: instalar segun feature aprobado.
+
+F. DATOS MOCK QUE DEBEN TRATARSE COMO PENDIENTES
+===============================================
+Mocks de runtime identificados en la base: carriers/mockCarriers; cashRegister/mockCashRegisterData; customerControl/mockCustomerData; customersToBeVerified/mockCustomersToBeVerified; employees/employeesMock.json; groups (get/create/update services simulados); inmediatePicking/mockInmediatePicking.json; modalGeneralRelocation importa modalShoppingCart/mockDataCart.json; modalReports/reportsData.json; movementsTable/movementsData.json e internalMovementsData.json; onlinePayments/mockOnlinePayments; paymentRecord importa wallet/mockData.json; relocation/mockRelocation.json; reportsTable/mockReportsTable.json; suppliers/mockSuppliers.
+
+Mocks parciales: modalBranchesPayments usa catalogo mock de modulos y mock de guardado, pero carga de permisos va a API; modalCashRegister tiene carrito mock y datos locales; modalInventoryControl inicia proveedores desde mock y simula buscar proveedor/producto por ID, aunque otras operaciones de proveedor usan API; wallet mezcla respuestas reales con fixtures para ciertos registros.
+
+Los mocks de pruebas de shop y modalInventoryControl no se trasladan. Antes de usar cualquier mock en una nueva pantalla, sustituirlo o marcarlo conscientemente como fixture temporal.
+
+G. RUTA DE IMPLEMENTACION DEL PROYECTO NUEVO
+============================================
+1. El usuario ejecuta los comandos de inicio que decida; esta preparacion no ejecuta create-vite, npm install ni comandos destructivos.
+2. Preservar los archivos existentes en la carpeta destino, especialmente
+3. Establecer package.json/configuracion con el stack compatible de la seccion E.
+4. Crear el arbol src de la seccion B; excluir src/test y carpetas tests hasta nueva aprobacion.
+5. Integrar primero capas compartidas y el store vacio/gradual; despues agregar un feature seleccionado cada vez.
+6. Aprobar nombres de funciones/estado/endpoints antes de implementarlos. Mantener el objeto API acordado y mapear su respuesta hasta la pantalla.
+7. Por cada slice: registrar en rootReducer, decidir persistencia de forma explicita y validar build.
+8. Usar mocks solo como fixtures intencionales y no como respuesta de produccion.
+
+Este documento describe la estructura fuente y sirve como mapa. No implica que todos los features, reducers, mocks o pruebas deban incorporarse al proyecto nuevo.
+
+H. CREACION PASO A PASO EN appImportadoraIp
+==========================================
+Destino solicitado:
+  C:\Users\PERSONAL\Desktop\Importadora_P_react\GstionIp\appImportadoraIp
+
+El directorio estaba creado y vacio durante la revision. El terminal consultado seguia ubicado en el repositorio fuente, no en el destino. Antes de ejecutar cualquier comando, cambiar a la ruta del proyecto y confirmar el directorio actual.
+
+PASO 1 - ABRIR Y UBICARSE EN LA CARPETA
+En VS Code: Archivo > Abrir carpeta... y seleccionar appImportadoraIp. En la terminal PowerShell:
+
+  Set-Location -LiteralPath 'C:\Users\PERSONAL\Desktop\Importadora_P_react\GstionIp\appImportadoraIp'
+  Get-Location
+
+Confirmar que la salida termina exactamente en \GstionIp\appImportadoraIp. La carpeta debe estar vacia para el siguiente comando.
+
+PASO 2 - GENERAR PLANTILLA REACT + TYPESCRIPT + SWC
+
+  npm create vite@latest . -- --template react-swc-ts
+
+Este comando genera la base Vite, React, TypeScript y SWC. No usarlo sobre una carpeta que ya tenga un proyecto o archivos que se deban preservar. No sobrescribir la guia IP Online/documentacion existente.
+
+PASO 3 - INSTALAR DEPENDENCIAS DE LA PLANTILLA
+
+  npm install
+
+PASO 4 - INSTALAR PAQUETES PRINCIPALES DE APLICACION
+Comando para React, Router, Redux y cliente HTTP:
+
+  npm install react@19.3.1 react-dom@19.3.1 react-router-dom@7.18.4 @reduxjs/toolkit@2.13.0 react-redux@9.3.0 redux@5.0.1 redux-persist@6.0.0 axios@1.20.0
+
+Tailwind CSS 4 con integracion de Vite:
+
+  npm install tailwindcss@4.3.3 @tailwindcss/vite@4.3.3
+
+PASO 5 - HERRAMIENTAS TYPESCRIPT, VITE Y LINT
+Vite/React SWC/TypeScript y definiciones:
+
+  npm install -D vite@8.3.4 @vitejs/plugin-react-swc@4.3.3 typescript@6.0.3 @types/node@26.6.5 @types/react@19.3.0 @types/react-dom@19.3.0
+
+ESLint y plugin de TypeScript/React:
+
+  npm install -D eslint@10.12.0 @eslint/js@10.0.1 typescript-eslint@8.71.2 eslint-plugin-react-hooks@7.1.1 eslint-plugin-react-refresh@0.5.7 globals@17.13.0
+
+TypeScript 6.0.3 se fija porque typescript-eslint 8.71.2 declara compatibilidad con TypeScript menor que 6.1.0. No instalar TypeScript latest 7.0.2 en esta combinacion.
+
+PASO 6 - CREAR EL ARBOL DE src DESPUES DE GENERAR VITE
+La plantilla crea archivos iniciales src/main.tsx, src/App.tsx, etc. No reemplazarlos al copiar la estructura. Crear directorios sin copiar implementaciones fuente y sin copiar pruebas:
+
+  $source = 'C:\Users\PERSONAL\Desktop\Importadora_P_react\GstionIp\src'
+  $target = Join-Path (Get-Location).Path 'src'
+  Get-ChildItem $source -Directory -Recurse | ForEach-Object {
+    $relative = $_.FullName.Substring($source.Length).TrimStart('\')
+    $segments = $relative -split '[\\/]'
+    if ($segments -notcontains 'test' -and $segments -notcontains 'tests') {
+      $destination = Join-Path $target $relative
+      New-Item -ItemType Directory -Force -Path $destination | Out-Null
+    }
+  }
+
+La fuente aqui es la estructura vacia preparada como mapa. Una vez creado src/features en el proyecto nuevo, copiar unicamente el documento:
+
+  Copy-Item -LiteralPath (Join-Path $source 'features\featuresstoreBase.txt') -Destination (Join-Path $target 'features\featuresstoreBase.txt')
+
+No copiar src/test, carpetas tests ni modulos completos de negocio hasta aprobarlos. Revisar el arbol de directorios en Explorer antes de continuar.
+
+PASO 7 - CONFIGURAR CAPAS SIN CREAR LOGICA NO APROBADA
+1. Mantener src/api para transporte compartido y errores.
+2. Mantener src/app/store para store, reducers y hooks tipados.
+3. Mantener src/features para modulos por dominio, con subcarpetas solo cuando ese feature las necesite.
+4. Mantener src/global para elementos transversales de UI, layout, helpers, hooks, configuracion y tipos.
+5. Mantener src/routes para el router raiz/proteccion y src/services para servicios transversales.
+6. Mantener AppInitializer.tsx, main.tsx e index.css como bootstrap/estilos globales.
+7. No integrar pruebas en esta etapa.
+
+PASO 8 - VALIDAR EL SCAFFOLD
+Los scripts del package generado pueden diferir de los del repositorio fuente. Confirmar scripts antes de ejecutar. Al integrar los scripts acordados, validar en este orden:
+
+  npm run build
+  npm run lint
+
+El comando dev se ejecuta solo cuando se quiera iniciar el servidor local. No se ha ejecutado ningun comando de creacion, instalacion o inicio desde esta preparacion.
+
+I. COMANDOS PARA LIBRERIAS OPCIONALES
+====================================
+No instalar estas librerias hasta seleccionar un feature que las use. Versiones latest observadas en npm el 2026-10-14.
+
+Formularios:
+  npm install react-hook-form@7.90.0 @hookform/resolvers@5.9.1
+
+Utilidades de UI y clases:
+  npm install class-variance-authority@0.7.1 clsx@2.1.1 lucide-react@1.57.0 framer-motion@14.2.0
+
+Drag and drop:
+  npm install @hello-pangea/dnd@18.0.1
+
+Alertas:
+  npm install sweetalert2@11.26.25 sweetalert2-react-content@5.1.2
+
+Exportacion de archivos:
+  npm install react-csv@2.2.2 jspdf@4.2.1 html2canvas@1.4.1 xlsx@0.18.5
+
+Otros:
+  npm install lodash-es@4.18.1 typescript-cookie@1.0.6 uuid@14.0.3 tailwind-scrollbar@4.0.2
+
+Notas de compatibilidad:
+- uuid 14 es ESM; el proyecto Vite usa modulos ES.
+- tailwind-scrollbar 4.0.2 declara peer Tailwind CSS 4.x.
+- xlsx 0.18.5 fue la version latest que devolvio npm en la fecha de consulta, aunque su numero de version es antiguo; revisar mantenimiento/seguridad antes de llevar datos reales.
+- Los paquetes @types/jspdf y @types/html2canvas no se incluyen en la instalacion base; comprobar primero si la version elegida ya ofrece tipos.
+- Si TypeScript pide definiciones adicionales para react-csv o lodash-es, instalar: npm install -D @types/react-csv@1.1.10 @types/lodash-es@4.17.12.
+
+PRUEBAS - NO INSTALAR EN ESTA ETAPA
+Cuando se apruebe incorporar pruebas, las versiones latest consultadas fueron Vitest 5.0.4, @vitest/ui 5.0.4, @vitest/coverage-v8 5.0.4, jsdom 30.1.2, @testing-library/react 16.3.3, @testing-library/dom 10.4.2, @testing-library/jest-dom 7.0.1, @testing-library/user-event 14.6.8 y MSW 3.0.3. No copiar ni activar src/test o tests de features por ahora.

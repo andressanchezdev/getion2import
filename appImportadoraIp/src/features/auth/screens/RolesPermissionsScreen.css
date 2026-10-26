@@ -1,0 +1,111 @@
+/* RolesPermissionsScreen.css · estilos de la matriz de roles y permisos jerárquicos */
+.permissions-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.25rem;
+}
+
+.permissions-header-card {
+  background-color: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.permissions-selector-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 320px;
+}
+
+.permissions-label {
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+}
+
+.permissions-select {
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+}
+
+.permissions-matrix-card {
+  background-color: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.permissions-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.permissions-table th {
+  background-color: var(--color-bg-muted);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-semibold);
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  text-align: center;
+}
+
+.permissions-table th:first-child {
+  text-align: left;
+}
+
+.permissions-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  text-align: center;
+  color: var(--color-text-primary);
+}
+
+.permissions-table td:first-child {
+  text-align: left;
+}
+
+.permissions-module-header {
+  background-color: var(--color-bg-muted);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+}
+
+.permissions-subitem-row {
+  background-color: var(--color-bg-surface);
+}
+
+.permissions-subitem-name {
+  padding-left: 1.5rem !important;
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+}
+
+.permissions-checkbox {
+  width: 1.125rem;
+  height: 1.125rem;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+.permissions-empty {
+  padding: 3rem;
+  text-align: center;
+  color: var(--color-text-muted);
+}

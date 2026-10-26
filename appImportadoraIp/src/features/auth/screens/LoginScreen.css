@@ -1,0 +1,26 @@
+/* LoginScreen.css · estilos de la pantalla de login (copia del diseño de importadora-online) · solo usa tokens de styles/tokens.css */
+.login-screen {
+  width: 100%;
+  height: 100vh;
+  background-image: url('../../../assets/images/login-fondo.webp');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.login-screen-section {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* panel blanco con el corte diagonal a la izquierda */
+.login-screen-panel {
+  width: 60%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--c-white);
+  clip-path: polygon(23% 0%, 100% 0%, 100% 100%, 0% 100%);
+}

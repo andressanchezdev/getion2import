@@ -1,0 +1,15 @@
+/* LoginWelcome.css · estilos del saludo del login (copia del diseño de importadora-online) · solo usa tokens de styles/tokens.css */
+.login-welcome {
+  margin-top: 3.75rem;
+}
+
+.login-welcome-title {
+  font-size: var(--text-display);
+  font-weight: var(--font-weight-extrabold);
+  line-height: 1;
+  color: var(--c-brand-yellow);
+}
+
+.login-welcome-text {
+  color: var(--alpha-brand-charcoal-60);
+}

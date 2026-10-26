@@ -1,0 +1,33 @@
+/* CreditAccountEmpty.css · estilos del mensaje cuando no hay cliente seleccionado · solo usa tokens de styles/tokens.css */
+/* ojo: antes estas reglas estaban en CreditAccountDrawer.css (se separó para que cada archivo haga una sola cosa) */
+/* Empty Drawer State */
+.credit-drawer-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3.5rem var(--space-5);
+  text-align: center;
+  height: 100%;
+}
+
+.credit-drawer-empty-icon {
+  width: 40px;
+  height: 40px;
+  opacity: 0.4;
+  margin-bottom: var(--space-3);
+}
+
+.credit-drawer-empty-text {
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary, var(--c-slate-900));
+  margin-bottom: var(--space-1);
+}
+
+.credit-drawer-empty-hint {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary, var(--c-slate-500));
+  max-width: 220px;
+  line-height: var(--leading-normal);
+}
