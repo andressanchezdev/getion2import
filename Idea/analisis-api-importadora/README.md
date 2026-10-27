@@ -132,7 +132,8 @@ Qué hace y qué no:
 ## Documentos principales
 
 - [DOCUMENTACION-API.md](DOCUMENTACION-API.md): referencia validada de los 189 endpoints.
-- [PLAN-V3.md](PLAN-V3.md): plan en tres fases (base de datos, API en Go, frontend) con integración SIIGO.
-- [V3-esquema-borrador.sql](V3-esquema-borrador.sql): script completo de la base de datos de la V3 (70 tablas), ejecutado en PostgreSQL 18.6.
-- [pruebas-bd/](pruebas-bd/README.md): los 101 escenarios con los que se probó el script y cómo repetirlos (`npm install` y `npm test`).
-- [MAQUETA-V3.html](MAQUETA-V3.html): maqueta de cuatro pestañas (la aplicación, la base de datos, el script SQL y la estructura del frontend).
+- [PLAN-V3.md](PLAN-V3.md): plan en tres fases (base de datos, API en Go, frontend) con integración SIIGO. Versión 5.
+- [V3-esquema-borrador.sql](V3-esquema-borrador.sql): script completo de la base de datos de la V3 (**46 tablas**, revisadas una por una), ejecutado en PostgreSQL 18.6.
+- [pruebas-bd/](pruebas-bd/README.md): los 111 escenarios con los que se probó el script y cómo repetirlos (`npm install` y `npm test`).
+- [MAQUETA-V3.html](MAQUETA-V3.html): maqueta de cuatro pestañas, en fondo claro (la aplicación, la base de datos con su diagrama horizontal, el script SQL y la estructura del frontend).
+- [`../diagrama_ER_V3_horizontal_claro.pdf`](../diagrama_ER_V3_horizontal_claro.pdf): el diagrama de la base de datos en PDF, un grupo por página (el `diagrama_ER_horizontal_claro.pdf` de esa carpeta es la versión anterior, de 61 tablas).
