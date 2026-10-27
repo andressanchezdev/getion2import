@@ -1,24 +1,27 @@
 # PLAN V3 — Gestión Importadora
 
-**Versión 4 (completa)** · 25 de octubre de 2026
+**Versión 5 (completa)** · 26 de octubre de 2026
 
-Reúne todo lo acordado: compañías, roles, flujo del pedido, créditos, auditoría, tiempo real, el principio de que el frontend no depende de la API, el diseño de IP para tarjeta, carrito y cards de pedido, y la limpieza de archivos.
+Reúne todo lo acordado: compañías, roles, flujo del pedido, créditos, auditoría, tiempo real, el principio de que el frontend no depende de la API, el diseño de IP para tarjeta, carrito y cards de pedido, y la limpieza de archivos. Esta versión suma la **revisión de las 70 tablas (quedan 46)**, el **stock físico, compartido y virtual**, el **diagrama horizontal** y el **fondo claro** de la maqueta.
 
-Va con cuatro archivos que **deben coincidir entre sí** y que salen de las mismas fuentes:
+Todo el contenido vive en `C:\Users\User\repos\GestionImportadora\Idea\` y los archivos **deben coincidir entre sí**, porque salen de las mismas fuentes:
 
 | Archivo | Qué es |
 |---|---|
-| [`V3-esquema-borrador.sql`](V3-esquema-borrador.sql) | El script completo de la base de datos (se copia y pega en PostgreSQL) |
-| [`MAQUETA-V3.html`](MAQUETA-V3.html) | Cuatro pestañas: 1 la aplicación · 2 la base de datos (diagrama) · 3 el script SQL · 4 la estructura del frontend |
-| [`pruebas-bd/`](pruebas-bd/README.md) | Los 101 escenarios con los que se probó el script y cómo repetirlos |
-| [`DOCUMENTACION-API.md`](DOCUMENTACION-API.md) | La API actual (189 endpoints validados, ninguno inventado) |
+| [`analisis-api-importadora/V3-esquema-borrador.sql`](analisis-api-importadora/V3-esquema-borrador.sql) | El script completo de la base de datos (se copia y pega en PostgreSQL) |
+| [`analisis-api-importadora/MAQUETA-V3.html`](analisis-api-importadora/MAQUETA-V3.html) | Cuatro pestañas, todas en fondo claro: 1 la aplicación · 2 la base de datos (diagrama) · 3 el script SQL · 4 la estructura del frontend |
+| [`diagrama_ER_V3_horizontal_claro.pdf`](diagrama_ER_V3_horizontal_claro.pdf) | El diagrama de la base de datos en PDF: un mapa de grupos, una página por grupo, el stock y las tablas que se quitaron |
+| [`analisis-api-importadora/pruebas-bd/`](analisis-api-importadora/pruebas-bd/README.md) | Los 111 escenarios con los que se probó el script y cómo repetirlos |
+| [`analisis-api-importadora/DOCUMENTACION-API.md`](analisis-api-importadora/DOCUMENTACION-API.md) | La API actual (189 endpoints validados, ninguno inventado) |
+
+> `diagrama_ER_horizontal_claro.pdf` (61 tablas) es una versión anterior del diagrama; se conserva como referencia de estilo y ya no coincide con el script.
 
 **Cómo se corresponden las pestañas de la maqueta con este plan**
 
 | Pestaña de la maqueta | Sección del plan |
 |---|---|
 | 1 · La aplicación (menú, catálogo, carrito, pedidos, compañías, auditorías) | 3.4 a 3.10 |
-| 2 · Base de datos (mapa, vecinas de cada tabla, campos) | 1.3 y 1.4 |
+| 2 · Base de datos (grupos, diagrama de cada grupo, stock, de 70 a 46 tablas, campos) | 1.3 a 1.6 |
 | 3 · Script SQL | Fase 1 completa |
 | 4 · Estructura del frontend (árbol, capas, archivos que se retiran) | 3.2, 3.11 y 3.12 |
 
@@ -27,23 +30,23 @@ Va con cuatro archivos que **deben coincidir entre sí** y que salen de las mism
 | Pieza | Estado |
 |---|---|
 | Documentación de la API actual | ✅ Hecha |
-| Base de datos: **70 tablas**, 532 campos, 148 llaves foráneas, 50 funciones, 87 disparadores, 2 vistas, 26 índices | ✅ Escrita y **probada en PostgreSQL 18.6**: corre completa y pasa 101 escenarios |
-| Maqueta de las cuatro pestañas | ✅ Hecha y revisada en el navegador |
+| Base de datos: **46 tablas**, 431 campos, 113 llaves foráneas, 49 funciones, 80 disparadores, 5 vistas, 30 índices | ✅ Escrita y **probada en PostgreSQL 18.6**: corre completa y pasa 111 escenarios |
+| Maqueta de las cuatro pestañas, en fondo claro | ✅ Hecha y revisada en el navegador |
+| Diagrama de la base de datos en PDF | ✅ Hecho |
 | API en Go | ⏳ Fase 2 (diseñada aquí) |
 | Frontend nuevo (diseño de IP, API local, tiempo real) | ⏳ Fase 3 (diseñada aquí) |
 | Integración con SIIGO | ⏳ Diseñada; falta una cuenta de pruebas de SIIGO |
 
 ## Qué cambió frente a la versión anterior del plan
 
-1. **Compañías de verdad.** Antes `company_id` solo separaba datos. Ahora una compañía es una empresa registrada en la plataforma con sus propios empleados, clientes, productos, bodegas y stock; el superadmin de la anfitriona las gestiona; las **marcas son comunes**; y una compañía puede **prestar stock** a otra (0.5).
-2. **Roles.** El `admin` nace **sin permisos**; el `superadmin` tiene todos (44); los demás roles solo los de su área; 2 usuarios por rol (1.6).
-3. **Corrección:** el **carrito sí aparta stock** y vence a la hora, como en IP y en la v1. La versión anterior decía lo contrario.
-4. **Tiempo real** completo: eventos en la base, WebSocket en Go con salas por compañía y bodega, y aviso a las **dos bodegas** en un traslado (1.10 y 2.5).
-5. **El frontend no depende de la API** ni de la URL base ni de la base de datos (3.2).
-6. **Tarjeta, carrito y cards de pedido** iguales a las de IP, con los valores de su CSS (3.5 a 3.7).
-7. **Nombres cortos** en la base de datos (1.11).
-8. **Limpieza:** 35 archivos del frontend que ya no quedan (3.12). Nada se borra hasta que lo apruebes.
-9. **Probado de verdad:** el script corre en un PostgreSQL real y pasa 101 escenarios (1.12).
+1. **Fondo claro.** Toda la maqueta (las cuatro pestañas, incluidos el menú, el panel derecho y el script) pasa a fondo blanco o gris muy claro. El gris oscuro y el negro quedan para el texto; el azul y el amarillo de Importadora, como acento (3.4).
+2. **De 70 a 46 tablas.** Se revisó cada tabla una por una: 26 se quitan o se fusionan y 2 son nuevas (`stock` y `third_parties`). No se perdió ninguna función (1.4).
+3. **Stock en una sola tabla.** El stock físico vive en `stock` (una fila por producto, bodega y ubicación). El stock compartido entre todas las bodegas y el stock virtual de cada tienda se **calculan** con vistas; no se guardan (1.5).
+4. **Diagrama horizontal.** Cada grupo se dibuja de izquierda a derecha, con una flecha por cada par de tablas y en una sola dirección, sin cajas encimadas. Está en la maqueta y en un PDF (1.6).
+5. **Modelo más simple de personas y terceros:** un empleado es un usuario, un usuario tiene un solo rol, y proveedores, transportadoras y otros terceros son una sola tabla. La **tienda** reemplaza al canal de venta y el método de pago son cuatro valores fijos.
+6. **WebSocket sin tabla de entradas:** se autentica con el token en su primer mensaje (1.12).
+7. **Pruebas:** 111 escenarios (eran 101).
+8. **Todo el contenido está en la carpeta `Idea`** del repositorio de Gestión Importadora.
 
 ---
 
@@ -67,19 +70,19 @@ Va con cuatro archivos que **deben coincidir entre sí** y que salen de las mism
 | Directorio | Papel | ¿Se modifica? |
 |---|---|---|
 | `C:\Users\User\repos\GestionImportadora` | **Proyecto destino**: el único que se modifica | **Sí** |
-| `…\GestionImportadora\appImportadoraIp` | Frontend (React): recibe el rediseño y la conexión a la API local | Sí |
-| `…\GestionImportadora\backend` *(carpeta nueva, sin repo)* | API en Go | Se crea |
-| `…\GestionImportadora\PGSQL` *(carpeta nueva, sin repo)* | Scripts de PostgreSQL | Se crea |
+| `…\GestionImportadora\Idea` | **Todo lo analizado y diseñado**: este plan, la maqueta, el script, las pruebas y el diagrama en PDF | Solo documentos |
+| `…\GestionImportadora\appImportadoraIp` | Frontend (React): recibe el rediseño y la conexión a la API local | Sí (Fase 3) |
+| `…\GestionImportadora\backend` *(carpeta nueva, sin repo)* | API en Go | Se crea (Fase 2) |
+| `…\GestionImportadora\PGSQL` *(carpeta nueva, sin repo)* | Scripts de PostgreSQL | Se crea (Fase 1) |
 | `C:\Users\User\repos\importadora-online` | **Versión inicial (v1)**: solo para entender la lógica original (incluido su WebSocket) | No |
 | `C:\Users\User\repos\IP` | **Origen del diseño** de la tarjeta de producto, el carrito y las cards de pedido («cards de espera») | No |
 | `C:\Users\User\repos\grandmas_liquors` | **Referencia visual y de agrupación del menú**; su estructura de código no se copia | No |
-| `C:\Users\User\repos\analisis-api-importadora` | Documentación, este plan, la maqueta, el script y sus pruebas | Solo documentos |
 
 ### 0.3 Resultado final
 
 1. Una **base PostgreSQL** con todos los modelos, compañías, roles con permisos, flujo de pedido con estados que la propia base hace respetar, tiempo real, auditoría y datos de prueba (2 usuarios por rol).
 2. Una **API en Go** local que reemplaza a la de Railway: rápida, con búsquedas por modelo padre, WebSocket y preparada para mucha concurrencia.
-3. El **frontend de Gestión Importadora** con su estructura de hoy, el aspecto de Grandma's adaptado a los colores de Importadora, tarjetas, carrito y cards de pedido de IP, y conectado a la API local, **sin depender de ella** (3.2).
+3. El **frontend de Gestión Importadora** con su estructura de hoy, el aspecto de Grandma's adaptado a los colores de Importadora (fondos claros), tarjetas, carrito y cards de pedido de IP, y conectado a la API local, **sin depender de ella** (3.2).
 4. La **integración con SIIGO** diseñada y lista para activarse.
 
 ### 0.4 Negocio
@@ -95,26 +98,26 @@ Importadora de repuestos y accesorios para moto: mucho personal, unos 8.000 prod
 | **Compañía** (`companies`) | Una empresa con **sus** empleados, clientes, productos, bodegas, tiendas, stock, roles y permisos. «Este empleado es de esta compañía», «este producto es de esta compañía». |
 | **Compañía anfitriona** (`is_host`) | La que opera la plataforma: **Gestión Importadora**. Solo hay una. Su **superadministrador** puede ver y gestionar todas las compañías. |
 | **Marca** (`brands`) | Yamaha, Suzuki, Kawasaki, Kixx, Shell… Son **comunes a todas las compañías** y llevan su logo. |
-| **Proveedor** (`suppliers`) | Un tercero de **cada compañía** que le surte (ej. «Yamaha Motor Colombia»). No entra a la aplicación. Se liga a las marcas que surte (`supplier_brands`). |
+| **Tercero** (`third_parties`) | Proveedores, transportadoras y otros terceros de **cada compañía**, en una sola tabla con su tipo (ej. «Yamaha Motor Colombia», «Servientrega»). No entran a la aplicación. |
 | **Conexión con una marca** (`company_brands`) | Las marcas con las que cada compañía puede vender. La base rechaza un producto cuya marca no esté conectada a su compañía. |
 | **Producto** (`products`) | Los repuestos y accesorios. Lo **posee** una compañía (`company_id`), lleva marca, categoría, modelo, códigos y QR, y se anexa a sus proveedores (`product_suppliers`). |
-| **Stock prestado** (`stock_shares`) | Una compañía autoriza a otra a vender unidades suyas. La que vende lo hace con **su** producto; el stock sale de la ubicación de la dueña. |
+| **Stock prestado** (`stock_shares`) | Una compañía autoriza a otra a vender unidades suyas. La que vende lo hace con **su** producto; el stock sale de la bodega de la dueña. |
 
 **Cómo se comporta**
 
-- Todo lo relacionado **pertenece a la misma compañía**: un pedido no puede usar un cliente, un vendedor, una bodega, una categoría o una ubicación de otra compañía (la base lo rechaza). La única excepción es el stock prestado, que se valida contra el préstamo.
+- Todo lo relacionado **pertenece a la misma compañía**: un pedido no puede usar un cliente, un vendedor, una bodega, una categoría o una existencia de otra compañía (la base lo rechaza). La única excepción es el stock prestado, que se valida contra el préstamo.
 - Un **correo = un usuario = una compañía**.
-- Al **registrar una compañía nueva** recibe automáticamente sus roles (con los mismos permisos que los de la anfitriona, **sin** superadmin), niveles de precio P0–P3, métodos de pago y canales de venta.
+- Al **registrar una compañía nueva** recibe automáticamente sus roles (con los mismos permisos que los de la anfitriona, **sin** superadmin) y los niveles de precio P0–P3.
 - **Hoy solo se necesita poder agregar otra compañía** (pantalla *Compañías*, solo superadmin). Traer en bloque los datos de otra compañía (productos, stock, usuarios, clientes, empleados) es un proceso aparte que se diseña después.
-- **Stock prestado, ejemplo:** la compañía A presta 10 unidades de una ubicación a B. B las vende con su producto: `sale_items.stock_company_id` queda en A, el cupo del préstamo (`qty_used`) sube, y A y B reciben en vivo el cambio de stock. Si B cancela el pedido, el cupo y el stock se liberan. Un préstamo no puede superar el stock libre ni usarse si está cerrado.
+- **Stock prestado, ejemplo:** la compañía A presta 10 unidades de una existencia a B. B las vende con su producto: `sale_items.stock_company_id` queda en A, el cupo del préstamo (`qty_used`) sube, y A y B reciben en vivo el cambio de stock. Si B cancela el pedido, el cupo y el stock se liberan. Un préstamo no puede superar el stock libre ni usarse si está cerrado.
 - *Supuesto:* las «secciones» de una compañía son sus **áreas, bodegas y tiendas**.
 
 ### 0.6 Flujo principal
 
 1. **Catálogo:** producto = marca + categoría + modelo (ej. `15W40`) + código de barras + QR + imágenes + precios por nivel.
-2. **Inventario:** el stock vive en una **ubicación de una bodega**, no en el producto.
+2. **Inventario:** el stock físico vive en una **existencia**: un producto en una ubicación de una bodega.
 3. **Carrito:** **aparta** stock mientras está abierto y vence solo (1 hora).
-4. **Pedido:** nace con un método de pago (**efectivo, transferencia o crédito**) y recorre seis etapas con verificación (1.8).
+4. **Pedido:** nace con un método de pago (**efectivo, transferencia o crédito**) y recorre seis etapas con verificación (1.10).
 5. **Venta:** el pedido pasa a ser venta cuando se **verifica el pago**. De contado = ingreso; a crédito = plata que nos deben.
 6. **Devoluciones:** no devuelven dinero, dejan **crédito a favor**.
 7. **Compras** a proveedores, **traslados** entre bodegas, **conteos**.
@@ -124,7 +127,7 @@ Importadora de repuestos y accesorios para moto: mucho personal, unos 8.000 prod
 
 | Tipo | ¿Tiene usuario y contraseña? |
 |---|---|
-| Superadministrador, empleados | **Sí** (con rol y permisos) |
+| Superadministrador, empleados | **Sí** (con un rol y sus permisos) |
 | Clientes | **Sí** (tienda en línea) |
 | Proveedores, transportadoras, otros terceros | **No**: son datos que ingresan los empleados |
 | Productos | No aplica |
@@ -133,7 +136,7 @@ Importadora de repuestos y accesorios para moto: mucho personal, unos 8.000 prod
 
 # FASE 1: BASE DE DATOS (PostgreSQL, local)
 
-**Ubicación al construirla:** `GestionImportadora\PGSQL` · **Hoy:** [`V3-esquema-borrador.sql`](V3-esquema-borrador.sql) (1.938 líneas).
+**Ubicación al construirla:** `GestionImportadora\PGSQL` · **Hoy:** [`V3-esquema-borrador.sql`](analisis-api-importadora/V3-esquema-borrador.sql) (1.767 líneas).
 
 ## 1.1 Entorno local
 
@@ -143,75 +146,144 @@ Importadora de repuestos y accesorios para moto: mucho personal, unos 8.000 prod
 
 ## 1.2 Reglas de diseño
 
-- **Claves:** número autoincremental + `uuid` público donde se expone (carrito, pedido, producto, usuario).
+- **Claves:** número autoincremental + `uuid` público donde se expone (carrito, pedido, producto, usuario, cliente).
 - **Multiempresa:** toda tabla de negocio lleva `company_id`; los únicos lo incluyen.
 - **Dinero:** `NUMERIC(14,2)`.
 - **Estados:** `CHECK` en cada tabla: un estado inválido es imposible.
 - **Borrado lógico** en maestros (`deleted_at`); los documentos no se borran.
 - **Búsqueda:** índices `trigram` y un `search_text` que **arma la base** al guardar el producto.
-- **Nombres cortos:** ningún nombre de tabla o campo pasa de 20 caracteres (1.11).
+- **Nombres cortos:** ningún nombre de tabla o campo pasa de 20 caracteres (1.13).
+- **Una tabla se queda si tiene vida propia** (su propio ciclo, se consulta por separado o protege una regla). Lo repetido, lo derivado y lo de 1 a 1 no merece tabla (1.4).
 
-## 1.3 Las 70 tablas
+## 1.3 Las 46 tablas
 
-**69 de negocio + `schema_migrations` (control de versión) = 70.** La auditoría usa además una partición por mes (la base las crea).
+Siete grupos. La auditoría usa además una partición por mes (la base las crea).
 
 | Grupo | # | Tablas |
 |---|---|---|
-| **Compañías y seguridad** | 10 | `companies`, `users`, `roles`, `permissions`, `role_permissions`, `user_roles`, `refresh_tokens`, `devices`, `audit_actions`, `audit_events` |
-| **Tiempo real** | 2 | `rt_events`, `rt_tickets` |
-| **Personas y terceros** | 9 | `warehouses`, `employees`, `price_levels`, `customers`, `customer_addresses`, `customer_contacts`, `suppliers`, `carriers`, `other_parties` |
-| **Catálogo** | 14 | `brands`, `company_brands`, `supplier_brands`, `models`, `categories`, `products`, `product_codes`, `product_qr`, `product_images`, `product_prices`, `price_history`, `product_suppliers`, `customer_discounts`, `customer_favorites` |
-| **Inventario** | 10 | `warehouse_locations`, `product_locations`, `stock_levels`, `stores`, `store_warehouses`, `virtual_stock`, `stock_shares`, `stock_movements`, `counts`, `count_items` |
-| **Ventas** | 12 | `sales_channels`, `payment_methods`, `sales`, `sale_items`, `sale_stages`, `sale_dispatches`, `carts`, `cart_items`, `quotations`, `quotation_items`, `returns`, `return_items` |
+| **Compañías y seguridad** | 8 | `companies`, `roles`, `permissions`, `role_permissions`, `users`, `refresh_tokens`, `audit_actions`, `audit_events` |
+| **Personas y terceros** | 3 | `price_levels`, `customers`, `third_parties` |
+| **Catálogo** | 9 | `brands`, `company_brands`, `models`, `categories`, `products`, `product_codes`, `product_prices`, `product_suppliers`, `customer_discounts` |
+| **Inventario** | 8 | `warehouses`, `stock`, `stores`, `store_warehouses`, `stock_shares`, `stock_movements`, `counts`, `count_items` |
+| **Ventas** | 9 | `sales`, `sale_items`, `sale_stages`, `carts`, `cart_items`, `quotations`, `quotation_items`, `returns`, `return_items` |
 | **Dinero y compras** | 5 | `payments`, `credit_entries`, `purchases`, `purchase_items`, `invoices` |
-| **Integración y operación** | 7 + 1 | `siigo_credentials`, `siigo_entity_map`, `siigo_outbox`, `sync_queue`, `sync_conflicts`, `notifications`, `api_rate_limit_log` + `schema_migrations` |
+| **Tiempo real e integración** | 4 | `rt_events`, `notifications`, `siigo_credentials`, `siigo_outbox` |
+
+Además hay cinco **vistas** (no son tablas, se calculan al consultar): `v_customer_credit` (lo que debe y lo que tiene a favor cada cliente), `v_stock` (cada existencia con lo vendible), `v_stock_company` (stock compartido entre todas las bodegas), `v_virtual_stock` (stock virtual de cada tienda) y `v_locations` (productos y unidades de cada ubicación).
 
 **Tablas clave y qué guardan**
 
 | Tabla | Para qué sirve |
 |---|---|
-| `products` | Código de barras, marca, categoría, modelo, promoción, estado (borrador · activo · inactivo · descontinuado) y la compañía dueña |
-| `product_qr` | **Código QR del producto** (existe en producción) |
-| `stock_levels` | Stock por ubicación: `available` (físico), `in_cart` (apartado en carritos), `reserved` (reservado por pedidos). **Vendible = available − in_cart − reserved** |
-| `sales` | Pedido o traslado: método de pago, picking inmediato, estado (abierto · completado · cancelado), etapa actual, `sale_at` (desde cuándo es venta) y si es de contado o a crédito |
+| `users` | Quien entra a la aplicación, con **un solo rol**. Un empleado es un usuario con su cédula, área y bodega; un cliente es un usuario ligado a su ficha en `customers` |
+| `customers` | El cliente, su nivel de precio, su cupo de crédito y su estado. Sus direcciones y contactos son listas dentro de la misma ficha |
+| `third_parties` | Proveedores, transportadoras y otros terceros, con su tipo |
+| `products` | Código de barras, marca, categoría, modelo, promoción, estado (borrador · activo · inactivo · descontinuado), la compañía dueña, sus imágenes y el contenido de su **código QR** (`IMP:` + su uuid) |
+| `stock` | Stock físico de un producto en una ubicación de una bodega: `available` (físico), `in_cart` (apartado en carritos) y `reserved` (reservado por pedidos). **Vendible = available − in_cart − reserved** |
+| `sales` | Pedido o traslado: tienda, método de pago, picking inmediato, estado (abierto · completado · cancelado), etapa actual, `sale_at` (desde cuándo es venta), si es de contado o a crédito, y su envío (transportadora y guía) |
 | `sale_stages` | Las **seis etapas** de cada pedido con su estado, quién la tomó y quién la verificó |
-| `sale_items` | Renglones con **precio congelado**, unidades sacadas (`picked_qty`) y empacadas (`packed_qty`), y de qué compañía salió el stock |
+| `sale_items` | Renglones con **precio congelado**, unidades sacadas (`picked_qty`) y empacadas (`packed_qty`), de qué existencia salen y de qué compañía salió el stock |
 | `payments` | Pagos y abonos: en revisión · verificado · novedad · anulado, con comprobante |
 | `credit_entries` | **Libro de créditos del cliente** (solo se agregan filas): lo que **debe** y lo que tiene **a favor** |
 | `returns` | Devoluciones: nunca devuelven dinero, generan crédito a favor |
 | `rt_events` | Cada cambio importante, listo para repartirse por WebSocket |
 | `audit_events` | Registro de auditoría de solo agregar |
 
-## 1.4 Relaciones principales
+## 1.4 ¿Hacían falta las 70 tablas? Auditoría de tablas
+
+**No.** Se revisó cada tabla del borrador con una pregunta: **¿tiene vida propia?** Una tabla se queda si tiene su propio ciclo de vida, se consulta por separado o protege una regla que no se puede proteger de otra forma. Se quitó lo que era repetido, derivado de otra tabla, de 1 a 1 con otra, o que hoy no usa nadie. **70 − 26 que se quitan + 2 nuevas (`stock` y `third_parties`) = 46.**
+
+| Ya no existe | Ahora | Por qué |
+|---|---|---|
+| `warehouse_locations`, `product_locations`, `stock_levels` | `stock` | Eran tres tablas para decir cuántas unidades hay de un producto en una ubicación de una bodega. Ahora es una sola fila por producto, bodega y ubicación (la ubicación es un texto como `04-F01`). El maestro de ubicaciones de hoy tampoco lo usa ninguna pantalla |
+| `virtual_stock` | vista `v_virtual_stock` | El stock virtual no se guarda: se calcula sumando el físico de las bodegas que surten cada tienda, así nunca se desajusta |
+| `suppliers`, `carriers`, `other_parties` | `third_parties` (con el tipo) | Guardaban los mismos datos. Las tres pantallas de *Gestión Terceros* siguen igual; solo cambia el filtro |
+| `employees` | `users` | Un empleado es un usuario con su cédula, área y bodega. Eran dos tablas que siempre iban de 1 a 1 |
+| `user_roles` | `users.role_id` | Un usuario tiene un solo rol |
+| `devices` | `refresh_tokens` (las sesiones) | Cada sesión ya guarda su dispositivo y su dirección IP |
+| `customer_addresses`, `customer_contacts` | `customers.addresses` y `customers.contacts` | Son listas cortas que solo se ven en la ficha del cliente y no se relacionan con nada más |
+| `product_qr` | `products.qr_payload` | Era 1 a 1 con el producto; la base arma el contenido del QR |
+| `product_images` | `products.images` | Lista de direcciones sin vida propia; la primera es la principal |
+| `price_history` | `audit_events` | Todo cambio de precio ya queda auditado con el valor anterior, el nuevo, quién lo hizo y el motivo |
+| `supplier_brands` | `product_suppliers` | Qué marcas surte un proveedor ya lo dicen los productos que se le anexan |
+| `sales_channels` | `stores.store_type` | Un canal y una tienda eran lo mismo: mostrador = tienda física, en línea y corporativo |
+| `payment_methods` | `sales.payment_method` y `payments.method` | Cuatro valores fijos (efectivo, transferencia, crédito, saldo a favor) que las reglas del pedido ya conocen; no cambian por compañía |
+| `sale_dispatches` | columnas del pedido (`carrier_id`, `tracking_no`…) | Era 1 a 1 con el pedido |
+| `customer_favorites` | se retira | Sin uso: en producción el endpoint de favoritos está roto y ninguna pantalla lo usa |
+| `rt_tickets` | se retira | El WebSocket se autentica con el token en su primer mensaje (1.12) |
+| `api_rate_limit_log` | se retira | El límite de peticiones se controla en memoria dentro de la API; escribirlo en la base solo la sobrecargaría |
+| `sync_queue`, `sync_conflicts` | se retiran | Cola y conflictos de dispositivos sin conexión: ninguna pantalla usa esos endpoints hoy. Se diseñan cuando exista el caso de uso |
+| `siigo_entity_map` | columnas `siigo_id` y `siigo_credentials.settings` | Los códigos de SIIGO ya tienen su columna en cada tabla; los demás van en `settings` |
+| `schema_migrations` | la herramienta de migraciones | El control de versiones lo crea esa herramienta; no es parte del modelo |
+
+**Lo que se revisó y se queda a propósito**
+
+| Tabla | Por qué se queda |
+|---|---|
+| `permissions` y `role_permissions` | Son el control de acceso. Sin ellas la lista de permisos viviría repetida en la base, en la API y en la pantalla *Roles y Permisos* |
+| `company_brands` | Es la regla «una compañía solo vende las marcas a las que se conecta» |
+| `product_codes` | Un producto tiene varios códigos (barras, referencia, proveedor…) y cada uno debe ser único por compañía |
+| `quotations` y `carts` | Se parecen, pero el carrito aparta stock y vence solo; la cotización no aparta nada y tiene vigencia |
+| `counts` y `count_items`, `purchases` y `purchase_items`, `returns` y `return_items` | Son documentos con encabezado y renglones |
+| `invoices` | Tiene su propio ciclo con la DIAN (pendiente, aceptada, rechazada, anulada) |
+| `siigo_credentials` | La llave va cifrada y aparte de los datos de la compañía |
+| `audit_actions` | Es la lista de acciones que exigen motivo; sin ella esa regla se repartiría en el código |
+| `customer_discounts` | La app lo usa (descuentos por cliente, marca, categoría o producto) |
+
+## 1.5 Stock físico, compartido y virtual
+
+> Las compañías tienen **bodegas**; las bodegas tienen su **stock físico**; y a partir del físico se representan el compartido y el virtual.
 
 ```
-companies ──< (todas las tablas de negocio)              brands (comunes) >──< companies  (company_brands)
-users 1──1 employees      users 1──0..1 customers        suppliers >──< brands (supplier_brands)
-users >──< roles >──< permissions                        products >──< suppliers (product_suppliers)
-brands 1──< products >── 1 categories   products >── 1 models      products 1──1 product_qr
-products 1──< product_prices >── 1 price_levels
-warehouses 1──< warehouse_locations 1──< product_locations >── 1 products
-product_locations 1──1 stock_levels        product_locations 1──< stock_movements
-stock_shares: product_locations (de la dueña) ── préstamo ──> products (de quien vende)
-stores >──< warehouses (store_warehouses)  stores 1──< virtual_stock >── 1 product_locations
-carts 1──< cart_items >── 1 product_locations            carts 1──0..1 quotations ──0..1 sales
-customers 1──< sales 1──< sale_items >── 1 product_locations
+companies ──< warehouses ──< stock  (una fila por producto, bodega y ubicación)        ← lo único que se guarda
+                                │
+                                ├──▶ v_stock_company   stock COMPARTIDO entre todas las bodegas de la compañía
+                                │                       (suma de todas, más lo prestado por otras compañías)
+                                └──▶ v_virtual_stock   stock VIRTUAL de cada tienda
+                                                        (suma de las bodegas que la surten: store_warehouses)
+```
+
+- **Físico (`stock`):** disponible, apartado en carritos y reservado por pedidos. La ubicación es un texto dentro de la fila; `v_locations` cuenta los productos y las unidades de cada ubicación.
+- **Compartido (`v_stock_company`):** lo que tiene la compañía sumando todas sus bodegas y, en `borrowed`, lo que otras compañías le prestaron y aún puede usar. `can_sell` es lo propio vendible más lo prestado.
+- **Virtual (`v_virtual_stock`):** lo que ve cada tienda. Una tienda se surte de una o varias bodegas (con prioridad) y su stock virtual se mueve solo cuando se mueve el físico.
+- **Reglas:** el carrito aparta y el pedido reserva **sobre la existencia física** (de forma atómica); al verificar el envío sale del físico. Nada se copia, así que los tres números nunca se desajustan.
+- **Entre compañías:** `stock_shares` autoriza a otra compañía a vender unidades de una existencia (1.10).
+
+## 1.6 Relaciones principales
+
+```
+companies ──< (todas las tablas de negocio)                  brands (comunes) >──< companies  (company_brands)
+roles 1──< users (un usuario, un rol)   users 1──0..1 customers   roles >──< permissions (role_permissions)
+users 1──< refresh_tokens (sesiones)
+brands 1──< products >── 1 categories   products >── 1 models     products >──< third_parties[proveedor] (product_suppliers)
+products 1──< product_prices >── 1 price_levels                    customers 1──< customer_discounts
+warehouses 1──< stock >── 1 products     stock 1──< stock_movements (kardex)
+stores >──< warehouses (store_warehouses)
+stock_shares: stock (de la dueña) ── préstamo ──> products (de quien vende)
+carts 1──< cart_items >── 1 stock      carts 1──0..1 quotations ──0..1 sales
+customers 1──< sales 1──< sale_items >── 1 stock       sales >── third_parties[transportadora]
 sales 1──< sale_stages (6 etapas)    sales 1──< payments     sales 1──0..1 invoices
 customers 1──< credit_entries >── sales / payments / returns
 sales (traslado) >── bodega origen y >── bodega destino (aux_warehouse_id)
 ```
 
-El **diagrama visual** está en la pestaña 2 de la maqueta: mapa de grupos, **una tabla y sus vecinas** (de qué depende y quién depende de ella) y la lista completa de campos. Se genera desde el script, así que siempre coincide.
+**El diagrama visual** está en la pestaña 2 de la maqueta y, página por página, en `diagrama_ER_V3_horizontal_claro.pdf`:
 
-## 1.5 Correcciones a lo que hoy está mal relacionado
+- Cada grupo se dibuja **de izquierda a derecha**: a la izquierda las tablas de las que dependen las demás y a la derecha las que dependen de ellas.
+- **Cada flecha une dos tablas y va en una sola dirección:** sale de la tabla referenciada y llega a la que guarda la llave foránea. Si hay varias llaves entre las mismas dos tablas, se muestran en una sola flecha.
+- **Nada se encima:** las cajas no se tocan y ninguna flecha pasa por encima de otra caja (se comprobó con un cálculo, grupo por grupo).
+- Las llaves hacia **otros grupos** no se dibujan: están dentro de cada caja, marcadas con ↗.
+- Al hacer clic en una tabla se resaltan sus relaciones y se ven de qué depende y quién la usa. Se genera desde el script, así que siempre coincide.
+
+## 1.7 Correcciones a lo que hoy está mal relacionado
 
 | # | Problema en la API actual | Corrección |
 |---|---|---|
 | 1 | Los precios llegan todos con `type:"sale"`; el nivel se adivina por el orden | `price_levels` con nombre y orden; `product_prices` único por producto y nivel |
-| 2 | *majority, immediate, corporate…* se usan para canal, tipo de cliente y precio a la vez | Tres conceptos: nivel del cliente, canal de venta y nivel aplicado al pedido |
-| 3 | El canal no sigue al tipo de cliente | El canal **no** fuerza el precio |
+| 2 | *majority, immediate, corporate…* se usan para canal, tipo de cliente y precio a la vez | Tres conceptos: nivel del cliente, **tienda** (por dónde se vende) y nivel aplicado al pedido |
+| 3 | El canal no sigue al tipo de cliente | La tienda **no** fuerza el precio |
 | 4 | Un precio cambiado altera pedidos viejos | Precio **congelado** en cada renglón |
-| 5 | El stock se descuadra | Stock con tres columnas y movimientos en el kardex; todo lo reserva la base |
+| 5 | El stock se descuadra | Una sola tabla de stock con tres columnas, kardex de movimientos y todo lo reserva la base |
 | 6 | Banderas que a veces son booleano y a veces número | `BOOLEAN` y `NUMERIC` siempre |
 | 7 | Reportes que devuelven plantillas en cero | Vistas y consultas reales |
 | 8 | Filas fantasma (medio de pago vacío) | `NOT NULL` y `CHECK` |
@@ -219,11 +291,11 @@ El **diagrama visual** está en la pestaña 2 de la maqueta: mapa de grupos, **u
 | 10 | Códigos del producto dispersos | `product_codes` con tipo y unicidad por compañía |
 | 11 | La cartera y la billetera eran dos cosas | `credit_entries` + vista `v_customer_credit` |
 | 12 | El historial de estados era una tabla aparte sin reglas | `sale_stages`: el estado **y** su orden los hace respetar la base |
-| 13 | El pipeline actual factura después del packing | Ahora la **facturación va antes del picking** (1.8) |
+| 13 | El pipeline actual factura después del packing | Ahora la **facturación va antes del picking** (1.10) |
 
-## 1.6 Roles, permisos y datos de prueba
+## 1.8 Roles, permisos y datos de prueba
 
-**10 roles × 2 usuarios = 20 usuarios.** Los correos son `<rol><1|2>@demo.local` (por ejemplo `vendedor1@demo.local`) y la contraseña de desarrollo es `Dev#2026`, guardada con **bcrypt** (`pgcrypto`). Es solo para desarrollo: se cambia antes de cualquier despliegue. `PGSQL/SEED_USERS.md` listará los 20. Solo los empleados y los clientes tienen usuario.
+**10 roles × 2 usuarios = 20 usuarios.** Los correos son `<rol><1|2>@demo.local` (por ejemplo `vendedor1@demo.local`) y la contraseña de desarrollo es `Dev#2026`, guardada con **bcrypt** (`pgcrypto`). Es solo para desarrollo: se cambia antes de cualquier despliegue. `PGSQL/SEED_USERS.md` listará los 20. Los **empleados** traen en su usuario su cédula, su área (el rol) y su bodega. Solo los empleados y los clientes tienen usuario.
 
 | Rol | Alcance | Permisos que trae el script |
 |---|---|---|
@@ -242,14 +314,15 @@ El **diagrama visual** está en la pestaña 2 de la maqueta: mapa de grupos, **u
 
 **Cómo los usa la base** (no solo la aplicación)
 
-- Para **tomar o verificar** una etapa del pedido se exige el permiso de esa etapa (`take_picking`, `take_shipping`…): un vendedor no puede tomar el picking.
+- Para **tomar o verificar** una etapa del pedido se exige el permiso de esa etapa (`take_picking`, `take_shipping`…): un vendedor no puede tomar el picking. La función `user_can()` además exige que el usuario esté activo.
 - Para **verificar un pago**: `wallet.verify` o `orders.take_invoicing`. Para **aprobar una devolución**: `returns.manage`.
 - La **auditoría** solo la tiene el superadmin (ningún otro rol trae sus cuatro permisos).
 - Una compañía nueva recibe los mismos roles y permisos que la anfitriona, sin el superadmin.
+- Cambiar el rol de un usuario cambia al instante lo que puede hacer.
 
-**Semillas incluidas:** la compañía anfitriona; niveles de precio P0 Mostrador · P1 Taller · P2 Distribuidor · P3 Mayorista; 3 canales (Mostrador, Tienda en línea, Corporativo); 4 métodos de pago (efectivo, transferencia, crédito, saldo a favor); 2 bodegas (Bodega principal y Bodega norte) con ubicaciones; 2 tiendas (principal y en línea); 9 marcas conectadas (Yamaha, Suzuki, Kawasaki, Honda, Kixx, Shell, Castrol, Global Oil, Mobil); 4 proveedores (Yamaha Motor Colombia, Suzuki Colombia, Kawasaki Colombia y Lubricantes del Pacífico) ligados a sus marcas; 2 transportadoras (Servientrega y Envía); y **8 productos de ejemplo** (los de las tarjetas del catálogo) con precios por nivel, QR, ubicaciones y stock. Cada usuario «cliente» trae su ficha (`cliente1` con crédito habilitado y cupo de 2.000.000) y cada empleado la suya con su área. La versión final del script sumará los ~50 productos y pedidos de ejemplo en cada etapa.
+**Semillas incluidas:** la compañía anfitriona; niveles de precio P0 Mostrador · P1 Taller · P2 Distribuidor · P3 Mayorista; 2 bodegas (Bodega principal y Bodega norte) con tres ubicaciones; 3 tiendas (principal, en línea y corporativa) y qué bodegas surten a cada una; 9 marcas conectadas (Yamaha, Suzuki, Kawasaki, Honda, Kixx, Shell, Castrol, Global Oil, Mobil); 4 proveedores (Yamaha Motor Colombia, Suzuki Colombia, Kawasaki Colombia y Lubricantes del Pacífico) y 2 transportadoras (Servientrega y Envía), todos como terceros; y **8 productos de ejemplo** (los de las tarjetas del catálogo) con precios por nivel, QR, stock y su proveedor. Cada usuario «cliente» trae su ficha (`cliente1` con crédito habilitado y cupo de 2.000.000). La versión final del script sumará los ~50 productos y pedidos de ejemplo en cada etapa.
 
-## 1.7 Acciones y estados por modelo
+## 1.9 Acciones y estados por modelo
 
 | Modelo | Acciones | Estados |
 |---|---|---|
@@ -270,7 +343,7 @@ El **diagrama visual** está en la pestaña 2 de la maqueta: mapa de grupos, **u
 
 Estas acciones son las que aparecen como botones en el menú ⋯ de cada fila (Fase 3).
 
-## 1.8 Cómo se maneja el estado: todo lo hace respetar la base
+## 1.10 Cómo se maneja el estado: todo lo hace respetar la base
 
 Cada regla es un disparador o una restricción; la API no puede saltárselas.
 
@@ -294,7 +367,7 @@ Verificación ▶ Facturación ▶ Picking ▶ Packing ▶ Envío ▶ Entrega
 
 ### Cuándo un pedido pasa a ser venta
 
-- El pedido **nace con un método de pago**: efectivo, transferencia o crédito.
+- El pedido **nace con un método de pago** (`sales.payment_method`): efectivo, transferencia o crédito.
 - En la etapa **Facturación** se define y se **verifica el pago**:
   - **Efectivo o transferencia:** se registra el pago (la transferencia necesita su **comprobante**) y un empleado lo **verifica**. Cuando lo verificado cubre el total, el pedido pasa a ser una **venta válida de contado** (`payment_condition = cash`) y es ingreso.
   - **Crédito:** solo si el cliente tiene el crédito **habilitado**, no está en mora ni inactivo y la venta **cabe en su cupo**. Pasa a ser una **venta a crédito**: **no es ingreso, es plata que nos deben** y queda como crédito pendiente del cliente.
@@ -323,13 +396,13 @@ Solo de una **venta** y del mismo cliente. Con motivo. Al **aprobarla**, el valo
 | Usuario inactivo, bloqueado o borrado | **No inicia sesión**; al desactivarlo se **cierran sus sesiones** |
 | Compañía inactiva | Sus usuarios no inician sesión |
 | Cliente inactivo | Su usuario pasa a inactivo; no tiene carritos, cotizaciones ni pedidos |
-| Empleado inactivo | Pierde el acceso; no puede ser vendedor ni tomar etapas |
+| Empleado inactivo | Es un usuario inactivo: pierde el acceso, no puede ser vendedor ni tomar etapas |
 | Producto inactivo o descontinuado | No se agrega a carrito, cotización ni pedido |
 | Bodega inactiva | No admite pedidos nuevos |
 | Cliente en mora o inactivo | No compra a crédito |
 | Cupo agotado | La venta a crédito que lo supere se rechaza |
 
-### Carrito y stock (`stock_levels`)
+### Carrito y stock (`stock`)
 
 1. **Carrito abierto = stock apartado** (`in_cart`): los demás ven bajar la disponibilidad en vivo. Vence solo a la hora (`release_expired_carts()`), y al convertirlo o abandonarlo se libera.
 2. **Cotización:** no aparta stock.
@@ -337,7 +410,7 @@ Solo de una **venta** y del mismo cliente. Con motivo. Al **aprobarla**, el valo
 4. **Cancelar** libera lo reservado.
 5. **Verificar el envío:** lo reservado **sale** del inventario y queda en el kardex (`sale_out`, o `transfer_out` en un traslado).
 6. **Aprobar una devolución:** las unidades que sirven vuelven (`return_in`).
-7. *Pendiente de definir:* en qué ubicación **entra** un traslado en la bodega destino (el kardex ya tiene `transfer_in`).
+7. *Pendiente de definir:* en qué existencia **entra** un traslado en la bodega destino (el kardex ya tiene `transfer_in`).
 
 > **Corrección:** una versión anterior de este plan decía que el carrito no reserva stock. En IP y en la API real el carrito sí aparta stock (`inCart`) y lo difunde por WebSocket; V3 lo conserva y lo lleva más lejos (vencimiento y préstamo entre compañías).
 
@@ -345,17 +418,17 @@ Solo de una **venta** y del mismo cliente. Con motivo. Al **aprobarla**, el valo
 
 Borrador → enviada → aceptada → **convertida** (solo una aceptada se convierte, y debe apuntar al pedido creado) o vencida.
 
-## 1.9 Auditoría (todo en la base)
+## 1.11 Auditoría (todo en la base)
 
 - **`audit_events`** guarda **quién** (usuario, nombre y rol en ese momento), **qué** (acción, modelo y registro, con etiqueta legible como `PD-18423`), **dónde** (pantalla, bodega, tienda, dispositivo, IP), **por qué** (motivo) y **qué cambió** (antes y después y los campos). Nunca guarda contraseñas ni claves.
 - **Solo se agrega:** un disparador impide editar, borrar o vaciar. Está **particionado por mes** (`audit_ensure_partitions`).
 - **`audit_actions`** define qué acciones exigen motivo (cancelar pedido, anular pago, ajustar stock, cambiar precio, cerrar un préstamo, desactivar compañía, bloquear usuario…): **sin motivo, la base rechaza la operación.**
-- **Automática** en 27 tablas (compañías, usuarios, roles y permisos, empleados, clientes, proveedores, productos, precios, bodegas, tiendas, stock prestado, pedidos, **etapas**, pagos, compras, devoluciones, facturas y credenciales de SIIGO). Los cambios que la base mantiene sola (etapa visible, `updated_at`) no generan ruido.
-- **Contexto:** al abrir cada transacción la API informa quién actúa y desde dónde (`set_config('app.user_id', …)`, `app.company_id`, `app.module`, `app.warehouse_id`, `app.ip`, `app.reason`…).
+- **Automática** en 22 tablas (compañías, marcas conectadas, usuarios, roles y permisos, clientes y sus descuentos, terceros, productos, precios, proveedores del producto, niveles de precio, bodegas, tiendas, stock prestado, pedidos, **etapas**, pagos, compras, devoluciones, facturas y credenciales de SIIGO). Los cambios que la base mantiene sola (etapa visible, `updated_at`) no generan ruido. **El historial de precios es esta misma auditoría.**
+- **Contexto:** al abrir cada transacción la API informa quién actúa y desde dónde (`set_config('app.user_id', …)`, `app.company_id`, `app.module`, `app.warehouse_id`, `app.device`, `app.ip`, `app.reason`…).
 - Lo que no cambia una fila (inicio de sesión, consultar o exportar la auditoría) se registra con `audit_record()`. **Consultar la auditoría también queda auditado.**
 - **Solo el superadmin** tiene los permisos de auditoría. En el menú, **Auditorías** solo aparece para él.
 
-## 1.10 Tiempo real en la base de datos
+## 1.12 Tiempo real en la base de datos
 
 Lo que hacía el WebSocket de la versión 1 (avisar a todos en una bodega cuando alguien aparta o libera stock, y mover pedidos entre sucursales), llevado más lejos:
 
@@ -364,7 +437,7 @@ Lo que hacía el WebSocket de la versión 1 (avisar a todos en una bodega cuando
 
 | Canal | Eventos |
 |---|---|
-| `stock` | `stock.updated` (disponible, apartado, reservado y vendible; también se envía a las compañías con stock prestado) |
+| `stock` | `stock.updated` (disponible, apartado, reservado y vendible de una existencia; también se envía a las compañías con stock prestado) |
 | `orders` y `transfers` | `order.created`, `order.stage_changed` (quién tomó la etapa), `order.became_sale`, `order.completed`, `order.cancelled` |
 | `payments` | `payment.created`, `payment.verified`, `payment.issue`, `payment.voided` |
 | `credit` | `credit.changed` |
@@ -373,28 +446,28 @@ Lo que hacía el WebSocket de la versión 1 (avisar a todos en una bodega cuando
 
 - **Entre bodegas:** un **traslado avisa a las dos bodegas** (origen y destino).
 - **Reanudar:** cada evento tiene un id creciente; quien se desconecta pide lo que le faltó (`id > último`). `rt_purge()` limpia los viejos.
-- **Entrada segura:** `rt_tickets` es una entrada de **un solo uso** (60 s) para abrir el WebSocket sin poner el token en la dirección (`rt_ticket_consume()`); si el usuario ya no puede entrar, el ticket no sirve.
+- **Entrada segura, sin tabla:** el WebSocket se autentica con el **token de acceso en su primer mensaje** (no va en la dirección). La API lo valida y comprueba con `auth_login_allowed()` que el usuario siga activo.
 
-## 1.11 Nombres cortos
+## 1.13 Nombres cortos
 
-Se acortó lo que pasaba de 20 caracteres: `customer_credit_entries` → **`credit_entries`**, `inventory_counts` → **`counts`**, `inventory_count_items` → **`count_items`**, `product_price_history` → **`price_history`**, `siigo_account_group_id` → **`siigo_group_id`**, `payment_terms_days` → **`terms_days`**. Las tablas `moto_brands` y `moto_models` **ya no existen**: lo que hay es `brands` (marcas, comunes) y `models` (modelo del producto, ej. 15W40). El escenario 00 verifica que ninguna tabla ni campo pase de 20 caracteres.
+Se acortó lo que pasaba de 20 caracteres: `customer_credit_entries` → **`credit_entries`**, `inventory_counts` → **`counts`**, `inventory_count_items` → **`count_items`**, `siigo_account_group_id` → **`siigo_group_id`**, `payment_terms_days` → **`terms_days`**. Las tablas `moto_brands` y `moto_models` **ya no existen**: lo que hay es `brands` (marcas, comunes) y `models` (modelo del producto, ej. 15W40). El escenario 000 verifica que ninguna tabla ni campo pase de 20 caracteres.
 
-## 1.12 Cómo se probó
+## 1.14 Cómo se probó
 
-- El script se **ejecutó completo en un PostgreSQL real (18.6)** y pasó **101 escenarios**. Están en [`pruebas-bd/`](pruebas-bd/README.md) y se repiten con `npm install` y `npm test`.
-- Cubren: semillas, roles y permisos, inicio de sesión, compañías, aislamiento entre compañías, marcas conectadas, carrito, reserva de stock, cada regla del flujo del pedido (orden de etapas, ocupación, permisos por etapa, picking inmediato, pago y comprobante, venta de contado y a crédito, cupo), abonos, devoluciones, crédito a favor, cancelaciones, traslados, stock prestado, tiempo real, tickets de WebSocket, auditoría (motivo, quién y dónde, inmutabilidad) y los nombres cortos. La tabla por número de escenario está en el README de esa carpeta.
+- El script se **ejecutó completo en un PostgreSQL real (18.6)** y pasó **111 escenarios**. Están en [`pruebas-bd/`](analisis-api-importadora/pruebas-bd/README.md) y se repiten con `npm install` y `npm test`.
+- Cubren: semillas, roles y permisos, inicio de sesión, compañías, aislamiento entre compañías, marcas conectadas, terceros, carrito, reserva de stock, **stock físico, compartido y virtual**, cada regla del flujo del pedido (orden de etapas, ocupación, permisos por etapa, picking inmediato, pago y comprobante, venta de contado y a crédito, cupo), abonos, devoluciones, crédito a favor, cancelaciones, traslados, stock prestado, tiempo real (incluido reanudar y limpiar eventos), auditoría (motivo, quién y dónde, inmutabilidad) y los nombres cortos. La tabla por número de escenario está en el README de esa carpeta.
 - **Lo que no cubre:** concurrencia real (varias conexiones a la vez), rendimiento con millones de filas y las pruebas de carga (Fase 2); y el **aislamiento por compañía con seguridad a nivel de fila (RLS)**, que se propone como refuerzo en la Fase 2.
 
-## 1.13 Entregables y cierre
+## 1.15 Entregables y cierre
 
 ```
 GestionImportadora/PGSQL/
-  README.md       cómo instalar y ejecutar        ERD.md           diagrama del modelo
+  README.md       cómo instalar y ejecutar        ERD.md           diagrama del modelo por grupos
   db.sql          TODO junto, para copiar y pegar SEED_USERS.md     usuarios de prueba (2 por rol)
 ```
 El script único es la fuente; no se parte en archivos numerados para no duplicarlo.
 
-**La Fase 1 termina cuando:** ✔ el script corre completo en una base vacía · ✔ existen los 20 usuarios · ✔ el admin no tiene permisos y el superadmin todos · ✔ los 101 escenarios pasan · ✔ el diagrama coincide con el script · ✔ tú apruebas el modelo.
+**La Fase 1 termina cuando:** ✔ el script corre completo en una base vacía · ✔ existen los 20 usuarios · ✔ el admin no tiene permisos y el superadmin todos · ✔ los 111 escenarios pasan · ✔ el diagrama coincide con el script · ✔ tú apruebas el modelo.
 
 ---
 
@@ -429,8 +502,8 @@ backend/
   cmd/api/main.go
   internal/
     platform/  config · db · auth (JWT, contexto de auditoría) · httpx · realtime (hub, salas, WebSocket/SSE)
-    companies/ products/ inventory/ stores/ sales/ customers/ employees/ suppliers/
-    purchases/ payments/ reports/ audit/ siigo/ sync/
+    companies/ products/ inventory/ stores/ sales/ customers/ employees/ thirdparties/
+    purchases/ payments/ reports/ audit/ siigo/
   sql/queries/    docs/openapi.yaml    tests/load/
 ```
 
@@ -447,21 +520,21 @@ backend/
 
 > **Cada pantalla consulta únicamente su modelo padre.** Buscar «Carlos» en *Usuarios* llama `GET /users?q=carlos` y solo toca usuarios.
 
-Contrato común de lista (`q`, `filters`, `sort`, `limit`, `cursor`, `fields`), `pg_trgm`, selectores livianos `…/options?q=`, lista distinta del detalle y **paginación por cursor**.
+Contrato común de lista (`q`, `filters`, `sort`, `limit`, `cursor`, `fields`), `pg_trgm`, selectores livianos `…/options?q=`, lista distinta del detalle y **paginación por cursor**. El catálogo de una tienda lee `v_virtual_stock`.
 
 ## 2.5 Tiempo real (WebSocket)
 
-1. El cliente pide `POST /realtime/ticket` (con su JWT) y abre `wss://…/ws?ticket=…`; la API llama `rt_ticket_consume()`.
+1. El cliente abre `wss://…/ws` y manda como **primer mensaje** su token de acceso; la API lo valida y llama `auth_login_allowed()` (si no llega en 5 s, cierra la conexión).
 2. La API lo **suscribe a salas** según quién es: `company:{id}`, `warehouse:{id}` (las bodegas a las que tiene acceso) y `user:{id}`. Un cliente solo recibe stock y lo suyo.
 3. Una conexión dedicada hace **`LISTEN rt_events`**; por cada aviso reparte el evento a las salas locales. Con **varias copias** de la API cada una escucha y reparte a los suyos: no hace falta Redis.
 4. Al reconectar el cliente manda el **último id** y recibe lo que falta; si se perdió demasiado, recibe `resync` y recarga sus listas.
 5. Latido cada 25 s, cola limitada por cliente (si se llena, se le pide `resync`), tope de conexiones por usuario.
 6. Formato al cliente: `{ id, type, channel, entity, entityId, companyId, warehouseId, at, payload }`.
-7. *SSE* (`GET /realtime/stream`) como respaldo para redes que bloquean WebSocket.
+7. *SSE* (`GET /realtime/stream`, con `fetch` y la cabecera `Authorization`) como respaldo para redes que bloquean WebSocket.
 
 ## 2.6 Seguridad y escalabilidad
 
-- **Seguridad:** el usuario de base de datos de la API **no es dueño de las tablas**; JWT corto con refresco rotativo; límites por IP y usuario; todo con tiempo máximo y apagado ordenado. **Propuesta:** activar **RLS** (seguridad a nivel de fila) por `company_id` como segunda barrera.
+- **Seguridad:** el usuario de base de datos de la API **no es dueño de las tablas**; JWT corto con refresco rotativo; límites por IP y usuario **en memoria dentro de la API**; todo con tiempo máximo y apagado ordenado. **Propuesta:** activar **RLS** (seguridad a nivel de fila) por `company_id` como segunda barrera.
 - **Escalabilidad:** servicio sin estado, varias copias; `pgxpool` dimensionado y **PgBouncer** si crecen; réplica de lectura para reportes y catálogo; caché del catálogo público; **reservas atómicas** (ya resueltas en la base); `SKIP LOCKED` para repartir picking.
 - **Metas de carga** (a acordar): p95 < 200 ms en listas y 500 pedidos por minuto.
 
@@ -469,10 +542,10 @@ Contrato común de lista (`q`, `filters`, `sort`, `limit`, `cursor`, `fields`), 
 
 1. Plataforma (config, base, autenticación, contexto, auditoría, errores, paginación, **tiempo real**).
 2. Compañías, catálogo y marcas.
-3. Inventario (bodegas, stock, kardex, conteos, traslados, **stock prestado**).
+3. Inventario (bodegas, stock, kardex, conteos, traslados, **stock prestado**) y tiendas.
 4. Usuarios, empleados, clientes y terceros.
 5. Carrito → cotización → pedido y etapas → pagos y créditos → devoluciones.
-6. Compras, reportes, sincronización.
+6. Compras y reportes.
 7. SIIGO.
 8. OpenAPI final y pruebas de carga.
 
@@ -480,7 +553,7 @@ Contrato común de lista (`q`, `filters`, `sort`, `limit`, `cursor`, `fields`), 
 
 - Base `https://api.siigo.com` (`/v1/…`); `POST /auth` con `username` y `access_key` → `access_token` de **24 h**; cabecera **`Partner-Id`** obligatoria; **100 peticiones/min** en producción y 10 en pruebas; bloqueo si más del 80 % fallan durante 7 días.
 - Recursos: productos, clientes, facturas (PDF, XML, correo, errores DIAN, anulación), cotizaciones, notas crédito, compras, recibos de caja, comprobantes, reportes y webhooks; catálogos para mapear (impuestos, listas de precio, bodegas, usuarios, tipos de comprobante, formas de pago, centros de costo, grupos).
-- **Diseño:** módulo `siigo` aislado; cliente que renueva el token antes de las 24 h y respeta el límite con una cola; **buzón de salida** (`siigo_outbox`) escrito en la misma transacción que la factura, con `Idempotency-Key`; equivalencias en `siigo_entity_map`; credenciales cifradas por compañía, prueba y producción separadas; las **notas crédito** salen de las devoluciones; los **errores de la DIAN** se muestran en el panel de factura.
+- **Diseño:** módulo `siigo` aislado; cliente que renueva el token antes de las 24 h y respeta el límite con una cola; **buzón de salida** (`siigo_outbox`) escrito en la misma transacción que la factura, con `Idempotency-Key`; los códigos de SIIGO viven en la columna `siigo_id` de cada tabla y los demás (tipos de pago, tipo de comprobante, vendedor, centro de costo) en `siigo_credentials.settings`; credenciales cifradas por compañía, prueba y producción separadas; las **notas crédito** salen de las devoluciones; los **errores de la DIAN** se muestran en el panel de factura.
 - **Pendiente:** una cuenta de pruebas de SIIGO (se pide con el NIT) para validar impuestos, numeración y redondeos.
 
 **La Fase 2 termina cuando:** ✔ la API arranca y los 20 usuarios inician sesión con lo que su rol permite · ✔ cada endpoint documentado tiene su equivalente · ✔ el WebSocket reparte y reanuda · ✔ prueba de carga medida · ✔ OpenAPI completo.
@@ -528,7 +601,9 @@ Además, `api/config.ts` se **limpia**: hoy tiene unas 150 líneas de JSON de ej
 
 ## 3.4 Rediseño visual (Grandma's Liquors como referencia, estructura de Gestión Importadora)
 
-Menú lateral colapsable con módulos y subgestiones por permiso; páginas con título, acción principal, búsqueda, filtros y tabla con **menú ⋯ de acciones por fila** (solo las que el rol y el estado permiten); estados vacíos y de error que explican qué hacer; **colores de Importadora** (gris oscuro/negro, azul, amarillo) por tokens; accesibilidad (contraste, foco visible, botones táctiles).
+Menú lateral colapsable con módulos y subgestiones por permiso; páginas con título, acción principal, búsqueda, filtros y tabla con **menú ⋯ de acciones por fila** (solo las que el rol y el estado permiten); estados vacíos y de error que explican qué hacer; accesibilidad (contraste, foco visible, botones táctiles).
+
+**Fondo claro, sin componentes oscuros.** El menú lateral, el contenido, el panel derecho, las tablas, las ventanas flotantes y los avisos usan **fondo blanco o gris muy claro**. Del Importadora se conservan: el gris oscuro y el negro **como color de texto**, el **azul** para lo seleccionado y lo principal, y el **amarillo** como acento (botones de acción, logo, etiqueta de tarifa). Todo sale de `src/styles/tokens.css`, así que un cambio de color se hace en un solo lugar. La maqueta ya está así en sus cuatro pestañas.
 
 ## 3.5 Tarjeta de producto: la de IP
 
@@ -548,6 +623,7 @@ Estructura y valores **tomados del CSS de IP** (`ProductCardBase.css` y `variabl
 
 - **Se conserva la etiqueta de tarifas** (`ProductCardTierMenu`): icono de etiqueta con la insignia P0–P3 en la **misma posición** (esquina superior derecha de la imagen); el precio de la tarjeta cambia al elegir **P0 Mostrador · P1 Taller · P2 Distribuidor · P3 Mayorista**.
 - Reglas de IP que se conservan: la cantidad no pasa del disponible (aviso «Cantidad máxima alcanzada»), flechas del teclado, clic en la imagen para ver el detalle.
+- Lo **disponible** de la tarjeta sale del stock virtual de la tienda (`v_virtual_stock`).
 - Los campos que no caben en la tarjeta **no se pierden**: promoción, descripción, fecha de creación, estado, ubicaciones con stock y reservado, **en carritos**, imágenes y QR están en la **ficha del panel derecho** (modo `product`).
 - La maqueta usa las **imágenes y logos reales de tus capturas** para las ocho primeras tarjetas.
 - Archivos: se ajustan `productCard/*.css` y `ProductCard.tsx`; `ProductCardTierMenu.*` queda igual; `ProductCardStock.*` se retira.
@@ -558,7 +634,7 @@ Panel derecho con **buscador** («Buscar en el carrito»), una **mini-tarjeta po
 
 ## 3.7 Cards de pedido: las «cards de espera» de IP
 
-En *Gestión Pedidos*: cada pedido es una card blanca con el **ID y botón de copiar**, un distintivo (Pedido · Venta de contado · Venta a crédito · Cancelado), fecha y «hace X», **total** y botón **+** para abrir el detalle. A la izquierda, la caja **«Estado del pedido»** con los seis pasos (verde con «… exitosa» el que ya se verificó, naranja el actual, gris los pendientes, con su línea conectora); a la derecha, cliente, canal y método de pago, lo que se debe si es a crédito, el aviso de la etapa («Picking · Ocupada por Bodeguero 1») y los botones del empleado: **Tomar · Pausar · Reanudar · Soltar · Completar · Verificar · Devolver** (y **Picking inmediato** cuando el pedido lo tiene). Arriba, el recorrido **Carrito › Cotización › Pedido › Pago verificado › Venta de contado o Venta a crédito → Cartera** y un contador por etapa que filtra la lista. Un pedido que tiene otro empleado se ve ocupado en vivo.
+En *Gestión Pedidos*: cada pedido es una card blanca con el **ID y botón de copiar**, un distintivo (Pedido · Venta de contado · Venta a crédito · Cancelado), fecha y «hace X», **total** y botón **+** para abrir el detalle. A la izquierda, la caja **«Estado del pedido»** con los seis pasos (verde con «… exitosa» el que ya se verificó, naranja el actual, gris los pendientes, con su línea conectora); a la derecha, cliente, tienda y método de pago, lo que se debe si es a crédito, el aviso de la etapa («Picking · Ocupada por Bodeguero 1») y los botones del empleado: **Tomar · Pausar · Reanudar · Soltar · Completar · Verificar · Devolver** (y **Picking inmediato** cuando el pedido lo tiene). Arriba, el recorrido **Carrito › Cotización › Pedido › Pago verificado › Venta de contado o Venta a crédito → Cartera** y un contador por etapa que filtra la lista. Un pedido que tiene otro empleado se ve ocupado en vivo.
 
 ## 3.8 Los tres componentes de `componentApp` y el panel derecho
 
@@ -593,7 +669,7 @@ Cada gestión reúne **un proceso**; las subgestiones van en el orden del proces
 | **Gestión Cartera** | Créditos · Abonos · Verificación Abonos · Historial de Recaudo |
 | **Gestión Inventario** | Gestión Productos · Gestión Marcas, Categorías y Modelos · Gestión Órdenes de Compra · Gestión Entradas de Compra · Existencias · Gestión Traslados · Gestión Devoluciones · Gestión Conteos · Gestión Tiendas y Stock Virtual |
 | **Gestión Usuarios** | Clientes · Empleados · Roles y Permisos |
-| **Gestión Terceros** | Proveedores · Transportadoras · Otros Terceros |
+| **Gestión Terceros** | Proveedores · Transportadoras · Otros Terceros (tres pantallas sobre una sola tabla, `third_parties`) |
 | **Reportes** | Ventas Diarias · Reporte General · Valoración Inventario |
 | **SIIGO** | Una pantalla con pestañas |
 | **Compañías** *(solo superadmin)* | Una pantalla: registrar y gestionar compañías |
@@ -601,7 +677,7 @@ Cada gestión reúne **un proceso**; las subgestiones van en el orden del proces
 
 **Del carrito a la venta:** Carrito (aparta stock) → Cotización (oferta con vigencia, no reserva) → Pedido (reserva y recorre las seis etapas) → pago verificado → **Venta de contado** (ingreso) o **Venta a crédito** (nos deben → *Gestión Cartera*). Las devoluciones dejan crédito a favor, visible en *Cartera › Créditos*.
 
-**Cómo se mueve un producto por *Gestión Inventario*:** se crea, edita, activa o desactiva (se elimina solo si nunca tuvo movimientos); se compra (*Órdenes de Compra*) y al recibirlo (*Entradas de Compra*) el stock **sube**; se mueve entre bodegas, se devuelve, se cuenta y se ajusta (con motivo); y se reparte entre tiendas o se presta a otra compañía.
+**Cómo se mueve un producto por *Gestión Inventario*:** se crea, edita, activa o desactiva (se elimina solo si nunca tuvo movimientos); se compra (*Órdenes de Compra*) y al recibirlo (*Entradas de Compra*) el stock **sube**; se mueve entre bodegas, se devuelve, se cuenta y se ajusta (con motivo); y se reparte entre tiendas (stock virtual) o se presta a otra compañía.
 
 **Cambio en el código:** el módulo `thirdParties` de hoy (clientes, proveedores, transportadoras, empleados, roles) se parte en `users` y `thirdParties`, y se suman `companies` y `audit`. Se ajustan `menuItems.constants.ts`, `navigation.types.ts`, `selectDrawerMode` y `screenRegistry`. Las features `customers`, `employees` y `suppliers` no cambian de carpeta; solo cambia dónde se muestran.
 
@@ -618,7 +694,7 @@ El estado sigue siendo **Redux** (slices, thunks y selectors por feature), con u
 | Formularios | Estado local del formulario; al guardar, un thunk |
 | Lo que llega en vivo | La feature `realtime` recibe los eventos y los entrega a los slices |
 
-La feature `realtime` ya existe (provisional); V3 la completa: conexión con **ticket**, **reanudación** con el último id (`realtime.cursor.ts`) y un manejador por tipo de evento: `stock.updated` actualiza tarjetas y carrito; `order.stage_changed` actualiza las cards y la ocupación; `payment.*` y `credit.changed` refrescan cartera; `notification.created` suma a la campana. Si el WebSocket se corta, los datos siguen y al volver se piden los eventos faltantes (o se recargan las listas con `resync`). El indicador **«En vivo»** de la cabecera muestra el estado y el contador de eventos. La maqueta lo simula con el botón *Simular eventos en vivo*.
+La feature `realtime` ya existe (provisional); V3 la completa: conexión que **manda el token en su primer mensaje**, **reanudación** con el último id (`realtime.cursor.ts`) y un manejador por tipo de evento: `stock.updated` actualiza tarjetas y carrito; `order.stage_changed` actualiza las cards y la ocupación; `payment.*` y `credit.changed` refrescan cartera; `notification.created` suma a la campana. Si el WebSocket se corta, los datos siguen y al volver se piden los eventos faltantes (o se recargan las listas con `resync`). El indicador **«En vivo»** de la cabecera muestra el estado y el contador de eventos. La maqueta lo simula con el botón *Simular eventos en vivo*.
 
 ## 3.11 Reorganización de carpetas
 
@@ -641,7 +717,7 @@ Se recorrió el árbol de importaciones desde `main.tsx` y se encontraron **35 a
 
 ## 3.13 Orden de trabajo y cierre
 
-1. `.env`, cliente HTTP y autenticación. 2. Distribución: menú, cabecera, tokens. 3. Tabla y buscador reutilizables. 4. Pantallas por módulo (en el orden del backend). 5. Tarjeta, carrito y cards de pedido. 6. Tiempo real. 7. Limpieza y reorganización. 8. Pruebas y accesibilidad.
+1. `.env`, cliente HTTP y autenticación. 2. Distribución: menú, cabecera, tokens (fondo claro). 3. Tabla y buscador reutilizables. 4. Pantallas por módulo (en el orden del backend). 5. Tarjeta, carrito y cards de pedido. 6. Tiempo real. 7. Limpieza y reorganización. 8. Pruebas y accesibilidad.
 
 **La Fase 3 termina cuando:** ✔ inicias sesión y el menú muestra solo lo permitido · ✔ todas las pantallas leen y escriben en la API local · ✔ tarjetas, carrito y cards de pedido son los de IP · ✔ se completa una venta de punta a punta (carrito → pedido → etapas → pago) · ✔ cambiar la URL base en `.env` basta para apuntar a otra API · ✔ las pruebas pasan.
 
@@ -653,24 +729,24 @@ Se recorrió el árbol de importaciones desde `main.tsx` y se encontraron **35 a
 |---|---|---|---|
 | 1 | Documentar la API por grupo (URL, body, respuesta, completitud, sin inventar endpoints) | ✅ | `DOCUMENTACION-API.md` (189, 0 inventados) |
 | 2 | Tener muy en cuenta SIIGO | ✅ | 2.8 |
-| 3 | Entender la lógica de v1 y v3 (incluido el WebSocket) | ✅ | 1.10, 2.5, 3.10 |
+| 3 | Entender la lógica de v1 y v3 (incluido el WebSocket) | ✅ | 1.12, 2.5, 3.10 |
 | 4 | Reemplazar la API de Railway por una local en Go | ✅ | Fase 2 |
-| 5 | Identificar todos los modelos | ✅ | 1.3 (70 tablas) |
-| 6 | Modelo visual con relaciones, campos y tipos | ✅ | Pestaña 2 |
-| 7 | Corregir lo mal relacionado | ✅ | 1.5 |
-| 8 | Script PostgreSQL copiable, **2 usuarios por rol** | ✅ | Pestaña 3; 1.6; escenarios 01–02 |
+| 5 | Identificar todos los modelos | ✅ | 1.3 (46 tablas) |
+| 6 | Modelo visual con relaciones, campos y tipos | ✅ | Pestaña 2 y PDF |
+| 7 | Corregir lo mal relacionado | ✅ | 1.7 |
+| 8 | Script PostgreSQL copiable, **2 usuarios por rol** | ✅ | Pestaña 3; 1.8; escenarios 001–002 |
 | 9 | Proveedores, transportadoras y productos externos, sin credenciales | ✅ | 0.5, 0.7 |
-| 10 | QR del producto | ✅ | `product_qr` |
+| 10 | QR del producto | ✅ | `products.qr_payload`; escenario 019 |
 | 11 | Marcas, modelos, categorías, referencias, códigos | ✅ | 1.3 |
-| 12 | **Compañías** (empleados, clientes, productos, stock propios; stock prestado; el superadmin las agrega) | ✅ | 0.5, pantalla *Compañías*; escenarios 11–19, 72–77, 93, 96–97 |
-| 13 | **Marcas comunes** y proveedores ligados a ellas | ✅ | `brands`, `company_brands`, `supplier_brands`; escenarios 17–18 |
-| 14 | **Roles: admin sin permisos, superadmin con todos, los demás por área** | ✅ | 1.6; escenarios 03–05, 98 |
-| 15 | Estados de activación y que un inactivo no inicie sesión | ✅ | 1.8; escenarios 06–10, 25–26, 29–30, 71 |
-| 16 | Flujo del pedido con verificación por etapa, ocupación, picking inmediato | ✅ | 1.8; escenarios 31–38, 51–54 |
-| 17 | Pedido pasa a venta al verificar el pago; a crédito es plata que nos deben | ✅ | 1.8; escenarios 39–50 |
-| 18 | Devoluciones sin dinero: crédito a favor y crédito pendiente | ✅ | 1.8; escenarios 62–68 |
-| 19 | Auditoría con usuario, lugar y motivo; acceso del superadmin | ✅ | 1.9; escenarios 04, 83–88, 99–100 |
-| 20 | **WebSocket entre bodegas, manejo de estado** | ✅ | 1.10, 2.5, 3.10; escenarios 77–82, 94 |
+| 12 | **Compañías** (empleados, clientes, productos, stock propios; stock prestado; el superadmin las agrega) | ✅ | 0.5, pantalla *Compañías*; escenarios 011–020, 083–088, 103, 106–107 |
+| 13 | **Marcas comunes** y proveedores ligados a ellas | ✅ | `brands`, `company_brands`, `product_suppliers`; escenarios 018–019 |
+| 14 | **Roles: admin sin permisos, superadmin con todos, los demás por área** | ✅ | 1.8; escenarios 003–005, 016, 108 |
+| 15 | Estados de activación y que un inactivo no inicie sesión | ✅ | 1.10; escenarios 006–008, 010, 031–032, 040–041, 082 |
+| 16 | Flujo del pedido con verificación por etapa, ocupación, picking inmediato | ✅ | 1.10; escenarios 042–049, 062–065 |
+| 17 | Pedido pasa a venta al verificar el pago; a crédito es plata que nos deben | ✅ | 1.10; escenarios 050–061 |
+| 18 | Devoluciones sin dinero: crédito a favor y crédito pendiente | ✅ | 1.10; escenarios 073–079 |
+| 19 | Auditoría con usuario, lugar y motivo; acceso del superadmin | ✅ | 1.11; escenarios 004, 093–098, 109–110 |
+| 20 | **WebSocket entre bodegas, manejo de estado** | ✅ | 1.12, 2.5, 3.10; escenarios 088–092, 104 |
 | 21 | API toda en Go, escalable | ✅ | Fase 2 |
 | 22 | Búsqueda por modelo padre, sin saturar endpoints | ✅ | 2.4 |
 | 23 | **El frontend no depende de la API / URL base / base de datos** | ✅ | 3.2, pestaña 4 |
@@ -681,9 +757,14 @@ Se recorrió el árbol de importaciones desde `main.tsx` y se encontraron **35 a
 | 28 | Cards de pedido como las «cards de espera» de IP | ✅ | 3.7 |
 | 29 | Menú por procesos con los nombres acordados | ✅ | 3.9 |
 | 30 | **Quitar de la estructura los archivos que no quedan** | ✅ | 3.12, pestaña 4 |
-| 31 | **Nombres largos acortados** | ✅ | 1.11 |
+| 31 | **Nombres largos acortados** | ✅ | 1.13 |
 | 32 | Cuatro pestañas coherentes entre sí | ✅ | Mismas fuentes: el diagrama y los conteos salen del script |
-| 33 | **Conteo de tablas** | ✅ | **70** (69 de negocio + `schema_migrations`) |
+| 33 | **Conteo de tablas** | ✅ | **46** (eran 70) |
+| 34 | **Maqueta con fondo claro, sin colores oscuros en los componentes** | ✅ | 3.4; las cuatro pestañas |
+| 35 | **Validar si las 70 tablas eran necesarias y reducir** | ✅ | 1.4: no lo eran; quedan 46 y no se perdió ninguna función |
+| 36 | **Stock físico por bodega; el compartido y el virtual salen del físico** | ✅ | 1.5; escenarios 033–037 |
+| 37 | **Diagrama horizontal, una flecha por par de tablas en una sola dirección, sin encimarse** | ✅ | 1.6; pestaña 2 y PDF |
+| 38 | **Todo el contenido actualizado en la carpeta `Idea`** | ✅ | Tabla de archivos al inicio |
 
 ---
 
@@ -697,7 +778,7 @@ Se recorrió el árbol de importaciones desde `main.tsx` y se encontraron **35 a
 | H4 | SIIGO en modo prueba | Requiere credenciales |
 | H5 | Rediseño completo, limpieza y pruebas de carga | Tú |
 
-**Riesgos:** migrar los **datos reales** de producción exige un script aparte y acceso de lectura a la base actual; parte del comportamiento de la API actual se dedujo sin ver su código; SIIGO impone límites y la DIAN valida cada factura; la concurrencia real y el rendimiento solo se miden en la Fase 2.
+**Riesgos:** migrar los **datos reales** de producción exige un script aparte y acceso de lectura a la base actual (con la fusión de tablas, ese script junta varias tablas viejas en una nueva); parte del comportamiento de la API actual se dedujo sin ver su código; SIIGO impone límites y la DIAN valida cada factura; la concurrencia real y el rendimiento solo se miden en la Fase 2.
 
 **Supuestos que tomé (corrígeme si alguno no es así):**
 
@@ -705,14 +786,18 @@ Se recorrió el árbol de importaciones desde `main.tsx` y se encontraron **35 a
 2. **Picking inmediato** = se completa y verifica en un solo paso.
 3. Las **«secciones»** de una compañía son sus áreas, bodegas y tiendas.
 4. **«SOC»** lo entendí como **sockets / tiempo real** (WebSocket, con SSE de respaldo).
-5. Un **correo** pertenece a **un solo usuario y una sola compañía**.
+5. Un **correo** pertenece a **un solo usuario y una sola compañía**, y un usuario tiene **un solo rol**.
 6. El carrito vence a la **hora** (configurable).
 7. **Otros terceros** son los que no son proveedores ni transportadoras (bancos, contratistas…).
 8. **Abonos** es una subgestión aparte de *Créditos* y de *Verificación Abonos*.
+9. Las **ubicaciones** de una bodega son un texto dentro del stock (no hay un catálogo de ubicaciones): una ubicación existe mientras tenga productos.
+10. Los **métodos de pago** son cuatro valores fijos y **la tienda** dice por dónde se vendió; si algún día una compañía necesita métodos propios, se agrega esa tabla.
+11. **Favoritos** del cliente y **sincronización de dispositivos sin conexión** quedan fuera del modelo hasta que existan en una pantalla.
+12. «**Fondo claro**» = blanco y gris muy claro para todo; el gris oscuro y el negro solo como texto.
 
 **Pendiente de definir:**
 
-1. En qué ubicación **entra** un traslado en la bodega destino.
+1. En qué existencia **entra** un traslado en la bodega destino.
 2. Qué pasa con una **devolución de una venta hecha con stock prestado**: si la unidad vuelve a la dueña y si libera cupo.
 3. Activar **RLS** por compañía como segunda barrera (propuesto en la Fase 2).
 4. Si los 80 archivos nuevos del frontend se pueden agrupar más (revisión de «keep it simple», opcional).
