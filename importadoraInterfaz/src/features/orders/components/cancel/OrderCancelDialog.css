@@ -1,0 +1,18 @@
+/* OrderCancelDialog.css · estilos del campo del motivo dentro del diálogo de anulación · solo usa tokens de styles/tokens.css */
+.order-cancel-reason {
+  width: 100%;
+  margin-top: var(--space-3);
+  padding: var(--space-2) 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--bg-card-inner);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  resize: vertical;
+}
+
+.order-cancel-reason:focus {
+  border-color: var(--c-blue-600);
+  outline: none;
+}

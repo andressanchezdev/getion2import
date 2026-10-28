@@ -1,0 +1,15 @@
+/* ProductCardPricing.css · estilos de la fila del precio y la marca de la tarjeta · solo usa tokens de styles/tokens.css */
+/* ojo: los estilos de la cuadrícula P0-P3 se quitaron; el menú de tarifas tiene su propio css (parts/ProductCardTierMenu.css) */
+
+.product-card-pricing {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* precio de 24 px en negrita fuerte, como la maqueta */
+.product-card-price-main {
+    color: var(--color-text-primary);
+    font-size: var(--text-2xl);
+    font-weight: var(--font-weight-extrabold);
+}

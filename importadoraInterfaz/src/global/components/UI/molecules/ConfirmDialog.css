@@ -1,0 +1,117 @@
+/* ConfirmDialog.css · estilos del diálogo de confirmación (fondo oscuro, tarjeta y botones) · solo usa tokens de styles/tokens.css */
+/* ojo: son las mismas reglas que tenía el modal de cierre de sesión en SideMenuUser.css; solo cambiaron los nombres de clase */
+.confirm-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: var(--alpha-black-45);
+  backdrop-filter: blur(2px);
+  z-index: var(--z-modal);
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  animation: confirmDialogFadeIn var(--motion-fast);
+}
+
+.confirm-dialog-card {
+  width: 100%;
+  max-width: 340px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-modal);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  animation: confirmDialogScaleIn var(--motion-fast);
+}
+
+.confirm-dialog-title {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+.confirm-dialog-message {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--leading-normal);
+}
+
+.confirm-dialog-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.confirm-dialog-btn-cancel {
+  padding: 0.45rem var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  background-color: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color var(--motion-fast);
+}
+
+.confirm-dialog-btn-cancel:hover {
+  background-color: var(--bg-card-inner);
+}
+
+.confirm-dialog-btn-confirm {
+  padding: 0.45rem var(--space-4);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--c-white);
+  background-color: var(--c-rose-600);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color var(--motion-fast);
+}
+
+.confirm-dialog-btn-confirm:hover {
+  background-color: var(--c-rose-700);
+}
+
+@keyframes confirmDialogFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes confirmDialogScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* quien prefiere menos movimiento no ve la animación de entrada */
+@media (prefers-reduced-motion: reduce) {
+
+  .confirm-dialog-overlay,
+  .confirm-dialog-card {
+    animation: none;
+  }
+}
+
+/* confirmar inactivo (ej. falta el motivo de la anulación) */
+.confirm-dialog-btn-confirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

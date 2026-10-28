@@ -1,0 +1,36 @@
+/* Pill.css · estilos de la pastilla de estado (las .pill de la maqueta: v, pk, d, c y g) · solo usa tokens de styles/tokens.css */
+.ui-pill {
+  display: inline-block;
+  padding: 2px 9px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background-color: var(--bg-card);
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  white-space: nowrap;
+}
+
+.ui-pill-amber {
+  border-color: var(--c-yellow-600);
+  background-color: var(--c-yellow-50);
+  color: var(--c-yellow-700);
+}
+
+.ui-pill-blue {
+  border-color: var(--c-blue-300);
+  background-color: var(--c-blue-50);
+  color: var(--c-blue-600);
+}
+
+.ui-pill-green {
+  border-color: var(--c-green-300);
+  background-color: var(--c-green-100);
+  color: var(--c-green-700);
+}
+
+.ui-pill-red {
+  border-color: var(--c-red-300);
+  background-color: var(--c-red-100);
+  color: var(--c-red-650);
+}

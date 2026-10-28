@@ -1,0 +1,51 @@
+/* DrawerRight.css · estilos del contenedor del panel derecho (ancho animado y cuerpo con scroll) · solo usa tokens de styles/tokens.css */
+/* ojo: se quitaron el panel genérico, el botón circular, los esqueletos y los !important; el encabezado está en DrawerHeader.css */
+/* ojo: ahora mide 400 px (--drawer-width-open) como el panel de la maqueta */
+.drawer-right {
+  width: 0;
+  flex-shrink: 0;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-drawer);
+  user-select: none;
+  transition: width var(--duration-enter) var(--ease-out);
+}
+
+.drawer-right-open {
+  width: var(--drawer-width-open);
+  border-left: 1px solid var(--color-border);
+}
+
+/* el contenido mide siempre lo mismo: así no se aprieta mientras el ancho se anima */
+.drawer-right-panel {
+  width: var(--drawer-width-open);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transition: opacity var(--duration-enter) var(--ease-out);
+}
+
+.drawer-right-open .drawer-right-panel {
+  opacity: 1;
+}
+
+/* carrito: fondo gris claro de IP; el encabezado conserva su fondo blanco (.dpanel.lite de la maqueta) */
+.drawer-right-panel-lite {
+  background-color: var(--bg-card-media);
+}
+
+.drawer-right-body {
+  flex: 1 1 0%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawer-right,
+  .drawer-right-panel {
+    transition: none;
+  }
+}

@@ -1,0 +1,101 @@
+/* DrawerHeader.css · estilos del encabezado único del panel derecho (ícono en caja amarilla, título y botón cerrar) · solo usa tokens de styles/tokens.css */
+/* ojo: como el .dh de la maqueta: caja de ícono de 38 px, título de 16 px (la maqueta usa 15, que no está en la escala de texto) y botón cerrar con borde */
+.drawer-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 14px 16px;
+  background-color: var(--bg-drawer);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.drawer-header-icon-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.drawer-header-icon-box {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-md);
+  background-color: var(--c-yellow-100);
+}
+
+.drawer-header-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.drawer-header-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.drawer-header-tag {
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--c-blue-700);
+}
+
+.drawer-header-title {
+  font-size: var(--text-base);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  line-height: var(--leading-snug);
+  overflow-wrap: anywhere;
+}
+
+.drawer-header-subtitle {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.drawer-header-badge {
+  flex-shrink: 0;
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-pill);
+  background-color: var(--c-blue-50);
+  color: var(--c-blue-700);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+  text-align: center;
+}
+
+.drawer-header-close {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--bg-card-inner);
+  color: var(--color-text-primary);
+  font-size: var(--text-md);
+  cursor: pointer;
+  transition: border-color var(--motion-fast);
+}
+
+.drawer-header-close:hover {
+  border-color: var(--c-blue-600);
+}
+
+/* ojo: este bloque estaba comentado en DrawerRight.css y se deja aquí como referencia (la insignia ahora es .drawer-header-badge) */
+/* .drawer-badge {
+  font-size: var(--text-2xs);
+  font-weight: var(--font-weight-semibold);
+  background-color: var(--bg-card-inner);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--radius-pill);
+} */

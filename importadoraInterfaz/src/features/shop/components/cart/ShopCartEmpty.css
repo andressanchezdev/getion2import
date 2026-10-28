@@ -1,0 +1,24 @@
+/* ShopCartEmpty.css · estilos del carrito vacío · solo usa tokens de styles/tokens.css */
+/* ojo: antes estas reglas estaban en ShopCartDrawer.css (se separó para que cada archivo haga una sola cosa) */
+/* Estado Vacío (como .cempty de la maqueta: texto centrado de 16 px en gris) */
+.shop-cart-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 0;
+  text-align: center;
+}
+
+.shop-cart-empty-text {
+  font-size: var(--text-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-card-muted);
+  margin-bottom: var(--space-1);
+}
+
+.shop-cart-empty-hint {
+  font-size: var(--text-xs);
+  color: var(--color-card-muted);
+  max-width: 220px;
+  line-height: var(--leading-normal);
+}

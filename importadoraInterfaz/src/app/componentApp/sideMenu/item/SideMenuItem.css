@@ -1,0 +1,76 @@
+/* SideMenuItem.css · estilos de cada módulo del menú (ícono, nombre, insignia y flecha) · solo usa tokens de styles/tokens.css */
+/* ojo: se quitaron el bloque oscuro del módulo activo, la caja del ícono y las animaciones de implosión y halo: la maqueta marca la subgestión activa en azul y el módulo solo cambia su flecha */
+.side-menu-item-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.side-menu-item-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border: none;
+  border-radius: var(--radius-md);
+  background-color: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-normal);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--motion-fast), color var(--motion-fast);
+}
+
+.side-menu-item-btn:hover {
+  background-color: var(--bg-card-inner);
+  color: var(--color-text-primary);
+}
+
+.side-menu-item-icon {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  object-fit: contain;
+  display: block;
+  opacity: 0.75;
+}
+
+.side-menu-item-btn:hover .side-menu-item-icon {
+  opacity: 1;
+}
+
+.side-menu-item-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.side-menu-item-badge {
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  background-color: var(--c-yellow-400);
+  color: var(--color-text-primary);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-bold);
+}
+
+.side-menu-item-caret {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: var(--text-xs);
+}
+
+/* menú contraído: solo el ícono, centrado; el módulo activo se marca porque ya no se ven sus subgestiones */
+.side-menu-item-btn-mini {
+  justify-content: center;
+}
+
+.side-menu-item-btn-mini .side-menu-item-label,
+.side-menu-item-btn-mini .side-menu-item-caret,
+.side-menu-item-btn-mini .side-menu-item-badge {
+  display: none;
+}
+
+.side-menu-item-btn-mini[aria-current='page'] {
+  background-color: var(--c-blue-75);
+}

@@ -1,0 +1,99 @@
+/* MainContent.css · estilos del lienzo central · solo usa tokens de styles/tokens.css */
+/* ojo: se quitaron las reglas sin uso (subtitle, header-actions, btn-sync, btn-action y kpis-grid) y el aviso de "Próxima Fase" pasó a MainContentPlaceholder.css */
+/* ojo: ahora es el lienzo de la maqueta (.scr): relleno de 18 px y título de 20 px con el módulo debajo; la cabecera con la bodega vive en AppHeader */
+.main-content {
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow-y: auto;
+  background-color: var(--bg-main);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Encabezado del Área de Trabajo */
+.main-content-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.main-content-title {
+  font-size: var(--text-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  line-height: var(--leading-body);
+}
+
+.main-content-subtitle {
+  display: block;
+  color: var(--color-text-secondary);
+}
+
+/* ojo: el flex:1 antes estaba en línea dentro de MainContent.tsx */
+/* entrada del contenido: cada vez que cambia el módulo o la subgestión aparece con un fundido y un leve desplazamiento */
+.main-content-viewport {
+  flex: 1;
+  animation: main-content-enter var(--duration-enter) var(--ease-out);
+}
+
+@keyframes main-content-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .main-content-viewport {
+    animation: none;
+  }
+}
+
+/* Estado de acceso no autorizado */
+.main-content-unauthorized {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 320px;
+  padding: 2rem;
+}
+
+.main-content-unauthorized-card {
+  max-width: 480px;
+  background-color: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-base);
+  padding: 2.5rem;
+  text-align: center;
+}
+
+.main-content-unauthorized-icon {
+  font-size: var(--text-icon-lg);
+  margin-bottom: 1rem;
+}
+
+.main-content-unauthorized-title {
+  font-size: var(--text-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-danger);
+  margin-bottom: 0.75rem;
+}
+
+.main-content-unauthorized-desc {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-relaxed);
+  margin-bottom: 0.5rem;
+}
+
+.main-content-unauthorized-detail {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}

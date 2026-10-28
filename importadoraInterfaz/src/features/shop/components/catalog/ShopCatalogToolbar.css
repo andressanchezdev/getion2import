@@ -1,0 +1,30 @@
+/* ShopCatalogToolbar.css · estilos de la fila de herramientas del catálogo (buscador, chips de filtro y limpiar) · solo usa tokens de styles/tokens.css */
+/* ojo: antes estas reglas estaban en ShopCatalogScreen.css (se separó para que cada archivo haga una sola cosa) */
+/* ojo: los chips (categoría, marca y con stock) ahora son componentes globales (global/UI/molecules/chips) y sus estilos ya no se repiten aquí */
+.shop-catalog-search-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.shop-catalog-search-bar {
+  flex: 1;
+  min-width: min(240px, 100%); /* ojo: con el panel abierto la columna es angosta y 240px la desbordaba */
+}
+
+.shop-catalog-reset-btn {
+  background: none;
+  border: none;
+  color: var(--c-red-650);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  transition: background var(--motion-fast);
+}
+
+.shop-catalog-reset-btn:hover {
+  background: var(--c-red-100);
+}

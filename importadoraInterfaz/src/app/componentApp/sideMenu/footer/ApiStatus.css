@@ -1,0 +1,49 @@
+/* ApiStatus.css · estilos del estado de la API en el footer del menú (línea de texto con punto de color) · solo usa tokens de styles/tokens.css */
+.side-menu-api {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px 8px;
+  font-size: var(--text-xs);
+  color: var(--c-yellow-700);
+}
+
+.side-menu-api-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-circle);
+  flex-shrink: 0;
+  background-color: currentColor;
+}
+
+.side-menu-api-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* conectando: ámbar con latido */
+.side-menu-api-checking .side-menu-api-dot {
+  animation: pulse var(--motion-pulse);
+}
+
+/* en línea: verde de la maqueta (contraste AA sobre blanco) */
+.side-menu-api-online {
+  color: var(--c-green-700);
+}
+
+/* sin conexión: rojo */
+.side-menu-api-offline {
+  color: var(--c-red-650);
+}
+
+/* menú contraído: la maqueta oculta esta línea */
+.side-menu-api-mini {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .side-menu-api-checking .side-menu-api-dot {
+    animation: none;
+  }
+}

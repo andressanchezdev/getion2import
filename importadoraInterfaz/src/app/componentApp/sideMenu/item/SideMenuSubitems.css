@@ -1,0 +1,56 @@
+/* SideMenuSubitems.css · estilos de las subgestiones del menú (se despliegan animando la altura) · solo usa tokens de styles/tokens.css */
+/* ojo: como en la maqueta la subgestión activa va en azul sobre fondo azul suave; se quitaron el punto indicador y la animación de implosión */
+.side-menu-subitems {
+  display: grid;
+  grid-template-rows: 0fr;
+  visibility: hidden;
+  transition: grid-template-rows var(--duration-enter) var(--ease-out), visibility 0s linear var(--duration-enter);
+}
+
+.side-menu-subitems-open {
+  grid-template-rows: 1fr;
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+.side-menu-subitems-inner {
+  min-height: 0;
+  overflow: hidden;
+  margin: 2px 0 6px 20px;
+  padding-left: 6px;
+  border-left: 1px solid var(--color-border);
+}
+
+.side-menu-subitem-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  padding: 6px 10px;
+  border: none;
+  border-radius: var(--radius-md);
+  background-color: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-normal);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--motion-fast), color var(--motion-fast);
+}
+
+.side-menu-subitem-btn:hover {
+  background-color: var(--bg-card-inner);
+  color: var(--color-text-primary);
+}
+
+.side-menu-subitem-btn-active,
+.side-menu-subitem-btn-active:hover {
+  background-color: var(--c-blue-75);
+  color: var(--c-blue-700);
+  font-weight: var(--font-weight-semibold);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .side-menu-subitems {
+    transition: none;
+  }
+}

@@ -1,0 +1,29 @@
+/* ShopCartSearch.css · estilos del buscador del carrito (caja blanca con lupa de la maqueta) · solo usa tokens de styles/tokens.css */
+.shop-cart-search {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: var(--space-2);
+  margin: 18px 18px 10px;
+  padding: 0 6px 0 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--color-card-border);
+  border-radius: var(--radius-base);
+  color: var(--color-card-muted);
+}
+
+.shop-cart-search:focus-within {
+  border-color: var(--c-blue-600);
+}
+
+.shop-cart-search-input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: var(--text-sm);
+}

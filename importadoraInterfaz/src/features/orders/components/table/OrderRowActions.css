@@ -1,0 +1,82 @@
+/* OrderRowActions.css · estilos de las acciones de una fila (botón principal, ⋯ y menú flotante de la maqueta) · solo usa tokens de styles/tokens.css */
+.order-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.order-actions-primary {
+  padding: 7px var(--space-3);
+  border: 1px solid var(--color-card-border);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--motion-fast);
+}
+
+.order-actions-primary:hover {
+  background: var(--bg-card-media);
+}
+
+.order-actions-wrap {
+  position: relative;
+}
+
+.order-actions-dots {
+  padding: 2px 9px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card-inner);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  cursor: pointer;
+}
+
+.order-actions-dots:hover,
+.order-actions-dots[aria-expanded='true'] {
+  border-color: var(--c-blue-600);
+}
+
+/* menú flotante: el .pop de la maqueta */
+.order-actions-pop {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: var(--z-dropdown);
+  min-width: 210px;
+  padding: 4px;
+  background: var(--bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-popover);
+}
+
+.order-actions-item {
+  display: block;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.order-actions-item:hover {
+  background: var(--bg-card-inner);
+}
+
+.order-actions-item-danger {
+  color: var(--c-red-650);
+}

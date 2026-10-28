@@ -1,0 +1,24 @@
+/* ChipSelect.css · estilos de la lista desplegable con aspecto de chip (píldora .fchip de la maqueta) · solo usa tokens de styles/tokens.css */
+.chip-select {
+  max-width: 180px;
+  padding: 7px var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background-color: var(--bg-card);
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition: border-color var(--motion-fast), background-color var(--motion-fast);
+}
+
+.chip-select:hover {
+  border-color: var(--c-yellow-400);
+}
+
+.chip-select-on {
+  border-color: var(--c-yellow-400);
+  background-color: var(--c-yellow-50);
+  color: var(--c-yellow-700);
+  font-weight: var(--font-weight-semibold);
+}

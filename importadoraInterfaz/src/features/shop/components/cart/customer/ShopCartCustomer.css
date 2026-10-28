@@ -1,0 +1,47 @@
+/* ShopCartCustomer.css · estilos de la franja del cliente de la venta en el carrito · solo usa tokens de styles/tokens.css */
+/* ojo: se alinea con el relleno de 18 px del carrito de la maqueta y usa el radio de 10 px */
+.shop-cart-customer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: 18px 18px 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--c-blue-200);
+  border-radius: var(--radius-base);
+  background: var(--c-blue-50);
+}
+
+.shop-cart-customer-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.shop-cart-customer-label {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.shop-cart-customer-name {
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--c-blue-800);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shop-cart-customer-remove {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--c-slate-500);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.shop-cart-customer-remove:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

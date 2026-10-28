@@ -1,0 +1,403 @@
+/* ============================================================================
+   TOKENS DEL DISEÑO — ÚNICA FUENTE DE VERDAD DE ESTILOS
+   ----------------------------------------------------------------------------
+   Todo valor visual del proyecto (colores, tipografía, radios, sombras, z-index,
+   movimiento, dimensiones de layout) se define AQUÍ. Los CSS de cada componente
+   solo consumen estos tokens con var(--token); no declaran valores propios.
+
+   Orden de herencia:
+     1. Paleta primitiva      (--c-*, --alpha-*)           valores crudos
+     2. Escalas               (--text-*, --radius-*, ...)  valores crudos
+     3. Tokens semánticos     (--bg-*, --color-*, ...)     referencian 1 y 2
+   Para cambiar el aspecto de toda la app, edita este archivo.
+   ============================================================================ */
+:root {
+  /* ---- 1. PALETA PRIMITIVA (hex) ---- */
+  --c-brand-charcoal: #2f3237;
+  /* login: carbón de la marca */
+  --c-brand-yellow: #fbb41a;
+  /* login: amarillo de la marca */
+  --c-amber-50: #fffbeb;
+  --c-amber-200: #fde68a;
+  --c-amber-400: #fbbf24;
+  --c-amber-500: #f59e0b;
+  --c-amber-600: #d97706;
+  --c-amber-700: #b45309;
+  --c-amber-800: #92400e;
+  --c-blue-25: #f0f7ff;
+  --c-blue-50: #eff6ff;
+  --c-blue-100: #dbeafe;
+  --c-blue-200: #bfdbfe;
+  --c-blue-300: #93c5fd;
+  --c-blue-600: #1f64e0;
+  /* ojo: antes #2563eb; ahora el azul de la maqueta */
+  --c-blue-700: #174fb5;
+  /* ojo: antes #1d4ed8; ahora el azul oscuro de la maqueta (hover y texto activo) */
+  --c-blue-800: #1e40af;
+  --c-blue-900: #1e3a8a;
+  --c-emerald-50: #ecfdf5;
+  --c-emerald-200: #a7f3d0;
+  --c-emerald-400: #34d399;
+  --c-emerald-500: #10b981;
+  --c-emerald-600: #059669;
+  --c-emerald-700: #047857;
+  --c-emerald-800: #065f46;
+  --c-gray-300: #d1d5db;
+  --c-green-50: #f0fdf4;
+  --c-green-200: #bbf7d0;
+  --c-green-500: #22c55e;
+  --c-green-800: #166534;
+  --c-indigo-400: #818cf8;
+  --c-ip-gray-50: #f7f7f7;
+  --c-ip-gray-200: #e5e5e5;
+  --c-ip-gray-600: #666666;
+  --c-ip-gray-900: #1a1a1a;
+  --c-neutral-50: #fafafa;
+  --c-red-50: #fef2f2;
+  --c-red-200: #fecaca;
+  --c-red-500: #ef4444;
+  --c-red-600: #dc2626;
+  --c-red-700: #b91c1c;
+  --c-red-800: #991b1b;
+  --c-rose-400: #fb7185;
+  --c-rose-600: #e11d48;
+  --c-rose-700: #be123c;
+  --c-slate-50: #f8fafc;
+  --c-slate-100: #f1f5f9;
+  --c-slate-200: #e2e8f0;
+  --c-slate-300: #cbd5e1;
+  --c-slate-400: #94a3b8;
+  --c-slate-500: #64748b;
+  --c-slate-600: #475569;
+  --c-slate-700: #334155;
+  --c-slate-800: #1e293b;
+  --c-slate-900: #0f172a;
+  --c-white: #ffffff;
+
+  /* ---- 1a. PALETA DE LA MAQUETA (MAQUETA-V3): el «chrome» de la app (menú, cabecera, tablas, panel) y las cards de IP ---- */
+  --c-shell-50: #f5f6f9;
+  /* fondo de la app y del contenido */
+  --c-shell-100: #eef1f5;
+  /* superficie suave: hover, campos y encabezados de tabla */
+  --c-shell-200: #dfe3ea;
+  /* líneas y bordes del menú, la cabecera, las tablas y el panel */
+  --c-shell-600: #5b6472;
+  /* texto secundario del chrome */
+  --c-blue-75: #e8f0fe;
+  /* fondo del ítem activo del menú */
+  --c-green-100: #eefaf2;
+  /* pastilla verde: fondo */
+  --c-green-300: #7cc79a;
+  /* pastilla verde: borde */
+  --c-green-700: #17803d;
+  /* texto verde de la maqueta */
+  --c-red-100: #fdf0f0;
+  /* pastilla roja: fondo */
+  --c-red-300: #e59a9a;
+  /* pastilla roja: borde */
+  --c-red-650: #d32f2f;
+  /* texto rojo de la maqueta */
+  --c-yellow-50: #fff8e1;
+  /* chip activo y pastilla ámbar: fondo */
+  --c-yellow-100: #fff4cf;
+  /* caja del ícono del panel derecho */
+  --c-yellow-400: #ffc629;
+  /* botón principal (Ordenar, Finalizar compra) y etiqueta de tarifa */
+  --c-yellow-600: #e0b400;
+  /* pastilla ámbar: borde */
+  --c-yellow-700: #9a6700;
+  /* texto e íconos sobre fondo amarillo suave */
+  --c-violet-50: #f5f3ff;
+  /* estado «acento» (ej. traslado en tránsito): fondo */
+  --c-violet-600: #7c3aed;
+  /* estado «acento»: texto */
+  --c-ip-gray-500: #757575;
+  /* texto tenue de las cards de IP */
+  --c-ip-green-100: #baffc0;
+  /* botón «Ordenado» */
+  --c-ip-green-800: #1b6519;
+  /* texto del botón «Ordenado» */
+  --c-ip-red-600: #e53935;
+  /* quitar del carrito */
+
+  /* ---- 1b. TRANSPARENCIAS (rgba) ---- */
+  --alpha-amber-500-10: rgba(245, 158, 11, 0.1);
+  --alpha-amber-500-20: rgba(245, 158, 11, 0.2);
+  --alpha-brand-charcoal-60: rgba(47, 50, 55, 0.6);
+  /* login: textos suaves */
+  --alpha-black-2: rgba(0, 0, 0, 0.02);
+  --alpha-black-4: rgba(0, 0, 0, 0.04);
+  --alpha-black-5: rgba(0, 0, 0, 0.05);
+  --alpha-black-6: rgba(0, 0, 0, 0.06);
+  --alpha-black-8: rgba(0, 0, 0, 0.08);
+  --alpha-black-10: rgba(0, 0, 0, 0.1);
+  --alpha-black-45: rgba(0, 0, 0, 0.45);
+  /* fondo oscuro detrás de los diálogos de confirmación */
+  --alpha-blue-600-10: rgba(31, 100, 224, 0.1);
+  --alpha-blue-600-20: rgba(31, 100, 224, 0.2);
+  --alpha-blue-600-25: rgba(31, 100, 224, 0.25);
+  --alpha-blue-600-30: rgba(31, 100, 224, 0.3);
+  --alpha-emerald-500-10: rgba(16, 185, 129, 0.1);
+  --alpha-emerald-500-20: rgba(16, 185, 129, 0.2);
+  --alpha-emerald-500-30: rgba(16, 185, 129, 0.3);
+  --alpha-emerald-600-20: rgba(5, 150, 105, 0.2);
+  --alpha-green-500-25: rgba(34, 197, 94, 0.25);
+  --alpha-indigo-500-10: rgba(99, 102, 241, 0.1);
+  --alpha-indigo-500-20: rgba(99, 102, 241, 0.2);
+  --alpha-ip-gray-900-8: rgba(26, 26, 26, 0.08);
+  --alpha-ip-gray-900-15: rgba(26, 26, 26, 0.15);
+  --alpha-slate-700-80: rgba(51, 65, 85, 0.8);
+  --alpha-white-20: rgba(255, 255, 255, 0.2);
+  --alpha-white-90: rgba(255, 255, 255, 0.9);
+
+  /* ---- 2. TIPOGRAFÍA: escala única de tamaños (todo texto usa uno de estos) ---- */
+  --text-xs: 12px;
+  /* etiquetas, badges y notas (mínimo legible) */
+  --text-sm: 13px;
+  /* texto secundario y botones */
+  --text-md: 14px;
+  /* texto base de listas, menú y tablas */
+  --text-base: 16px;
+  /* títulos de sección */
+  --text-lg: 18px;
+  /* encabezados medianos */
+  --text-xl: 20px;
+  /* encabezados grandes */
+  --text-2xl: 24px;
+  /* títulos de módulo y valores de KPI */
+  --text-heading: 30px;
+  /* login: nombre de la marca */
+  --text-display: 60px;
+  /* login: título Bienvenido */
+  --text-icon: 36px;
+  /* íconos emoji grandes */
+  --text-icon-lg: 42px;
+  /* íconos emoji de tarjeta */
+
+  /* ---- 2b. TIPOGRAFÍA: pesos adicionales ---- */
+  --font-weight-extrabold: 800;
+
+  /* ---- 2c. RADIOS: escala única ---- */
+  --radius-sm: 6px;
+  /* badges, botones y campos pequeños */
+  --radius-md: 8px;
+  /* botones y bloques medianos */
+  --radius-base: 10px;
+  /* paneles, campos de cantidad y cards del carrito (el radio más usado de la maqueta) */
+  --radius-lg: 12px;
+  /* tarjetas y paneles */
+  --radius-pill: 5px;
+  --radius-circle: 50%;
+
+  /* ---- 2d-1. SOMBRAS Y FOCO ---- */
+  --shadow-rest: 0 1px 3px var(--alpha-black-6);
+  /* elementos en reposo (botones, chips) */
+  --ring-focus: 0 0 0 3px var(--alpha-blue-600-10);
+  /* aro suave de campos con foco */
+  --focus-outline: 2px solid var(--c-blue-600);
+  /* foco visible con teclado */
+
+  /* ---- 2d-2. ESPACIADO: escala (4 · 8 · 12 · 16 · 24 · 32) ---- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 0.9rem;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* ---- 2d. CAPAS (z-index) ---- */
+  --z-dropdown: 50;
+  --z-header: 30;
+  --z-toggle: 10;
+  --z-modal: 1000;
+  /* diálogos de confirmación: por encima de todo el shell */
+
+  /* ---- 2e. MOVIMIENTO (duración + curva) ---- */
+  --motion-base: 0.2s ease;
+  --motion-fast: 0.15s ease;
+  --motion-instant: 0.12s ease;
+  --motion-slow: 0.3s ease;
+  --motion-pulse: 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  /* latido de puntos de estado y esqueletos */
+  --duration-implode: 180ms;
+  /* menú: el resaltado se contrae al hacer clic */
+  --duration-halo: 360ms;
+  /* menú: halo de salida cuando el cambio ya se aplicó */
+  --duration-enter: 260ms;
+  /* entrada de contenido y apertura de paneles */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* ---- 3. TOKENS SEMÁNTICOS Y LAYOUT (valores originales del proyecto) ---- */
+
+  /* 1. BACKGROUNDS (Superficies y Fondos) */
+  --bg-app: var(--c-shell-50);
+  /* Fondo base general de la app */
+  --bg-header: var(--c-white);
+  /* Superficie blanca de la cabecera */
+  --bg-sidebar: var(--c-white);
+  /* Superficie blanca del menú lateral */
+  --bg-main: var(--c-shell-50);
+  /* Fondo del lienzo central de trabajo */
+  --bg-card: var(--c-white);
+  /* Fondo de tarjetas, paneles y métricas */
+  --bg-card-inner: var(--c-shell-100);
+  --bg-card-media: var(--c-ip-gray-50);
+  /* fondo de la imagen de la card, del botón agotado y del carrito (el gris de IP) */
+  /* Fondo de contenedores internos / placeholders */
+  --bg-drawer: var(--c-white);
+  /* Superficie blanca del drawer lateral derecho */
+
+  /* 2. TEXTOS Y BORDES (Escala de Grises de clienteIP) */
+  --color-text-primary: var(--c-ip-gray-900);
+  /* Texto principal carbón de alto contraste */
+  --color-text-secondary: var(--c-shell-600);
+  /* Subtítulos, etiquetas e iconos inactivos */
+  --color-text-muted: var(--c-shell-600);
+  /* Textos tenues */
+  --color-border: var(--c-shell-200);
+  --color-card-border: var(--c-ip-gray-200);
+  /* borde de las cards de IP (producto, carrito, pedido) */
+  --color-card-muted: var(--c-ip-gray-500);
+  /* texto tenue de las cards de IP */
+  /* Bordes finos y divisores sutiles */
+
+  /* 3. SOMBRAS Y BORDES REDONDEADOS */
+  --shadow-card: 0 2px 8px var(--alpha-black-6);
+  --shadow-card-hover: 0 6px 20px var(--alpha-black-10);
+  --shadow-card-soft: 0 1px 8px var(--alpha-black-5);
+  /* card de pedido */
+  --shadow-card-flat: 0 1px 6px var(--alpha-black-4);
+  /* card del carrito */
+  --shadow-popover: 0 8px 24px rgba(20, 30, 50, 0.18);
+  /* menús desplegables */
+  --shadow-tier-trigger: 0 1px 3px rgba(0, 0, 0, 0.13);
+  /* botón de tarifas */
+  --shadow-tier-menu: 0 8px 24px rgba(0, 0, 0, 0.27);
+  /* menú de tarifas */
+  --shadow-modal: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+  /* sombra de los diálogos de confirmación */
+  --radius-input: 24px;
+
+  /* 4. FUENTES (Familias y Pesos Tipográficos) */
+  /* ojo: la fuente principal pasó de Inter (que nunca se cargaba) a Montserrat, la de las tarjetas de Yamaha; se carga en index.html */
+  /* --font-family-base: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; */
+  --font-family-base: Inter, system-ui, 'Segoe UI', Roboto, sans-serif;
+  /* ojo: antes Montserrat; la maqueta usa Inter o la fuente del sistema. Montserrat sigue en --font-family-brand (login) */
+  --font-family-brand: 'Montserrat', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-family-display: 'Oswald', 'D-DIN Condensed', 'Arial Narrow', sans-serif;
+  --font-family-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --font-weight-normal: 400;
+  /* Texto estándar */
+  --font-weight-medium: 500;
+  /* Subtítulos y etiquetas */
+  --font-weight-semibold: 600;
+  /* Botones e ítems de menú */
+  --font-weight-bold: 700;
+  /* Títulos y valores numéricos */
+  --font-weight-black: 900;
+  /* Título principal del módulo */
+
+  /* Interlineado (line-height): 5 valores en vez de los 12 sueltos que había */
+  --leading-none: 1;
+  /* una sola línea sin aire (iconos, números grandes) */
+  --leading-tight: 1.1;
+  /* precios y etiquetas de botón */
+  --leading-snug: 1.2;
+  /* títulos cortos, nombres y notas */
+  --leading-normal: 1.4;
+  /* texto corrido y descripciones */
+  --leading-relaxed: 1.5;
+  /* mensajes largos */
+  --leading-body: 1.45;
+  /* base del ERP (maqueta): 14px con este interlineado en todo lo que no fija el suyo */
+  /* mensajes largos */
+  --leading-badge: 16px;
+  /* alto fijo de las insignias circulares (no depende del tamaño del texto) */
+
+  /* Espaciado entre letras (letter-spacing): 2 valores en vez de los 7 sueltos que había */
+  --tracking-tight: -0.02em;
+  /* títulos y cifras grandes */
+  --tracking-wide: 0.05em;
+  /* etiquetas en mayúsculas */
+
+  /* 5. MEDIDAS (Tamaños de Texto y Dimensiones del Layout) */
+  /* ojo: los tamaños de texto ahora están en la escala de la sección 2 */
+
+  /* --- Dimensiones estructurales de Layout --- */
+  --header-height: 60px;
+  /* 64px: altura fija de cabecera de clienteIP */
+  --sidebar-width: 232px;
+  --sidebar-width-mini: 64px;
+  /* menú contraído (solo íconos) */
+  /* 280px: ancho fijo del menú lateral ERP */
+  --drawer-width-open: 400px;
+  /* 360px: ancho del panel derecho abierto */
+  --drawer-width-collapsed: 56px;
+  /* 56px: ancho del panel derecho contraído */
+  /* ---- alias heredados: solo los usa global2 (carpeta reservada, no se toca); con los valores de antes ---- */
+  --radius-rem-12: 0.75rem;
+  --text-11px: 11px;
+  --text-2xs: 10px;
+  --text-rem-12: 0.75rem;
+  --text-rem-24: 1.5rem;
+
+  /* 6. TARJETA DE PRODUCTO (diseño tomado de las cards de Yamaha; ver docs/yamaha-product-card-spec.md) */
+  --product-card-min-width: 300px;
+  --product-card-max-width: 380px;
+  /* ojo: tope de ancho para que la card no se estire cuando hay pocas columnas */
+  /* ojo: antes 330px (Yamaha); ahora 300px como la maqueta */
+  --product-card-media-height: 180px;
+  --radius-product-card: 12px;
+  --c-product-card-border: #e9e7e7;
+  --c-product-card-name: #374f5b;
+  --c-product-card-title: #333333;
+  --c-product-card-ref: #727273;
+  --c-product-card-icon: #1e1e1e;
+  --c-product-card-action: var(--c-brand-yellow);
+  --c-product-card-action-hover: #e09f14;
+  --c-product-card-action-text: var(--c-brand-charcoal);
+  --c-product-card-ordered: #374f5b;
+  --c-product-card-disabled-bg: #e9e7e7;
+  --c-product-card-disabled-text: #767676;
+  --c-product-card-hover-bg: #f4f6f8;
+  --alpha-product-card-action-8: rgba(251, 180, 26, 0.12);
+  --shadow-product-card-menu: 1px 2px 4px rgba(0, 0, 0, 0.25);
+  --size-product-card-icon-box: 40px;
+  --size-product-card-emoji: 80px;
+
+  /* 7. ALIAS DE NOMBRES QUE YA USABAN LOS CSS (antes no existían en este archivo y esos estilos no se aplicaban) */
+  --color-bg-muted: var(--c-shell-100);
+  --color-bg-hover: var(--c-shell-100);
+  --bg-hover: var(--c-shell-100);
+  --bg-surface-secondary: var(--c-shell-100);
+  --color-bg-elevated: var(--c-white);
+  --color-bg-surface: var(--c-white);
+  --bg-surface: var(--c-white);
+  --color-primary: var(--c-blue-600);
+  --color-primary-light: var(--c-blue-75);
+  --color-danger: var(--c-red-650);
+  --color-danger-light: var(--c-red-100);
+  --color-danger-bg: var(--c-red-100);
+  --color-success: var(--c-green-700);
+  --color-success-light: var(--c-green-100);
+  --color-success-bg: var(--c-green-100);
+  --color-warning: var(--c-yellow-700);
+  --color-warning-bg: var(--c-yellow-50);
+  --color-info: var(--c-blue-600);
+  --color-info-bg: var(--c-blue-50);
+  --color-accent: var(--c-violet-600);
+  --color-accent-bg: var(--c-violet-50);
+  --color-text-tertiary: var(--c-slate-400);
+  --color-text-disabled: var(--c-slate-400);
+  --color-backdrop: var(--alpha-black-45);
+  --shadow-sm: var(--shadow-rest);
+  --shadow-md: var(--shadow-card);
+  --shadow-xl: var(--shadow-modal);
+  --radius-full: var(--radius-pill);
+  --tracking-wider: 0.08em;
+  --line-height-relaxed: var(--leading-relaxed);
+  --alpha-black-1: rgba(0, 0, 0, 0.01);
+  --duration-fast: 150ms;
+  --ease-default: ease;
+}

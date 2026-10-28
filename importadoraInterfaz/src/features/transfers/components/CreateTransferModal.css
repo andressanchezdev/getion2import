@@ -1,0 +1,159 @@
+/* CreateTransferModal.css · estilos de creación y reubicación multibodega */
+/* ojo: se quitaron los valores de respaldo escritos a mano (colores, sombras y tamaños): los tokens que usaban ya existen en tokens.css */
+.transfer-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: var(--color-backdrop);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.transfer-modal-card {
+  background-color: var(--c-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  width: 100%;
+  max-width: 680px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.transfer-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.transfer-modal-title {
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.transfer-modal-close {
+  background: transparent;
+  border: none;
+  font-size: var(--text-xl);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.transfer-modal-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.transfer-search-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.transfer-matrix-title {
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+}
+
+.transfer-matrix-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.transfer-matrix-table th {
+  background-color: var(--color-bg-muted);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-semibold);
+  padding: 0.625rem 0.75rem;
+  text-align: left;
+}
+
+.transfer-matrix-table td {
+  padding: 0.625rem 0.75rem;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+}
+
+.transfer-stock-badge {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  background-color: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.transfer-stock-badge-zero {
+  background-color: var(--color-bg-muted);
+  color: var(--color-text-muted);
+}
+
+.transfer-grid-2cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.transfer-select-label {
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  margin-bottom: 0.375rem;
+  display: block;
+}
+
+.transfer-select-control {
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+}
+
+.transfer-serial-alert {
+  background-color: var(--color-success-bg);
+  border: 1px solid var(--color-success);
+  padding: 1.5rem;
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+
+.transfer-serial-number {
+  font-size: var(--text-heading);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-success);
+  letter-spacing: var(--tracking-wider);
+  margin: 0.5rem 0;
+}
+
+.transfer-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--color-border);
+  background-color: var(--color-bg-muted);
+}

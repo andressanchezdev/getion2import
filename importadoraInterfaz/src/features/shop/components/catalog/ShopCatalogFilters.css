@@ -1,0 +1,19 @@
+/* ShopCatalogFilters.css · estilos del resumen de resultados del catálogo · solo usa tokens de styles/tokens.css */
+/* ojo: antes estas reglas estaban en ShopCatalogScreen.css (se separó para que cada archivo haga una sola cosa) */
+/* ojo: el resumen ahora es una línea discreta a la derecha, sin borde superior (la maqueta pone el conteo en el subtítulo) */
+.shop-catalog-filter-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+/* Resumen de Resultados */
+.shop-catalog-results-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}

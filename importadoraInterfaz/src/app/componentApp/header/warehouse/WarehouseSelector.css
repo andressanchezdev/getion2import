@@ -1,0 +1,51 @@
+/* WarehouseSelector.css · estilos del botón selector de bodega del encabezado (botón gris con ícono y flecha) · solo usa tokens de styles/tokens.css */
+/* ojo: antes estas reglas estaban en AppHeader.css (se separó para que cada archivo haga una sola cosa); la etiqueta «Tienda:» y la insignia del número se quitaron como en la maqueta */
+.app-header-warehouse-wrapper {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.app-header-warehouse-relative {
+  position: relative;
+  min-width: 0;
+}
+
+/* Botón de la bodega activa */
+.app-header-warehouse-btn {
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  background-color: var(--bg-card-inner);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  user-select: none;
+  transition: border-color var(--motion-fast);
+}
+
+.app-header-warehouse-btn:hover,
+.app-header-warehouse-btn-active {
+  border-color: var(--c-blue-600);
+}
+
+.app-header-warehouse-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.app-header-warehouse-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-header-warehouse-chevron {
+  color: var(--color-text-secondary);
+}

@@ -1,0 +1,40 @@
+/* ProductBrand.css · estilos de la marca del producto (logo o nombre) en la card y en el carrito · solo usa tokens de styles/tokens.css */
+.product-brand {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    position: relative;
+}
+
+/* card del catálogo: caja de 90 px alineada a la derecha */
+.product-brand-card {
+    justify-content: flex-end;
+    width: 90px;
+}
+
+/* línea del carrito: caja de 22 px de alto */
+.product-brand-cart {
+    height: 22px;
+    max-width: 68px;
+    padding: 3px;
+}
+
+.product-brand-image {
+    height: 100%;
+    max-width: 100%;
+    width: auto;
+    object-fit: contain;
+}
+
+.product-brand-name {
+    color: var(--color-text-primary);
+    font-size: var(--text-base);
+    font-style: italic;
+    font-weight: var(--font-weight-black);
+    letter-spacing: var(--tracking-tight);
+}
+
+/* ojo: la maqueta usa 11 px en el carrito; el mínimo de la app es 12 px */
+.product-brand-cart .product-brand-name {
+    font-size: var(--text-xs);
+}

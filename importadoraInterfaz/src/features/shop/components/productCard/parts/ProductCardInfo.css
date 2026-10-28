@@ -1,0 +1,69 @@
+/* ProductCardInfo.css · estilos de la categoría, el título, la línea de marca y modelo y la referencia de la tarjeta · solo usa tokens de styles/tokens.css */
+
+.product-card-desc {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    width: 100%;
+}
+
+/* categoría y título comparten estilo: 14 px en negrita, una sola línea con puntos suspensivos */
+.product-card-category,
+.product-card-title {
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    color: var(--color-text-primary);
+    font-size: var(--text-md);
+    font-weight: var(--font-weight-bold);
+    line-height: inherit;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.product-card-category {
+    flex: 0 1 auto;
+}
+
+.product-card-title {
+    flex: 1 1 auto;
+}
+
+.product-card-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    color: var(--color-card-muted);
+    font-size: var(--text-xs);
+}
+
+.product-card-location {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.product-card-location svg {
+    width: 11px;
+    height: 13px;
+}
+
+/* la referencia es un botón vestido de texto: se copia con un clic */
+.product-card-ref {
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--color-card-muted);
+    font-family: inherit;
+    font-size: var(--text-xs);
+    line-height: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.product-card-ref:hover {
+    color: var(--color-text-primary);
+}

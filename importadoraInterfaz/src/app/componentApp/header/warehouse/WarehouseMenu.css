@@ -1,0 +1,70 @@
+/* WarehouseMenu.css · estilos del menú desplegable de bodegas (menú flotante de la maqueta) · solo usa tokens de styles/tokens.css */
+/* ojo: antes estas reglas estaban en AppHeader.css (se separó para que cada archivo haga una sola cosa) */
+.app-header-warehouse-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 190px;
+  padding: 4px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-popover);
+  z-index: var(--z-dropdown);
+  animation: dropdownFadeIn var(--motion-fast);
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.app-header-warehouse-menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 7px 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--motion-instant);
+}
+
+.app-header-warehouse-menu-item:hover {
+  background-color: var(--bg-card-inner);
+}
+
+.app-header-warehouse-menu-item-selected {
+  font-weight: var(--font-weight-semibold);
+}
+
+.app-header-warehouse-menu-item-id {
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-normal);
+}
+
+/* aviso cuando el backend no devolvió bodegas (o todavía no cargan) */
+.app-header-warehouse-menu-empty {
+  padding: 7px 10px;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-header-warehouse-menu {
+    animation: none;
+  }
+}

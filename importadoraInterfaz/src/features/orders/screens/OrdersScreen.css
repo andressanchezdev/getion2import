@@ -1,0 +1,13 @@
+/* OrdersScreen.css · estilos de la pantalla de pedidos (la barra y la tabla una debajo de la otra) · solo usa tokens de styles/tokens.css */
+.orders-screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.orders-screen-note {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}

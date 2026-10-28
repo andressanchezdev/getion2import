@@ -1,0 +1,30 @@
+/* ErpLayout.css · estilos del layout del ERP (menú, columna central con cabecera y contenido, y drawer) · solo usa tokens de styles/tokens.css */
+/* ojo: como en la maqueta el layout es una fila (menú | columna central | drawer); antes era una columna con el header arriba y el cuerpo debajo */
+.store-app-layout {
+    display: flex;
+    height: 100vh;
+    width: 100%;
+    overflow: hidden;
+    background-color: var(--bg-app);
+    color: var(--color-text-primary);
+    user-select: none;
+    /* ojo: base de texto de la maqueta (14px con interlineado 1,45); va aquí y no en body porque el login depende del tamaño que hereda del navegador */
+    font-size: var(--text-md);
+    line-height: var(--leading-body);
+}
+
+.store-app-main {
+    display: flex;
+    flex: 1 1 0%;
+    flex-direction: column;
+    min-width: 0;
+    background-color: var(--bg-main);
+}
+
+/* ojo: .store-app-body ya no se usa (el cuerpo con los 3 bloques ahora es .store-app-layout); se deja como referencia
+.store-app-body {
+    display: flex;
+    flex: 1 1 0%;
+    overflow: hidden;
+}
+*/

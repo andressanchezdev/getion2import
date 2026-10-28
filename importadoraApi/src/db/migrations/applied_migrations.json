@@ -1,0 +1,24 @@
+{
+  "database": "Importadora",
+  "host": "localhost",
+  "lastSyncedAt": "2026-10-28T22:02:37.122Z",
+  "totalApplied": 2,
+  "migrations": [
+    {
+      "version": "000",
+      "name": "initial_v10_schema",
+      "filename": "startDb.pgsql",
+      "checksum": "bd408064256372017f18f87ac76ab577763aaaada7849e700d10970cf81e6980",
+      "execution_time_ms": 0,
+      "applied_at": "2026-10-28T17:02:22.429067-05:00"
+    },
+    {
+      "version": "001",
+      "name": "schema_migrations_control",
+      "filename": "001_schema_migrations_control.pgsql",
+      "checksum": "15dc84c3ee61bd82324eb96d42b7c418f14c02397051394b365e0b2022648c3d",
+      "execution_time_ms": 113,
+      "applied_at": "2026-10-28T17:02:22.712484-05:00"
+    }
+  ]
+}

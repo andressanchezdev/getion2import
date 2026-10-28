@@ -1,7 +1,0 @@
-/* ReportScreen.css · estilos de las pantallas de reportes (columna con barra de fechas y secciones) · solo usa tokens de styles/tokens.css */
-.report-screen {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-5);
-  width: 100%;
-}

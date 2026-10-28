@@ -1,0 +1,81 @@
+/* ShopCartFooter.css · estilos del pie del carrito (totales de la maqueta y botón amarillo) · solo usa tokens de styles/tokens.css */
+/* ojo: antes estas reglas estaban en ShopCartDrawer.css (se separó para que cada archivo haga una sola cosa) */
+/* ojo: ahora es el bloque .ctotals de la maqueta: filas de subtotal, IVA y total (20 px) y un solo botón amarillo de 44 px; «Vaciar carrito» pasó a un enlace rojo pequeño debajo */
+.shop-cart-footer {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 14px 28px 18px;
+  background: var(--bg-card);
+  border-top: 1px solid var(--color-card-border);
+}
+
+.shop-cart-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.shop-cart-row span {
+  color: var(--color-card-muted);
+}
+
+.shop-cart-row b {
+  color: var(--color-text-primary);
+}
+
+.shop-cart-row-total span,
+.shop-cart-row-total b {
+  color: var(--color-text-primary);
+  font-size: var(--text-xl);
+  font-weight: var(--font-weight-black);
+}
+
+.shop-cart-btn-checkout {
+  height: 44px;
+  border: none;
+  border-radius: var(--radius-base);
+  background: var(--c-yellow-400);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+  transition: box-shadow var(--motion-fast);
+}
+
+.shop-cart-btn-checkout:hover:not(:disabled) {
+  box-shadow: var(--shadow-card);
+}
+
+.shop-cart-btn-checkout:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.shop-cart-btn-clear {
+  align-self: center;
+  padding: var(--space-1) var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--c-red-650);
+  font-family: inherit;
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: background-color var(--motion-fast);
+}
+
+.shop-cart-btn-clear:hover:not(:disabled) {
+  background: var(--c-red-100);
+}
+
+.shop-cart-btn-clear:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

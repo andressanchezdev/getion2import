@@ -1,0 +1,36 @@
+/* SideMenu.css · estilos del contenedor del menú lateral (lista y footer) · solo usa tokens de styles/tokens.css */
+/* ojo: el ancho sale de --sidebar-width (232px) y contraído de --sidebar-width-mini (64px), como en la maqueta; la marca, los módulos y el pie tienen su propio css */
+.side-menu {
+  width: var(--sidebar-width);
+  background-color: var(--bg-sidebar);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  height: 100%;
+  user-select: none;
+  border-right: 1px solid var(--color-border);
+  transition: width var(--motion-base);
+}
+
+.side-menu-mini {
+  width: var(--sidebar-width-mini);
+}
+
+/* Lista de Navegación */
+.side-menu-nav {
+  flex: 1 1 0%;
+  overflow-y: auto;
+  padding: var(--space-2);
+}
+
+/* Pie del menú: estado de la API y, debajo, el usuario (que lleva su propia línea superior) */
+.side-menu-footer {
+  display: flex;
+  flex-direction: column;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .side-menu {
+    transition: none;
+  }
+}

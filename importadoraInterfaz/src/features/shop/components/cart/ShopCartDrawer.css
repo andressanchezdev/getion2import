@@ -1,0 +1,37 @@
+/* ShopCartDrawer.css · estilos del contenedor y la lista del carrito (el encabezado está en DrawerHeader.css) · solo usa tokens de styles/tokens.css */
+/* src/features/shop/components/ShopCartDrawer.css */
+/* ojo: la lista es la .cart-list de la maqueta: relleno lateral de 18 px y 3 px entre cards */
+
+.shop-cart-drawer {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+}
+
+/* Items List */
+.shop-cart-items-container {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 18px;
+}
+
+.shop-cart-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* búsqueda sin resultados */
+.shop-cart-no-match {
+  padding: 40px 0;
+  color: var(--color-card-muted);
+  font-size: var(--text-base);
+  font-weight: var(--font-weight-semibold);
+  text-align: center;
+}

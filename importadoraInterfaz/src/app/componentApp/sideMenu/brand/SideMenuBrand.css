@@ -1,0 +1,64 @@
+/* SideMenuBrand.css · estilos de la cabecera del menú lateral (logo amarillo, nombre y botón de contraer) · solo usa tokens de styles/tokens.css */
+/* ojo: la altura es --header-height, la misma de la cabecera de la columna central, para que las dos líneas inferiores queden a la misma altura */
+.side-menu-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-sizing: border-box;
+  height: var(--header-height);
+  flex-shrink: 0;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.side-menu-brand-mini {
+  justify-content: center;
+}
+
+.side-menu-brand-logo {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-md);
+  background-color: var(--c-yellow-400);
+  color: var(--color-text-primary);
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-extrabold);
+}
+
+/* el nombre pasa a dos líneas ("Importadora" / "Premium") para que quepa junto al botón */
+.side-menu-brand-name {
+  min-width: 0;
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--leading-snug);
+  color: var(--color-text-primary);
+}
+
+/* Botón ☰ (contraer o expandir el menú) */
+.side-menu-brand-toggle {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  margin-left: auto;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--bg-card-inner);
+  color: var(--color-text-primary);
+  font-size: var(--text-md);
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color var(--motion-fast);
+}
+
+.side-menu-brand-mini .side-menu-brand-toggle {
+  margin-left: 0;
+}
+
+.side-menu-brand-toggle:hover {
+  border-color: var(--c-blue-600);
+}

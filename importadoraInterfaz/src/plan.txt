@@ -1,0 +1,1043 @@
+====================================================================================================
+PLAN MAESTRO DE ESPECIFICACIÓN TÉCNICA, ARQUITECTURA Y CONSOLIDACIÓN DE FLUJOS (ERP IMPORTADORA)
+Documento oficial para revisión y aprobación por Desarrollador Senior / Scrum Master
+====================================================================================================
+
+FECHA: 2026-10-22
+VERSIÓN: 2.1 (Auditoría Integral de Endpoints Swagger: Modelos DTO, Tipos de Datos y Contratos de API)
+UBICACIÓN DE PROYECTO: c:\Users\PERSONAL\Desktop\repos\GestionImportadora\appImportadoraIp
+ESTADO ACTUAL DEL SERVIDOR DEV: Activo en segundo plano (Vite + React + TypeScript + Redux Toolkit)
+SWAGGER BACKEND REFERENCIA: https://importadora-back-production.up.railway.app/swagger/doc.json
+
+----------------------------------------------------------------------------------------------------
+TABLA DE CONTENIDOS
+----------------------------------------------------------------------------------------------------
+1. REGLAS INNEGOCIABLES DE ARQUITECTURA Y ESTRUCTURA DE CÓDIGO
+2. IDENTIDAD DEL EMPLEADO Y FIJACIÓN AUTOMÁTICA DE BODEGA AL LOGIN (POST /auth/login)
+3. EJE CENTRAL DE STOCK: EL FÍSICO MANDA (POST /products, models.ProductLocation Y WEBSOCKETS)
+4. MÓDULO TIENDA (SHOP): CATÁLOGO POS, PRECIOS DINÁMICOS Y FLUJO REAL DE CARRITO A PEDIDO
+5. MÓDULO GESTIÓN CAJA: FACTURACIÓN, HISTORIAL, ARQUEO Y REGLA DE BYPASS POR CRÉDITO
+6. MÓDULO TRASLADOS (INVENTARIO): REUBICACIÓN MULTIBODEGA Y CONTROL DE NOVEDADES
+7. MÓDULO GESTIÓN ROLES: MATRIZ JERÁRQUICA DE PERMISOS POR EMPLEADO (POST /employees/permissions/modules)
+8. NUEVO MÓDULO CONFIGURACIÓN: ENGRANAJE EN HEADER Y OPCIONES SWAGGER
+9. MOTOR GLOBAL DE VALIDACIÓN Y SANITIZACIÓN DE ENTRADAS (CONTROL DE EXCEPCIONES)
+10. MATRIZ CONSOLIDADA OFICIAL DE NAVEGACIÓN Y SUBÍTEMS
+11. TRAZABILIDAD Y AUDITORÍA UNIVERSAL: ESPECIFICACIÓN RIGUROSA DE CONTRATOS API SWAGGER
+12. MAPEO DETALLADO DE ARCHIVOS, LÍNEAS DE CÓDIGO Y FIRMAS TÉCNICAS
+13. LISTA DE ELEMENTOS Y MOCKS CANDIDATOS A RETIRO MANUAL (PARA EL DESARROLLADOR)
+
+====================================================================================================
+1. REGLAS INNEGOCIABLES DE ARQUITECTURA Y ESTRUCTURA DE CÓDIGO
+====================================================================================================
+
+1.1. Inviolabilidad de la Raíz de "src":
+   No se crearán carpetas nuevas en la raíz de src/. Toda la solución se organiza exclusivamente en:
+   - src/api/               -> Cliente Axios, configuración de URLs y endpoints maestros (src/api/config.ts).
+   - src/app/               -> Montaje (main.tsx, App.tsx), Layout y Contenedores Padre (componentApp).
+   - src/assets/            -> Iconos SVG y recursos gráficos estáticos.
+   - src/features/          -> Módulos de dominio de negocio (cada feature contiene types, constants, helpers, services, slices, thunks, components, screens).
+   - src/global/            -> Utilidades transversales (hooks, helpers, UI atoms, UI molecules).
+   - src/styles/            -> Tokens CSS y variables de diseño (tokens.css).
+
+1.2. Contenedores Padre en "componentApp" (Intocables):
+   Los componentes en src/app/componentApp son los dueños de la interfaz visual general:
+   - MainContent.tsx        -> Lienzo principal donde se renderiza la pantalla activa según activeModule y activeSubitem.
+   - SideMenu.tsx           -> Menú de navegación lateral (consume MENU_ITEMS).
+   - AppHeader.tsx          -> Barra superior (Logo corporativo, WarehouseSelector, botón Configuración).
+   - DrawerRight.tsx        -> Panel lateral deslizable para carritos, auditorías y formularios contextuales.
+   REGLA ESTRICTA: Ningún feature creará nuevos envolventes de layout ni duplicará estos componentes. Las pantallas de negocio se construyen como hijos en src/features/{feature}/screens/ y se inyectan a través del registro central src/app/componentApp/contentMain/screenRegistry.ts.
+
+1.3. Criterio de Reutilización Global vs. Específico:
+   - Si un componente visual (tabla genérica, modal, badge, chip de filtro, input validado) se utiliza en más de un módulo, DEBE residir en src/global/components/UI/.
+   - Si un componente responde a una lógica 100% interna de un módulo (ej. calculador de billetes en Caja), reside en src/features/{feature}/components/.
+
+1.4. Política de Cero Duplicación de CSS:
+   Se prohíbe duplicar reglas CSS. Todo estilo utiliza los tokens semánticos de src/styles/tokens.css (colores, espaciados, radios, tipografías, transiciones).
+
+1.5. Política de Depuración de Archivos:
+   El agente bajo NINGUNA circunstancia eliminará archivos o carpetas directamente. Cualquier archivo obsoleto o mock antiguo se documenta en la Sección 13 para que el Desarrollador Senior / Scrum Master ejecute la eliminación manual.
+
+1.6. Usuarios del ERP = Exclusivamente Empleados de la Empresa:
+   Clientes, proveedores y transportadoras son directorios maestros de datos administrados por el personal. Quienes tienen credenciales de acceso, inician sesión y ejecutan acciones auditadas son única y exclusivamente los empleados de la empresa.
+
+====================================================================================================
+2. IDENTIDAD DEL EMPLEADO Y FIJACIÓN AUTOMÁTICA DE BODEGA AL LOGIN (POST /auth/login)
+====================================================================================================
+
+2.1. Contrato Exacto de Swagger:
+   - Endpoint: POST /auth/login
+   - Request Body: models.LoginRequest
+     * email (string, requerido)
+     * password (string, requerido)
+   - Response: response.APIResponse donde data es models.LoginResponse:
+     * access_token (string)
+     * refresh_token (string)
+     * user: models.UserResponse conteniendo:
+       - userId (integer)
+       - companyId (integer)
+       - warehouseId (integer) -> Bodega física asignada por defecto al empleado
+       - name (string), lastName (string), email (string)
+       - userType (string) -> 'admin', 'seller', 'cashier', 'warehouseman', etc.
+       - priceType (string) -> Tarifa predeterminada
+       - identification (string)
+       - comissionRate (number)
+       - photo (string)
+       - companyInformation (models.CompanyDetails)
+
+2.2. Diagnóstico del Problema Actual:
+   Actualmente, el helper pickActiveWarehouse en src/features/warehouses/helpers/warehouses.helpers.ts le da prioridad a la bodega almacenada en el estado local persistido (currentId) por encima del userWarehouseId retornado en el login. Esto provoca que un empleado asignado a la "Sede Norte" inicie sesión y quede ubicado en la bodega de una sesión previa ajena ("Sede Principal"), visualizando existencias de otra sede.
+
+2.3. Solución Técnica Implementada en Código:
+   1. En el thunk de inicio de sesión (src/features/auth/thunks/auth.thunks.ts -> loginThunk):
+      Al resolverse POST /auth/login con éxito, se extrae response.data.user.warehouseId y se despacha inmediatamente la acción Redux:
+      dispatch(setActiveWarehouse({ id: String(response.data.user.warehouseId), name: 'Sede Asignada...' }));
+   2. En src/features/warehouses/helpers/warehouses.helpers.ts -> pickActiveWarehouse:
+      Se reestructura la prioridad:
+      - Si el empleado tiene userWarehouseId asignado y su rol NO es superadmin multisede (userType !== 'admin'), se fuerzan SIEMPRE los datos de su sede física.
+      - Si el empleado es superadmin (userType === 'admin'), se permite la alternancia libre de bodegas.
+   3. En src/app/componentApp/header/warehouse/WarehouseSelector.tsx:
+      Si el usuario no cuenta con permiso multisede, el selector se desactiva visualmente (renderiza en modo lectura fija como badge no interactivo), impidiendo que el cajero o vendedor opere sobre bodegas ajenas.
+
+2.4. Carga e Hidratación del Árbol de Permisos en Sesión:
+   Al resolverse POST /auth/login con éxito:
+   - Si response.data.user.userType === 'admin' (Superadministrador):
+     Posee bypass maestro total. Todos los módulos, subítems y botones de acción se habilitan sin restricción en toda la aplicación.
+   - Si response.data.user.userType !== 'admin' (Empleado operativo: cajero, vendedor, bodeguero):
+     El sistema despacha inmediatamente POST /employees/permissions enviando { employeeId: response.data.user.userId }.
+     La respuesta (models.EmployeePermissionsResponse) hidrata el estado global en Redux (state.auth.permissions), gobernando qué módulos y subítems se renderizan en el Menú Lateral (SideMenu) y qué acciones CRUD (crear, editar, eliminar) se permiten en cada pantalla.
+
+====================================================================================================
+3. EJE CENTRAL DE STOCK: EL FÍSICO MANDA (POST /products, models.ProductLocation Y WEBSOCKETS)
+====================================================================================================
+
+3.1. Contrato Exacto de Stock en Swagger:
+   - Endpoint: POST /products
+   - Request Body: models.GetProductRequest
+     * companyId (integer, requerido)
+     * warehouseId (integer, opcional: filtra locations por bodega específica)
+     * hasStock (boolean, opcional: true = locations con stock > 0)
+     * isActive (boolean, opcional: default true)
+     * isPromotion (boolean, opcional)
+     * brandIds (Array[integer], opcional)
+     * categoryIds (Array[integer], opcional)
+     * modelIds (Array[integer], opcional)
+     * familyIds (Array[integer], opcional)
+     * page (integer), pageSize (integer)
+   - Response: response.APIResponse donde data es Array[models.ProductResponse].
+     Cada producto contiene:
+     * locations: Array[models.ProductLocation]:
+       - productLocationId (integer)
+       - productId (integer)
+       - warehouseId (integer)
+       - locationCode (string)
+       - stock (integer)         -> Existencia física total en estantería
+       - reservedStock (integer) -> Existencia virtual comprometida en carritos activos y pedidos en picking
+     * prices: Array[models.ProductPrices]:
+       - productPriceId (integer)
+       - productId (integer)
+       - type (string)          -> Nombre o etiqueta de la tarifa (ej. "DETAL", "MAYORISTA", "TALLER")
+       - price (number)         -> Valor monetario unitario
+     * models: Array[string]    -> Lista de modelos de motocicleta compatibles
+     * modelName: string        -> Modelo principal
+     * code: string             -> Referencia SKU
+     * description: string
+     * brandName (string), categoryName (string), brandImage (string)
+
+3.2. Fórmula Matemática de Stock en Frontend:
+   Para cualquier bodega evaluada:
+   - Stock Físico Real =campo devuelto por la api, con stock de el producto, y debe tambien devolver la cantidad de ese producto de forma virtual, el campo como cantidadAux, o algo similar 
+   - Stock Virtual = campo devuelto en la respueta de la api que representa las cantidades virtuales
+   - Stock Físico Disponible para Venta = location.stock - location.reservedStock
+
+
+3.3. Mecanismo de Bloqueo Inmediato:
+   - Si Stock virtual es pedido full cantidades y esto cubre la cantidad fisica disponible entonces agotado== cantidad virtual == a cantidad fisica entonces agotado = 1, el botón "+ Agregar al carrito" en ProductCardActions.tsx se deshabilita automáticamente y muestra badge "Agotado en Bodega".
+   - Si un vendedor agrega unidades a un carrito, se descuentan en vivo del Stock Disponible.
+   - En caso de agotamiento de stock físico, el backend vía WebSocket (VITE_WS_URL) notifica el evento 'stock_updated', bloqueando la tarjeta en todas las terminales concurrentes.
+
+====================================================================================================
+4. MÓDULO TIENDA (SHOP): CATÁLOGO POS, PRECIOS DINÁMICOS Y FLUJO REAL DE CARRITO A PEDIDO
+====================================================================================================
+
+4.1. Subítems Consolidados:
+   - catalog  -> Catálogo POS (búsqueda, stock físico vs virtual, precios dinámicos, carrito en vivo).
+   - orders   -> Bandeja de Pedidos (unifica pedidos pendientes de mostrador y cotizaciones).
+   - history  -> Historial de Ventas (consultas históricas y reimpresión de comprobantes).
+
+4.2. Soporte de Precios Dinámicos:
+   En ProductCardInfo.tsx y la tarjeta de producto, se elimina el supuesto de que existen exactamente 4 precios fijos (P0, P1, P2, P3). La interfaz renderiza dinámicamente el listado de tarifas devuelto en product.prices (Array[models.ProductPrices]), permitiendo al vendedor seleccionar la tarifa aplicable según el cliente.
+
+4.3. Flujo Técnico de Carrito a Pedido (Validado contra Endpoints Swagger):
+   El backend NO recibe una lista de ítems en POST /sales/register. El flujo oficial de 3 fases es:
+
+   FASE 1: Registro de Ítems en Carrito Temporal:
+   - Endpoint: POST /carts/register
+   - Request Body: models.GetCartInsertRequest
+     * companyId (integer, requerido)
+     * userId (integer, requerido - ID del Cliente)
+     * sellerId (integer, opcional - ID del Empleado vendedor)
+     * warehouseId (integer, requerido - ID de Bodega de despacho)
+     * uuid (string, requerido - UUID único de sesión de carrito)
+     * productId (integer, requerido)
+     * price (number, requerido - Precio unitario según tarifa seleccionada)
+     * quantity (integer, requerido)
+     * typeCart (string, requerido - 'sale' para venta mostrador)
+     * discount (integer, opcional)
+     * auxWarehouseId (integer, opcional)
+
+   FASE 2: Modificación y Eliminación de Ítems en Carrito:
+   - Modificar cantidad: PUT /carts/update con models.GetCartUpdateRequest { cartId: integer, quantity: integer }.
+   - Eliminar un ítem: DELETE /carts/delete con models.GetCartDeleteRequest { cartId: integer }.
+   - Vaciar carrito: DELETE /carts/deleteall con models.GetCartDeleteAllRequest { userId: integer, uuid: string }.
+   - Reasignar carrito a otro cliente: PUT /carts/reassignuser con models.GetCartReassingUser { oldUserId: integer, newUserId: integer, uuid: string }.
+
+   FASE 3: Consolidación y Creación del Pedido / Venta:
+   - Endpoint: POST /sales/register
+   - Request Body: models.GetCartCreateSale
+     * companyId (integer, requerido)
+     * userId (integer, requerido - ID del Cliente)
+     * sellerId (integer, opcional - ID del Empleado vendedor)
+     * warehouseId (integer, requerido - ID Bodega)
+     * uuid (string, requerido - Mismo UUID de carrito consolidado)
+     * saleType (string, opcional - 'sale')
+     * paymentMethod (string, opcional - 'cash' | 'transfer' | 'credit')
+     * totalAmount (number, opcional)
+     * discount (integer, opcional)
+     * address (string, opcional), directionId (integer, opcional)
+     * invoiceStatus (string, opcional - 'pendiente' o 'facturar' si aplica bypass)
+     * reference (string, opcional)
+     * saleChannel (string, opcional - 'pos' | 'web')
+   - Response: response.APIResponse donde data es models.SaleResponse (saleId, serialCode, invoiceStatus, totalAmount).
+
+====================================================================================================
+5. MÓDULO GESTIÓN CAJA: FACTURACIÓN, HISTORIAL, ARQUEO Y REGLA DE BYPASS POR CRÉDITO
+====================================================================================================
+
+5.1. Subítems Consolidados:
+   - posBilling      -> Facturación Caja (recaudación multimetodo, verificación y edición de última hora).
+   - billingHistory  -> Historial Facturación (reimpresión de tirilla POS 80mm y factura carta; anulación).
+   - shiftClose      -> Cierre de Turno (arqueo ciego/guiado contra /payments/summary y cierre de caja).
+
+5.2. Ciclo de Vida del Pedido en Surtido:
+   [Pedido Creado: Pendiente (invoiceStatus: 'pendiente')]
+             |
+             v
+   [Caja: Facturación Verificada (invoiceStatus: 'facturar')]  <-- (O Bypass automático por Crédito Sano)
+             |
+             v
+   [Bodega: Picking en Curso (invoiceStatus: 'picking')]
+             |
+             v
+   [Bodega: Picking Verificado (invoiceStatus: 'picking_verified')]
+             |
+             v
+   [Bodega: Packing en Curso (invoiceStatus: 'packing')]
+             |
+             v
+   [Bodega: Packing Verificado / Despachado (invoiceStatus: 'packing_verified')]
+
+5.3. Regla Maestra de Bypass de Caja por Crédito Sano (Contratos Swagger):
+   Al crearse un pedido con paymentMethod: 'credit', el frontend o backend evalúa el estado de cartera del cliente mediante models.WalletUser (obtenido de POST /wallet o POST /wallet/summary):
+   - models.WalletUser campos evaluados:
+     * creditAmount (number): Cupo de crédito total autorizado.
+     * reservedCredit (number): Cupo de crédito ocupado/comprometido en órdenes no saldadas.
+     * sumAmount (number): Saldo deudor pendiente acumulado.
+     * creditDays (integer): Plazo de crédito concedido en días.
+     * isCredit (boolean): Bandera que indica si el crédito está activo.
+
+   CONDICIONES OBLIGATORIAS DE BYPASS:
+   1. Condición de Cupo Disponible:
+      Cupo Disponible = creditAmount - reservedCredit
+      (Cupo Disponible / creditAmount) > 0.30  (Dispone de más del 30% de su línea de crédito).
+   2. Condición de Días Hábiles:
+      creditDaysRemaining >= 20 días hábiles (calculado contra fecha de vencimiento más próxima).
+   3. Condición de Saldo en Mora:
+      pendingPayments === 0 (no presenta abonos vencidos).
+
+   ACCIONES SEGÚN EVALUACIÓN:
+   - Si CUMPLE todas las condiciones: En POST /sales/register se envía directamente invoiceStatus: 'facturar'. El pedido salta la cola del cajero y entra directamente a Bodega para PICKING.
+   - Si NO CUMPLE alguna condición: En POST /sales/register se envía invoiceStatus: 'pendiente'. El pedido ingresa obligatoriamente a la pantalla posBilling (Caja) para cobro o autorización manual de sobrecupo.
+
+5.4. Operación en "Facturación Caja":
+   - Bandeja de pedidos pendientes: POST /sales/pendings con models.GetPendingsRequest { userId: integer, warehouseId: integer, page, pageSize }.
+   - Cobro mediante POST /payments/register:
+     * Request Body: models.GetPaymentInsertRequest
+       - amount (number, requerido)
+       - companyId (integer, requerido)
+       - paymentMethod (string, requerido - 'cash' | 'transfer' | 'credit' | 'card')
+       - saleId (integer, requerido)
+       - userId (integer, requerido - ID del Cliente)
+       - userVerifyId (integer, requerido - ID del Cajero auditor en sesión)
+       - warehouseId (integer, requerido)
+       - reference (string, opcional - Nro de comprobante o autorización bancaria)
+       - remainingAmount (number, opcional)
+       - status (string, opcional - 'verificado')
+   - Aprobación formal del pago: PUT /payments/changestatus con models.GetPaymentChangeStatusRequest { paymentId: integer }.
+   - Cambio de estado del pedido a facturado: PUT /sales/status con models.UpdateSaleStatusRequest { saleId: integer, invoiceStatus: 'facturar' }.
+   - Anulación de cobro en caso de error: PUT /payments/cancelled con models.GetPaymentCancelledRequest { paymentId: integer, reason: string, userId: integer, isElectronicCancellation?: boolean, electronicCancellationReference?: string }.
+
+5.5. Cierre de Turno y Arqueo de Caja (shiftClose):
+   - Endpoint: POST /payments/summary
+   - Request Body: models.GetPaymentSummaryRequest
+     * companyId (integer, requerido)
+     * warehouseId (integer, opcional)
+     * startDate (string, opcional)
+     * endDate (string, opcional)
+   - Response: response.APIResponse donde data es models.PaymentSummaryResponse:
+     * totalAmount (number)
+     * totalAmountVerified (number)
+     * totalAmountPending (number)
+     * totalPayments (integer)
+     * totalVerifiedPayments (integer)
+     * totalPendingPayments (integer)
+     * totalCancelledPayments (integer)
+     * paymentsByMethod (Array[PaymentMethodSummary]) -> Totales desglosados por 'cash', 'transfer', 'credit'.
+   - El cajero ingresa el conteo de efectivo físico (arqueo ciego) y el sistema compara contra totalAmountVerified en efectivo, generando el comprobante de cuadre de caja.
+
+====================================================================================================
+6. MÓDULO TRASLADOS (INVENTARIO): REUBICACIÓN MULTIBODEGA Y CONTROL DE NOVEDADES
+====================================================================================================
+
+6.1. Subítems Consolidados de Gestión Inventario (Exactamente 4):
+   - products   -> Control de Productos (ficha técnica 360°, stock físico por bodega, precios, activar/inactivar).
+   - transfers  -> Traslados entre Bodegas (reubicación multibodega con control de novedades).
+   - catalogs   -> Marcas y Categorías (taxonomía maestra que alimenta el catálogo y modelos de moto).
+   - movements  -> Kardex & Movimientos (auditoría cronológica inmutable de entradas y salidas).
+
+6.2. Reubicación Multibodega con Existencias Físicas Visibles:
+   - Al pulsar "Crear Traslado", el usuario busca el producto (POST /inventory/search).
+   - La pantalla consulta el producto completo (POST /products con companyId) y extrae locations: Array[models.ProductLocation].
+   - Despliega una tabla matricial con las existencias físicas en TODAS las bodegas de la empresa (Bodega Central: 45 uds, Bodega Norte: 8 uds, etc.).
+   - El usuario selecciona Bodega Origen (warehouseId) y Bodega Destino (auxWarehouseId), validando que la cantidad solicitada no supere el stock físico disponible en el origen (stock - reservedStock).
+
+6.3. Ciclo de Vida del Traslado (Alineado con Endpoints Swagger):
+   FASE 1: Solicitud de Traslado:
+   - Se agregan los repuestos al carrito de traslado: POST /carts/register con:
+     { companyId, userId, warehouseId: originId, auxWarehouseId: destId, uuid, productId, price: 0, quantity, typeCart: 'traslade' }.
+   - Se formaliza el traslado: POST /sales/register con:
+     { companyId, userId, warehouseId: originId, auxWarehouseId: destId, uuid, saleType: 'traslade', invoiceStatus: 'pendiente' }.
+   - El backend genera el código único de entrega: serialCode (integer) en models.SaleResponse.
+
+   FASE 2: Consulta de Traslados Entrantes en Destino:
+   - Endpoint: POST /sales/traslades
+   - Request Body: models.GetTrasladeRequest
+     * warehouseId (integer, requerido - Bodega de DESTINO / auxWarehouseId)
+     * userId (integer, opcional)
+     * page (integer), pageSize (integer)
+   - Response: response.APIResponse con Array[models.TrasladeResponse]:
+     * saleId (integer)
+     * serialCode (integer) -> Código de entrega para verificación física
+     * invoiceStatus (string)
+     * warehouseInformation (models.WarehouseData - Origen)
+     * auxWarehouseInformation (models.WarehouseData - Destino)
+     * products (Array[models.SaleItemResponse])
+     * userInformation (models.UserData - Operador creador)
+
+   FASE 3: Alistamiento y Empaque en Origen:
+   - Al completar picking: PUT /sales/status con { saleId, invoiceStatus: 'picking_verified' }.
+   - Al completar empaque: PUT /sales/status con { saleId, invoiceStatus: 'packing_verified' }.
+
+   FASE 4: Recepción y Control de Novedades en Destino:
+   - Recepción Exitosa (Sin Novedades):
+     Endpoint: POST /sales/approved
+     Body: models.GetApprovedTrasladeRequest { saleId: integer, code: integer (código serialCode digitado por el receptor) }.
+     Respuesta: models.TrasladeResponse confirmando acreditación de stock en la bodega destino.
+   - Rechazo o Novedad (Faltantes / Averías):
+     Endpoint: POST /sales/traslades/reject
+     Body: models.RejectTrasladeRequest { saleId: integer, reason: string (Detalle de novedades reportadas) }.
+     El traslado se marca en la tabla con un badge de advertencia ("Con Novedad") para auditoría de mermas.
+
+====================================================================================================
+7. MÓDULO GESTIÓN ROLES: MATRIZ JERÁRQUICA DE PERMISOS POR EMPLEADO (POST /employees/permissions/modules)
+====================================================================================================
+
+7.1. Premisa de Identidad:
+   Solo los empleados son usuarios con credenciales en la aplicación ERP. Clientes, proveedores y transportadoras son directorios de datos sin acceso al software.
+
+7.2. Subítems de Gestión Roles:
+   - customers        -> Clientes (creación, edición, verificación documental, activación/bloqueo).
+   - suppliers        -> Proveedores (mayoristas de repuestos y condiciones comerciales).
+   - carriers         -> Transportadoras (directorio logístico de despacho intermunicipal).
+   - employees        -> Empleados (ficha laboral interna, sucursal física asignada y cargo).
+   - rolesPermissions -> Roles & Permisos (matriz jerárquica de permisos por empleado).
+
+7.3. Estructura Jerárquica del Árbol de Permisos (3 Niveles):
+   El esquema de seguridad definido en Swagger opera en 3 niveles complementarios:
+   
+   NIVEL 1: SEDES FÍSICAS (branches: Array[models.BranchPermissionInfo])
+      └── Define a qué bodegas físicas tiene acceso u operación el empleado.
+           │
+           ▼
+   NIVEL 2: MÓDULOS DE NEGOCIO (modules: Array[models.ModulePermission])
+      └── [shop | wallet | cashRegister | inventory | thirdParties | reports | settings]
+           ├── canRead: boolean   (Visibilidad general del módulo)
+           ├── canCreate: boolean (Capacidad de inserción)
+           ├── canUpdate: boolean (Capacidad de modificación)
+           └── canDelete: boolean (Capacidad de anulación/eliminación)
+                │
+                ▼
+   NIVEL 3: PANTALLAS / SUBÍTEMS (screens: Array[models.ScreenPermission])
+      └── Permisos CRUD atómicos para cada pantalla individual del módulo:
+           ├── canRead   (Visualización de la tabla / pantalla en SideMenu)
+           ├── canCreate (Habilita botones "+ Nuevo", "Crear Traslado", "Crear Pedido")
+           ├── canUpdate (Habilita botones "Editar", "Ajustar Precio", "Aprobar Picking")
+           └── canDelete (Habilita botones "Anular Factura", "Rechazar Traslado", "Eliminar")
+
+7.4. Reglas Maestras de Visibilidad y Filtrado Dinámico en el Menú Lateral (SideMenu):
+   El SideMenu (SideMenu.tsx) lee dinámicamente la configuración asignada por el superadmin:
+   - REGLA 1 (OCULTACIÓN TOTAL DE MÓDULO):
+     Si el empleado NO tiene ningún permiso de lectura (canRead: false en todas las pantallas del módulo), dicha gestión principal (módulo) NO SE LE PRESENTA en el SideMenu. La opción desaparece por completo del menú para ese usuario.
+   - REGLA 2 (APARICIÓN CONDICIONAL CON AL MENOS 1 PERMISO):
+     Si el superadministrador habilita AL MENOS UN permiso sobre algún subítem (así sea 1 sola pantalla con canRead: true), la gestión principal SÍ se muestra en el SideMenu, pero desplegando ÚNICA Y EXCLUSIVAMENTE los subítems para los cuales el empleado tiene permiso de lectura (canRead: true). Los subítems no autorizados quedan totalmente invisibles.
+   - REGLA 3 (GOBERNANZA DE ACCIONES CRUD EN PANTALLA):
+     Dentro de cada pantalla visible, los botones de acción se acondicionan a los flags booleanos del subítem:
+     * Si canCreate === false: Se ocultan o inhabilitan botones de creación (+ Nuevo Producto, Crear Traslado, Crear Cliente, etc.).
+     * Si canUpdate === false: Se ocultan o inhabilitan botones de edición (Editar, Modificar Carrito, Ajustar Precios, etc.).
+     * Si canDelete === false: Se ocultan o inhabilitan opciones destructivas (Anular Factura, Rechazar Traslado, Desactivar Registro).
+   - REGLA 4 (PROTECCIÓN DE RUTAS Y REDIRECCIÓN EN MAINCONTENT):
+     Si un usuario intenta forzar navegación mediante alteración de URL o estado a un módulo o subítem no autorizado, MainContent.tsx intercepta la petición y renderiza una vista de seguridad ("Acceso Denegado: No posees permisos para visualizar esta sección") o redirige automáticamente al primer subítem autorizado.
+
+7.5. Endpoints y Guardado Técnico de Permisos:
+   - Listado de empleados: POST /employees/list con models.GetEmployeeListRequest { companyId: integer, limit: integer, page: integer, warehouseId?: integer, status?: string }.
+   - Consulta de permisos de un empleado: POST /employees/permissions con models.GetEmployeePermissionsRequest { employeeId: integer }.
+   - Guardado de matriz personalizada: POST /employees/permissions/modules con models.SaveModulePermissionsRequest { employeeId: integer, modules: Array[models.ModulePermission] }.
+   - Gestión de credenciales: PUT /employees/access-credentials con models.UpdateAccessCredentialsRequest { employeeId: integer, email: string, password: string, currentPassword?: string }.
+
+====================================================================================================
+8. NUEVO MÓDULO CONFIGURACIÓN: ENGRANAJE EN HEADER Y OPCIONES SWAGGER
+====================================================================================================
+
+8.1. Ubicación y Disparador Visual en AppHeader:
+   - Archivo: src/app/componentApp/header/AppHeader.tsx
+   - Ubicación: En la sección app-header-actions, inmediatamente a la derecha de <WarehouseSelector />.
+   - Elemento: Botón con el icono settingsIcon (src/assets/icons/settings.svg).
+   - Interacción: Al hacer clic, despacha:
+     dispatch(setActiveModule('settings'));
+     dispatch(setActiveSubitem('company'));
+
+8.2. Integración en Navegación y Lienzo Central:
+   - En src/features/navigation/types/navigation.types.ts: Se añade 'settings' a la unión ERPModule:
+     export type ERPModule = 'shop' | 'wallet' | 'cashRegister' | 'inventory' | 'transfers' | 'thirdParties' | 'reports' | 'settings';
+   - En menuItems.constants.ts: Se añade a MODULE_HEADER_TITLES: { settings: 'Configuración del Sistema' } y en MODULE_HEADER_ICONS el settingsIcon.
+   - En screenRegistry.ts: Se mapea settings a SettingsScreen (ubicada en src/features/settings/screens/SettingsScreen.tsx).
+
+8.3. Pestañas Administrativas y Endpoints de Swagger:
+   1. Datos de Empresa y Facturación Electrónica:
+      - Consultar empresa: GET /companies/id -> models.CompanyResponse
+      - Crear empresa: POST /companies -> models.CompanyCreateRequest { name: string, nit: string, businessName?: string, address?: string, phone?: string, email?: string }
+      - Actualizar empresa y resolución DIAN: PUT /companies/update -> models.CompanyUpdateRequest { name, businessName, nit, phone, email, address, prefix, initialInvoiceNumber, finalInvoiceNumber, dianResolutionNumber, dianResolutionDate, technicalKey, isElectronicBiller, logo, ... }
+   2. Sedes y Bodegas Físicas:
+      - Listar bodegas: POST /warehouses -> models.GetWarehouseRequest { companyId: integer, page: integer, pageSize: integer }
+      - Crear bodega: POST /warehouses/register -> models.GetWarehouseInsertRequest { companyId: integer, name: string, address?: string, electronicBillingSerial?: integer, remissionSerial?: integer, saleSerial?: integer, transferSerial?: integer }
+      - Actualizar bodega: PUT /warehouses/update -> models.GetWarehouseUpdateRequest { warehouseId: integer, name?: string, address?: string, electronicBillingSerial?: integer, remissionSerial?: integer, saleSerial?: integer, transferSerial?: integer }
+   3. Políticas Comerciales de Descuentos:
+      - Listar descuentos: POST /discounts -> models.GetDiscountRequest { userId: integer, page: integer, pageSize: integer }
+      - Crear regla de descuento: POST /discounts/register -> models.GetDiscountInsertRequest { rate: integer, userId: integer, price?: number, modelId?: integer, productId?: integer, brandId?: integer, categoryId?: integer, quantity?: integer, isActive?: boolean }
+      - Actualizar descuento: PUT /discounts/update -> models.GetDiscountUpdateRequest { discountId: integer, rate?: integer, price?: number, modelId?: integer, productId?: integer, brandId?: integer, categoryId?: integer, quantity?: integer, isActive?: boolean }
+      - Eliminar descuento: DELETE /discounts/delete -> models.GetDiscountDeleteRequest { discountId: integer }
+      - Eliminar todos: DELETE /discounts/deleteall -> models.GetDiscountDeleteAllRequest { userId: integer }
+      - Desactivar todos: PUT /discounts/disabledall -> models.GetDiscountDisabledAllRequest { userId: integer }
+   4. Credenciales y Seguridad de Acceso:
+      - Consultar credenciales: POST /employees/access-credentials -> models.GetAccessCredentialsRequest { employeeId: integer }
+      - Actualizar contraseña / email: PUT /employees/access-credentials -> models.UpdateAccessCredentialsRequest { employeeId: integer, email: string, password: string, currentPassword?: string }
+   5. Diagnóstico de Salud y Servidores:
+      - Endpoints: GET /health, GET /readiness (monitoreo de estado del backend en Railway y base de datos).
+
+====================================================================================================
+9. MOTOR GLOBAL DE VALIDACIÓN Y SANITIZACIÓN DE ENTRADAS (CONTROL DE EXCEPCIONES)
+====================================================================================================
+
+9.1. Objetivo:
+   Garantizar que todo dato ingresado por el usuario cumpla con los tipos de datos requeridos por la base de datos y Swagger antes del envío, evitando llamadas con error 400/422.
+
+9.2. Utilitario Global: src/global/helpers/validation.helpers.ts
+   Funciones puras de validación y sanitización:
+   - SANITIZERS.trim(str)            -> Elimina espacios inicio/fin y colapsa espacios dobles internos.
+   - SANITIZERS.numericOnly(str)      -> Remueve cualquier carácter no numérico [0-9].
+   - SANITIZERS.positiveDecimal(str)  -> Garantiza flotante positivo con un único punto decimal.
+   - VALIDATORS.isValidName(str, max) -> Valida longitud (3 a 60 caracteres) y bloquea repeticiones infinitas (regex /(.)\1{4,}/).
+   - VALIDATORS.isValidEmail(str)     -> Valida formato RFC 5322 estricto.
+   - VALIDATORS.isValidPhone(str)     -> Valida exactamente 10 dígitos celulares (iniciando en 3).
+   - VALIDATORS.isValidDocument(str)  -> Valida formato Cédula o NIT (6 a 15 caracteres alfanuméricos).
+   - VALIDATORS.isPositiveNumber(num) -> Valida que sea numérico y > 0.
+
+9.3. Verificaciones Asíncronas en Tiempo Real (Debounce 500ms):
+   - Correo Duplicado:
+     Endpoint: POST /customers/check-email
+     Body: models.CheckEmailRequest { companyId: integer, email: string }
+     Alerta inmediata: "Este correo ya se encuentra registrado para esta empresa".
+   - Documento Duplicado:
+     Endpoint: POST /users/validate-document
+     Body: models.ValidateDocumentRequest { documentType: string, documentNumber: string }
+     Alerta inmediata: "El documento de identidad ya se encuentra registrado en el sistema".
+
+9.4. Componentes Reutilizables:
+   - ValidatedInput.tsx (src/global/components/UI/molecules/form/ValidatedInput.tsx):
+     Input de texto con contador visual de caracteres restantes (ej. "45/60"), sanitización automática en onChange y mensaje de error con token --color-danger.
+   - ValidatedNumberInput.tsx:
+     Input para importes y cantidades con bloqueo de teclas no numéricas ('e', 'E', '+', '-', coma) en onKeyDown.
+
+====================================================================================================
+10. MATRIZ CONSOLIDADA OFICIAL DE NAVEGACIÓN Y SUBÍTEMS
+====================================================================================================
+
+| MÓDULO PRINCIPAL               | SUBÍTEMS OFICIALES (ID Y LABEL)                               | OBJETIVO OPERATIVO DEL SUBÍTEM                                      |
+| :----------------------------- | :------------------------------------------------------------ | :------------------------------------------------------------------ |
+| 1. Tienda (shop)               | 1. catalog  -> 'Catálogo POS'                                 | Catálogo, stock físico vs virtual, precios dinámicos y carrito.    |
+|                                | 2. orders   -> 'Bandeja de Pedidos'                           | Pedidos pendientes de mostrador y cotizaciones guardadas.           |
+|                                | 3. history  -> 'Historial de Ventas'                          | Registro de ventas cerradas y reimpresión de comprobantes.          |
+| 2. Gestión Caja (cashRegister) | 1. posBilling     -> 'Facturación Caja'                       | Cobro multimetodo, verificación y edición previa de carrito.        |
+|                                | 2. billingHistory -> 'Historial Facturación'                  | Historial de facturas/recibos, reimpresión POS 80mm y anulación.    |
+|                                | 3. shiftClose     -> 'Cierre de Turno'                        | Arqueo físico vs esperado y cierre formal de sesión de caja.        |
+| 3. Gestión Cartera (wallet)    | 1. creditClients       -> 'Gestión de Créditos'               | Expediente 360° del cliente (deuda, cupo, días hábiles de plazo).   |
+|                                | 2. paymentVerification -> 'Aprobación de Abonos'              | Verificación de transferencias con causales de rechazo formales.    |
+|                                | 3. paymentHistory      -> 'Historial de Recaudos'             | Bitácora cronológica de ingresos y abonos conciliados.              |
+| 4. Gestión Inventario          | 1. products  -> 'Control de Productos'                        | Ficha integral, cantidades físicas por bodega y activación.         |
+|    (inventory)                 | 2. transfers -> 'Traslados entre Bodegas'                     | Reubicación multibodega con existencias visibles y novedades.       |
+|                                | 3. catalogs  -> 'Marcas y Categorías'                         | Taxonomía maestra (Categorías, Marcas, Modelos de moto).            |
+|                                | 4. movements -> 'Kardex & Movimientos'                        | Libro diario inmutable de entradas, salidas y mermas.               |
+| 5. Gestión Roles               | 1. customers        -> 'Clientes'                             | Directorio de clientes, tipo de precio predeterminado y estado.    |
+|    (thirdParties)              | 2. suppliers        -> 'Proveedores'                          | Directorio mayorista de repuestos y condiciones de compra.          |
+|                                | 3. carriers         -> 'Transportadoras'                      | Directorio de operadores logísticos y guías de envío.               |
+|                                | 4. employees        -> 'Empleados'                            | Ficha de personal interno, sede asignada y cargo laboral.           |
+|                                | 5. rolesPermissions -> 'Roles & Permisos'                     | Matriz interactiva de permisos por empleado sobre toda la app.      |
+| 6. Reportes (reports)          | 1. dailySales     -> 'Ventas Diarias'                         | Cierre del día y cuadre de ingresos por sucursal.                   |
+|                                | 2. generalReport  -> 'Reporte General'                        | Consolidado de margen bruto, utilidad e IVA por línea.              |
+|                                | 3. inventoryReport-> 'Valoración Inventario'                  | Valoración contable del stock en bodega a costo promedio.           |
+| 7. Configuración (settings)    | Acceso por Engranaje en AppHeader                             | Empresas (/companies), Bodegas (/warehouses), Descuentos            |
+|    (Ubicado en Header)         | (Se renderiza en MainContent)                                 | (/discounts), Credenciales (/employees/access-credentials), Salud.  |
+
+====================================================================================================
+11. TRAZABILIDAD Y AUDITORÍA UNIVERSAL: ESPECIFICACIÓN RIGUROSA DE CONTRATOS API SWAGGER
+====================================================================================================
+
+Para garantizar la auditoría total de cada proceso, los endpoints inyectan obligatoriamente los IDs del usuario autenticado:
+
+1. Agregar ítem a Carrito (POST /carts/register):
+   - Model: models.GetCartInsertRequest
+   - Payload: { companyId: integer, userId: integer, sellerId: integer, warehouseId: integer, uuid: string, productId: integer, price: number, quantity: integer, typeCart: 'sale' | 'traslade', discount?: integer, auxWarehouseId?: integer }
+   - Auditoría: Registra el cliente (userId), el vendedor (sellerId) y la bodega de origen.
+
+2. Creación de Pedido / Venta (POST /sales/register):
+   - Model: models.GetCartCreateSale
+   - Payload: { companyId: integer, userId: integer, sellerId: integer, warehouseId: integer, uuid: string, saleType: 'sale', paymentMethod: 'cash' | 'transfer' | 'credit', totalAmount: number, invoiceStatus: 'pendiente' | 'facturar', ... }
+   - Auditoría: Vincula el pedido al vendedor y al carrito unificado por UUID.
+
+3. Cobro en Caja (POST /payments/register):
+   - Model: models.GetPaymentInsertRequest
+   - Payload: { amount: number, companyId: integer, paymentMethod: string, saleId: integer, userId: integer, userVerifyId: integer, warehouseId: integer, reference?: string }
+   - Auditoría: userId registra al cliente y userVerifyId registra al cajero que cobró.
+
+4. Anulación de Venta (POST /sales/cancel):
+   - Model: models.CancelSaleRequest
+   - Payload: { saleId: integer, userId: integer, reason: string }
+   - Auditoría: Registra qué empleado autorizó la anulación y el motivo detallado.
+
+5. Creación de Traslado (POST /sales/register):
+   - Model: models.GetCartCreateSale
+   - Payload: { companyId: integer, userId: integer, warehouseId: originId, auxWarehouseId: destId, uuid: string, saleType: 'traslade', invoiceStatus: 'pendiente' }
+   - Auditoría: userId audita al bodeguero solicitante; warehouseId y auxWarehouseId auditan la ruta del traslado.
+
+6. Aprobación y Recepción de Traslado (POST /sales/approved):
+   - Model: models.GetApprovedTrasladeRequest
+   - Payload: { saleId: integer, code: integer } (donde code coincide con serialCode)
+   - Auditoría: Valida el código de seguridad físico emitido al momento del despacho.
+
+7. Rechazo de Traslado por Novedad (POST /sales/traslades/reject):
+   - Model: models.RejectTrasladeRequest
+   - Payload: { saleId: integer, reason: string }
+   - Auditoría: Registra la no conformidad o faltante en recepción.
+
+8. Asignación de Permisos de Módulos (POST /employees/permissions/modules):
+   - Model: models.SaveModulePermissionsRequest
+   - Payload: { employeeId: integer, modules: Array<models.ModulePermission> }
+   - Auditoría: Actualiza el perfil de permisos granulares del empleado sobre módulos y pantallas.
+
+====================================================================================================
+12. MAPEO DETALLADO DE ARCHIVOS, LÍNEAS DE CÓDIGO Y FIRMAS TÉCNICAS
+====================================================================================================
+
+12.1. Archivo: src/features/navigation/constants/menuItems.constants.ts
+- Líneas a modificar: 12 a 111.
+- Acción: Reemplazar el array MENU_ITEMS por la matriz oficial de 6 módulos y actualizar MODULE_HEADER_TITLES y MODULE_HEADER_ICONS incluyendo la clave 'settings'.
+
+12.2. Archivo: src/features/navigation/types/navigation.types.ts
+- Líneas a modificar: 3 a 11.
+- Acción: Extender el tipo ERPModule:
+  export type ERPModule = 'shop' | 'wallet' | 'cashRegister' | 'inventory' | 'transfers' | 'thirdParties' | 'reports' | 'settings';
+
+12.3. Archivo: src/app/componentApp/header/AppHeader.tsx
+- Líneas a modificar: 5 a 25.
+- Acción: Importar settingsIcon desde '@/assets/icons/settings.svg'.
+  En el div app-header-actions, al lado de <WarehouseSelector />, agregar el botón:
+  <button
+      type="button"
+      className="app-header-settings-btn"
+      onClick={() => {
+          dispatch(setActiveModule('settings'));
+          dispatch(setActiveSubitem('company'));
+      }}
+      title="Configuración del Sistema"
+      aria-label="Configuración del Sistema"
+  >
+      <img src={settingsIcon} alt="" className="app-header-settings-icon" />
+  </button>
+
+12.4. Archivo: src/app/componentApp/header/AppHeader.css
+- Líneas a modificar: 56 a 62.
+- Acción: Añadir reglas para el botón de engranaje respetando tokens:
+  .app-header-settings-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: var(--radius-sm);
+    background-color: transparent;
+    border: 1px solid var(--color-border);
+    cursor: pointer;
+    transition: background-color var(--duration-fast) var(--ease-default);
+  }
+  .app-header-settings-btn:hover {
+    background-color: var(--color-bg-hover);
+  }
+  .app-header-settings-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+12.5. Archivo: src/features/warehouses/helpers/warehouses.helpers.ts
+- Líneas a modificar: 19 a 30.
+- Acción: Reemplazar pickActiveWarehouse para priorizar obligatoriamente userWarehouseId en el inicio de sesión.
+
+12.6. Archivo: src/app/componentApp/contentMain/screenRegistry.ts
+- Líneas a modificar: 10 a 27.
+- Acción: Actualizar el mapa SCREEN_REGISTRY vinculando los nuevos subítems y mapear 'settings' hacia SettingsScreen (o fallback controlado a MainContentPlaceholder).
+
+12.7. Archivo Nuevo: src/global/helpers/validation.helpers.ts
+- Acción: Crear el utilitario de sanitización y validación estricta con funciones puras (SANITIZERS y VALIDATORS).
+
+12.8. Archivos Nuevos: src/global/components/UI/molecules/form/ValidatedInput.tsx y ValidatedNumberInput.tsx
+- Acción: Crear los controles de entrada blindados con soporte para límite de caracteres, regex y bloqueo de teclas inválidas.
+
+12.9. Archivo: src/app/componentApp/sideMenu/SideMenu.tsx
+- Acción: Reemplazar el renderizado estático de MENU_ITEMS por un hook/selector filtrado (useFilteredMenuItems). Si el usuario es superadmin (userType === 'admin'), renderiza todos los módulos y subítems. Si es empleado estándar, filtra el menú según las Reglas 1 y 2 (oculta módulos sin permisos y muestra únicamente subítems autorizados).
+
+12.10. Archivo Nuevo: src/global/hooks/usePermissions.ts
+- Acción: Crear el hook global de autorización con funciones helper:
+  * hasModuleAccess(moduleKey): Retorna si el módulo tiene al menos 1 subítem con canRead: true.
+  * hasScreenAccess(moduleKey, screenKey): Retorna canRead para esa pantalla.
+  * canPerformAction(moduleKey, screenKey, 'create' | 'update' | 'delete'): Valida flags booleanos para habilitar o deshabilitar botones en UI.
+
+====================================================================================================
+13. LISTA DE ELEMENTOS Y MOCKS CANDIDATOS A RETIRO MANUAL (PARA EL DESARROLLADOR)
+====================================================================================================
+
+(El asistente no borrará ningún archivo. El Desarrollador Senior / Scrum Master revisará y ejecutará el retiro manual de los siguientes elementos cuando lo estime oportuno):
+
+1. Subítems Redundantes Retirados de Navegación:
+   - savedCarts             -> Absorvido dentro de la bandeja de orders (pedidos pendientes/guardados).
+   - inmediatePicking       -> Absorvido en el flujo de surtido de orders y transfers.
+   - locations y relocation -> Absorvidos en el maestro de products y en la reubicación multibodega de transfers.
+   - customerVerification   -> Absorvido en el expediente maestro de customers.
+
+2. Mocks Antiguos en Desuso (reemplazados por llamadas reales a Railway en src/api/config.ts):
+   - docs/features2/ (archivos de mocks mockInmediatePicking.json, mockCashRegisterData, etc.).
+   - Cualquier archivo de datos simulados local que duplique los endpoints activos del backend.
+
+3. Elementos reemplazados por el traslado del diseño de la maqueta (revisar y retirar a mano):
+   - ProductCardStock y la clase .product-card-out-of-stock (la card nueva muestra el stock en su fila de datos).
+   - Sección de tokens «Yamaha» y el uso de --c-brand-yellow en las cards (ahora son los tokens de la maqueta).
+   - Ajuste de menú y cabeceras: «Gestión Caja» ahora es «Gestión Ventas» (id cashRegister igual), las subgestiones tienen nombres cortos y «Marcas y Categorías» (id catalogs) se separó en brands, categories y models. Si el backend tiene permisos guardados con el id catalogs, hay que asignarlos de nuevo a los 3 ids nuevos para los empleados que no son admin; los textos de las secciones 10 y 12 de este documento conservan los nombres anteriores.
+   - CSS sin ningún uso en el código: .shop-catalog-filter-pills-scroll (src/App.css) y .customer-drawer-field (CustomerDrawer.css).
+   - !important que ya existían (la regla del repo los prohíbe): padding-left en RolesPermissionsScreen.css (features/auth y features/employees, parece copia repetida) y border-color en molecules/form/FormInputs.css.
+   - Vista de pedidos: no hay vista de ficha de producto; los pedidos se ven en tabla y su detalle en el panel derecho (features/orders).
+
+====================================================================================================
+FIN DEL DOCUMENTO DE ESPECIFICACIÓN TÉCNICA
+====================================================================================================
+
+
+_____________estructura final _____________________
+1. Raíz del Proyecto (/appImportadoraIp)
+Archivos de configuración, entorno y orquestación del build:
+
+
+
+package.json
+: Define los metadatos del proyecto, dependencias de producción (React, Redux Toolkit, Axios, etc.), dependencias de desarrollo y scripts de ejecución (dev, build, test).
+
+
+vite.config.ts
+: Configuración del bundler Vite, plugins (React SWC) y alias de rutas (resuelve @/ hacia src/).
+
+
+tsconfig.json
+, 
+
+tsconfig.app.json
+, 
+
+tsconfig.node.json
+: Configuración del compilador TypeScript, comprobación estricta de tipos (strict: true) y resolución de módulos.
+
+
+eslint.config.js
+: Reglas de linter y calidad estática de código ECMAScript/TypeScript.
+
+
+index.html
+: Punto de entrada HTML del Single Page Application (SPA), carga de fuentes e inyección del script raíz.
+
+
+.env
+: Variables de entorno locales (URL del backend en Railway, endpoints WebSocket y modo del entorno).
+
+
+src/plan.txt
+: Documento oficial del Plan Maestro de Especificación Técnica, contratos Swagger y arquitectura.
+2. Núcleo del Código Fuente: src/
+2.1. Montaje Global
+
+
+main.tsx
+: Inicialización del árbol React, montaje de ReactDOM.createRoot e inyección de la etiqueta raíz #root.
+
+
+App.tsx
+: Componente raíz de la app; envuelve la jerarquía con el Provider de Redux y el componente contenedor StoreApp.
+
+
+App.css
+: Estilos base globales para el reset del viewport y la superficie de renderizado.
+2.2. Capa de Estilos: src/styles/
+
+
+tokens.css
+: Diccionario central de diseño del ERP. Define tokens CSS para colores (marca, neutros, alertas), tipografía, sombras, bordes redondeados (--radius-*), espaciados y transiciones. Evita la duplicación de estilos en toda la app.
+2.3. Capa de Comunicación con Backend: src/api/
+
+
+client.ts
+: Instancia central de Axios. Inyecta automáticamente el token Bearer en las cabeceras (Authorization: Bearer <token>) y gestiona la expiración con interceptores.
+
+
+config.ts
+: Catálogo unificado de URLs y rutas relativas de los endpoints Swagger del backend (auth, ventas, clientes, bodegas, permisos, etc.).
+
+
+errors.ts
+: Formateador de errores de red y respuestas HTTP hacia mensajes amigables y legibles para el usuario.
+
+
+pagination.ts
+ / 
+
+pagination.test.ts
+: Helper y pruebas para estandarizar respuestas paginadas del backend (items, total, page, pageSize).
+
+
+health.ts
+: Utilidad de sondeo para consultar los endpoints /health y /readiness del servidor.
+
+
+types/api.types.ts
+: Interfaces TypeScript de los envoltorios estándar de respuesta (APIResponse<T>, PaginatedResponse<T>).
+2.4. Contenedores Estructurales y Layout: src/app/
+src/app/layout/
+
+
+AuthGate.tsx
+: Puerta de seguridad de la sesión. Si el usuario no está autenticado, renderiza LoginScreen; si está autenticado, renderiza ErpLayout.
+
+
+ErpLayout.tsx
+ / 
+
+ErpLayout.css
+: Marco maestro de 3 columnas (Menú lateral SideMenu, Lienzo central MainContent y Panel lateral DrawerRight), encabezado por AppHeader.
+
+
+StoreApp.tsx
+: Envoltorio intermedio que inicializa el estado y valida el arranque de la sesión.
+src/app/store/
+
+
+store.ts
+: Configuración del Store Redux con configureStore, persistencia selectiva y middlewares.
+
+
+rootReducer.ts
+: Fusión de todos los reducers de los dominios (auth, ui, warehouses, catalogs, customers, shop, wallet).
+src/app/componentApp/ (Contenedores Padre Intocables)
+
+
+header/AppHeader.tsx
+ / 
+
+AppHeader.css
+: Barra superior de navegación. Contiene el isotipo/marca del ERP, el selector de sede física y el acceso directo al módulo de Configuración (engranaje).
+
+
+header/warehouse/WarehouseSelector.tsx
+: Desplegable o badge de bodega física activa, con bloqueo de seguridad para usuarios no administradores.
+
+
+header/warehouse/WarehouseMenu.tsx
+: Menú desplegable flotante con la lista de bodegas disponibles para superadministradores.
+
+
+sideMenu/SideMenu.tsx
+ / 
+
+SideMenu.css
+: Menú lateral con filtrado dinámico de permisos por empleado.
+
+
+sideMenu/item/SideMenuItem.tsx
+ / 
+
+SideMenuSubitems.tsx
+: Renderizado colapsable de módulos y subítems autorizados.
+
+
+sideMenu/footer/ApiStatus.tsx
+: Indicador visual en tiempo real de la latencia y salud de la API.
+
+
+sideMenu/footer/SideMenuUser.tsx
+: Tarjeta del usuario en sesión, su rol y botón de cierre de sesión seguro.
+
+
+contentMain/MainContent.tsx
+ / 
+
+MainContent.css
+: Lienzo dinámico donde se inyecta la pantalla activa con guardia de seguridad integrada.
+
+
+contentMain/screenRegistry.ts
+: Mapa canónico de resolución entre (activeModule, activeSubitem) y su componente de pantalla oficial.
+
+
+contentMain/MainContentPlaceholder.tsx
+: Pantalla de respaldo y hoja de ruta para subítems en etapas futuras de despliegue.
+
+
+drawerRight/DrawerRight.tsx
+ / 
+
+DrawerRight.css
+: Panel lateral deslizable para acciones contextuales (carrito de compras, historial o auditoría).
+
+
+drawerRight/drawerRegistry.ts
+: Mapeo de vistas dentro del panel lateral derecho.
+2.5. Utilidades Transversales: src/global/
+src/global/helpers/
+
+
+validation.helpers.ts
+: Funciones puras de sanitización (trim, numericOnly, positiveDecimal) y validación (isValidName, isValidEmail, isValidPhone, isValidDocument).
+
+
+format.ts
+: Formateador de moneda en pesos colombianos (COP), porcentajes y fechas.
+
+
+storage.ts
+ / 
+
+session.storage.ts
+: Abstracción de lectura/escritura segura en localStorage y sessionStorage.
+
+
+toast.ts
+: Disparador de notificaciones visuales flotantes (éxito, advertencia, error).
+src/global/hooks/
+
+
+usePermissions.ts
+ / 
+
+usePermissions.test.ts
+: Hook de evaluación jerárquica de permisos (hasModuleAccess, hasScreenAccess, canPerformAction, useFilteredMenuItems).
+
+
+useAsyncValidation.ts
+ / 
+
+useAsyncValidation.test.ts
+: Validación con debounce de 500ms contra Swagger para correos y documentos de identidad duplicados.
+
+
+useDebouncedValue.ts
+ / 
+
+useDebouncedValue.test.ts
+: Retraso en tiempo de propagación para inputs de búsqueda.
+
+
+useRedux.ts
+: Tipado estricto para useAppDispatch y useAppSelector.
+
+
+useClickOutside.ts
+, 
+
+useEscapeKey.ts
+: Controladores de eventos de interfaz de usuario para cierre de menús y modales.
+src/global/components/UI/
+
+
+molecules/form/ValidatedInput.tsx
+: Control de entrada blindado con sanitización en tiempo real, contador visual de caracteres restantes y mensajes de error.
+
+
+molecules/form/ValidatedNumberInput.tsx
+: Input numérico con bloqueo físico en onKeyDown de caracteres no válidos (e, +, -).
+
+
+molecules/Pagination.tsx
+: Barra de navegación paginada reutilizable.
+
+
+molecules/ConfirmDialog.tsx
+: Modal de confirmación para acciones críticas.
+
+
+molecules/SearchBar.tsx
+: Barra de búsqueda con icono y botón de limpieza.
+2.6. Módulos de Dominio de Negocio: src/features/
+1. Autenticación y Permisos (features/auth/)
+
+
+services/auth.service.ts
+: Conexión con POST /auth/login, POST /auth/refresh, POST /auth/logout.
+
+
+services/permissions.service.ts
+ / 
+
+permissions.service.test.ts
+: Conexión con los endpoints de Swagger para listar empleados, consultar permisos de módulos y guardar la matriz de permisos.
+
+
+thunks/auth.thunks.ts
+: Thunk de inicio de sesión, auto-fijación de sede física asignada (setActiveWarehouse) y gestión de tokens.
+
+
+screens/RolesPermissionsScreen.tsx
+: Pantalla de administración de roles con selector de empleado y persistencia en backend.
+
+
+screens/ModulePermissionRow.tsx
+: Fila interactiva que expone checkboxes para canRead, canCreate, canUpdate y canDelete por módulo y subpantalla.
+
+
+types/permissions.types.ts
+: Modelos Swagger DTO de sedes, módulos y pantallas (BranchPermissionInfo, ModulePermission, ScreenPermission).
+2. Traslados y Reubicación Multibodega (features/transfers/)
+
+
+services/transfers.service.ts
+: Llamadas Swagger para creación de traslados (/carts/register, /sales/register), listado (/sales/traslades), avance de picking/empaque (/sales/status), aprobación con serial (/sales/approved) y reporte de novedades (/sales/traslades/reject).
+
+
+helpers/transfers.adapter.ts
+: Adaptadores de transformación pura entre la respuesta del backend y las estructuras de visualización.
+
+
+screens/TransfersScreen.tsx
+: Vista principal de traslados entrantes y salientes.
+
+
+components/TransferItemsTable.tsx
+: Tabla con badges de estado, seriales y botones de acción.
+
+
+components/CreateTransferModal.tsx
+: Modal de despacho multibodega con código serial único generado por backend.
+
+
+components/TransferFormFields.tsx
+: Selectores de bodegas de salida, destino y control de cantidad.
+
+
+components/TransferStockMatrix.tsx
+: Tabla matricial con existencias físicas en todas las sedes de la empresa.
+
+
+components/ReceiveTransferModal.tsx
+: Modal de verificación física mediante serial de entrega o registro de novedades/averías.
+3. Clientes y Terceros (features/customers/)
+
+
+screens/CustomersScreen.tsx
+: Directorio maestro de clientes con búsqueda, filtros y botón de creación.
+
+
+components/modal/CreateCustomerModal.tsx
+: Formulario blindado de registro de clientes con validación en tiempo real de documento y correo electrónico.
+
+
+services/customers.service.ts
+: Peticiones a POST /customers y POST /customers/register.
+4. Tienda y POS (features/shop/)
+
+
+screens/ShopCatalogScreen.tsx
+: Catálogo visual de productos con stock físico visible, precios mayoristas/detal y adición al carrito.
+
+
+services/shop.sales.service.ts
+: Creación de pedidos y ventas auditadas inyectando userId, sellerId, warehouseId y canal de venta.
+
+
+services/shop.cart.service.ts
+: Gestión de ítems en carrito unificado por UUID.
+5. Cartera y Recaudos (features/wallet/)
+
+
+screens/WalletScreen.tsx
+: Panel de control de cuentas por cobrar, estados de crédito y comprobantes.
+
+
+services/wallet.payments.service.ts
+: Registro de cobros auditados vinculando cajero (userVerifyId) y cliente (userId).
+6. Configuración General (features/settings/)
+
+
+screens/SettingsScreen.tsx
+ / 
+
+SettingsScreen.css
+: Consola administrativa con 5 pestañas maestras (Empresa y Facturación DIAN, Sedes y Bodegas, Descuentos, Credenciales de Empleados y Diagnóstico de Salud).
+7. Bodegas y Sedes Físicas (features/warehouses/)
+
+
+services/warehouses.service.ts
+: Consulta de bodegas registradas (POST /warehouses).
+
+
+helpers/warehouses.helpers.ts
+: Algoritmo de resolución de bodega física activa priorizando la sede física del empleado en el login.
+8. Navegación (features/navigation/)
+
+
+constants/menuItems.constants.ts
+: Matriz oficial de los 6 módulos y sus subítems oficiales.
+
+
+types/navigation.types.ts
+: Unión TypeScript ERPModule ('shop' | 'cashRegister' | 'wallet' | 'inventory' | 'transfers' | 'thirdParties' | 'reports' | 'settings').
+9. Catálogos y Taxonomías (features/catalogs/)
+
+
+services/catalogs.service.ts
+: Consulta de marcas, categorías y modelos de motocicletas que nutren los filtros del catálogo.
+10. Actualizaciones en Tiempo Real (features/realtime/)
+
+
+services/websocket.service.ts
+: Conexión persistente mediante WebSocket para actualización inmediata de inventario físico en pantalla ante ventas o traslados concurrentes.

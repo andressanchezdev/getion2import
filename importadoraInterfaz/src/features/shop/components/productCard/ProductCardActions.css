@@ -1,0 +1,72 @@
+/* ProductCardActions.css · estilos del campo de cantidad y del botón de ordenar de la tarjeta · solo usa tokens de styles/tokens.css */
+/* ojo: se quitaron el contador con - y +, la fuente Oswald en mayúsculas y la nota «Cantidad: N»; ahora son el campo numérico y el botón amarillo de la maqueta */
+
+.product-card-action-row {
+    width: 100%;
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.product-card-qty {
+    flex: 0 0 auto;
+    width: clamp(56px, 20%, 80px);
+    min-width: 56px;
+    height: 36px;
+    padding: 0 6px 0 10px;
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--radius-base);
+    background-color: var(--bg-card);
+    color: var(--color-text-primary);
+    font-family: inherit;
+    font-size: var(--text-md);
+    text-align: center;
+    appearance: auto;
+}
+
+/* ya ordenado o agotado: el campo ocupa su lugar pero no se ve */
+.product-card-qty-hidden {
+    visibility: hidden;
+}
+
+.product-card-btn-add-to-cart {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 130px;
+    height: 36px;
+    min-height: 36px;
+    border: none;
+    border-radius: var(--radius-md);
+    background-color: var(--c-yellow-400);
+    color: var(--color-text-primary);
+    font-family: inherit;
+    font-size: var(--text-md);
+    font-weight: var(--font-weight-extrabold);
+    cursor: pointer;
+    transition: box-shadow var(--motion-fast);
+}
+
+.product-card-btn-add-to-cart:hover:not(:disabled) {
+    box-shadow: var(--shadow-card);
+}
+
+.product-card-btn-add-to-cart:focus-visible,
+.product-card-qty:focus-visible {
+    outline: var(--focus-outline);
+    outline-offset: 2px;
+}
+
+/* agotado: gris y sin acción */
+.product-card-btn-add-to-cart.product-card-btn-off {
+    background-color: var(--bg-card-media);
+    color: var(--color-card-muted);
+    cursor: not-allowed;
+}
+
+/* ya está en el carrito: verde suave y sin acción */
+.product-card-btn-add-to-cart.product-card-already-ordered {
+    background-color: var(--c-ip-green-100);
+    color: var(--c-ip-green-800);
+    cursor: not-allowed;
+}

@@ -1,0 +1,59 @@
+/* ShopCatalogScreen.css · estilos del catálogo · solo usa tokens de styles/tokens.css */
+/* src/features/shop/screens/ShopCatalogScreen.css */
+
+.shop-catalog-screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+}
+
+/* ==========================================================================
+   1. BARRA DE HERRAMIENTAS Y FILTROS
+   ========================================================================== */
+
+.shop-catalog-toolbar {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* ojo: el selector con etiqueta (wrapper, etiqueta y select) ya no existe: ahora son chips y viven en components/catalog/ShopCatalogToolbar.css; se deja como referencia
+.shop-catalog-filter-select-wrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.shop-catalog-filter-group-label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary, var(--c-slate-500));
+  white-space: nowrap;
+}
+*/
+
+/* ==========================================================================
+   2. GRID DE PRODUCTOS
+   ========================================================================== */
+
+.shop-catalog-grid-section {
+  width: 100%;
+}
+
+.shop-catalog-products-grid {
+  display: grid;
+  /* ojo: antes minmax(var(--product-card-min-width), 1fr) con 330px (diseño Yamaha); la maqueta usa min(100%, 300px) y 24px de separación */
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--product-card-min-width)), 1fr));
+  /* ojo: el tope de ancho va en la card (--product-card-max-width) y no en la columna: con tope en la columna el navegador cuenta menos columnas; así una card sola nunca se estira de más y queda a la izquierda */
+  justify-items: start;
+  gap: var(--space-5);
+}
+
+/* mientras se pide otra página o se cambia un filtro, la lista anterior se atenúa y no se puede tocar (evita agregar productos que están por cambiar) */
+.shop-catalog-products-grid-loading {
+  opacity: 0.55;
+  pointer-events: none;
+  transition: opacity var(--motion-fast);
+}

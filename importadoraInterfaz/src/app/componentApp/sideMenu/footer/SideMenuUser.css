@@ -1,0 +1,76 @@
+/* SideMenuUser.css · estilos de la tarjeta de usuario del menú lateral (avatar azul, nombre y rol) · solo usa tokens de styles/tokens.css */
+/* ojo: antes estas reglas (con prefijo app-header-user) estaban en AppHeader.css, porque el footer del menú usaba clases del header */
+.side-menu-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  min-width: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.side-menu-user-mini {
+  justify-content: center;
+}
+
+.side-menu-user-avatar {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: var(--radius-circle);
+  background-color: var(--c-blue-600);
+  color: var(--c-white);
+  display: grid;
+  place-items: center;
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-bold);
+}
+
+.side-menu-user-info {
+  min-width: 0;
+  text-align: left;
+}
+
+.side-menu-user-name {
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  line-height: var(--leading-snug);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.side-menu-user-role {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* botón de cerrar sesión, al final de la tarjeta */
+.side-menu-user-logout {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  margin-left: auto;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: var(--radius-sm);
+  background-color: transparent;
+  cursor: pointer;
+  transition: background-color var(--motion-fast);
+}
+
+.side-menu-user-logout:hover {
+  background-color: var(--bg-card-inner);
+}
+
+.side-menu-user-logout-icon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  opacity: 0.7;
+}
