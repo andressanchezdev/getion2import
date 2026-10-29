@@ -1,0 +1,17 @@
+# Binarios Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+
+# Temporales y dependencias
+tmp/
+*.tmp
+uploads/*
+!uploads/.gitkeep
+
+# Variables locales de entorno
+.env.local
+
