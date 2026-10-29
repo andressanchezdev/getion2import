@@ -33,6 +33,31 @@ import (
 	staffRepos "importadoraApi/src/features/staff/repositories"
 	staffRoutes "importadoraApi/src/features/staff/routes"
 	staffServices "importadoraApi/src/features/staff/services"
+
+	customerControllers "importadoraApi/src/features/customers/controllers"
+	customerRepos "importadoraApi/src/features/customers/repositories"
+	customerRoutes "importadoraApi/src/features/customers/routes"
+	customerServices "importadoraApi/src/features/customers/services"
+
+	externalControllers "importadoraApi/src/features/externals/controllers"
+	externalRepos "importadoraApi/src/features/externals/repositories"
+	externalRoutes "importadoraApi/src/features/externals/routes"
+	externalServices "importadoraApi/src/features/externals/services"
+
+	catalogControllers "importadoraApi/src/features/catalog/controllers"
+	catalogRepos "importadoraApi/src/features/catalog/repositories"
+	catalogRoutes "importadoraApi/src/features/catalog/routes"
+	catalogServices "importadoraApi/src/features/catalog/services"
+
+	productControllers "importadoraApi/src/features/products/controllers"
+	productRepos "importadoraApi/src/features/products/repositories"
+	productRoutes "importadoraApi/src/features/products/routes"
+	productServices "importadoraApi/src/features/products/services"
+
+	inventoryControllers "importadoraApi/src/features/inventory/controllers"
+	inventoryRepos "importadoraApi/src/features/inventory/repositories"
+	inventoryRoutes "importadoraApi/src/features/inventory/routes"
+	inventoryServices "importadoraApi/src/features/inventory/services"
 )
 
 func main() {
@@ -87,7 +112,34 @@ func main() {
 	staffService := staffServices.NewStaffService(cfg, database.Pool, adminRepo, roleRepo, permissionRepo, employeeRepo, auditRepo)
 	staffCtrl := staffControllers.NewStaffController(staffService)
 
-	// 10. Configurar servidor HTTP Echo y registrar rutas por feature
+	// 10. Inicializar Feature: Customers & Documents
+	customerRepo := customerRepos.NewCustomerRepository()
+	customerService := customerServices.NewCustomerService(cfg, database.Pool, customerRepo, auditRepo)
+	customerCtrl := customerControllers.NewCustomerController(customerService)
+
+	// 11. Inicializar Feature: Externals (Proveedores, Transportadoras, Otros)
+	externalRepo := externalRepos.NewExternalRepository()
+	externalService := externalServices.NewExternalService(cfg, database.Pool, externalRepo, auditRepo)
+	externalCtrl := externalControllers.NewExternalController(externalService)
+
+	// 12. Inicializar Feature: Catalog (Marcas, Modelos, Categorías)
+	brandRepo := catalogRepos.NewBrandRepository()
+	modelRepo := catalogRepos.NewModelRepository()
+	categoryRepo := catalogRepos.NewCategoryRepository()
+	catalogService := catalogServices.NewCatalogService(cfg, database.Pool, brandRepo, modelRepo, categoryRepo, auditRepo)
+	catalogCtrl := catalogControllers.NewCatalogController(catalogService)
+
+	// 13. Inicializar Feature: Products & Codes & Suppliers (con Easysearch)
+	productRepo := productRepos.NewProductRepository()
+	productService := productServices.NewProductService(cfg, database.Pool, productRepo, categoryRepo, brandRepo, modelRepo, auditRepo)
+	productCtrl := productControllers.NewProductController(productService)
+
+	// 14. Inicializar Feature: Inventory (Stock, Traslados 1:N, Conteos Físicos y Kardex)
+	inventoryRepo := inventoryRepos.NewInventoryRepository()
+	inventoryService := inventoryServices.NewInventoryService(cfg, database.Pool, inventoryRepo, productRepo, warehouseRepo, auditRepo)
+	inventoryCtrl := inventoryControllers.NewInventoryController(inventoryService)
+
+	// 15. Configurar servidor HTTP Echo y registrar rutas por feature
 	srv := server.NewServer(cfg)
 	e := srv.Echo()
 
@@ -96,8 +148,13 @@ func main() {
 	companyRoutes.RegisterRoutes(e, authMiddleware, companyCtrl)
 	warehouseRoutes.RegisterRoutes(e, authMiddleware, warehouseCtrl)
 	staffRoutes.RegisterRoutes(e, authMiddleware, staffCtrl)
+	customerRoutes.RegisterRoutes(e, authMiddleware, customerCtrl)
+	externalRoutes.RegisterRoutes(e, authMiddleware, externalCtrl)
+	catalogRoutes.RegisterRoutes(e, authMiddleware, catalogCtrl)
+	productRoutes.RegisterRoutes(e, authMiddleware, productCtrl)
+	inventoryRoutes.RegisterRoutes(e, authMiddleware, inventoryCtrl)
 
-	// 11. Arrancar servidor HTTP con graceful shutdown
+	// 16. Arrancar servidor HTTP con graceful shutdown
 	if err := srv.Start(); err != nil {
 		log.Fatalf("Servidor detenido con error: %v", err)
 	}
