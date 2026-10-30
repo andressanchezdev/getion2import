@@ -347,3 +347,45 @@ func (r *EmployeeRepository) UnlockEmployee(ctx context.Context, q db.DBExecutor
 	return nil
 }
 
+func (r *EmployeeRepository) ListSalespersons(ctx context.Context, q db.DBExecutor, companyID int64) ([]EmployeeEntity, error) {
+	const sql = `
+		SELECT
+			e.id, e.company_id, e.role_id, COALESCE(r.name, ''),
+			e.warehouse_id, w.name,
+			e.email, '', e.first_name, e.last_name, e.full_name,
+			e.document_type, e.document, e.phone, e.address, e.photo_url,
+			e.work_modality, e.employment_status, e.status, e.last_login_at,
+			e.created_at, e.updated_at, e.deleted_at
+		FROM employees e
+		LEFT JOIN roles r ON r.id = e.role_id
+		LEFT JOIN warehouses w ON w.id = e.warehouse_id
+		WHERE e.company_id = $1
+		  AND e.status = 'active'
+		  AND e.deleted_at IS NULL
+		  AND (r.code = 'vendedor' OR LOWER(r.name) LIKE '%vendedor%' OR LOWER(r.name) LIKE '%comercial%' OR LOWER(r.name) LIKE '%vent%')
+		ORDER BY e.full_name ASC
+	`
+	rows, err := q.Query(ctx, sql, companyID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var list []EmployeeEntity
+	for rows.Next() {
+		var e EmployeeEntity
+		if err := rows.Scan(
+			&e.ID, &e.CompanyID, &e.RoleID, &e.RoleName,
+			&e.WarehouseID, &e.WarehouseName,
+			&e.Email, &e.PasswordHash, &e.FirstName, &e.LastName, &e.FullName,
+			&e.DocumentType, &e.Document, &e.Phone, &e.Address, &e.PhotoURL,
+			&e.WorkModality, &e.EmploymentStatus, &e.Status, &e.LastLoginAt,
+			&e.CreatedAt, &e.UpdatedAt, &e.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		list = append(list, e)
+	}
+	return list, rows.Err()
+}
+

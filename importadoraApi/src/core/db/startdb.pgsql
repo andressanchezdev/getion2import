@@ -106,6 +106,7 @@ DROP TABLE IF EXISTS cash_movements CASCADE;
 DROP TABLE IF EXISTS cash_sessions CASCADE;
 DROP TABLE IF EXISTS cash_registers CASCADE;
 DROP TABLE IF EXISTS product_prices CASCADE;
+DROP TABLE IF EXISTS warehouse_locations CASCADE;
 DROP TABLE IF EXISTS price_levels CASCADE;
 DROP TABLE IF EXISTS company_brands CASCADE;
 DROP TABLE IF EXISTS customer_discounts CASCADE;
@@ -114,6 +115,8 @@ DROP TABLE IF EXISTS partners CASCADE;
 DROP TABLE IF EXISTS user_warehouses CASCADE;
 DROP TABLE IF EXISTS user_permissions CASCADE;
 DROP TABLE IF EXISTS role_permissions CASCADE;
+DROP TABLE IF EXISTS bank_statement_records CASCADE;
+DROP TABLE IF EXISTS recycle_bin CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 
 -- Eliminar cualquier función propia previa en public (preservando funciones de extensiones pgcrypto/citext/pg_trgm)
@@ -230,7 +233,22 @@ CREATE TABLE warehouse_facturation (
 
 CREATE INDEX idx_warehouse_facturation_company ON warehouse_facturation (company_id);
 
--- 5. TABLA: roles (Descriptivos por compañía, sin area y sin permisos asociados)
+-- 5. TABLA: warehouse_locations (Ubicaciones físicas administrables por bodega)
+CREATE TABLE warehouse_locations (
+    id              BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    company_id      BIGINT NOT NULL REFERENCES companies(id) ON DELETE RESTRICT,
+    warehouse_id    BIGINT NOT NULL REFERENCES warehouses(id) ON DELETE RESTRICT,
+    code            VARCHAR(60) NOT NULL,
+    description     TEXT,
+    is_active       BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (warehouse_id, code)
+);
+
+CREATE INDEX idx_warehouse_locations_lookup ON warehouse_locations (warehouse_id, is_active);
+
+-- 6. TABLA: roles (Descriptivos por compañía, sin area y sin permisos asociados)
 CREATE TABLE roles (
     id              BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     company_id      BIGINT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
@@ -387,6 +405,8 @@ CREATE TABLE customers (
     credit_enabled          BOOLEAN NOT NULL DEFAULT FALSE,
     credit_limit            NUMERIC(14,2) NOT NULL DEFAULT 0 CHECK (credit_limit >= 0),
     credit_days             SMALLINT NOT NULL DEFAULT 30 CHECK (credit_days >= 0 AND credit_days <= 365),
+    credit_warning_pct      NUMERIC(5,2) NOT NULL DEFAULT 70.00 CHECK (credit_warning_pct >= 0 AND credit_warning_pct <= 100),
+    docs_validity_months    INTEGER NOT NULL DEFAULT 12 CHECK (docs_validity_months > 0),
     status                  VARCHAR(20) NOT NULL DEFAULT 'active'
         CHECK (status IN ('pending', 'active', 'overdue', 'inactive')),
     created_at              TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -501,14 +521,6 @@ CREATE TABLE products (
     unit            VARCHAR(20) NOT NULL DEFAULT 'UND',
     iva             NUMERIC(5,2)
         CHECK (iva IS NULL OR (iva >= 0 AND iva <= 100)),
-    prices          JSONB NOT NULL DEFAULT '{"p1":0,"p2":0,"p3":0,"p4":0}'::jsonb
-        CHECK (
-            jsonb_typeof(prices) = 'object'
-            AND prices ? 'p1'
-            AND prices ? 'p2'
-            AND prices ? 'p3'
-            AND prices ? 'p4'
-        ),
     last_cost       NUMERIC(14,2) NOT NULL DEFAULT 0 CHECK (last_cost >= 0),
     is_promotion    BOOLEAN NOT NULL DEFAULT FALSE,
     images          TEXT[] NOT NULL DEFAULT '{}',
@@ -524,6 +536,21 @@ CREATE TABLE products (
 CREATE INDEX idx_products_company_category ON products (company_id, category_id, status) WHERE deleted_at IS NULL;
 CREATE INDEX idx_products_name_trgm ON products USING gin (name gin_trgm_ops);
 CREATE INDEX idx_products_easysearch_trgm ON products USING gin (easysearch gin_trgm_ops);
+
+-- 19. TABLA: product_prices (Precios dinámicos por producto: p1..p4 y listas adicionales)
+CREATE TABLE product_prices (
+    id              BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    company_id      BIGINT NOT NULL REFERENCES companies(id) ON DELETE RESTRICT,
+    product_id      BIGINT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    price_tier      VARCHAR(30) NOT NULL,
+    price           NUMERIC(14,2) NOT NULL DEFAULT 0 CHECK (price >= 0),
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (product_id, price_tier)
+);
+
+CREATE INDEX idx_product_prices_product ON product_prices (product_id);
+CREATE INDEX idx_product_prices_company_tier ON product_prices (company_id, price_tier);
 
 -- 19. TABLA: product_codes
 CREATE TABLE product_codes (
@@ -872,6 +899,12 @@ CREATE TABLE returns (
     employee_id                 BIGINT NOT NULL REFERENCES employees(id) ON DELETE RESTRICT,
     approved_by_employee_id     BIGINT REFERENCES employees(id) ON DELETE SET NULL,
     reason                      TEXT NOT NULL,
+    reason_type                 VARCHAR(20) NOT NULL DEFAULT 'warranty'
+        CHECK (reason_type IN ('warranty', 'wrong_item')),
+    resolution_type             VARCHAR(20) NOT NULL DEFAULT 'credit_balance'
+        CHECK (resolution_type IN ('exchange', 'credit_balance')),
+    replacement_product_id      BIGINT REFERENCES products(id) ON DELETE SET NULL,
+    replacement_stock_id        BIGINT REFERENCES stock(id) ON DELETE SET NULL,
     status                      VARCHAR(20) NOT NULL DEFAULT 'pending'
         CHECK (status IN ('pending', 'approved', 'rejected')),
     total                       NUMERIC(14,2) NOT NULL CHECK (total > 0),
@@ -945,6 +978,31 @@ CREATE TABLE credit_entries (
 );
 
 CREATE INDEX idx_credit_entries_customer ON credit_entries (customer_id, created_at DESC);
+
+-- 37b. TABLA: bank_statement_records (Careo de extractos bancarios y confirmación de transferencias)
+CREATE TABLE bank_statement_records (
+    id                  BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    company_id          BIGINT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    bank_name           VARCHAR(80) NOT NULL DEFAULT 'Bancolombia',
+    account_number      VARCHAR(50) NOT NULL DEFAULT '01400000369',
+    movement_date       DATE NOT NULL,
+    description         TEXT NOT NULL,
+    branch_channel      VARCHAR(80) NOT NULL DEFAULT '',
+    reference1          VARCHAR(100),
+    reference2          VARCHAR(100),
+    document_number     VARCHAR(80),
+    amount              NUMERIC(14,2) NOT NULL,
+    is_income           BOOLEAN NOT NULL DEFAULT TRUE,
+    status              VARCHAR(20) NOT NULL DEFAULT 'pending' 
+                        CHECK (status IN ('pending', 'confirmed', 'ignored')),
+    confirmed_by_id     BIGINT REFERENCES employees(id) ON DELETE SET NULL,
+    confirmed_at        TIMESTAMPTZ,
+    notes               TEXT,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_bank_stmt_filter ON bank_statement_records (company_id, movement_date, status);
+CREATE INDEX idx_bank_stmt_desc ON bank_statement_records USING gin (description gin_trgm_ops);
 
 -- 38. TABLA: purchases
 CREATE TABLE purchases (
@@ -1053,7 +1111,25 @@ CREATE INDEX idx_notifications_employee_unread
     ON notifications (employee_id, created_at DESC)
     WHERE read_at IS NULL;
 
--- 43. TABLA: schema_migrations (Compatible con src/db/migrations/migrator.js)
+-- 43. TABLA: recycle_bin (Papelera de reciclaje y recuperación de entidades)
+CREATE TABLE IF NOT EXISTS recycle_bin (
+    id                      BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    company_id              BIGINT REFERENCES companies(id) ON DELETE CASCADE,
+    entity_table            VARCHAR(60) NOT NULL,
+    entity_id               BIGINT NOT NULL,
+    entity_label            VARCHAR(180) NOT NULL,
+    entity_data             JSONB NOT NULL DEFAULT '{}'::jsonb,
+    deleted_by_actor_type   VARCHAR(20) NOT NULL,
+    deleted_by_actor_id     BIGINT NOT NULL,
+    deleted_at              TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_restored             BOOLEAN NOT NULL DEFAULT FALSE,
+    restored_at             TIMESTAMPTZ,
+    restored_by_actor_id    BIGINT
+);
+CREATE INDEX IF NOT EXISTS idx_recycle_bin_lookup ON recycle_bin (company_id, entity_table, is_restored);
+CREATE INDEX IF NOT EXISTS idx_recycle_bin_date ON recycle_bin (deleted_at DESC);
+
+-- 44. TABLA: schema_migrations (Compatible con src/db/migrations/migrator.js)
 CREATE TABLE schema_migrations (
     id                  BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     version             TEXT NOT NULL UNIQUE,
@@ -1212,7 +1288,12 @@ SELECT
     p.model_id,
     m.name AS model_name,
     p.iva,
-    p.prices,
+    COALESCE(
+        (SELECT jsonb_object_agg(pp.price_tier, pp.price)
+         FROM product_prices pp
+         WHERE pp.product_id = p.id),
+        '{}'::jsonb
+    ) AS prices,
     s.location,
     s.available,
     s.reserved,
@@ -1254,6 +1335,7 @@ SELECT
     c.credit_enabled,
     c.credit_limit,
     c.credit_days,
+    c.credit_warning_pct,
     l.credit_balance,
     r.reserved_orders,
     GREATEST(c.credit_limit + l.credit_balance - r.reserved_orders, 0) AS available_credit
@@ -1272,794 +1354,301 @@ CROSS JOIN LATERAL (
       AND s.payment_method = 'credit'
 ) r;
 
-
 -- ============================================================
--- PARTE 4: DATOS SEMILLA INICIALES (SEED DATA)
+-- PARTE 4: DATOS SEMILLA LIMPIOS DE OPERACIÓN (SEED DEMO)
 -- ============================================================
 
--- 1. Superusuario desarrollador global (contraseña: 123456)
-INSERT INTO superadmins (username, email, password_hash, first_name, last_name, phone, access_level)
-VALUES (
-    'superdev',
-    'superadminImportadora@gmail.com',
-    crypt('123456', gen_salt('bf')),
-    'Superusuario',
-    'Desarrollador',
-    '3001002000',
-    'developer'
-);
+-- ============================================================================
+-- SCRIPT DE DATOS SEMILLA LIMPIOS (PGADMIN)
+-- IMPORTADORA PREMIUM ONLINE SAS
+-- Compatible con PostgreSQL V4 (Esquema Limpio)
+-- ============================================================================
 
--- 2. Compañías independientes (todas al mismo nivel, sin is_host y sin facturación directa)
-INSERT INTO companies (created_by_superadmin_id, name, email, phone, address, city)
+BEGIN;
+
+-- 1. COMPAÑÍA PRINCIPAL
+INSERT INTO companies (id, name, address, city, phone, email, is_active)
+OVERRIDING SYSTEM VALUE
+VALUES (1, 'IMPORTADORA PREMIUM ONLINE S.A.S.', 'CL 41 N 51 - 15', 'Medellín', '3126134771', 'contacto@importadorapremium.com', TRUE)
+ON CONFLICT (id) DO UPDATE SET 
+    name = EXCLUDED.name,
+    address = EXCLUDED.address,
+    city = EXCLUDED.city;
+
+-- 2. TRES BODEGAS (BODEGA 1 PRINCIPAL, BODEGA 2 ONLINE, BODEGA 3 NORTE)
+INSERT INTO warehouses (id, company_id, code, name, city, address, phone, is_active)
+OVERRIDING SYSTEM VALUE
+VALUES 
+    (1, 1, 'BOD-01', 'PASEO BOLÍVAR', 'Medellín', 'CL 41 N 51 - 15 Medellín', '3126134771', TRUE),
+    (2, 1, 'BOD-02', 'TIENDA ONLINE', 'Medellín', 'CRA 51 N 40 - 22 Bodega Despachos', '3126134771', TRUE),
+    (3, 1, 'BOD-03', 'BODEGA NORTE / DISTRIBUCIÓN', 'Bello', 'KM 2 Autopista Norte Medellín', '3103803690', TRUE)
+ON CONFLICT (id) DO UPDATE SET 
+    code = EXCLUDED.code,
+    name = EXCLUDED.name,
+    address = EXCLUDED.address;
+
+-- 3. CATEGORÍAS Y MARCAS
+INSERT INTO categories (id, company_id, name, description)
+OVERRIDING SYSTEM VALUE
+VALUES 
+    (1, 1, 'REPUESTOS Y MOTOR', 'Piezas de motor, mofles, abrazaderas y chasis'),
+    (2, 1, 'LUBRICANTES Y FLUIDOS', 'Aceites 2T, 4T 20W50, 10W30 y aditivos'),
+    (3, 1, 'FRENOS Y TRANSMISIÓN', 'Pastillas, bandas, discos, cadenas y piñones'),
+    (4, 1, 'SISTEMA ELÉCTRICO', 'Baterías, bobinas, bujías y ramales'),
+    (5, 1, 'ACCESORIOS Y CHASIS', 'Agarraderas, espejos, manilares y tapas')
+ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
+
+INSERT INTO brands (id, company_id, name)
+OVERRIDING SYSTEM VALUE
+VALUES 
+    (1, 1, 'BAJAJ'),
+    (2, 1, 'YAMAHA'),
+    (3, 1, 'HONDA'),
+    (4, 1, 'SUZUKI')
+ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
+
+-- 4. ROLES
+INSERT INTO roles (id, company_id, code, name, description)
+OVERRIDING SYSTEM VALUE
+VALUES 
+    (1, 1, 'SUPERADMIN', 'Superadministrador', 'Superadministrador con control total del sistema'),
+    (2, 1, 'ADMIN', 'Administrador', 'Administrador de sede o sucursal'),
+    (3, 1, 'SELLER', 'Vendedor', 'Vendedor de mostrador y pedidos'),
+    (4, 1, 'WAREHOUSE', 'Bodeguero', 'Bodeguero y encargado de recepción de compras y despachos'),
+    (5, 1, 'BILLING', 'Facturador / Cartera', 'Facturador y analista de cartera / cobranza'),
+    (6, 1, 'CASHIER', 'Cajero', 'Cajero recaudador de pagos en efectivo')
+ON CONFLICT (id) DO UPDATE SET code = EXCLUDED.code, name = EXCLUDED.name;
+
+-- 5. USUARIOS DEL SISTEMA (SUPERADMINS, EMPLEADOS Y ADMINS)
+-- Contraseña para todos los usuarios de prueba: "123456" ($2a$10$xo3irJ9IbTG.ju8iRMb2Iu4YB6KAe.XzeBtRkEo1aWXnChX84X2ne)
+
+-- 5a. Superadministradores Globales
+INSERT INTO superadmins (id, username, email, password_hash, first_name, last_name, phone, access_level, is_active)
+OVERRIDING SYSTEM VALUE
 VALUES
-    (1, 'Gestión Importadora Principal', 'contacto@gestionimportadora.com', '6017450000', 'Av. Calle 26 # 68-90', 'Bogotá'),
-    (1, 'Importadora del Norte', 'contacto@importadoradelnorte.com', '6043209900', 'Carrera 43A # 14-50', 'Medellín');
+    (1, 'superadmin1', 'superadmin1@importadora.com', '$2a$10$xo3irJ9IbTG.ju8iRMb2Iu4YB6KAe.XzeBtRkEo1aWXnChX84X2ne', 'Carlos', 'Mario Administrador', '3001112233', 'developer', TRUE),
+    (2, 'superadmin2', 'superadmin2@importadora.com', '$2a$10$xo3irJ9IbTG.ju8iRMb2Iu4YB6KAe.XzeBtRkEo1aWXnChX84X2ne', 'Patricia', 'Vega Auditora', '3001112234', 'developer', TRUE)
+ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email;
 
--- 3. Bodegas por compañía (todas al mismo nivel, sin is_main)
-INSERT INTO warehouses (company_id, code, name, city, address, phone, description)
+-- 5b. Empleados y Operativos (2 por Rol con Bodega asignada)
+INSERT INTO employees (id, company_id, role_id, warehouse_id, email, password_hash, first_name, last_name, document_type, document, phone, address, work_modality, employment_status, status)
+OVERRIDING SYSTEM VALUE
 VALUES
-    (1, 'BOD-01', 'Bodega Bogotá Centro', 'Bogotá', 'Calle 13 # 28-45', '6017450001', 'Bodega operativa zona centro'),
-    (1, 'BOD-02', 'Bodega Bogotá Norte', 'Bogotá', 'Autopista Norte # 142-20', '6017450002', 'Bodega operativa zona norte'),
-    (2, 'BOD-N01', 'Bodega Medellín Sur', 'Medellín', 'Carrera 50 # 12 Sur-30', '6043209901', 'Bodega operativa Antioquia');
+    -- Admins de sede (rol 2)
+    (1, 1, 2, 1, 'admin.bolivar@importadora.com', '$2a$10$xo3irJ9IbTG.ju8iRMb2Iu4YB6KAe.XzeBtRkEo1aWXnChX84X2ne', 'Andrés Felipe', 'Ramos', 'CC', '1001001', '3001112235', 'Cra 43A # 1-50', 'onsite', 'active', 'active'),
+    (2, 1, 2, 2, 'admin.online@importadora.com', '$2a$10$xo3irJ9IbTG.ju8iRMb2Iu4YB6KAe.XzeBtRkEo1aWXnChX84X2ne', 'Marcela', 'Gómez Restrepo', 'CC', '1001002', '3001112236', 'Calle 50 # 10-20', 'onsite', 'active', 'active'),
+    -- Vendedores (rol 3)
+    (3, 1, 3, 1, 'vendedor.bolivar@importadora.com', '$2a$10$xo3irJ9IbTG.ju8iRMb2Iu4YB6KAe.XzeBtRkEo1aWXnChX84X2ne', 'Juan Felipe', 'Montoya', 'CC', '1001003', '3001112237', 'Cra 70 # 30-10', 'onsite', 'active', 'active'),
+    (4, 1, 3, 2, 'vendedor.online@importadora.com', '$2a$10$xo3irJ9IbTG.ju8iRMb2Iu4YB6KAe.XzeBtRkEo1aWXnChX84X2ne', 'Daniela', 'Arango Posada', 'CC', '1001004', '3001112238', 'Diag 40 # 12-05', 'onsite', 'active', 'active'),
+    -- Bodegueros (rol 4)
+    (5, 1, 4, 1, 'bodega.bolivar@importadora.com', '$2a$10$xo3irJ9IbTG.ju8iRMb2Iu4YB6KAe.XzeBtRkEo1aWXnChX84X2ne', 'Jhon Alexander', 'Pérez', 'CC', '1001005', '3001112239', 'Calle 10 # 50-30', 'onsite', 'active', 'active'),
+    (6, 1, 4, 3, 'bodega.norte@importadora.com', '$2a$10$xo3irJ9IbTG.ju8iRMb2Iu4YB6KAe.XzeBtRkEo1aWXnChX84X2ne', 'Kevin', 'Morales Duarte', 'CC', '1001006', '3001112240', 'Av 33 # 80-12', 'onsite', 'active', 'active'),
+    -- Facturación y Cartera (rol 5)
+    (7, 1, 5, 1, 'cartera1@importadora.com', '$2a$10$xo3irJ9IbTG.ju8iRMb2Iu4YB6KAe.XzeBtRkEo1aWXnChX84X2ne', 'Laura Sofía', 'Castro', 'CC', '1001007', '3001112241', 'Cra 80 # 40-15', 'onsite', 'active', 'active'),
+    (8, 1, 5, 2, 'facturacion2@importadora.com', '$2a$10$xo3irJ9IbTG.ju8iRMb2Iu4YB6KAe.XzeBtRkEo1aWXnChX84X2ne', 'Esteban', 'Restrepo Ruiz', 'CC', '1001008', '3001112242', 'Calle 65 # 20-40', 'onsite', 'active', 'active'),
+    -- Cajeros (rol 6)
+    (9, 1, 6, 1, 'caja.bolivar@importadora.com', '$2a$10$xo3irJ9IbTG.ju8iRMb2Iu4YB6KAe.XzeBtRkEo1aWXnChX84X2ne', 'Juliana', 'Henao López', 'CC', '1001009', '3001112243', 'Cra 50 # 10-25', 'onsite', 'active', 'active'),
+    (10, 1, 6, 2, 'caja.online@importadora.com', '$2a$10$xo3irJ9IbTG.ju8iRMb2Iu4YB6KAe.XzeBtRkEo1aWXnChX84X2ne', 'Santiago', 'Osorio Cano', 'CC', '1001010', '3001112244', 'Calle 25 # 70-11', 'onsite', 'active', 'active')
+ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email;
 
--- 4. Configuración de facturación directa por bodega (warehouse_facturation: juridica | natural)
-INSERT INTO warehouse_facturation (
-    company_id, warehouse_id, type_facturation, document_type, nit, legal_name, trade_name,
-    billing_email, billing_phone, billing_address, billing_city,
-    vat_withholder, income_withholder, self_withholder,
-    invoice_prefix, resolution_number, resolution_date, range_from, range_to
+-- 5c. Administradores de Compañía (vinculados al empleado correspondiente)
+INSERT INTO admins (id, company_id, employee_id, created_by_superadmin_id, email, password_hash, first_name, last_name, document_type, document, phone, is_active)
+OVERRIDING SYSTEM VALUE
+VALUES
+    (1, 1, 1, 1, 'admin.bolivar@importadora.com', '$2a$10$xo3irJ9IbTG.ju8iRMb2Iu4YB6KAe.XzeBtRkEo1aWXnChX84X2ne', 'Andrés Felipe', 'Ramos', 'CC', '1001001', '3001112235', TRUE),
+    (2, 1, 2, 1, 'admin.online@importadora.com', '$2a$10$xo3irJ9IbTG.ju8iRMb2Iu4YB6KAe.XzeBtRkEo1aWXnChX84X2ne', 'Marcela', 'Gómez Restrepo', 'CC', '1001002', '3001112236', TRUE)
+ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email;
+
+-- 6. PROVEEDORES REALES (externals)
+INSERT INTO externals (id, company_id, kind, document_type, document, name, contact_name, phone, email, is_active)
+OVERRIDING SYSTEM VALUE
+VALUES 
+    (10, 1, 'supplier', 'NIT', '900123456', 'BAJAJ COLOMBIA MOTORS S.A.S.', 'BAJAJ OFICIAL', '3120001122', 'proveedores@bajaj.com.co', TRUE),
+    (11, 1, 'supplier', 'NIT', '900987654', 'DISTRIBUIDORA DE REPUESTOS JAPON SAS', 'REPUESTOS JAPON', '3158889900', 'ventas@japonrepuestos.com', TRUE)
+ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
+
+-- 7. CLIENTES DE PRUEBA (customers)
+-- A. Cliente Mostrador por defecto
+INSERT INTO customers (id, company_id, document_type, document, person_type, name, trade_name, credit_enabled, credit_limit, credit_days, credit_warning_pct, status)
+OVERRIDING SYSTEM VALUE
+VALUES (1, 1, 'NIT', '222222222222', 'legal', 'Consumidor Final', 'Cliente Mostrador', FALSE, 0.00, 0, 70.00, 'active')
+ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, credit_warning_pct = EXCLUDED.credit_warning_pct;
+
+-- B. Cliente con cupo disponible normal (0% ocupado)
+INSERT INTO customers (id, company_id, document_type, document, person_type, name, trade_name, credit_enabled, credit_limit, credit_days, credit_warning_pct, status)
+OVERRIDING SYSTEM VALUE
+VALUES (2, 1, 'CC', '1004260479', 'natural', 'VICTOR MANUEL ROJAS', 'TALLER ROJAS', TRUE, 2000000.00, 30, 70.00, 'active')
+ON CONFLICT (id) DO UPDATE SET credit_limit = EXCLUDED.credit_limit, credit_warning_pct = EXCLUDED.credit_warning_pct;
+
+-- C. Cliente con 75% de crédito ocupado (Para disparar anuncio de advertencia >= 70%)
+INSERT INTO customers (id, company_id, document_type, document, person_type, name, trade_name, credit_enabled, credit_limit, credit_days, credit_warning_pct, status)
+OVERRIDING SYSTEM VALUE
+VALUES (3, 1, 'NIT', '901555444', 'legal', 'MOTO REPUESTOS EL PAISA SAS', 'EL PAISA MOTOS', TRUE, 5000000.00, 30, 70.00, 'active')
+ON CONFLICT (id) DO UPDATE SET credit_limit = EXCLUDED.credit_limit, credit_warning_pct = EXCLUDED.credit_warning_pct;
+
+-- Asignar saldo de deuda de $3.750.000 (75% de 5M)
+INSERT INTO credit_entries (company_id, customer_id, entry_type, amount, reason)
+VALUES (1, 3, 'charge', -3750000.00, 'Saldo inicial cargado para prueba de advertencia de cupo al 75%')
+ON CONFLICT DO NOTHING;
+
+-- D. Cliente en mora (Facturas vencidas)
+INSERT INTO customers (id, company_id, document_type, document, person_type, name, trade_name, credit_enabled, credit_limit, credit_days, credit_warning_pct, status)
+OVERRIDING SYSTEM VALUE
+VALUES (4, 1, 'NIT', '900333222', 'legal', 'DISTRIBUIDORA MOTOSUR LTDA', 'MOTOSUR', TRUE, 3000000.00, 15, 70.00, 'overdue')
+ON CONFLICT (id) DO UPDATE SET status = 'overdue', credit_limit = EXCLUDED.credit_limit;
+
+-- 8. FUNCIÓN AUXILIAR TEMPORAL PARA CREAR PRODUCTOS EN BATCH
+CREATE OR REPLACE FUNCTION seed_product(
+    p_company_id BIGINT,
+    p_category_id BIGINT,
+    p_brand_id BIGINT,
+    p_code VARCHAR(80),
+    p_name VARCHAR(200),
+    p_desc TEXT,
+    p_cost NUMERIC(14,2),
+    p_price NUMERIC(14,2),
+    p_oem VARCHAR(80),
+    p_stk1 INT,
+    p_stk2 INT,
+    p_stk3 INT,
+    p_easy TEXT
+) RETURNS VOID AS $$
+DECLARE
+    v_prod_id BIGINT;
+BEGIN
+    INSERT INTO products (company_id, category_id, brand_id, code, name, description, unit, iva, last_cost, easysearch, status)
+    VALUES (p_company_id, p_category_id, p_brand_id, p_code, p_name, p_desc, 'UND', 19.00, p_cost, p_easy, 'active')
+    ON CONFLICT (company_id, code) DO UPDATE SET
+        name = EXCLUDED.name,
+        description = EXCLUDED.description,
+        last_cost = EXCLUDED.last_cost
+    RETURNING id INTO v_prod_id;
+
+    -- Código OEM alternativo
+    IF p_oem IS NOT NULL AND p_oem <> '' THEN
+        INSERT INTO product_codes (company_id, product_id, code_type, code)
+        VALUES (p_company_id, v_prod_id, 'oem', p_oem)
+        ON CONFLICT (company_id, code_type, code) DO NOTHING;
+    END IF;
+
+    -- Proveedor y costo
+    INSERT INTO product_suppliers (product_id, supplier_id, cost, supplier_code)
+    VALUES (v_prod_id, 10, p_cost, p_oem)
+    ON CONFLICT (product_id, supplier_id) DO UPDATE SET cost = EXCLUDED.cost;
+
+    -- Precio de Venta Especial (P1)
+    INSERT INTO product_prices (company_id, product_id, price_tier, price)
+    VALUES (p_company_id, v_prod_id, 'p1', p_price)
+    ON CONFLICT (product_id, price_tier) DO UPDATE SET price = EXCLUDED.price;
+
+    -- Stock distribuido en las 3 bodegas
+    -- Bodega 1 (Principal): Mayor inventario
+    INSERT INTO stock (company_id, product_id, warehouse_id, location, available, reserved, min_stock)
+    VALUES (p_company_id, v_prod_id, 1, 'ESTANTE-P1-01', p_stk1, 0, 5)
+    ON CONFLICT (product_id, warehouse_id, location) DO UPDATE SET available = EXCLUDED.available;
+
+    -- Bodega 2 (Online): Despachos
+    INSERT INTO stock (company_id, product_id, warehouse_id, location, available, reserved, min_stock)
+    VALUES (p_company_id, v_prod_id, 2, 'ESTANTE-ON-02', p_stk2, 0, 3)
+    ON CONFLICT (product_id, warehouse_id, location) DO UPDATE SET available = EXCLUDED.available;
+
+    -- Bodega 3 (Norte): Satélite
+    INSERT INTO stock (company_id, product_id, warehouse_id, location, available, reserved, min_stock)
+    VALUES (p_company_id, v_prod_id, 3, 'ESTANTE-NORTE-01', p_stk3, 0, 2)
+    ON CONFLICT (product_id, warehouse_id, location) DO UPDATE SET available = EXCLUDED.available;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 9. INSERCIÓN DE 65 PRODUCTOS REALES (EXTRAÍDOS DE LISTA EXEL.xlsx)
+
+SELECT seed_product(1, 1, 1, 'AP121064-1', 'ABRAZADERA PULSAR 180 UG', 'ABRAZADERA', 1134.00, 1700.00, 'AP121064', 29, 14, 9, 'AP121064-1 AP121064 ABRAZADERA PULSAR 180 UG BAJAJ');
+SELECT seed_product(1, 1, 1, 'JG591038-1', 'ABRAZADERA PULSAR 200 NS', 'ABRAZADERA', 7143.00, 14900.00, 'JG591038', 15, 7, 5, 'JG591038-1 JG591038 ABRAZADERA PULSAR 200 NS BAJAJ');
+SELECT seed_product(1, 1, 1, 'DG121002-1', 'ABRAZADERA UNIVERSAL', 'ABRAZADERA', 206.00, 300.00, 'DG121002', 1, 5, 3, 'DG121002-1 DG121002 ABRAZADERA UNIVERSAL BAJAJ');
+SELECT seed_product(1, 1, 1, 'BAJAJ1LTR', 'ACEITE 10W30', 'ACEITE', 16970.00, 25000.00, 'BAJAJ1LTR', 18, 9, 6, 'BAJAJ1LTR BAJAJ1LTR ACEITE 10W30 BAJAJ');
+SELECT seed_product(1, 1, 1, 'BGO10W50-1LT2W', 'ACEITE 10W50', 'ACEITE', 23323.00, 30000.00, 'BGO10W50', 15, 7, 5, 'BGO10W50-1LT2W BGO10W50 ACEITE 10W50 BAJAJ');
+SELECT seed_product(1, 1, 1, 'ACEBAJAJ1', 'ACEITE 20W50', 'ACEITE', 15693.00, 24800.00, 'ACEBAJAJ1', 109, 54, 36, 'ACEBAJAJ1 ACEBAJAJ1 ACEITE 20W50 BAJAJ');
+SELECT seed_product(1, 1, 1, 'ACEBAJAJ', 'ACEITE 20W50', 'ACEITE', 26782.00, 29600.00, 'ACEBAJAJ', 133, 66, 44, 'ACEBAJAJ ACEBAJAJ ACEITE 20W50 BAJAJ');
+SELECT seed_product(1, 1, 1, 'BAJAJ1.2D', 'ACEITE 20W50', 'ACEITE', 25195.00, 38000.00, 'BAJAJ1.2D', 953, 476, 317, 'BAJAJ1.2D BAJAJ1.2D ACEITE 20W50 BAJAJ');
+SELECT seed_product(1, 1, 1, 'BAJAJ115', 'ACEITE BAJAJ', 'ACEITE', 17000.00, 26500.00, 'BAJAJ115', 92, 46, 30, 'BAJAJ115 BAJAJ115 ACEITE BAJAJ BAJAJ');
+SELECT seed_product(1, 1, 1, 'JK231400-1', 'AGARRADERA PLATINO 100', 'AGARRADERA', 19000.00, 28300.00, 'JK231400', 15, 7, 5, 'JK231400-1 JK231400 AGARRADERA PLATINO 100 BAJAJ');
+SELECT seed_product(1, 1, 1, 'DK161147-1', 'AGARRADERA PULSAR 180 UG', 'AGARRADERA', 11408.00, 19000.00, 'DK161147', 6, 3, 2, 'DK161147-1 DK161147 AGARRADERA PULSAR 180 UG BAJAJ');
+SELECT seed_product(1, 1, 1, 'DK161148-1', 'AGARRADERA PULSAR 180 UG', 'AGARRADERA', 11407.00, 29900.00, 'DK161148', 6, 3, 2, 'DK161148-1 DK161148 AGARRADERA PULSAR 180 UG BAJAJ');
+SELECT seed_product(1, 1, 1, 'JL231404-1', 'AGARRADERA PULSAR 200 NS', 'AGARRADERA', 16280.00, 37900.00, 'JL231404', 2, 1, 3, 'JL231404-1 JL231404 AGARRADERA PULSAR 200 NS BAJAJ');
+SELECT seed_product(1, 1, 1, 'JL231045-1', 'AGARRADERA PULSAR 200 NS', 'AGARRADERA', 0.00, 0.00, 'JL231045', 15, 7, 5, 'JL231045-1 JL231045 AGARRADERA PULSAR 200 NS BAJAJ');
+SELECT seed_product(1, 1, 1, 'JL231405-1', 'AGARRADERA PULSAR 200 NS', 'AGARRADERA', 16512.00, 24600.00, 'JL231405', 1, 5, 3, 'JL231405-1 JL231405 AGARRADERA PULSAR 200 NS BAJAJ');
+SELECT seed_product(1, 1, 1, 'JB581229-1', 'AGUJA CARBURADOR BOXER CT100', 'AGUJA CARBURADOR', 4286.00, 13900.00, 'JB581229', 8, 4, 2, 'JB581229-1 JB581229 AGUJA CARBURADOR BOXER CT100 BAJAJ');
+SELECT seed_product(1, 1, 1, 'DJ121044-1', 'AGUJA CORTINA CARBURADOR PULSAR 180 UG', 'AGUJA CORTINA CARBURADOR', 8831.00, 27900.00, 'DJ121044', 15, 7, 5, 'DJ121044-1 DJ121044 AGUJA CORTINA CARBURADOR PULSAR 180 UG BAJAJ');
+SELECT seed_product(1, 1, 1, 'DD121168-1', 'AGUJA DE ACIENTO BOXER CT', 'AGUJA DE ACIENTO', 7396.00, 15900.00, 'DD121168', 99, 49, 33, 'DD121168-1 DD121168 AGUJA DE ACIENTO BOXER CT BAJAJ');
+SELECT seed_product(1, 1, 1, 'DS121076-1', 'AGUJA DE ACIENTO DISCOVER 135', 'AGUJA DE ACIENTO', 15000.00, 26900.00, 'DS121076', 1, 5, 3, 'DS121076-1 DS121076 AGUJA DE ACIENTO DISCOVER 135 BAJAJ');
+SELECT seed_product(1, 1, 1, 'DH121093-1', 'AGUJA DE ACIENTO PULSAR 135', 'AGUJA DE ACIENTO', 8193.00, 27900.00, 'DH121093', 25, 12, 8, 'DH121093-1 DH121093 AGUJA DE ACIENTO PULSAR 135 BAJAJ');
+SELECT seed_product(1, 1, 1, 'DJ121057-1', 'AGUJA DE ACIENTO PULSAR 180 UG', 'AGUJA DE ACIENTO', 18487.00, 27500.00, 'DJ121057', 46, 23, 15, 'DJ121057-1 DJ121057 AGUJA DE ACIENTO PULSAR 180 UG BAJAJ');
+SELECT seed_product(1, 1, 1, 'DK121047-1', 'AGUJA DE ACIENTO PULSAR 200 NS', 'AGUJA DE ACIENTO', 18796.00, 15900.00, 'DK121047', 1, 5, 3, 'DK121047-1 DK121047 AGUJA DE ACIENTO PULSAR 200 NS BAJAJ');
+SELECT seed_product(1, 1, 1, 'JZ181007-1', 'ALCUTRAS DISCOVER 125 ST', 'ALCUTRAS', 4732.00, 7000.00, 'JZ181007', 15, 7, 5, 'JZ181007-1 JZ181007 ALCUTRAS DISCOVER 125 ST BAJAJ');
+SELECT seed_product(1, 1, 1, 'PF121003-1', 'ALETA FAROLA BOXER BM 100', 'ALETA FAROLA', 9435.00, 13900.00, 'PF121003', 4, 2, 1, 'PF121003-1 PF121003 ALETA FAROLA BOXER BM 100 BAJAJ');
+SELECT seed_product(1, 1, 1, 'PF121002-1', 'ALETA FAROLA BOXER BM 100', 'ALETA FAROLA', 10840.00, 15900.00, 'PF121002', 15, 7, 5, 'PF121002-1 PF121002 ALETA FAROLA BOXER BM 100 BAJAJ');
+SELECT seed_product(1, 1, 1, '52DJ0373-1', 'ALETA TANQUE PULSAR 180 UG', 'ALETA TANQUE', 17411.00, 25900.00, '52DJ0373', 15, 7, 5, '52DJ0373-1 52DJ0373 ALETA TANQUE PULSAR 180 UG BAJAJ');
+SELECT seed_product(1, 1, 1, '52DJ0374-1', 'ALETA TANQUE PULSAR 180 UG', 'ALETA TANQUE', 14144.00, 24500.00, '52DJ0374', 5, 2, 1, '52DJ0374-1 52DJ0374 ALETA TANQUE PULSAR 180 UG BAJAJ');
+SELECT seed_product(1, 1, 1, 'PF122005-1', 'AMORTIGUADOR BOXER BM 100', 'AMORTIGUADOR', 44302.00, 75000.00, 'PF122005', 15, 7, 5, 'PF122005-1 PF122005 AMORTIGUADOR BOXER BM 100 BAJAJ');
+SELECT seed_product(1, 1, 1, 'DZ171016-1', 'AMORTIGUADOR BOXER CT', 'AMORTIGUADOR', 39312.00, 59900.00, 'DZ171016', 77, 38, 25, 'DZ171016-1 DZ171016 AMORTIGUADOR BOXER CT BAJAJ');
+SELECT seed_product(1, 1, 1, 'DM171027-1', 'AMORTIGUADOR BOXER CT', 'AMORTIGUADOR', 39058.00, 59900.00, 'DM171027', 10, 5, 3, 'DM171027-1 DM171027 AMORTIGUADOR BOXER CT BAJAJ');
+SELECT seed_product(1, 1, 1, 'PA122026-1', 'AMORTIGUADOR DISCOVER 100', 'AMORTIGUADOR', 49580.00, 73800.00, 'PA122026', 15, 7, 5, 'PA122026-1 PA122026 AMORTIGUADOR DISCOVER 100 BAJAJ');
+SELECT seed_product(1, 1, 1, 'JN122000-1', 'AMORTIGUADOR DISCOVER 135', 'AMORTIGUADOR', 64149.00, 95000.00, 'JN122000', 10, 5, 3, 'JN122000-1 JN122000 AMORTIGUADOR DISCOVER 135 BAJAJ');
+SELECT seed_product(1, 1, 1, 'JF122013-1', 'AMORTIGUADOR DOMINAR 400 UG', 'AMORTIGUADOR', 201008.00, 299000.00, 'JF122013', 1, 5, 3, 'JF122013-1 JF122013 AMORTIGUADOR DOMINAR 400 UG BAJAJ');
+SELECT seed_product(1, 1, 1, '24171063-1', 'AMORTIGUADOR MOTO CARRO RE 205', 'AMORTIGUADOR', 57748.00, 85900.00, '24171063', 2, 1, 3, '24171063-1 24171063 AMORTIGUADOR MOTO CARRO RE 205 BAJAJ');
+SELECT seed_product(1, 1, 1, 'JD122003-1', 'AMORTIGUADOR PULSAR 135', 'AMORTIGUADOR', 76405.00, 152000.00, 'JD122003', 9, 4, 3, 'JD122003-1 JD122003 AMORTIGUADOR PULSAR 135 BAJAJ');
+SELECT seed_product(1, 1, 1, 'DJ171019-1', 'AMORTIGUADOR PULSAR 180 II', 'AMORTIGUADOR', 49159.00, 79000.00, 'DJ171019', 2, 1, 3, 'DJ171019-1 DJ171019 AMORTIGUADOR PULSAR 180 II BAJAJ');
+SELECT seed_product(1, 1, 1, 'JC171003-1', 'AMORTIGUADOR PULSAR 180 UG', 'AMORTIGUADOR', 57629.00, 85000.00, 'JC171003', 10, 5, 3, 'JC171003-1 JC171003 AMORTIGUADOR PULSAR 180 UG BAJAJ');
+SELECT seed_product(1, 1, 1, 'DK171014-1', 'AMORTIGUADOR PULSAR 180 UG', 'AMORTIGUADOR', 53781.00, 80000.00, 'DK171014', 75, 37, 25, 'DK171014-1 DK171014 AMORTIGUADOR PULSAR 180 UG BAJAJ');
+SELECT seed_product(1, 1, 1, '36PA0003-1', 'ANILLOS BOXER BM 100', 'ANILLOS', 15300.00, 21900.00, '36PA0003', 10, 5, 3, '36PA0003-1 36PA0003 ANILLOS BOXER BM 100 BAJAJ');
+SELECT seed_product(1, 1, 1, '36DD4001-1', 'ANILLOS BOXER CT', 'ANILLOS', 9664.00, 14400.00, '36DD4001', 45, 22, 15, '36DD4001-1 36DD4001 ANILLOS BOXER CT BAJAJ');
+SELECT seed_product(1, 1, 1, '36PF0062-1', 'ANILLOS BOXER CT 102 ES/KS', 'ANILLOS', 13214.00, 20900.00, '36PF0062', 15, 7, 5, '36PF0062-1 36PF0062 ANILLOS BOXER CT 102 ES/KS BAJAJ');
+SELECT seed_product(1, 1, 1, '36DJ4008-1', 'ANILLOS DISCOVER 135', 'ANILLOS', 10898.00, 27900.00, '36DJ4008', 7, 3, 2, '36DJ4008-1 36DJ4008 ANILLOS DISCOVER 135 BAJAJ');
+SELECT seed_product(1, 1, 1, '36JF0026-1', 'ANILLOS DISCOVER 150 ST', 'ANILLOS', 14280.00, 25600.00, '36JF0026', 6, 3, 2, '36JF0026-1 36JF0026 ANILLOS DISCOVER 150 ST BAJAJ');
+SELECT seed_product(1, 1, 1, '36JF0060-1', 'ANILLOS DOMINAR 400', 'ANILLOS', 18600.00, 27700.00, '36JF0060', 18, 9, 6, '36JF0060-1 36JF0060 ANILLOS DOMINAR 400 BAJAJ');
+SELECT seed_product(1, 1, 1, '36JE0002-1', 'ANILLOS PULSAR 135', 'ANILLOS', 12317.00, 17000.00, '36JE0002', 25, 12, 8, '36JE0002-1 36JE0002 ANILLOS PULSAR 135 BAJAJ');
+SELECT seed_product(1, 1, 1, '36JF0042-1', 'ANILLOS PULSAR 160 NS', 'ANILLOS', 13291.00, 18900.00, '36JF0042', 5, 2, 1, '36JF0042-1 36JF0042 ANILLOS PULSAR 160 NS BAJAJ');
+SELECT seed_product(1, 1, 1, 'DJ101106-1', 'ANILLOS PULSAR 180 UG', 'ANILLOS', 9240.00, 17000.00, 'DJ101106', 22, 11, 7, 'DJ101106-1 DJ101106 ANILLOS PULSAR 180 UG BAJAJ');
+SELECT seed_product(1, 1, 1, '36JU0001-1', 'ANILLOS PULSAR 200 NS', 'ANILLOS', 12644.00, 19900.00, '36JU0001', 11, 5, 3, '36JU0001-1 36JU0001 ANILLOS PULSAR 200 NS BAJAJ');
+SELECT seed_product(1, 1, 1, 'DE151048-1', 'ANTIRRUIDO PASTILLA DISCOVER 125', 'ANTIRRUIDO PASTILLA', 2100.00, 3500.00, 'DE151048', 13, 6, 4, 'DE151048-1 DE151048 ANTIRRUIDO PASTILLA DISCOVER 125 BAJAJ');
+SELECT seed_product(1, 1, 1, 'DK151041-1', 'ANTIRRUIDO PASTILLA PULSAR 180 UG', 'ANTIRRUIDO PASTILLA', 2890.00, 4300.00, 'DK151041', 9, 4, 3, 'DK151041-1 DK151041 ANTIRRUIDO PASTILLA PULSAR 180 UG BAJAJ');
+SELECT seed_product(1, 1, 1, 'JE541038-1', 'ANTIVIBRANTE DISCOVER 150 ST', 'ANTIVIBRANTE', 5311.00, 7900.00, 'JE541038', 5, 2, 1, 'JE541038-1 JE541038 ANTIVIBRANTE DISCOVER 150 ST BAJAJ');
+SELECT seed_product(1, 1, 1, 'DJ151068-1', 'ANTIVIBRANTE PULSAR 180', 'ANTIVIBRANTE', 2332.00, 3500.00, 'DJ151068', 38, 19, 12, 'DJ151068-1 DJ151068 ANTIVIBRANTE PULSAR 180 BAJAJ');
+SELECT seed_product(1, 1, 1, '39260011-1', 'ARANDELA  CLUTCH PULSAR 135', 'ARANDELA  CLUTCH', 1261.00, 1900.00, '39260011', 15, 7, 5, '39260011-1 39260011 ARANDELA  CLUTCH PULSAR 135 BAJAJ');
+SELECT seed_product(1, 1, 1, 'JG551428-10', 'ARANDELA  CLUTCH PULSAR 180 UG', 'ARANDELA  CLUTCH', 1588.00, 2500.00, 'JG551428', 549, 274, 183, 'JG551428-10 JG551428 ARANDELA  CLUTCH PULSAR 180 UG BAJAJ');
+SELECT seed_product(1, 1, 1, 'DP101243-1', 'ARANDELA  CLUTCH PULSAR 200 NS', 'ARANDELA  CLUTCH', 2073.00, 3900.00, 'DP101243', 15, 7, 5, 'DP101243-1 DP101243 ARANDELA  CLUTCH PULSAR 200 NS BAJAJ');
+SELECT seed_product(1, 1, 1, '36JL0091-1', 'ARANDELA  CLUTCH PULSAR 200 NS', 'ARANDELA  CLUTCH', 45000.00, 66900.00, '36JL0091', 8, 4, 2, '36JL0091-1 36JL0091 ARANDELA  CLUTCH PULSAR 200 NS BAJAJ');
+SELECT seed_product(1, 1, 1, '28101110-1', 'ARANDELA CIGUEÑAL DISCOVER 135', 'ARANDELA CIGUEÑAL', 3361.00, 5000.00, '28101110', 34, 17, 11, '28101110-1 28101110 ARANDELA CIGUEÑAL DISCOVER 135 BAJAJ');
+SELECT seed_product(1, 1, 1, 'DU101213-5', 'ARANDELA PIÑON SALIDA BOXER CT', 'ARANDELA PIÑON SALIDA', 756.00, 1400.00, 'DU101213', 55, 27, 18, 'DU101213-5 DU101213 ARANDELA PIÑON SALIDA BOXER CT BAJAJ');
+SELECT seed_product(1, 1, 1, 'DE151012-5', 'ARANDELA PULSAR 135', 'ARANDELA', 510.00, 810.00, 'DE151012', 75, 37, 25, 'DE151012-5 DE151012 ARANDELA PULSAR 135 BAJAJ');
+SELECT seed_product(1, 1, 1, 'DJ191026-5', 'ARANDELA PULSAR 180 UG', 'ARANDELA', 100.00, 600.00, 'DJ191026', 15, 7, 5, 'DJ191026-5 DJ191026 ARANDELA PULSAR 180 UG BAJAJ');
+SELECT seed_product(1, 1, 1, 'DS101084-5', 'ARANDELA PULSAR 180 UG', 'ARANDELA', 260.00, 950.00, 'DS101084', 102, 51, 34, 'DS101084-5 DS101084 ARANDELA PULSAR 180 UG BAJAJ');
+SELECT seed_product(1, 1, 1, 'DK101570-1', 'ARANDELA PULSAR 180 UG', 'ARANDELA', 2078.00, 8900.00, 'DK101570', 5, 2, 1, 'DK101570-1 DK101570 ARANDELA PULSAR 180 UG BAJAJ');
+SELECT seed_product(1, 1, 1, 'DK101571-1', 'ARANDELA PULSAR 180 UG', 'ARANDELA', 7071.00, 9900.00, 'DK101571', 5, 2, 1, 'DK101571-1 DK101571 ARANDELA PULSAR 180 UG BAJAJ');
+SELECT seed_product(1, 1, 1, 'DP101114-1', 'ARANDELA PULSAR 200 NS', 'ARANDELA', 3782.00, 8900.00, 'DP101114', 15, 7, 5, 'DP101114-1 DP101114 ARANDELA PULSAR 200 NS BAJAJ');
+SELECT seed_product(1, 1, 1, 'LDA00008-20', 'ARANDELA PULSAR 200 NS', 'ARANDELA', 312.00, 700.00, 'LDA00008', 208, 104, 69, 'LDA00008-20 LDA00008 ARANDELA PULSAR 200 NS BAJAJ');
+
+
+-- Eliminar la función auxiliar
+DROP FUNCTION IF EXISTS seed_product;
+
+-- 10. MOVIMIENTOS BANCARIOS REALES DEL EXTRACTO (000090139539_20261029_161736.pdf)
+INSERT INTO bank_statement_records (
+    company_id, bank_name, account_number, movement_date, description,
+    branch_channel, reference1, reference2, document_number, amount, is_income, status
 )
 VALUES
-    (
-        1,
-        (SELECT id FROM warehouses WHERE company_id = 1 AND code = 'BOD-01'),
-        'juridica', 'NIT', '901456789-1',
-        'GESTION IMPORTADORA PRINCIPAL S.A.S.', 'Importadora Bogotá Centro',
-        'facturacion.bod01@gestionimportadora.com', '6017450001', 'Calle 13 # 28-45', 'Bogotá',
-        TRUE, TRUE, FALSE,
-        'FE1-', '18764000001111', '2026-01-15', 1, 50000
-    ),
-    (
-        1,
-        (SELECT id FROM warehouses WHERE company_id = 1 AND code = 'BOD-02'),
-        'natural', 'CC', '79888999',
-        'CARLOS ANDRES MENDOZA RUIZ', 'Distribución Bogotá Norte',
-        'facturacion.bod02@gestionimportadora.com', '6017450002', 'Autopista Norte # 142-20', 'Bogotá',
-        FALSE, FALSE, FALSE,
-        'FE2-', '18764000002222', '2026-01-15', 1, 20000
-    ),
-    (
-        2,
-        (SELECT id FROM warehouses WHERE company_id = 2 AND code = 'BOD-N01'),
-        'juridica', 'NIT', '901999888-5',
-        'IMPORTADORA DEL NORTE S.A.S.', 'Importadora del Norte Medellín',
-        'facturacion@importadoradelnorte.com', '6043209901', 'Carrera 50 # 12 Sur-30', 'Medellín',
-        TRUE, FALSE, FALSE,
-        'FEN-', '18764000003333', '2026-02-01', 1, 30000
-    );
-
--- 5. Roles descriptivos por compañía (sin campo area y sin permisos)
-INSERT INTO roles (company_id, code, name, description)
-VALUES
-    (1, 'vendedor', 'Vendedor Comercial', 'Atención comercial, cotizaciones y creación de pedidos/ventas'),
-    (1, 'bodeguero', 'Operario de Bodega', 'Picking, packing, despacho, recepción de traslados y conteos físicos'),
-    (1, 'facturador', 'Facturador y Verificador', 'Verificación de pedidos y emisión de facturación por bodega'),
-    (1, 'cartera', 'Analista de Cartera', 'Gestión de pagos, abonos, cupos de crédito y conciliación'),
-    (1, 'compras', 'Analista de Compras', 'Gestión de órdenes de compra, proveedores y catálogo'),
-    (2, 'vendedor', 'Vendedor Comercial', 'Atención comercial y ventas en Importadora del Norte'),
-    (2, 'bodeguero', 'Operario de Bodega', 'Operación logística e inventario en Importadora del Norte');
-
--- 6. Catálogo maestro de permisos habilitables
-INSERT INTO permissions (module, action, description)
-VALUES
-    ('products', 'view', 'Consultar catálogo y precios p1..p4 de productos'),
-    ('products', 'create', 'Crear nuevos productos'),
-    ('products', 'edit', 'Editar productos y precios p1..p4'),
-    ('products', 'delete', 'Inactivar o eliminar productos'),
-    ('categories', 'manage', 'Crear y editar categorías, marcas y modelos'),
-    ('warehouses', 'view', 'Consultar bodegas'),
-    ('warehouses', 'manage', 'Crear y editar bodegas'),
-    ('warehouses', 'facturation', 'Configurar datos fiscales de facturación por bodega'),
-    ('stock', 'view', 'Consultar existencias por bodega y ubicación'),
-    ('stock', 'adjust', 'Realizar ajustes manuales de inventario'),
-    ('counts', 'manage', 'Abrir, registrar y corroborar conteos físicos'),
-    ('transfers', 'view', 'Consultar traslados entre bodegas'),
-    ('transfers', 'create', 'Crear solicitud de traslado multi-ítem entre bodegas'),
-    ('transfers', 'dispatch', 'Despachar traslado desde bodega origen'),
-    ('transfers', 'receive', 'Recibir traslado en bodega destino'),
-    ('customers', 'view', 'Consultar ficha de clientes'),
-    ('customers', 'create', 'Registrar clientes nuevos'),
-    ('customers', 'edit', 'Actualizar datos, lista p1..p4, descuento y cupo del cliente'),
-    ('customers', 'documents', 'Adjuntar y gestionar documentos del cliente'),
-    ('externals', 'view', 'Consultar proveedores, transportadoras y externos'),
-    ('externals', 'manage', 'Crear y editar externos'),
-    ('sales', 'view', 'Consultar pedidos y ventas'),
-    ('sales', 'create', 'Crear pedidos y carritos de venta'),
-    ('sales', 'verify', 'Verificar pedidos comerciales (Verificación -> Verificación exitosa)'),
-    ('sales', 'pick', 'Ejecutar picking de renglones (Picking -> Picking exitoso)'),
-    ('sales', 'pack', 'Ejecutar packing de renglones (Packing -> Packing exitoso)'),
-    ('sales', 'invoice', 'Facturar pedidos desde la bodega (Facturación -> Facturación exitosa)'),
-    ('sales', 'dispatch', 'Gestionar despacho y confirmar envío (Despacho -> Enviado)'),
-    ('sales', 'cancel', 'Cancelar pedidos abiertos'),
-    ('quotations', 'manage', 'Crear, enviar y convertir cotizaciones'),
-    ('returns', 'create', 'Registrar solicitudes de devolución'),
-    ('returns', 'approve', 'Aprobar o rechazar devoluciones'),
-    ('payments', 'view', 'Consultar pagos y cartera'),
-    ('payments', 'create', 'Registrar recibos de pago o abonos'),
-    ('payments', 'verify', 'Verificar o anular pagos'),
-    ('purchases', 'view', 'Consultar órdenes de compra'),
-    ('purchases', 'manage', 'Crear y recibir órdenes de compra en bodega'),
-    ('invoices', 'view', 'Consultar facturas y notas crédito emitidas por bodega'),
-    ('audit', 'view', 'Consultar auditoría de movimientos y sistema');
-
--- 7. Empleados por compañía (contraseña: 123456)
-INSERT INTO employees (
-    company_id, role_id, warehouse_id, email, password_hash,
-    first_name, last_name, document_type, document, phone, work_modality
-)
-VALUES
-    (
-        1,
-        (SELECT id FROM roles WHERE company_id = 1 AND code = 'vendedor'),
-        (SELECT id FROM warehouses WHERE company_id = 1 AND code = 'BOD-01'),
-        'vendedor1Importadora@gmail.com', crypt('123456', gen_salt('bf')),
-        'Andrés', 'Gómez Ríos', 'CC', '1010001001', '3101110001', 'onsite'
-    ),
-    (
-        1,
-        (SELECT id FROM roles WHERE company_id = 1 AND code = 'vendedor'),
-        (SELECT id FROM warehouses WHERE company_id = 1 AND code = 'BOD-02'),
-        'vendedor2Importadora@gmail.com', crypt('123456', gen_salt('bf')),
-        'Laura', 'Martínez Soto', 'CC', '1010001002', '3101110002', 'hybrid'
-    ),
-    (
-        1,
-        (SELECT id FROM roles WHERE company_id = 1 AND code = 'bodeguero'),
-        (SELECT id FROM warehouses WHERE company_id = 1 AND code = 'BOD-01'),
-        'bodeguero1Importadora@gmail.com', crypt('123456', gen_salt('bf')),
-        'Miguel', 'Torres Peña', 'CC', '1010001003', '3101110003', 'onsite'
-    ),
-    (
-        1,
-        (SELECT id FROM roles WHERE company_id = 1 AND code = 'bodeguero'),
-        (SELECT id FROM warehouses WHERE company_id = 1 AND code = 'BOD-02'),
-        'bodeguero2Importadora@gmail.com', crypt('123456', gen_salt('bf')),
-        'Camilo', 'Vargas León', 'CC', '1010001004', '3101110004', 'onsite'
-    ),
-    (
-        1,
-        (SELECT id FROM roles WHERE company_id = 1 AND code = 'facturador'),
-        (SELECT id FROM warehouses WHERE company_id = 1 AND code = 'BOD-01'),
-        'facturador1Importadora@gmail.com', crypt('123456', gen_salt('bf')),
-        'Diana', 'Rojas Castro', 'CC', '1010001005', '3101110005', 'onsite'
-    ),
-    (
-        1,
-        (SELECT id FROM roles WHERE company_id = 1 AND code = 'cartera'),
-        (SELECT id FROM warehouses WHERE company_id = 1 AND code = 'BOD-01'),
-        'cartera1Importadora@gmail.com', crypt('123456', gen_salt('bf')),
-        'Paola', 'Herrera Díaz', 'CC', '1010001006', '3101110006', 'hybrid'
-    ),
-    (
-        1,
-        (SELECT id FROM roles WHERE company_id = 1 AND code = 'compras'),
-        (SELECT id FROM warehouses WHERE company_id = 1 AND code = 'BOD-01'),
-        'compras1Importadora@gmail.com', crypt('123456', gen_salt('bf')),
-        'Jorge', 'Salazar Mora', 'CC', '1010001007', '3101110007', 'onsite'
-    ),
-    (
-        2,
-        (SELECT id FROM roles WHERE company_id = 2 AND code = 'vendedor'),
-        (SELECT id FROM warehouses WHERE company_id = 2 AND code = 'BOD-N01'),
-        'vendedorNorte@gmail.com', crypt('123456', gen_salt('bf')),
-        'Sebastián', 'Restrepo Gil', 'CC', '1020002001', '3122220001', 'onsite'
-    );
-
--- 8. Administradores por compañía (contraseña: 123456)
-INSERT INTO admins (
-    company_id, created_by_superadmin_id, email, password_hash,
-    first_name, last_name, document_type, document, phone
-)
-VALUES
-    (
-        1, 1, 'adminImportadora@gmail.com', crypt('123456', gen_salt('bf')),
-        'Carlos', 'Mendoza Ruiz', 'CC', '79888999', '3150001111'
-    ),
-    (
-        2, 1, 'admin2Importadora@gmail.com', crypt('123456', gen_salt('bf')),
-        'Natalia', 'Ospina Vélez', 'CC', '43999888', '3150002222'
-    );
-
--- 9. Asignación directa de permisos habilitados a cada empleado (employee_permissions)
--- Vendedores compañía 1
-INSERT INTO employee_permissions (employee_id, permission_id, granted_by_admin_id)
-SELECT e.id, p.id, (SELECT id FROM admins WHERE email = 'adminImportadora@gmail.com')
-FROM employees e
-CROSS JOIN permissions p
-WHERE e.email IN ('vendedor1Importadora@gmail.com', 'vendedor2Importadora@gmail.com')
-  AND (
-      (p.module = 'products' AND p.action = 'view')
-      OR (p.module = 'stock' AND p.action = 'view')
-      OR (p.module = 'customers' AND p.action IN ('view', 'create', 'documents'))
-      OR (p.module = 'sales' AND p.action IN ('view', 'create'))
-      OR (p.module = 'quotations' AND p.action = 'manage')
-      OR (p.module = 'payments' AND p.action = 'create')
-  );
-
--- Bodegueros compañía 1
-INSERT INTO employee_permissions (employee_id, permission_id, granted_by_admin_id)
-SELECT e.id, p.id, (SELECT id FROM admins WHERE email = 'adminImportadora@gmail.com')
-FROM employees e
-CROSS JOIN permissions p
-WHERE e.email IN ('bodeguero1Importadora@gmail.com', 'bodeguero2Importadora@gmail.com')
-  AND (
-      (p.module = 'products' AND p.action = 'view')
-      OR (p.module = 'warehouses' AND p.action = 'view')
-      OR (p.module = 'stock' AND p.action IN ('view', 'adjust'))
-      OR (p.module = 'counts' AND p.action = 'manage')
-      OR (p.module = 'transfers' AND p.action IN ('view', 'create', 'dispatch', 'receive'))
-      OR (p.module = 'sales' AND p.action IN ('view', 'pick', 'pack', 'dispatch'))
-  );
-
--- Facturador compañía 1
-INSERT INTO employee_permissions (employee_id, permission_id, granted_by_admin_id)
-SELECT e.id, p.id, (SELECT id FROM admins WHERE email = 'adminImportadora@gmail.com')
-FROM employees e
-CROSS JOIN permissions p
-WHERE e.email = 'facturador1Importadora@gmail.com'
-  AND (
-      (p.module = 'sales' AND p.action IN ('view', 'verify', 'invoice', 'cancel'))
-      OR (p.module = 'invoices' AND p.action = 'view')
-      OR (p.module = 'payments' AND p.action IN ('view', 'verify'))
-      OR (p.module = 'customers' AND p.action = 'view')
-      OR (p.module = 'returns' AND p.action IN ('create', 'approve'))
-  );
-
--- Cartera compañía 1
-INSERT INTO employee_permissions (employee_id, permission_id, granted_by_admin_id)
-SELECT e.id, p.id, (SELECT id FROM admins WHERE email = 'adminImportadora@gmail.com')
-FROM employees e
-CROSS JOIN permissions p
-WHERE e.email = 'cartera1Importadora@gmail.com'
-  AND (
-      (p.module = 'customers' AND p.action IN ('view', 'edit', 'documents'))
-      OR (p.module = 'payments' AND p.action IN ('view', 'create', 'verify'))
-      OR (p.module = 'sales' AND p.action = 'view')
-      OR (p.module = 'invoices' AND p.action = 'view')
-  );
-
--- Compras compañía 1
-INSERT INTO employee_permissions (employee_id, permission_id, granted_by_admin_id)
-SELECT e.id, p.id, (SELECT id FROM admins WHERE email = 'adminImportadora@gmail.com')
-FROM employees e
-CROSS JOIN permissions p
-WHERE e.email = 'compras1Importadora@gmail.com'
-  AND (
-      (p.module = 'products' AND p.action IN ('view', 'create', 'edit'))
-      OR (p.module = 'categories' AND p.action = 'manage')
-      OR (p.module = 'externals' AND p.action IN ('view', 'manage'))
-      OR (p.module = 'purchases' AND p.action IN ('view', 'manage'))
-      OR (p.module = 'stock' AND p.action = 'view')
-  );
-
--- Vendedor compañía 2
-INSERT INTO employee_permissions (employee_id, permission_id, granted_by_admin_id)
-SELECT e.id, p.id, (SELECT id FROM admins WHERE email = 'admin2Importadora@gmail.com')
-FROM employees e
-CROSS JOIN permissions p
-WHERE e.email = 'vendedorNorte@gmail.com'
-  AND p.module IN ('products', 'stock', 'customers', 'sales', 'quotations')
-  AND p.action IN ('view', 'create', 'manage');
-
--- 10. Inicialización limpia de control de intentos de login para empleados semilla
-INSERT INTO employee_login_attempts (employee_id, email, failed_login_count)
-SELECT id, email, 0 FROM employees;
-
--- 11. Clientes y documentos del cliente
-INSERT INTO customers (
-    company_id, document_type, document, person_type, name, last_name, trade_name,
-    legal_representative, email, phone, mobile, address, city, vat_responsible,
-    price_tier, discount_percent, credit_enabled, credit_limit, credit_days, status
-)
-VALUES
-    (
-        1, 'NIT', '222222222222', 'natural', 'Consumidor Final', NULL, 'Cliente Mostrador',
-        NULL, NULL, NULL, NULL, 'Mostrador', 'Bogotá', FALSE,
-        'p1', 0.00, FALSE, 0, 0, 'active'
-    ),
-    (
-        1, 'CC', '1020304050', 'natural', 'Juan', 'Pérez Gómez', 'MotoRepuestos Juan',
-        NULL, 'juan.perez@example.com', '6014445566', '3001234567', 'Calle 10 # 5-30', 'Bogotá', FALSE,
-        'p2', 3.00, TRUE, 2500000, 30, 'active'
-    ),
-    (
-        1, 'NIT', '900123456-7', 'legal', 'Taller El Rápido S.A.S.', NULL, 'El Rápido Motos',
-        'María Fernanda García', 'compras@elrapido.com', '6012345678', '3119876543', 'Carrera 45 # 12-10', 'Bogotá', TRUE,
-        'p3', 5.00, TRUE, 8000000, 45, 'active'
-    ),
-    (
-        2, 'NIT', '222222222222', 'natural', 'Consumidor Final', NULL, 'Mostrador Medellín',
-        NULL, NULL, NULL, NULL, 'Mostrador', 'Medellín', FALSE,
-        'p1', 0.00, FALSE, 0, 0, 'active'
-    );
-
-INSERT INTO customer_documents (customer_id, doc_type, file_name, file_url, mime_type, notes)
-VALUES
-    (
-        (SELECT id FROM customers WHERE company_id = 1 AND document = '900123456-7'),
-        'rut', 'RUT_Taller_El_Rapido_2026.pdf', '/uploads/customers/rut_900123456.pdf', 'application/pdf', 'RUT actualizado vigente'
-    ),
-    (
-        (SELECT id FROM customers WHERE company_id = 1 AND document = '900123456-7'),
-        'chamber', 'Camara_Comercio_El_Rapido.pdf', '/uploads/customers/camara_900123456.pdf', 'application/pdf', 'Certificado menor a 30 días'
-    );
-
--- 12. Externos (Proveedores y Transportadoras)
-INSERT INTO externals (
-    company_id, kind, document_type, document, name, contact_name, contact_phone,
-    email, city, terms_days, credit_limit, coverage
-)
-VALUES
-    (1, 'supplier', 'NIT', '800100001-1', 'Yamaha Motor Colombia', 'Ricardo Mejía', '3105550101', 'ventas@yamaha-col.example.com', 'Medellín', 30, 25000000, NULL),
-    (1, 'supplier', 'NIT', '800100002-2', 'Suzuki Motor de Colombia', 'Elena Pardo', '3105550202', 'mayoristas@suzuki-col.example.com', 'Pereira', 30, 20000000, NULL),
-    (1, 'supplier', 'NIT', '800100004-4', 'Lubricantes del Pacífico S.A.S.', 'Óscar Duarte', '3105550404', 'pedidos@lubripacifico.example.com', 'Cali', 15, 15000000, NULL),
-    (1, 'carrier', 'NIT', '860512330-3', 'Servientrega S.A.', 'Despachos Corporativos', '6017700200', 'corporativo@servientrega.example.com', 'Bogotá', 0, 0, 'Nacional'),
-    (1, 'carrier', 'NIT', '800185306-4', 'Envía Colvanes', 'Línea Logística', '6014430000', 'logistica@envia.example.com', 'Bogotá', 0, 0, 'Nacional'),
-    (2, 'supplier', 'NIT', '800100099-9', 'Distribuidora Antioquia Motos', 'Julián Cano', '3147778899', 'ventas@antmotos.example.com', 'Medellín', 30, 12000000, NULL);
-
--- 13. Catálogo: Marcas, Modelos (con description) y Categorías (padre + subcategorías)
-INSERT INTO brands (company_id, name)
-VALUES
-    (1, 'Kixx'),
-    (1, 'Shell'),
-    (1, 'Castrol'),
-    (1, 'Mobil'),
-    (1, 'Honda'),
-    (1, 'Yamaha'),
-    (2, 'Yamaha');
-
-INSERT INTO models (company_id, name, description)
-VALUES
-    (1, '15W40', 'Viscosidad multigrado 15W-40 para motores diésel y gasolina de trabajo pesado'),
-    (1, '20W50', 'Viscosidad 20W-50 4 tiempos de alta protección térmica'),
-    (1, '10W30', 'Viscosidad sintética/semisintética 10W-30 de baja fricción'),
-    (1, 'ULTRA 4T', 'Línea sintética de alto desempeño para motocicletas 4T'),
-    (1, 'STD-OEM', 'Referencia estándar tipo original de fábrica'),
-    (2, '20W50', 'Viscosidad estándar 20W-50');
-
--- Categorías padre
-INSERT INTO categories (company_id, parent_id, name, description)
-VALUES
-    (1, NULL, 'LUBRICANTES Y FLUIDOS', 'Categoría padre de aceites, líquidos de freno y refrigerantes'),
-    (1, NULL, 'REPUESTOS DE MOTOR', 'Categoría padre de filtros, bujías y componentes internos'),
-    (2, NULL, 'LUBRICANTES', 'Categoría general de lubricantes');
-
--- Subcategorías hijas (usando parent_id)
-INSERT INTO categories (company_id, parent_id, name, description)
-VALUES
-    (
-        1,
-        (SELECT id FROM categories WHERE company_id = 1 AND parent_id IS NULL AND name = 'LUBRICANTES Y FLUIDOS'),
-        'ACEITES MOTOR 4T',
-        'Aceites lubricantes para motocicletas de 4 tiempos'
-    ),
-    (
-        1,
-        (SELECT id FROM categories WHERE company_id = 1 AND parent_id IS NULL AND name = 'REPUESTOS DE MOTOR'),
-        'FILTROS Y MANTENIMIENTO',
-        'Filtros de aceite, aire y consumibles preventivos'
-    );
-
--- 14. Productos (siempre anexados a una categoría existente, con iva NULL/0=exento o 19.00, y prices p1..p4)
-INSERT INTO products (
-    company_id, category_id, brand_id, model_id, code, name, description, unit, iva, prices, last_cost, is_promotion
-)
-VALUES
-    (
-        1,
-        (SELECT id FROM categories WHERE company_id = 1 AND name = 'ACEITES MOTOR 4T'),
-        (SELECT id FROM brands WHERE company_id = 1 AND name = 'Kixx'),
-        (SELECT id FROM models WHERE company_id = 1 AND name = '15W40'),
-        '8801470510011', 'ACEITE KIXX 15W40 1L', 'Lubricante Kixx 15W40 presentación cuarto/litro', 'UND',
-        19.00, '{"p1":28000,"p2":26500,"p3":25000,"p4":23500}'::jsonb, 18000, FALSE
-    ),
-    (
-        1,
-        (SELECT id FROM categories WHERE company_id = 1 AND name = 'ACEITES MOTOR 4T'),
-        (SELECT id FROM brands WHERE company_id = 1 AND name = 'Shell'),
-        (SELECT id FROM models WHERE company_id = 1 AND name = '20W50'),
-        '5011987033207', 'ACEITE SHELL ADVANCE AX5 20W50', 'Lubricante mineral premium 20W50 4T', 'UND',
-        19.00, '{"p1":32000,"p2":30200,"p3":28800,"p4":27000}'::jsonb, 21000, FALSE
-    ),
-    (
-        1,
-        (SELECT id FROM categories WHERE company_id = 1 AND name = 'ACEITES MOTOR 4T'),
-        (SELECT id FROM brands WHERE company_id = 1 AND name = 'Castrol'),
-        (SELECT id FROM models WHERE company_id = 1 AND name = '20W50'),
-        '79191261187', 'ACEITE CASTROL ACTEVO 20W50 4T', 'Con moléculas Actibond de protección continua', 'UND',
-        19.00, '{"p1":35000,"p2":33200,"p3":31500,"p4":29800}'::jsonb, 23500, TRUE
-    ),
-    (
-        1,
-        (SELECT id FROM categories WHERE company_id = 1 AND name = 'ACEITES MOTOR 4T'),
-        (SELECT id FROM brands WHERE company_id = 1 AND name = 'Honda'),
-        (SELECT id FROM models WHERE company_id = 1 AND name = '10W30'),
-        '7701234000011', 'ACEITE GENUINO HONDA 10W30', 'Aceite original Honda Pro 4T 10W30', 'UND',
-        19.00, '{"p1":36000,"p2":34000,"p3":32500,"p4":31000}'::jsonb, 24000, FALSE
-    ),
-    (
-        1,
-        (SELECT id FROM categories WHERE company_id = 1 AND name = 'ACEITES MOTOR 4T'),
-        (SELECT id FROM brands WHERE company_id = 1 AND name = 'Kixx'),
-        (SELECT id FROM models WHERE company_id = 1 AND name = 'ULTRA 4T'),
-        '8801470510028', 'ACEITE KIXX ULTRA 4T SINTÉTICO', 'Aceite 100% sintético para alto cilindraje', 'UND',
-        19.00, '{"p1":44000,"p2":41500,"p3":39500,"p4":37500}'::jsonb, 29000, FALSE
-    ),
-    (
-        1,
-        (SELECT id FROM categories WHERE company_id = 1 AND name = 'ACEITES MOTOR 4T'),
-        (SELECT id FROM brands WHERE company_id = 1 AND name = 'Mobil'),
-        (SELECT id FROM models WHERE company_id = 1 AND name = '20W50'),
-        '7709000112233', 'ACEITE MOBIL SUPER 4T 20W50 (EXENTO)', 'Lote especial exento (iva = 0)', 'UND',
-        0.00, '{"p1":29500,"p2":28000,"p3":26500,"p4":25000}'::jsonb, 19500, FALSE
-    ),
-    (
-        1,
-        (SELECT id FROM categories WHERE company_id = 1 AND name = 'FILTROS Y MANTENIMIENTO'),
-        (SELECT id FROM brands WHERE company_id = 1 AND name = 'Yamaha'),
-        (SELECT id FROM models WHERE company_id = 1 AND name = 'STD-OEM'),
-        'YAM-FIL-001', 'FILTRO DE ACEITE YAMAHA FZ/XTZ', 'Filtro original elemento microporoso (exento NULL)', 'UND',
-        NULL, '{"p1":18000,"p2":16800,"p3":15500,"p4":14200}'::jsonb, 10500, FALSE
-    ),
-    (
-        2,
-        (SELECT id FROM categories WHERE company_id = 2 AND name = 'LUBRICANTES'),
-        (SELECT id FROM brands WHERE company_id = 2 AND name = 'Yamaha'),
-        (SELECT id FROM models WHERE company_id = 2 AND name = '20W50'),
-        'YAM-LUB-N01', 'YAMALUBE 4T 20W50 NORTE', 'Producto exclusivo de Importadora del Norte', 'UND',
-        19.00, '{"p1":34000,"p2":32500,"p3":31000,"p4":29500}'::jsonb, 22500, FALSE
-    );
-
-INSERT INTO product_codes (company_id, product_id, code_type, code)
-VALUES
-    (1, (SELECT id FROM products WHERE company_id = 1 AND code = '8801470510011'), 'sku', 'SKU-KX-15W40'),
-    (1, (SELECT id FROM products WHERE company_id = 1 AND code = '79191261187'), 'sku', 'SKU-CS-ACTEVO'),
-    (1, (SELECT id FROM products WHERE company_id = 1 AND code = 'YAM-FIL-001'), 'oem', '5TA-13440-00');
-
-INSERT INTO product_suppliers (product_id, supplier_id, cost, supplier_code)
-SELECT
-    p.id,
-    (SELECT id FROM externals WHERE company_id = 1 AND kind = 'supplier' AND name = 'Lubricantes del Pacífico S.A.S.'),
-    p.last_cost,
-    'PROV-' || p.code
-FROM products p
-WHERE p.company_id = 1;
-
--- 15. Existencias iniciales (stock) en BOD-01, BOD-02 y BOD-N01
-INSERT INTO stock (company_id, product_id, warehouse_id, location, available, reserved, min_stock, max_stock)
-SELECT
-    1,
-    p.id,
-    (SELECT id FROM warehouses WHERE company_id = 1 AND code = 'BOD-01'),
-    CASE WHEN p.id % 2 = 0 THEN 'PAS-A-01' ELSE 'PAS-B-03' END,
-    50,
-    0,
-    10,
-    200
-FROM products p
-WHERE p.company_id = 1;
-
-INSERT INTO stock (company_id, product_id, warehouse_id, location, available, reserved, min_stock, max_stock)
-SELECT
-    1,
-    p.id,
-    (SELECT id FROM warehouses WHERE company_id = 1 AND code = 'BOD-02'),
-    'EST-N-02',
-    25,
-    0,
-    5,
-    120
-FROM products p
-WHERE p.company_id = 1
-  AND p.code IN ('8801470510011', '5011987033207', '79191261187', 'YAM-FIL-001');
-
-INSERT INTO stock (company_id, product_id, warehouse_id, location, available, reserved, min_stock, max_stock)
-SELECT
-    2,
-    p.id,
-    (SELECT id FROM warehouses WHERE company_id = 2 AND code = 'BOD-N01'),
-    'MED-A-01',
-    40,
-    0,
-    8,
-    150
-FROM products p
-WHERE p.company_id = 2;
-
--- 16. Series de numeración documental (doc_series) por compañía y por bodega para facturación
-INSERT INTO doc_series (company_id, warehouse_id, doc_type, prefix, next_number)
-VALUES
-    (1, NULL, 'sale', 'PD-', 3),
-    (1, NULL, 'transfer', 'TR-', 2),
-    (1, NULL, 'quotation', 'CT-', 2),
-    (1, NULL, 'purchase', 'OC-', 2),
-    (1, NULL, 'payment', 'RC-', 2),
-    (1, (SELECT id FROM warehouses WHERE company_id = 1 AND code = 'BOD-01'), 'invoice', 'FE1-', 2),
-    (1, (SELECT id FROM warehouses WHERE company_id = 1 AND code = 'BOD-02'), 'invoice', 'FE2-', 1),
-    (2, (SELECT id FROM warehouses WHERE company_id = 2 AND code = 'BOD-N01'), 'invoice', 'FEN-', 1);
-
--- 17. Ejemplo de Traslado Multi-Ítem Bodega <-> Bodega (1 traslado en transfers con 3 ítems distintos en details_transfer)
-INSERT INTO transfers (
-    company_id, serial_code, origin_warehouse_id, destination_warehouse_id,
-    employee_id, dispatched_by_employee_id, received_by_employee_id,
-    status, notes, dispatched_at, received_at
-)
-VALUES (
-    1,
-    'TR-0001',
-    (SELECT id FROM warehouses WHERE company_id = 1 AND code = 'BOD-01'),
-    (SELECT id FROM warehouses WHERE company_id = 1 AND code = 'BOD-02'),
-    (SELECT id FROM employees WHERE email = 'bodeguero1Importadora@gmail.com'),
-    (SELECT id FROM employees WHERE email = 'bodeguero1Importadora@gmail.com'),
-    (SELECT id FROM employees WHERE email = 'bodeguero2Importadora@gmail.com'),
-    'received',
-    'Traslado simultáneo de surtido multi-producto desde Bogotá Centro hacia Bogotá Norte',
-    CURRENT_TIMESTAMP - INTERVAL '2 hours',
-    CURRENT_TIMESTAMP - INTERVAL '1 hour'
-);
-
-INSERT INTO details_transfer (
-    transfer_id, product_id, origin_stock_id, destination_stock_id,
-    product_code, product_name, destination_location, quantity, received_qty, notes
-)
-VALUES
-    (
-        (SELECT id FROM transfers WHERE company_id = 1 AND serial_code = 'TR-0001'),
-        (SELECT id FROM products WHERE company_id = 1 AND code = '8801470510011'),
-        (SELECT s.id FROM stock s JOIN products p ON p.id = s.product_id JOIN warehouses w ON w.id = s.warehouse_id WHERE p.code = '8801470510011' AND w.code = 'BOD-01'),
-        (SELECT s.id FROM stock s JOIN products p ON p.id = s.product_id JOIN warehouses w ON w.id = s.warehouse_id WHERE p.code = '8801470510011' AND w.code = 'BOD-02'),
-        '8801470510011', 'ACEITE KIXX 15W40 1L', 'EST-N-02', 6, 6, 'Caja sellada x6'
-    ),
-    (
-        (SELECT id FROM transfers WHERE company_id = 1 AND serial_code = 'TR-0001'),
-        (SELECT id FROM products WHERE company_id = 1 AND code = '79191261187'),
-        (SELECT s.id FROM stock s JOIN products p ON p.id = s.product_id JOIN warehouses w ON w.id = s.warehouse_id WHERE p.code = '79191261187' AND w.code = 'BOD-01'),
-        (SELECT s.id FROM stock s JOIN products p ON p.id = s.product_id JOIN warehouses w ON w.id = s.warehouse_id WHERE p.code = '79191261187' AND w.code = 'BOD-02'),
-        '79191261187', 'ACEITE CASTROL ACTEVO 20W50 4T', 'EST-N-02', 4, 4, 'Unidades verificadas sin novedad'
-    ),
-    (
-        (SELECT id FROM transfers WHERE company_id = 1 AND serial_code = 'TR-0001'),
-        (SELECT id FROM products WHERE company_id = 1 AND code = 'YAM-FIL-001'),
-        (SELECT s.id FROM stock s JOIN products p ON p.id = s.product_id JOIN warehouses w ON w.id = s.warehouse_id WHERE p.code = 'YAM-FIL-001' AND w.code = 'BOD-01'),
-        (SELECT s.id FROM stock s JOIN products p ON p.id = s.product_id JOIN warehouses w ON w.id = s.warehouse_id WHERE p.code = 'YAM-FIL-001' AND w.code = 'BOD-02'),
-        'YAM-FIL-001', 'FILTRO DE ACEITE YAMAHA FZ/XTZ', 'EST-N-02', 10, 10, 'Empaque original OEM'
-    );
-
--- 18. Ejemplo de Venta Completada y Enviada (Verificación -> Picking -> Packing -> Facturación -> Despacho -> Enviado)
-INSERT INTO sales (
-    company_id, serial_code, customer_id, employee_id, warehouse_id, price_tier,
-    payment_method, payment_condition, immediate_picking, status, current_stage,
-    subtotal, discount_total, iva_total, total, paid_total, sale_at,
-    carrier_id, tracking_no, notes
-)
-VALUES (
-    1,
-    'PD-0001',
-    (SELECT id FROM customers WHERE company_id = 1 AND document = '900123456-7'),
-    (SELECT id FROM employees WHERE email = 'vendedor1Importadora@gmail.com'),
-    (SELECT id FROM warehouses WHERE company_id = 1 AND code = 'BOD-01'),
-    'p3',
-    'transfer',
-    'cash',
-    FALSE,
-    'completed',
-    'sent',
-    188000.00,
-    0.00,
-    29925.00,
-    217925.00,
-    217925.00,
-    CURRENT_TIMESTAMP - INTERVAL '15 minutes',
-    (SELECT id FROM externals WHERE company_id = 1 AND kind = 'carrier' AND name = 'Servientrega S.A.'),
-    'SRV-99887766',
-    'Venta mayorista verificada, alistada, empacada, facturada por BOD-01 y enviada'
-);
-
-INSERT INTO sale_items (
-    sale_id, product_id, stock_id, product_code, product_name, price_tier,
-    quantity, picked_qty, packed_qty, dispatched_qty,
-    unit_price, unit_cost, discount, iva_percent, iva_amount, subtotal, line_total,
-    process_stage, stage_status,
-    verified_by_employee_id, verified_at,
-    picked_by_employee_id, picked_at,
-    packed_by_employee_id, packed_at,
-    invoiced_by_employee_id, invoiced_at,
-    dispatched_by_employee_id, dispatched_at,
-    sent_by_employee_id, sent_at,
-    process_notes
-)
-VALUES
-    (
-        (SELECT id FROM sales WHERE company_id = 1 AND serial_code = 'PD-0001'),
-        (SELECT id FROM products WHERE company_id = 1 AND code = '79191261187'),
-        (SELECT s.id FROM stock s JOIN products p ON p.id = s.product_id JOIN warehouses w ON w.id = s.warehouse_id WHERE p.code = '79191261187' AND w.code = 'BOD-01'),
-        '79191261187', 'ACEITE CASTROL ACTEVO 20W50 4T', 'p3',
-        5, 5, 5, 5,
-        31500.00, 23500.00, 0.00, 19.00, 29925.00, 157500.00, 187425.00,
-        'sent', 'completed',
-        (SELECT id FROM employees WHERE email = 'facturador1Importadora@gmail.com'), CURRENT_TIMESTAMP - INTERVAL '45 minutes',
-        (SELECT id FROM employees WHERE email = 'bodeguero1Importadora@gmail.com'), CURRENT_TIMESTAMP - INTERVAL '35 minutes',
-        (SELECT id FROM employees WHERE email = 'bodeguero1Importadora@gmail.com'), CURRENT_TIMESTAMP - INTERVAL '25 minutes',
-        (SELECT id FROM employees WHERE email = 'facturador1Importadora@gmail.com'), CURRENT_TIMESTAMP - INTERVAL '15 minutes',
-        (SELECT id FROM employees WHERE email = 'bodeguero1Importadora@gmail.com'), CURRENT_TIMESTAMP - INTERVAL '10 minutes',
-        (SELECT id FROM employees WHERE email = 'bodeguero1Importadora@gmail.com'), CURRENT_TIMESTAMP - INTERVAL '5 minutes',
-        'Renglón verificado, alistado, empacado, facturado y enviado'
-    ),
-    (
-        (SELECT id FROM sales WHERE company_id = 1 AND serial_code = 'PD-0001'),
-        (SELECT id FROM products WHERE company_id = 1 AND code = 'YAM-FIL-001'),
-        (SELECT s.id FROM stock s JOIN products p ON p.id = s.product_id JOIN warehouses w ON w.id = s.warehouse_id WHERE p.code = 'YAM-FIL-001' AND w.code = 'BOD-01'),
-        'YAM-FIL-001', 'FILTRO DE ACEITE YAMAHA FZ/XTZ', 'p3',
-        2, 2, 2, 2,
-        15250.00, 10500.00, 0.00, NULL, 0.00, 30500.00, 30500.00,
-        'sent', 'completed',
-        (SELECT id FROM employees WHERE email = 'facturador1Importadora@gmail.com'), CURRENT_TIMESTAMP - INTERVAL '45 minutes',
-        (SELECT id FROM employees WHERE email = 'bodeguero1Importadora@gmail.com'), CURRENT_TIMESTAMP - INTERVAL '35 minutes',
-        (SELECT id FROM employees WHERE email = 'bodeguero1Importadora@gmail.com'), CURRENT_TIMESTAMP - INTERVAL '25 minutes',
-        (SELECT id FROM employees WHERE email = 'facturador1Importadora@gmail.com'), CURRENT_TIMESTAMP - INTERVAL '15 minutes',
-        (SELECT id FROM employees WHERE email = 'bodeguero1Importadora@gmail.com'), CURRENT_TIMESTAMP - INTERVAL '10 minutes',
-        (SELECT id FROM employees WHERE email = 'bodeguero1Importadora@gmail.com'), CURRENT_TIMESTAMP - INTERVAL '5 minutes',
-        'Producto exento (iva NULL) enviado completo'
-    );
-
-INSERT INTO payments (
-    company_id, serial_code, sale_id, customer_id, employee_id, verified_by_employee_id,
-    method, amount, status, reference, verified_at
-)
-VALUES (
-    1,
-    'RC-0001',
-    (SELECT id FROM sales WHERE company_id = 1 AND serial_code = 'PD-0001'),
-    (SELECT id FROM customers WHERE company_id = 1 AND document = '900123456-7'),
-    (SELECT id FROM employees WHERE email = 'vendedor1Importadora@gmail.com'),
-    (SELECT id FROM employees WHERE email = 'cartera1Importadora@gmail.com'),
-    'transfer',
-    217925.00,
-    'verified',
-    'BANCOL-88442211',
-    CURRENT_TIMESTAMP - INTERVAL '20 minutes'
-);
-
-INSERT INTO invoices (
-    company_id, warehouse_id, warehouse_facturation_id, sale_id, employee_id,
-    kind, number, status, pdf_url
-)
-VALUES (
-    1,
-    (SELECT id FROM warehouses WHERE company_id = 1 AND code = 'BOD-01'),
-    (SELECT wf.id FROM warehouse_facturation wf JOIN warehouses w ON w.id = wf.warehouse_id WHERE w.company_id = 1 AND w.code = 'BOD-01'),
-    (SELECT id FROM sales WHERE company_id = 1 AND serial_code = 'PD-0001'),
-    (SELECT id FROM employees WHERE email = 'facturador1Importadora@gmail.com'),
-    'invoice',
-    'FE1-1',
-    'issued',
-    '/uploads/invoices/FE1-1.pdf'
-);
-
--- 19. Ejemplo de Venta a Crédito en etapa Facturación exitosa lista para Despacho (PD-0002 + credit_entries unificado)
-INSERT INTO sales (
-    company_id, serial_code, customer_id, employee_id, warehouse_id, price_tier,
-    payment_method, payment_condition, status, current_stage,
-    subtotal, discount_total, iva_total, total, paid_total, sale_at, due_date, notes
-)
-VALUES (
-    1,
-    'PD-0002',
-    (SELECT id FROM customers WHERE company_id = 1 AND document = '1020304050'),
-    (SELECT id FROM employees WHERE email = 'vendedor1Importadora@gmail.com'),
-    (SELECT id FROM warehouses WHERE company_id = 1 AND code = 'BOD-01'),
-    'p2',
-    'credit',
-    'credit',
-    'open',
-    'invoicing_ok',
-    106000.00,
-    0.00,
-    20140.00,
-    126140.00,
-    0.00,
-    CURRENT_TIMESTAMP - INTERVAL '10 minutes',
-    CURRENT_DATE + 30,
-    'Venta a crédito 30 días con facturación exitosa, pendiente de despacho'
-);
-
-INSERT INTO sale_items (
-    sale_id, product_id, stock_id, product_code, product_name, price_tier,
-    quantity, picked_qty, packed_qty, dispatched_qty,
-    unit_price, unit_cost, discount, iva_percent, iva_amount, subtotal, line_total,
-    process_stage, stage_status,
-    verified_by_employee_id, verified_at,
-    picked_by_employee_id, picked_at,
-    packed_by_employee_id, packed_at,
-    invoiced_by_employee_id, invoiced_at
-)
-VALUES (
-    (SELECT id FROM sales WHERE company_id = 1 AND serial_code = 'PD-0002'),
-    (SELECT id FROM products WHERE company_id = 1 AND code = '8801470510011'),
-    (SELECT s.id FROM stock s JOIN products p ON p.id = s.product_id JOIN warehouses w ON w.id = s.warehouse_id WHERE p.code = '8801470510011' AND w.code = 'BOD-01'),
-    '8801470510011', 'ACEITE KIXX 15W40 1L', 'p2',
-    4, 4, 4, 0,
-    26500.00, 18000.00, 0.00, 19.00, 20140.00, 106000.00, 126140.00,
-    'invoicing_ok', 'completed',
-    (SELECT id FROM employees WHERE email = 'facturador1Importadora@gmail.com'), CURRENT_TIMESTAMP - INTERVAL '25 minutes',
-    (SELECT id FROM employees WHERE email = 'bodeguero1Importadora@gmail.com'), CURRENT_TIMESTAMP - INTERVAL '20 minutes',
-    (SELECT id FROM employees WHERE email = 'bodeguero1Importadora@gmail.com'), CURRENT_TIMESTAMP - INTERVAL '15 minutes',
-    (SELECT id FROM employees WHERE email = 'facturador1Importadora@gmail.com'), CURRENT_TIMESTAMP - INTERVAL '10 minutes'
-);
-
--- Asientos lógicos sobre el crédito del cliente (< 0 deuda por venta a crédito, > 0 saldo positivo a favor)
-INSERT INTO credit_entries (company_id, customer_id, employee_id, entry_type, amount, sale_id, reason)
-VALUES
-    (
-        1,
-        (SELECT id FROM customers WHERE company_id = 1 AND document = '1020304050'),
-        (SELECT id FROM employees WHERE email = 'facturador1Importadora@gmail.com'),
-        'charge',
-        -126140.00,
-        (SELECT id FROM sales WHERE company_id = 1 AND serial_code = 'PD-0002'),
-        'Cargo a crédito por facturación exitosa de PD-0002'
-    ),
-    (
-        1,
-        (SELECT id FROM customers WHERE company_id = 1 AND document = '900123456-7'),
-        (SELECT id FROM employees WHERE email = 'cartera1Importadora@gmail.com'),
-        'adjust',
-        50000.00,
-        NULL,
-        'Saldo positivo a favor en crédito comercial del cliente'
-    );
-
--- 20. Auditoría inicial de movimientos (audit_movements), logs (audit_logs) y notificación
-INSERT INTO audit_movements (
-    company_id, stock_id, employee_id, movement_type, quantity, previous_qty, new_qty, reference_type, reference_id, reason
-)
-VALUES
-    (
-        1,
-        (SELECT s.id FROM stock s JOIN products p ON p.id = s.product_id JOIN warehouses w ON w.id = s.warehouse_id WHERE p.code = '8801470510011' AND w.code = 'BOD-01'),
-        (SELECT id FROM employees WHERE email = 'bodeguero1Importadora@gmail.com'),
-        'transfer_out', -6, 56, 50, 'transfers',
-        (SELECT id FROM transfers WHERE company_id = 1 AND serial_code = 'TR-0001'),
-        'Salida por traslado multi-ítem TR-0001 hacia BOD-02'
-    ),
-    (
-        1,
-        (SELECT s.id FROM stock s JOIN products p ON p.id = s.product_id JOIN warehouses w ON w.id = s.warehouse_id WHERE p.code = '79191261187' AND w.code = 'BOD-01'),
-        (SELECT id FROM employees WHERE email = 'bodeguero1Importadora@gmail.com'),
-        'sale_out', -5, 55, 50, 'sales',
-        (SELECT id FROM sales WHERE company_id = 1 AND serial_code = 'PD-0001'),
-        'Despacho venta completada PD-0001'
-    );
-
-INSERT INTO audit_logs (company_id, superadmin_id, entity, entity_id, action, reason, changes)
-VALUES (
-    1,
-    1,
-    'companies',
-    1,
-    'CREATE',
-    'Inicialización semilla del esquema V4 final',
-    '{"name":"Gestión Importadora Principal","facturation_mode":"warehouse_facturation"}'::jsonb
-);
-
-INSERT INTO notifications (employee_id, kind, title, body, entity, entity_id)
-VALUES (
-    (SELECT id FROM employees WHERE email = 'bodeguero1Importadora@gmail.com'),
-    'info',
-    'Pedido PD-0002 listo para despacho',
-    'El pedido PD-0002 ya cuenta con facturación exitosa y está listo para despacho en BOD-01.',
-    'sales',
-    (SELECT id FROM sales WHERE company_id = 1 AND serial_code = 'PD-0002')
-);
+    (1, 'Bancolombia', '01400000369', '2026-10-28', 'PAGO QR VICTOR MANUEL', 'LA PLAYA', '0043545714', NULL, NULL, 446950.00, TRUE, 'pending'),
+    (1, 'Bancolombia', '01400000369', '2026-10-28', 'PAGO QR VICTOR AURELI', 'LA PLAYA', '0043545714', NULL, NULL, 420800.00, TRUE, 'pending'),
+    (1, 'Bancolombia', '01400000369', '2026-10-28', 'TRANSFERENCIA CTA SUC VIRTUAL', 'LA PLAYA', '10042604794', '10042604794', NULL, 599200.00, TRUE, 'pending'),
+    (1, 'Bancolombia', '01400000369', '2026-10-28', 'TRANSFERENCIA CTA SUC VIRTUAL', 'LA PLAYA', '53626328624', '53626328624', NULL, 529000.00, TRUE, 'pending'),
+    (1, 'Bancolombia', '01400000369', '2026-10-28', 'TRANSFERENCIA DESDE NEQUI', 'LA PLAYA', 'YENY GOMEZ 4479', NULL, NULL, 300000.00, TRUE, 'pending'),
+    (1, 'Bancolombia', '01400000369', '2026-10-28', 'CONSIG LOCAL REFEREN EFECTIVO', 'CNB REDES', '1000758800', '1000758800', NULL, 1000000.00, TRUE, 'pending'),
+    (1, 'Bancolombia', '01400000369', '2026-10-28', 'IMPTO GOBIERNO 4X1000', 'LA PLAYA', NULL, NULL, NULL, -114.54, FALSE, 'ignored'),
+    (1, 'Bancolombia', '01400000369', '2026-10-28', 'COMISION REC CORRESPONSAL', 'LA PLAYA', NULL, NULL, NULL, -24064.45, FALSE, 'ignored'),
+    (1, 'Bancolombia', '01400000369', '2026-10-28', 'IVA COMISION REC CORRESPONSAL', 'LA PLAYA', NULL, NULL, NULL, -4572.25, FALSE, 'ignored');
 
 COMMIT;
+
+-- ============================================================================
+-- FIN DE SCRIPT DE SEMILLAS
+-- ============================================================================

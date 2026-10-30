@@ -1,12 +1,11 @@
 /* AppHeader.css · estilos de la barra superior de la columna central (selector de bodega y configuración) · solo usa tokens de styles/tokens.css */
-/* ojo: la marca (app-header-brand, logo, título e insignia) se quitó de aquí: pasó a sideMenu/brand/SideMenuBrand.css; los tokens que faltaban (--duration-fast, --ease-default, --color-bg-hover) ya existen en tokens.css */
 .app-header {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
   box-sizing: border-box;
-  height: var(--header-height); /* ojo: la misma altura que la cabecera del menú lateral (SideMenuBrand) */
+  height: var(--header-height);
   padding: 0 18px;
   background-color: var(--bg-header);
   border-bottom: 1px solid var(--color-border);
@@ -14,11 +13,9 @@
   z-index: var(--z-header);
 }
 
-/* ojo: el botón ☰ (.app-header-burger) pasó a SideMenuBrand.css (.side-menu-brand-toggle) */
-
 /* Controles y Acciones (a la derecha) */
 .app-header-actions {
-  min-width: 0; /* ojo: deja que la bodega se acorte cuando la columna es angosta */
+  min-width: 0;
   margin-left: auto;
   display: flex;
   align-items: center;
@@ -46,4 +43,42 @@
 .app-header-settings-icon {
   width: 18px;
   height: 18px;
+}
+
+/* Botón Hamburguesa Superior Derecho de Acciones del Proceso */
+.app-header-actions-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-card-inner);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-default);
+}
+
+.app-header-actions-btn:hover {
+  border-color: var(--c-blue-600);
+  background-color: var(--color-bg-hover);
+  color: var(--c-blue-600);
+}
+
+.app-header-actions-burger {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.app-header-actions-label {
+  display: inline-block;
+}
+
+@media (max-width: 768px) {
+  .app-header-actions-label {
+    display: none;
+  }
 }

@@ -111,3 +111,26 @@ type UpdateDocSeriesRequest struct {
 	Prefix     *string `json:"prefix,omitempty"`
 	NextNumber *int64  `json:"nextNumber,omitempty"`
 }
+
+// WarehouseLocationResponse representa una ubicación física administrada por bodega.
+type WarehouseLocationResponse struct {
+	ID          int64     `json:"id"`
+	CompanyID   int64     `json:"companyId"`
+	WarehouseID int64     `json:"warehouseId"`
+	Code        string    `json:"code"`
+	Description *string   `json:"description,omitempty"`
+	IsActive    bool      `json:"isActive"`
+	CreatedAt   time.Time `json:"createdAt"`
+	UpdatedAt   time.Time `json:"updatedAt"`
+}
+
+type CreateWarehouseLocationRequest struct {
+	Code        string  `json:"code"`
+	Description *string `json:"description,omitempty"`
+}
+
+type UpdateWarehouseLocationRequest struct {
+	Code        *string `json:"code,omitempty"`
+	Description *string `json:"description,omitempty"`
+	IsActive    *bool   `json:"isActive,omitempty"`
+}

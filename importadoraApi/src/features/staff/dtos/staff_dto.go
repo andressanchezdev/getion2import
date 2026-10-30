@@ -177,6 +177,16 @@ type EmployeeFilterQuery struct {
 	PageSize    int
 }
 
+type SalespersonResponse struct {
+	ID            int64   `json:"id"`
+	FullName      string  `json:"fullName"`
+	Email         string  `json:"email"`
+	Phone         *string `json:"phone,omitempty"`
+	RoleName      string  `json:"roleName"`
+	WarehouseID   *int64  `json:"warehouseId,omitempty"`
+	WarehouseName *string `json:"warehouseName,omitempty"`
+}
+
 type UnlockEmployeeResponse struct {
 	EmployeeID int64     `json:"employeeId"`
 	Email      string    `json:"email"`

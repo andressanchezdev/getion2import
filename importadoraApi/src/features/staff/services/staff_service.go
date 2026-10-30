@@ -556,6 +556,36 @@ func (s *StaffService) ListEmployees(ctx context.Context, actor *middlewares.Act
 	return result, &meta, nil
 }
 
+func (s *StaffService) ListSalespersons(ctx context.Context, actor *middlewares.ActorContext) ([]dtos.SalespersonResponse, error) {
+	if actor == nil {
+		return nil, utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
+	}
+
+	companyID := int64(1)
+	if actor.CompanyID != nil && *actor.CompanyID > 0 {
+		companyID = *actor.CompanyID
+	}
+
+	entities, err := s.employeeRepo.ListSalespersons(ctx, s.pool, companyID)
+	if err != nil {
+		return nil, utils.Internal("Error al consultar vendedores.", err)
+	}
+
+	result := make([]dtos.SalespersonResponse, 0, len(entities))
+	for i := range entities {
+		result = append(result, dtos.SalespersonResponse{
+			ID:            entities[i].ID,
+			FullName:      entities[i].FullName,
+			Email:         entities[i].Email,
+			Phone:         entities[i].Phone,
+			RoleName:      entities[i].RoleName,
+			WarehouseID:   entities[i].WarehouseID,
+			WarehouseName: entities[i].WarehouseName,
+		})
+	}
+	return result, nil
+}
+
 func (s *StaffService) GetEmployeeByID(ctx context.Context, actor *middlewares.ActorContext, id int64) (*dtos.EmployeeResponse, error) {
 	if actor == nil {
 		return nil, utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")

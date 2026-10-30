@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -705,4 +706,173 @@ func (s *WarehouseService) mapFacturationToDTO(f *repositories.FacturationEntity
 		CreatedAt:        f.CreatedAt,
 		UpdatedAt:        f.UpdatedAt,
 	}
+}
+
+// ==========================================
+// SERVICIOS PARA UBICACIONES DE BODEGA
+// ==========================================
+
+func (s *WarehouseService) ListLocations(ctx context.Context, actor *middlewares.ActorContext, warehouseID int64, activeOnly bool) ([]dtos.WarehouseLocationResponse, error) {
+	if actor == nil {
+		return nil, utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
+	}
+
+	wh, err := s.warehouseRepo.FindByID(ctx, s.pool, warehouseID)
+	if err != nil {
+		return nil, utils.Internal("Error al consultar bodega.", err)
+	}
+	if wh == nil {
+		return nil, utils.NotFound("WAREHOUSE_NOT_FOUND", "La bodega no existe.")
+	}
+
+	if actor.ActorType != types.ActorSuperadmin {
+		if actor.CompanyID == nil || *actor.CompanyID != wh.CompanyID {
+			return nil, utils.Forbidden("FORBIDDEN_WAREHOUSE_ACCESS", "No tienes permiso sobre esta bodega.")
+		}
+	}
+
+	entities, err := s.warehouseRepo.ListLocations(ctx, s.pool, warehouseID, activeOnly)
+	if err != nil {
+		return nil, utils.Internal("Error al listar ubicaciones.", err)
+	}
+
+	res := make([]dtos.WarehouseLocationResponse, 0, len(entities))
+	for _, l := range entities {
+		res = append(res, dtos.WarehouseLocationResponse{
+			ID:          l.ID,
+			CompanyID:   l.CompanyID,
+			WarehouseID: l.WarehouseID,
+			Code:        l.Code,
+			Description: l.Description,
+			IsActive:    l.IsActive,
+			CreatedAt:   l.CreatedAt,
+			UpdatedAt:   l.UpdatedAt,
+		})
+	}
+	return res, nil
+}
+
+func (s *WarehouseService) CreateLocation(ctx context.Context, actor *middlewares.ActorContext, warehouseID int64, req dtos.CreateWarehouseLocationRequest, ip, ua string) (*dtos.WarehouseLocationResponse, error) {
+	if actor == nil {
+		return nil, utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
+	}
+
+	code := strings.TrimSpace(req.Code)
+	if code == "" {
+		return nil, utils.BadRequest("INVALID_LOCATION_CODE", "El código de la ubicación es obligatorio.")
+	}
+
+	wh, err := s.warehouseRepo.FindByID(ctx, s.pool, warehouseID)
+	if err != nil {
+		return nil, utils.Internal("Error al consultar bodega.", err)
+	}
+	if wh == nil {
+		return nil, utils.NotFound("WAREHOUSE_NOT_FOUND", "La bodega no existe.")
+	}
+
+	if actor.ActorType != types.ActorSuperadmin {
+		if actor.CompanyID == nil || *actor.CompanyID != wh.CompanyID {
+			return nil, utils.Forbidden("FORBIDDEN_WAREHOUSE_ACCESS", "No tienes permiso sobre esta bodega.")
+		}
+	}
+
+	entity := &repositories.WarehouseLocationEntity{
+		CompanyID:   wh.CompanyID,
+		WarehouseID: warehouseID,
+		Code:        code,
+		Description: req.Description,
+	}
+
+	created, err := s.warehouseRepo.CreateLocation(ctx, s.pool, entity)
+	if err != nil {
+		return nil, utils.Internal("Error al crear ubicación.", err)
+	}
+
+	return &dtos.WarehouseLocationResponse{
+		ID:          created.ID,
+		CompanyID:   created.CompanyID,
+		WarehouseID: created.WarehouseID,
+		Code:        created.Code,
+		Description: created.Description,
+		IsActive:    created.IsActive,
+		CreatedAt:   created.CreatedAt,
+		UpdatedAt:   created.UpdatedAt,
+	}, nil
+}
+
+func (s *WarehouseService) UpdateLocation(ctx context.Context, actor *middlewares.ActorContext, warehouseID, locationID int64, req dtos.UpdateWarehouseLocationRequest, ip, ua string) (*dtos.WarehouseLocationResponse, error) {
+	if actor == nil {
+		return nil, utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
+	}
+
+	current, err := s.warehouseRepo.FindLocationByID(ctx, s.pool, locationID)
+	if err != nil {
+		return nil, utils.Internal("Error al consultar ubicación.", err)
+	}
+	if current == nil || current.WarehouseID != warehouseID {
+		return nil, utils.NotFound("LOCATION_NOT_FOUND", "La ubicación no existe en esta bodega.")
+	}
+
+	if actor.ActorType != types.ActorSuperadmin {
+		if actor.CompanyID == nil || *actor.CompanyID != current.CompanyID {
+			return nil, utils.Forbidden("FORBIDDEN_WAREHOUSE_ACCESS", "No tienes permiso sobre esta bodega.")
+		}
+	}
+
+	if req.Code != nil && strings.TrimSpace(*req.Code) != "" {
+		current.Code = strings.TrimSpace(*req.Code)
+	}
+	if req.Description != nil {
+		current.Description = req.Description
+	}
+	if req.IsActive != nil {
+		current.IsActive = *req.IsActive
+	}
+
+	updated, err := s.warehouseRepo.UpdateLocation(ctx, s.pool, current)
+	if err != nil {
+		return nil, utils.Internal("Error al actualizar ubicación.", err)
+	}
+
+	return &dtos.WarehouseLocationResponse{
+		ID:          updated.ID,
+		CompanyID:   updated.CompanyID,
+		WarehouseID: updated.WarehouseID,
+		Code:        updated.Code,
+		Description: updated.Description,
+		IsActive:    updated.IsActive,
+		CreatedAt:   updated.CreatedAt,
+		UpdatedAt:   updated.UpdatedAt,
+	}, nil
+}
+
+func (s *WarehouseService) DeleteLocation(ctx context.Context, actor *middlewares.ActorContext, warehouseID, locationID int64, ip, ua string) error {
+	if actor == nil {
+		return utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
+	}
+
+	current, err := s.warehouseRepo.FindLocationByID(ctx, s.pool, locationID)
+	if err != nil {
+		return utils.Internal("Error al consultar ubicación.", err)
+	}
+	if current == nil || current.WarehouseID != warehouseID {
+		return utils.NotFound("LOCATION_NOT_FOUND", "La ubicación no existe en esta bodega.")
+	}
+
+	if actor.ActorType != types.ActorSuperadmin {
+		if actor.CompanyID == nil || *actor.CompanyID != current.CompanyID {
+			return utils.Forbidden("FORBIDDEN_WAREHOUSE_ACCESS", "No tienes permiso sobre esta bodega.")
+		}
+	}
+
+	// VALIDACIÓN ESTRICTA: No se puede eliminar si tiene existencias físicas o reservadas
+	stockCount, err := s.warehouseRepo.CountStockInLocation(ctx, s.pool, warehouseID, current.Code)
+	if err != nil {
+		return utils.Internal("Error al verificar inventario en la ubicación.", err)
+	}
+	if stockCount > 0 {
+		return utils.Conflict("LOCATION_NOT_EMPTY", fmt.Sprintf("No se puede eliminar la ubicación '%s' porque cuenta con %d unidades almacenadas. Debe reubicar los productos antes de eliminarla.", current.Code, stockCount))
+	}
+
+	return s.warehouseRepo.DeleteLocation(ctx, s.pool, locationID)
 }

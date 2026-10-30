@@ -12,8 +12,10 @@ func RegisterRoutes(e *echo.Echo, authMiddleware *middlewares.AuthMiddleware, ct
 	c := e.Group("/customers", authMiddleware.Authenticate())
 	{
 		c.GET("", ctrl.Get)
+		c.GET("/selector", ctrl.ListSelector)
 		c.GET("/search", ctrl.Search)
 		c.GET("/:id", ctrl.GetByID)
+		c.GET("/:id/credit-status", ctrl.GetCreditStatus)
 		c.POST("", ctrl.Create)
 		c.PUT("/:id", ctrl.Update)
 		c.DELETE("/:id", ctrl.Delete)

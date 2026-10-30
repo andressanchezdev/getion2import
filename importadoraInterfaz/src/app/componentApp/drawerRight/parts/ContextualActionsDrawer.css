@@ -1,0 +1,89 @@
+.contextual-actions-drawer {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.contextual-actions-intro {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.contextual-actions-label {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin: 0 0 4px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.contextual-actions-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.contextual-actions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.contextual-action-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background-color: var(--bg-card-inner);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  text-align: left;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-default);
+  width: 100%;
+}
+
+.contextual-action-card:hover {
+  border-color: var(--c-blue-600);
+  background-color: var(--color-bg-hover);
+  transform: translateY(-1px);
+}
+
+.contextual-action-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background-color: var(--c-blue-50);
+  flex-shrink: 0;
+}
+
+.contextual-action-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.contextual-action-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.contextual-action-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.contextual-action-desc {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  line-height: 1.3;
+}
+

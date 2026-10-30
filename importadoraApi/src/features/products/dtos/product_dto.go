@@ -11,11 +11,18 @@ import (
 // DTOs PARA PRODUCTOS
 // ==========================================
 
-type ProductPrices struct {
-	P1 float64 `json:"p1"`
-	P2 float64 `json:"p2"`
-	P3 float64 `json:"p3"`
-	P4 float64 `json:"p4"`
+type ProductPrices map[string]float64
+
+func (p ProductPrices) ToMap() map[string]float64 {
+	if p == nil {
+		return map[string]float64{"p1": 0, "p2": 0, "p3": 0, "p4": 0}
+	}
+	return p
+}
+
+func (p ProductPrices) ToJSON() []byte {
+	b, _ := json.Marshal(p.ToMap())
+	return b
 }
 
 type ProductResponse struct {
@@ -122,11 +129,5 @@ type AssignProductSupplierRequest struct {
 	SupplierID   int64   `json:"supplierId" validate:"required"`
 	Cost         float64 `json:"cost" validate:"required,min=0"`
 	SupplierCode *string `json:"supplierCode"`
-}
-
-// Helper para convertir ProductPrices a JSON bytes
-func (p ProductPrices) ToJSON() []byte {
-	b, _ := json.Marshal(p)
-	return b
 }
 

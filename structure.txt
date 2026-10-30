@@ -1,0 +1,179 @@
+importadoraInterfaz/src/
+├── main.tsx                                # Punto de entrada React 18: monta el Store Provider y el BrowserRouter
+├── App.tsx                                 # Componente raíz: monta AuthGate, ErpLayout y Toaster global
+├── App.css                                 # Estilos base de layout global y reinicio tipográfico
+│
+├── api/                                    # CAPA CENTRAL DE COMUNICACIÓN CON LA API GO
+│   ├── config.ts                          # Variables de entorno (API_URL = http://localhost:8080/api/v1, TIMEOUT = 10s)
+│   ├── client.ts                          # Instancia Axios con interceptores: adjunta token JWT y gestiona refresco
+│   ├── errors.ts                          # Normalizador de errores del backend (parsea errores estructurados de Go)
+│   ├── pagination.ts                      # Tipos y helpers para paginación (Page, PageSize, TotalRecords)
+│   ├── health.ts                          # Consumo del endpoint GET /health para monitoreo del backend
+│   ├── types/
+│   │   └── api.types.ts                   # Interfaces base: ApiResponse<T>, PaginatedResponse<T>, ApiError
+│   └── endpoints/                         # Servicios HTTP tipados por dominio de negocio:
+│       ├── auth.api.ts                    # POST /auth/login, POST /auth/refresh, POST /auth/logout
+│       ├── products.api.ts                # GET /products, GET /products/search, POST /products, PUT /products/:id
+│       ├── sales.api.ts                   # POST /sales, GET /sales/:id, POST /sales/:id/dispatch, POST /sales/:id/cancel
+│       ├── returns.api.ts                 # POST /returns (garantías y devoluciones por error de envío)
+│       ├── purchases.api.ts               # POST /purchases, GET /purchases/:id/excel (descarga de pedido WhatsApp)
+│       ├── customers.api.ts               # GET /customers/selector, GET /customers/:id/credit-status, POST /customers
+│       ├── bankStatements.api.ts          # POST /bank-statements/upload-pdf, GET /records, PATCH /confirm, PATCH /ignore
+│       ├── transfers.api.ts               # POST /transfers (traslados multi-ítem), PATCH /transfers/:id/status
+│       └── recycleBin.api.ts              # GET /recycle-bin, POST /recycle-bin/:id/restore (papelera superadmin)
+│
+├── app/                                    # ANDAMIAJE PRINCIPAL DEL ERP (LAYOUT Y NAVEGACIÓN)
+│   ├── store/                             # Configuración central de Redux Toolkit
+│   │   ├── store.ts                       # configureStore con middleware de persistencia y serialización
+│   │   └── rootReducer.ts                 # Combina los reducers de navegación, auth, shop, wallet, sales, etc.
+│   │
+│   ├── layout/                            # Envoltorios de pantalla
+│   │   ├── AuthGate.tsx                   # Bloquea acceso si no hay token válido y redirige a /login
+│   │   ├── ErpLayout.tsx                  # Estructura visual: Menú lateral + Cabecera + Área de trabajo + Drawer
+│   │   └── ErpLayout.css                  # Grid responsivo (sidebar de 260px o 64px contraído)
+│   │
+│   └── componentApp/                      # Componentes estructurales de la aplicación
+│       ├── header/                        # Cabecera superior
+│       │   ├── AppHeader.tsx              # Barra con reloj, selector de bodega activa y notificaciones
+│       │   ├── AppHeader.css              # Estilos de la barra superior
+│       │   └── warehouse/
+│       │       ├── WarehouseSelector.tsx  # Botón dropdown para alternar la bodega activa de trabajo
+│       │       └── WarehouseMenu.tsx      # Lista de bodegas disponibles (Bolívar, Online, Norte)
+│       │
+│       ├── sideMenu/                      # MENÚ LATERAL REACTIVO (SideMenu.tsx)
+│       │   ├── SideMenu.tsx               # Contenedor del sidebar (marca, lista de módulos, estado y pie)
+│       │   ├── SideMenu.css               # Transición entre sidebar abierto (260px) y contraído (64px)
+│       │   ├── brand/
+│       │   │   ├── SideMenuBrand.tsx      # Logotipo de la importadora y botón hamburguesa ☰ para colapsar
+│       │   │   └── SideMenuBrand.css
+│       │   ├── item/
+│       │   │   ├── SideMenuItem.tsx       # Botón del módulo con ícono SVG y flecha acordeón
+│       │   │   ├── SideMenuSubitem.tsx    # Enlace clickable de cada subgestión
+│       │   │   └── SideMenuItem.css
+│       │   └── footer/
+│       │       ├── ApiStatus.tsx          # Indicador semáforo en vivo (Verde = Conectado a la API Go)
+│       │       ├── SideMenuUser.tsx       # Avatar del usuario autenticado, rol y botón de cerrar sesión
+│       │       └── SideMenuUser.css
+│       │
+│       ├── contentMain/                   # ÁREA DE RENDERIZADO DINÁMICO
+│       │   ├── MainContent.tsx            # Lee activeModule y activeSubitem de Redux y monta la pantalla activa
+│       │   ├── screenRegistry.ts          # Mapeo llave-valor: { [modulo]: { [subitem]: PantallaComponente } }
+│       │   ├── MainContentPlaceholder.tsx # Vista elegante temporal si una pantalla está en desarrollo
+│       │   └── MainContent.css
+│       │
+│       └── drawerRight/                   # GAVETA LATERAL DERECHA (SLIDE OVER)
+│           ├── DrawerRight.tsx            # Panel deslizante derecho que se abre para acciones rápidas
+│           ├── drawerRegistry.ts          # Registra qué panel mostrar (ej. Carrito de venta, Ficha rápida)
+│           ├── useDrawerPresence.ts       # Hook para controlar animación suave de entrada y salida
+│           └── parts/
+│               ├── DrawerHeader.tsx       # Título del panel y botón de cerrar (✕)
+│               └── DrawerTab.tsx          # Pestañas internas si el drawer maneja múltiples pestañas
+│
+├── features/                              # MÓDULOS DE NEGOCIO (VERTICAL SLICES)
+│
+│   ├── auth/                              # AUTENTICACIÓN Y CONTROL DE ACCESO
+│   │   ├── screens/LoginScreen.tsx        # Pantalla de inicio de sesión con email y contraseña
+│   │   ├── slices/auth.slice.ts           # Estado Redux: user, token, isAuthenticated, permissions
+│   │   ├── thunks/auth.thunks.ts          # Thunk async: loginUser, logoutUser, refreshToken
+│   │   ├── services/auth.service.ts       # Conexión directa a POST /api/v1/auth/login
+│   │   ├── hooks/useLoginForm.ts          # Lógica de validación de campos del formulario de login
+│   │   └── types/auth.types.ts            # Tipos: UserSession, AuthResponse, RolePermissions
+│   │
+│   ├── navigation/                        # NAVEGACIÓN Y CONFIGURACIÓN DEL MENÚ
+│   │   ├── constants/menuItems.constants.ts # DEFINICIÓN CENTRAL de módulos y subgestiones del sidebar
+│   │   ├── types/navigation.types.ts      # Tipos: ERPModule ('shop'|'sales'|'purchases'|'inventory'|'wallet'|...)
+│   │   ├── slices/navigation.slice.ts     # Estado Redux: activeModule, activeSubitem, sidebarOpen
+│   │   └── helpers/navigation.helpers.ts  # Helpers para resolver títulos e íconos activos
+│   │
+│   ├── shop/                              # TIENDA, CATÁLOGO Y COTIZACIONES
+│   │   ├── screens/
+│   │   │   ├── ShopCatalogScreen.tsx      # Parrilla de repuestos con fotos, código, precio P1 y stock en bodega
+│   │   │   └── QuotationsScreen.tsx       # Listado y creación de cotizaciones convertibles a venta
+│   │   ├── components/
+│   │   │   ├── ProductCard.tsx            # Tarjeta de producto individual con botón "Agregar al Carrito"
+│   │   │   ├── ProductFilters.tsx         # Filtros por categoría, marca (Bajaj) y modelo de moto
+│   │   │   └── CartDrawer.tsx             # Visualizador del carrito activo con cálculo de IVA y total
+│   │   ├── slices/cart.slice.ts           # Carrito en memoria Redux sincronizado con la API (/carts)
+│   │   └── services/shop.service.ts       # Conexión a /products/search y /quotations
+│   │
+│   ├── sales/                             # GESTIÓN DE VENTAS, POS Y DEVOLUCIONES
+│   │   ├── screens/
+│   │   │   ├── PosBillingScreen.tsx       # Caja / Facturación: selección de cliente, método (Efectivo/Crédito)
+│   │   │   ├── OrdersScreen.tsx           # Seguimiento de pedidos: pendientes por despachar y entregar
+│   │   │   ├── ReturnsScreen.tsx          # Gestión de Devoluciones y Garantías (Falla fábrica / Error envío)
+│   │   │   └── SalesHistoryScreen.tsx     # Histórico de ventas con reimpresión de comprobante
+│   │   ├── components/
+│   │   │   ├── ReturnReasonModal.tsx      # Modal para elegir: Saldo a Favor vs Cambio por otro Repuesto
+│   │   │   └── PaymentMethodModal.tsx     # Selector de pago y validación visual de crédito
+│   │   ├── slices/sales.slice.ts          # Estado de ventas activas y filtros
+│   │   └── services/sales.service.ts      # Llamadas a POST /sales, POST /returns
+│   │
+│   ├── purchases/                         # GESTIÓN DE COMPRAS Y PROVEEDORES
+│   │   ├── screens/
+│   │   │   ├── PurchaseOrdersScreen.tsx   # Creación de orden de compra y botón "Descargar Excel para WhatsApp"
+│   │   │   ├── ReceivingScreen.tsx        # Recepción física en bodega (validación de cantidades recibidas)
+│   │   │   └── SuppliersScreen.tsx        # Directorio de proveedores (Bajaj Colombia, Japón, etc.)
+│   │   ├── components/
+│   │   │   └── ExcelExportButton.tsx      # Genera la descarga del archivo Excel formateado
+│   │   ├── slices/purchases.slice.ts      # Estado de órdenes de compra
+│   │   └── services/purchases.service.ts  # Conexión a POST /purchases y descarga de archivos
+│   │
+│   ├── inventory/                         # GESTIÓN DE INVENTARIO Y BODEGAS
+│   │   ├── screens/
+│   │   │   ├── ProductsScreen.tsx         # Tabla maestra de repuestos: edición de precios P1..P4 y códigos OEM
+│   │   │   ├── TransfersScreen.tsx        # Solicitud y confirmación de traslados entre Bodega 1, 2 y 3
+│   │   │   └── WarehousesScreen.tsx       # Consulta de existencias consolidadas por sede
+│   │   ├── components/
+│   │   │   ├── ProductFormModal.tsx       # Formulario para registrar o editar repuesto
+│   │   │   └── TransferItemsTable.tsx     # Tabla dinámica de ítems a trasladar
+│   │   ├── slices/inventory.slice.ts      # Estado de inventario local
+│   │   └── services/inventory.service.ts  # Conexión a /products, /stocks, /transfers
+│   │
+│   ├── wallet/                            # CARTERA, COBROS Y CAREO BANCARIO
+│   │   ├── screens/
+│   │   │   ├── CreditClientsScreen.tsx    # Directorio de clientes con cupo, saldo y aviso de advertencia >= 70%
+│   │   │   ├── PaymentsScreen.tsx         # Registro de abonos y recaudos en efectivo o transferencia
+│   │   │   └── BankReconciliationScreen.tsx # CAREO BANCARIO: Carga de PDF Bancolombia, filtros y confirmación
+│   │   ├── components/
+│   │   │   ├── BankStatementUploader.tsx  # Zona drag & drop para soltar el extracto PDF de Bancolombia
+│   │   │   ├── ReconciliationTable.tsx    # Tabla comparativa con filtros de fecha, sucursal y botón "Confirmar"
+│   │   │   └── CreditWarningPill.tsx      # Indicador visual ámbar cuando el cliente tiene >= 70% de crédito ocupado
+│   │   ├── slices/wallet.slice.ts         # Estado de cartera y movimientos bancarios
+│   │   └── services/wallet.service.ts     # Conexión a /bank-statements y /payments
+│   │
+│   ├── customers/                         # CLIENTES
+│   │   ├── screens/CustomersScreen.tsx    # Directorio completo de clientes
+│   │   ├── components/
+│   │   │   ├── CustomerSelectorModal.tsx  # Selector rápido con Consumidor Final / Mostrador de primero
+│   │   │   └── CustomerCreditModal.tsx    # Configuración de cupo de crédito y días de plazo
+│   │   └── services/customers.service.ts  # Conexión a /customers y /customers/:id/credit-status
+│   │
+│   ├── staff/                             # PERSONAL, ROLES Y PERMISOS
+│   │   ├── screens/
+│   │   │   ├── EmployeesScreen.tsx        # Gestión de empleados asignados a su respectiva bodega
+│   │   │   └── RolesPermissionsScreen.tsx # Matriz de permisos RBAC para los 6 roles
+│   │   └── services/staff.service.ts      # Conexión a /staff y /roles
+│   │
+│   └── recycleBin/                        # PAPELERA DE RECICLAJE (SOLO SUPERADMIN)
+│       ├── screens/RecycleBinScreen.tsx   # Lista de elementos eliminados con fecha y usuario que eliminó
+│       ├── components/RestoreButton.tsx   # Botón para restaurar registros con un solo clic
+│       └── services/recycleBin.service.ts # Conexión a GET /recycle-bin y POST /recycle-bin/:id/restore
+│
+└── global/                                # COMPONENTES Y UTILIDADES COMPARTIDAS
+    ├── components/UI/
+    │   ├── atoms/
+    │   │   ├── Button.tsx                 # Botón estandarizado con variantes (primary, secondary, danger)
+    │   │   ├── Pill.tsx                   # Insignias de estado (verde = activo, ámbar = alerta, rojo = mora)
+    │   │   └── AppToaster.tsx             # Contenedor de notificaciones Toast flotantes
+    │   └── molecules/
+    │       ├── SearchBar.tsx              # Barra de búsqueda con debounce para no saturar la API
+    │       ├── ConfirmDialog.tsx          # Modal de confirmación para acciones críticas
+    │       └── Pagination.tsx             # Componente de paginación para tablas
+    ├── hooks/
+    │   ├── useRedux.ts                    # useAppDispatch y useAppSelector con tipado estricto
+    │   ├── useDebouncedValue.ts           # Retardo para búsquedas en tiempo real
+    │   └── usePermissions.ts              # Comprueba si el rol del usuario puede ver el módulo o acción
+    └── helpers/
+        ├── format.ts                      # Formato de moneda colombiana (ej. $1.500.000) y fechas (DD/MM/YYYY)
+        ├── toast.ts                       # Disparador de mensajes toast (éxito, error, advertencia)
+        └── storage.ts                     # Manejo seguro de tokens en localStorage / sessionStorage

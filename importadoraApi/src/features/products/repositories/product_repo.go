@@ -70,7 +70,8 @@ func (r *ProductRepository) FindByID(ctx context.Context, q db.DBExecutor, id in
 			p.brand_id, b.name,
 			p.model_id, m.name,
 			p.code, p.name, p.description, p.unit, p.iva,
-			p.prices, p.last_cost, p.is_promotion, p.images,
+			COALESCE((SELECT jsonb_object_agg(pp.price_tier, pp.price) FROM product_prices pp WHERE pp.product_id = p.id), '{}'::jsonb) AS prices,
+			p.last_cost, p.is_promotion, p.images,
 			p.easysearch, p.status, p.created_at, p.updated_at, p.deleted_at
 		FROM products p
 		LEFT JOIN categories cat ON cat.id = p.category_id
@@ -105,7 +106,8 @@ func (r *ProductRepository) FindByCompanyAndCode(ctx context.Context, q db.DBExe
 			p.brand_id, b.name,
 			p.model_id, m.name,
 			p.code, p.name, p.description, p.unit, p.iva,
-			p.prices, p.last_cost, p.is_promotion, p.images,
+			COALESCE((SELECT jsonb_object_agg(pp.price_tier, pp.price) FROM product_prices pp WHERE pp.product_id = p.id), '{}'::jsonb) AS prices,
+			p.last_cost, p.is_promotion, p.images,
 			p.easysearch, p.status, p.created_at, p.updated_at, p.deleted_at
 		FROM products p
 		LEFT JOIN categories cat ON cat.id = p.category_id
@@ -205,7 +207,8 @@ func (r *ProductRepository) List(ctx context.Context, q db.DBExecutor, f dtos.Pr
 			p.brand_id, b.name,
 			p.model_id, m.name,
 			p.code, p.name, p.description, p.unit, p.iva,
-			p.prices, p.last_cost, p.is_promotion, p.images,
+			COALESCE((SELECT jsonb_object_agg(pp.price_tier, pp.price) FROM product_prices pp WHERE pp.product_id = p.id), '{}'::jsonb) AS prices,
+			p.last_cost, p.is_promotion, p.images,
 			p.easysearch, p.status, p.created_at, p.updated_at, p.deleted_at
 		FROM products p
 		LEFT JOIN categories cat ON cat.id = p.category_id
@@ -245,9 +248,6 @@ func (r *ProductRepository) List(ctx context.Context, q db.DBExecutor, f dtos.Pr
 }
 
 func (r *ProductRepository) Create(ctx context.Context, q db.DBExecutor, p *ProductEntity) (*ProductEntity, error) {
-	if len(p.Prices) == 0 {
-		p.Prices = []byte(`{"p1":0,"p2":0,"p3":0,"p4":0}`)
-	}
 	if p.Images == nil {
 		p.Images = []string{}
 	}
@@ -255,18 +255,18 @@ func (r *ProductRepository) Create(ctx context.Context, q db.DBExecutor, p *Prod
 	const sql = `
 		INSERT INTO products (
 			company_id, category_id, brand_id, model_id,
-			code, name, description, unit, iva, prices,
+			code, name, description, unit, iva,
 			last_cost, is_promotion, images, easysearch, status
 		) VALUES (
 			$1, $2, $3, $4,
-			$5, $6, $7, $8, $9, $10,
-			$11, $12, $13, $14, $15
+			$5, $6, $7, $8, $9,
+			$10, $11, $12, $13, $14
 		)
 		RETURNING id, uuid::text, easysearch, created_at, updated_at
 	`
 	err := q.QueryRow(ctx, sql,
 		p.CompanyID, p.CategoryID, p.BrandID, p.ModelID,
-		p.Code, p.Name, p.Description, p.Unit, p.IVA, p.Prices,
+		p.Code, p.Name, p.Description, p.Unit, p.IVA,
 		p.LastCost, p.IsPromotion, p.Images, p.Easysearch, p.Status,
 	).Scan(&p.ID, &p.UUID, &p.Easysearch, &p.CreatedAt, &p.UpdatedAt)
 	if err != nil {
@@ -286,25 +286,39 @@ func (r *ProductRepository) Update(ctx context.Context, q db.DBExecutor, p *Prod
 			description = $6,
 			unit = $7,
 			iva = $8,
-			prices = $9,
-			last_cost = $10,
-			is_promotion = $11,
-			images = $12,
-			easysearch = $13,
-			status = $14,
+			last_cost = $9,
+			is_promotion = $10,
+			images = $11,
+			easysearch = $12,
+			status = $13,
 			updated_at = CURRENT_TIMESTAMP
-		WHERE id = $15 AND deleted_at IS NULL
+		WHERE id = $14 AND deleted_at IS NULL
 		RETURNING easysearch, updated_at
 	`
 	err := q.QueryRow(ctx, sql,
 		p.CategoryID, p.BrandID, p.ModelID,
-		p.Code, p.Name, p.Description, p.Unit, p.IVA, p.Prices,
+		p.Code, p.Name, p.Description, p.Unit, p.IVA,
 		p.LastCost, p.IsPromotion, p.Images, p.Easysearch, p.Status, p.ID,
 	).Scan(&p.Easysearch, &p.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
 	return p, nil
+}
+
+func (r *ProductRepository) UpsertPrices(ctx context.Context, q db.DBExecutor, companyID, productID int64, prices map[string]float64) error {
+	for tier, price := range prices {
+		const sql = `
+			INSERT INTO product_prices (company_id, product_id, price_tier, price)
+			VALUES ($1, $2, $3, $4)
+			ON CONFLICT (product_id, price_tier) DO UPDATE
+			SET price = EXCLUDED.price, updated_at = CURRENT_TIMESTAMP
+		`
+		if _, err := q.Exec(ctx, sql, companyID, productID, tier, price); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (r *ProductRepository) SoftDelete(ctx context.Context, q db.DBExecutor, id int64) error {

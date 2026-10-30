@@ -6,6 +6,7 @@ export const INITIAL_NAVIGATION_STATE: NavigationState = {
   activeModule: 'shop',
   activeSubitem: 'catalog',
   sidebarOpen: true,
+  rightDrawerOpen: false,
   // ojo: antes arrancaba con la bodega fija 'WH-01'; ahora arranca vacía y WarehouseSelector elige la real cuando llegan las bodegas del backend
   activeWarehouseId: '',
   activeWarehouseName: 'Cargando bodega…',

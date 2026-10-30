@@ -15,3 +15,5 @@ uploads/*
 # Variables locales de entorno
 .env.local
 
+# Asegurar que toda la estructura de BD suba al repositorio
+!src/core/db/**

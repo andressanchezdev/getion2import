@@ -22,6 +22,12 @@ func RegisterRoutes(e *echo.Echo, authMiddleware *middlewares.AuthMiddleware, ct
 		// Sub-rutas de facturación fiscal por bodega
 		wh.GET("/:id/facturation", ctrl.GetFacturation)
 		wh.PUT("/:id/facturation", ctrl.UpdateFacturation)
+
+		// Sub-rutas de ubicaciones físicas de bodega
+		wh.GET("/:id/locations", ctrl.ListLocations)
+		wh.POST("/:id/locations", ctrl.CreateLocation)
+		wh.PUT("/:id/locations/:locId", ctrl.UpdateLocation)
+		wh.DELETE("/:id/locations/:locId", ctrl.DeleteLocation)
 	}
 
 	// Grupo /doc-series

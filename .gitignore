@@ -1,0 +1,10 @@
+# Archivos temporales y respaldos pesados
+Idea/datos ejemplo para nutrir nuestra db/
+*.dump
+*.tar.gz
+*.zip
+*.bak
+dbdatosinicioparalimpiar.*
+
+# Asegurar que los scripts oficiales de la BD siempre suban al repositorio
+!importadoraApi/src/core/db/**

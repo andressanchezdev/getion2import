@@ -68,6 +68,22 @@ const (
 	ReturnRejected ReturnStatus = "rejected"
 )
 
+// ReturnReasonType coincide con returns.reason_type ('warranty' | 'wrong_item').
+type ReturnReasonType string
+
+const (
+	ReturnReasonWarranty  ReturnReasonType = "warranty"
+	ReturnReasonWrongItem ReturnReasonType = "wrong_item"
+)
+
+// ReturnResolutionType coincide con returns.resolution_type ('exchange' | 'credit_balance').
+type ReturnResolutionType string
+
+const (
+	ReturnResolutionExchange ReturnResolutionType = "exchange"
+	ReturnResolutionCredit   ReturnResolutionType = "credit_balance"
+)
+
 // InvoiceKind coincide con invoices.kind ('invoice' | 'credit_note').
 type InvoiceKind string
 

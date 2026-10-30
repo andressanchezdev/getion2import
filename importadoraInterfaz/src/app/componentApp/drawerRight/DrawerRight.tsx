@@ -1,11 +1,9 @@
-// DrawerRight · panel derecho contextual: carrito en el catálogo, o detalle del objeto seleccionado; en cualquier otro caso no se muestra
-// conecta con: drawerRegistry (modo y contenido), DrawerHeader, DrawerTab (carrito contraído), useDrawerPresence (animación de salida), global useEscapeKey
-// ojo: antes mostraba un panel genérico en todos los módulos con un botón circular para contraerlo; ahora aparece solo cuando hay algo que hacer
-// ojo: el carrito usa el fondo gris claro de la maqueta (.dpanel.lite): el encabezado queda blanco y las cards del carrito resaltan
+// DrawerRight · panel derecho contextual: carrito en el catálogo, detalle del objeto seleccionado o panel de acciones del proceso
 import React, { useState } from 'react'
 import './DrawerRight.css'
 import { useAppDispatch, useAppSelector } from '@/global/hooks/useRedux'
 import { useEscapeKey } from '@/global/hooks/useEscapeKey'
+import { setRightDrawerOpen } from '@/features/navigation'
 import { selectCartTotals } from '@/features/shop'
 import { DRAWER_REGISTRY, selectDrawerMode } from './drawerRegistry'
 import { useDrawerPresence } from './useDrawerPresence'
@@ -24,8 +22,9 @@ export const DrawerRight: React.FC = () => {
   const entry = shownMode ? DRAWER_REGISTRY[shownMode] : null
   const meta = useAppSelector(entry ? entry.selectMeta : () => null)
 
-  // cerrar: el carrito se contrae; un objeto se deselecciona
+  // cerrar: el carrito se contrae; un objeto se deselecciona; se apaga rightDrawerOpen
   const handleClose = () => {
+    dispatch(setRightDrawerOpen(false))
     if (entry?.close) entry.close(dispatch)
     else setIsCartCollapsed(true)
   }

@@ -39,6 +39,7 @@ func RegisterRoutes(e *echo.Echo, authMiddleware *middlewares.AuthMiddleware, ct
 	emp := e.Group("/employees", authMiddleware.Authenticate())
 	{
 		emp.GET("", ctrl.ListEmployees)
+		emp.GET("/salespersons", ctrl.ListSalespersons)
 		emp.GET("/:id", ctrl.GetEmployeeByID)
 		emp.POST("", ctrl.CreateEmployee)
 		emp.PUT("/:id", ctrl.UpdateEmployee)

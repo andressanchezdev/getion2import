@@ -25,6 +25,12 @@ export const navigationSlice = createSlice({
     setSidebarOpen: (state, action: PayloadAction<boolean>) => {
       state.sidebarOpen = action.payload
     },
+    toggleRightDrawer: (state) => {
+      state.rightDrawerOpen = !state.rightDrawerOpen
+    },
+    setRightDrawerOpen: (state, action: PayloadAction<boolean>) => {
+      state.rightDrawerOpen = action.payload
+    },
     setActiveWarehouse: (
       state,
       action: PayloadAction<{ id: string; name: string }>
@@ -43,6 +49,8 @@ export const {
   setActiveSubitem,
   toggleSidebar,
   setSidebarOpen,
+  toggleRightDrawer,
+  setRightDrawerOpen,
   setActiveWarehouse,
   setCashRegisterStatus,
 } = navigationSlice.actions

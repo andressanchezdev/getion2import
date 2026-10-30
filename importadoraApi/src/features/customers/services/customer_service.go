@@ -86,6 +86,20 @@ func (s *CustomerService) Search(ctx context.Context, actor *middlewares.ActorCo
 	return s.List(ctx, actor, filter)
 }
 
+// ListSelector devuelve la lista ligera de clientes para selector de venta rápida con el cliente mostrador por defecto al tope.
+func (s *CustomerService) ListSelector(ctx context.Context, actor *middlewares.ActorContext, search string) ([]dtos.CustomerSelectorResponse, error) {
+	if actor == nil {
+		return nil, utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
+	}
+
+	companyID := int64(1)
+	if actor.CompanyID != nil && *actor.CompanyID > 0 {
+		companyID = *actor.CompanyID
+	}
+
+	return s.customerRepo.ListSelector(ctx, s.pool, companyID, search)
+}
+
 // GetByID obtiene el detalle completo del cliente incluyendo sus documentos.
 func (s *CustomerService) GetByID(ctx context.Context, actor *middlewares.ActorContext, id int64) (*dtos.CustomerResponse, error) {
 	if actor == nil {
@@ -168,6 +182,11 @@ func (s *CustomerService) Create(ctx context.Context, actor *middlewares.ActorCo
 		tier = types.PriceTierP1
 	}
 
+	docsValidity := 12
+	if req.DocsValidityMonths != nil && *req.DocsValidityMonths > 0 {
+		docsValidity = *req.DocsValidityMonths
+	}
+
 	discount := 0.0
 	if req.DiscountPercent != nil {
 		discount = *req.DiscountPercent
@@ -186,6 +205,11 @@ func (s *CustomerService) Create(ctx context.Context, actor *middlewares.ActorCo
 	creditDays := int16(30)
 	if req.CreditDays != nil {
 		creditDays = *req.CreditDays
+	}
+
+	creditWarningPct := 70.00
+	if req.CreditWarningPct != nil && *req.CreditWarningPct >= 0 {
+		creditWarningPct = *req.CreditWarningPct
 	}
 
 	status := types.CustomerActive
@@ -226,6 +250,8 @@ func (s *CustomerService) Create(ctx context.Context, actor *middlewares.ActorCo
 		CreditEnabled:       creditEnabled,
 		CreditLimit:         creditLimit,
 		CreditDays:          creditDays,
+		CreditWarningPct:    creditWarningPct,
+		DocsValidityMonths:  docsValidity,
 		Status:              status,
 	}
 
@@ -341,6 +367,12 @@ func (s *CustomerService) Update(ctx context.Context, actor *middlewares.ActorCo
 	if req.CreditDays != nil {
 		current.CreditDays = *req.CreditDays
 	}
+	if req.CreditWarningPct != nil && *req.CreditWarningPct >= 0 {
+		current.CreditWarningPct = *req.CreditWarningPct
+	}
+	if req.DocsValidityMonths != nil && *req.DocsValidityMonths > 0 {
+		current.DocsValidityMonths = *req.DocsValidityMonths
+	}
 	if req.Status != nil {
 		current.Status = *req.Status
 	}
@@ -389,6 +421,15 @@ func (s *CustomerService) Delete(ctx context.Context, actor *middlewares.ActorCo
 	if err := s.customerRepo.SoftDelete(ctx, s.pool, id); err != nil {
 		return utils.Internal("Error al eliminar cliente.", err)
 	}
+
+	currentBytes, _ := json.Marshal(current)
+	const recycleSQL = `
+		INSERT INTO recycle_bin (
+			company_id, entity_table, entity_id, entity_label, entity_data,
+			deleted_by_actor_type, deleted_by_actor_id
+		) VALUES ($1, 'customers', $2, $3, $4, $5, $6)
+	`
+	_, _ = s.pool.Exec(ctx, recycleSQL, current.CompanyID, current.ID, fmt.Sprintf("%s (%s)", current.Name, current.Document), currentBytes, string(actor.ActorType), actor.ActorID)
 
 	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
 		CompanyID: &current.CompanyID,
@@ -629,6 +670,8 @@ func (s *CustomerService) mapCustomerToDTO(c *repositories.CustomerEntity, docs 
 		CreditEnabled:       c.CreditEnabled,
 		CreditLimit:         c.CreditLimit,
 		CreditDays:          c.CreditDays,
+		CreditWarningPct:    c.CreditWarningPct,
+		DocsValidityMonths:  c.DocsValidityMonths,
 		Status:              c.Status,
 		CreatedAt:           c.CreatedAt,
 		UpdatedAt:           c.UpdatedAt,
@@ -636,3 +679,13 @@ func (s *CustomerService) mapCustomerToDTO(c *repositories.CustomerEntity, docs 
 	}
 }
 
+func (s *CustomerService) GetCreditStatus(ctx context.Context, companyID int64, customerID int64) (*dtos.CustomerCreditStatusResponse, error) {
+	status, err := s.customerRepo.GetCreditStatusSummary(ctx, s.pool, customerID)
+	if err != nil {
+		return nil, utils.Internal("Error al consultar estado de crédito del cliente.", err)
+	}
+	if status == nil {
+		return nil, utils.NotFound("CUSTOMER_NOT_FOUND", "Cliente no encontrado o inactivo.")
+	}
+	return status, nil
+}

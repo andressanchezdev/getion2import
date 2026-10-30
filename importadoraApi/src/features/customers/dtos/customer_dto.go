@@ -35,6 +35,8 @@ type CustomerResponse struct {
 	CreditEnabled       bool                   `json:"creditEnabled"`
 	CreditLimit         float64                `json:"creditLimit"`
 	CreditDays          int16                  `json:"creditDays"`
+	CreditWarningPct    float64                `json:"creditWarningPct"`
+	DocsValidityMonths  int                    `json:"docsValidityMonths"`
 	Status              types.CustomerStatus   `json:"status"`
 	CreatedAt           time.Time              `json:"createdAt"`
 	UpdatedAt           time.Time              `json:"updatedAt"`
@@ -64,6 +66,8 @@ type CreateCustomerRequest struct {
 	CreditEnabled       *bool                  `json:"creditEnabled"`
 	CreditLimit         *float64               `json:"creditLimit"`
 	CreditDays          *int16                 `json:"creditDays"`
+	CreditWarningPct    *float64               `json:"creditWarningPct"`
+	DocsValidityMonths  *int                   `json:"docsValidityMonths"`
 	Status              *types.CustomerStatus  `json:"status"`
 }
 
@@ -89,6 +93,8 @@ type UpdateCustomerRequest struct {
 	CreditEnabled       *bool                  `json:"creditEnabled"`
 	CreditLimit         *float64               `json:"creditLimit"`
 	CreditDays          *int16                 `json:"creditDays"`
+	CreditWarningPct    *float64               `json:"creditWarningPct"`
+	DocsValidityMonths  *int                   `json:"docsValidityMonths"`
 	Status              *types.CustomerStatus  `json:"status"`
 }
 
@@ -100,6 +106,30 @@ type CustomerFilterQuery struct {
 	Search        string
 	Page          int
 	PageSize      int
+}
+
+// ==========================================
+// DTOs PARA ESTADO DE CRÉDITO Y ADVERTENCIA
+// ==========================================
+
+type CustomerCreditStatusResponse struct {
+	CustomerID       int64   `json:"customerId"`
+	Document         string  `json:"document"`
+	Name             string  `json:"name"`
+	CreditEnabled    bool    `json:"creditEnabled"`
+	CreditLimit      float64 `json:"creditLimit"`
+	CreditBalance    float64 `json:"creditBalance"` // saldo contable (< 0 es deuda)
+	CurrentDebt      float64 `json:"currentDebt"`    // deuda actual positiva
+	ReservedOrders   float64 `json:"reservedOrders"` // pedidos abiertos no facturados
+	AvailableCredit  float64 `json:"availableCredit"`
+	UsedCredit       float64 `json:"usedCredit"`
+	UsedCreditPct    float64 `json:"usedCreditPct"`
+	CreditWarningPct float64 `json:"creditWarningPct"`
+	HasWarning       bool    `json:"hasWarning"`
+	WarningMessage   string  `json:"warningMessage,omitempty"`
+	PaymentTermsDays int16   `json:"paymentTermsDays"`
+	HasOverdue       bool    `json:"hasOverdue"`
+	OverdueDays      int     `json:"overdueDays"`
 }
 
 // ==========================================
@@ -120,5 +150,16 @@ type CustomerDocumentDTO struct {
 type CreateCustomerDocumentRequest struct {
 	DocType types.CustomerDocType `json:"docType" validate:"required"`
 	Notes   *string               `json:"notes"`
+}
+
+type CustomerSelectorResponse struct {
+	ID              int64   `json:"id"`
+	Document        string  `json:"document"`
+	Name            string  `json:"name"`
+	TradeName       *string `json:"tradeName,omitempty"`
+	PriceTier       string  `json:"priceTier"`
+	CreditEnabled   bool    `json:"creditEnabled"`
+	AvailableCredit float64 `json:"availableCredit"`
+	IsDefault       bool    `json:"isDefault"`
 }
 

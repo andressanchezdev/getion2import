@@ -2,10 +2,12 @@
 // conecta con: menuItems.constants, navigation.slice, SideMenu, MainContent, DrawerRight
 export type ERPModule =
   | 'shop'
-  | 'wallet'
-  | 'cashRegister'
+  | 'sales'
+  | 'cashRegister' // alias retrocompatible
+  | 'purchases'
   | 'inventory'
-  | 'transfers'
+  | 'transfers'    // alias retrocompatible
+  | 'wallet'
   | 'thirdParties'
   | 'reports'
   | 'settings'
@@ -29,6 +31,7 @@ export interface UIState {
   activeModule: ERPModule
   activeSubitem: string
   sidebarOpen: boolean
+  rightDrawerOpen: boolean
   activeWarehouseId: string
   activeWarehouseName: string
   cashRegisterStatus: 'open' | 'closed'

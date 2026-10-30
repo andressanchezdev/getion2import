@@ -239,6 +239,8 @@ func (s *ProductService) Create(ctx context.Context, actor *middlewares.ActorCon
 		return nil, utils.Internal("Error al registrar producto.", err)
 	}
 
+	_ = s.productRepo.UpsertPrices(ctx, s.pool, *companyID, created.ID, req.Prices.ToMap())
+
 	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
 		CompanyID: companyID,
 		ActorType: actor.ActorType,
@@ -374,6 +376,10 @@ func (s *ProductService) Update(ctx context.Context, actor *middlewares.ActorCon
 		return nil, utils.Internal("Error al actualizar producto.", err)
 	}
 
+	if req.Prices != nil {
+		_ = s.productRepo.UpsertPrices(ctx, s.pool, current.CompanyID, current.ID, req.Prices.ToMap())
+	}
+
 	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
 		CompanyID: &current.CompanyID,
 		ActorType: actor.ActorType,
@@ -414,6 +420,15 @@ func (s *ProductService) Delete(ctx context.Context, actor *middlewares.ActorCon
 	if err := s.productRepo.SoftDelete(ctx, s.pool, id); err != nil {
 		return utils.Internal("Error al eliminar producto.", err)
 	}
+
+	currentBytes, _ := json.Marshal(current)
+	const recycleSQL = `
+		INSERT INTO recycle_bin (
+			company_id, entity_table, entity_id, entity_label, entity_data,
+			deleted_by_actor_type, deleted_by_actor_id
+		) VALUES ($1, 'products', $2, $3, $4, $5, $6)
+	`
+	_, _ = s.pool.Exec(ctx, recycleSQL, current.CompanyID, current.ID, fmt.Sprintf("%s (%s)", current.Name, current.Code), currentBytes, string(actor.ActorType), actor.ActorID)
 
 	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
 		CompanyID: &current.CompanyID,
