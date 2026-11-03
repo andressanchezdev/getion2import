@@ -15,8 +15,8 @@ export const toBrands = (rows: BrandDto[]): Brand[] =>
 
 // convierte las categorías de la API en las que usa la app
 export const toCategories = (rows: CategoryDto[]): Category[] =>
-  rows.filter(isShown).map((row) => ({ id: row.id, name: cleanName(row.name) }))
+  rows.filter(isShown).map((row) => ({ id: row.id, name: cleanName(row.name), description: cleanName(row.description) || undefined }))
 
 // convierte los modelos de moto de la API en los que usa la app
 export const toMotoModels = (rows: ModelDto[]): MotoModel[] =>
-  rows.filter(isShown).map((row) => ({ id: row.id, name: cleanName(row.name) }))
+  rows.filter(isShown).map((row) => ({ id: row.id, name: cleanName(row.name), description: cleanName(row.description) || undefined }))

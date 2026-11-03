@@ -92,6 +92,7 @@ export const createProduct = async (input: NewProductInput): Promise<Product> =>
         lastCost: input.lastCost,
         prices,
         isNew: input.isNew,
+        iva: input.iva,
         status: input.status,
         initialStock: input.initialStock?.map((item) => ({ warehouseId: item.warehouseId, location: item.location, quantity: item.quantity })),
     }
@@ -118,6 +119,7 @@ export const updateProductDetails = async (
         brandId?: number
         modelId?: number
         isNew?: boolean
+        iva?: number
     }
 ): Promise<ProductDto> => {
     const body: Record<string, unknown> = {}
@@ -129,6 +131,7 @@ export const updateProductDetails = async (
     if (updates.brandId !== undefined) body.brandId = updates.brandId
     if (updates.modelId !== undefined) body.modelId = updates.modelId
     if (updates.isNew !== undefined) body.isNew = updates.isNew
+    if (updates.iva !== undefined) body.iva = updates.iva
     if (updates.prices) {
         const pricesBody: Record<string, number> = {}
         for (const [level, price] of Object.entries(updates.prices)) {

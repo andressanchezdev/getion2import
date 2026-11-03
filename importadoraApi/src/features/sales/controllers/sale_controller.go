@@ -32,11 +32,9 @@ func (ctrl *SaleController) Create(c echo.Context) error {
 	}
 
 	companyID, _ := middlewares.EffectiveCompanyID(c)
-	actor := middlewares.GetActor(c)
-
-	actorEmployeeID := int64(1)
-	if actor != nil && actor.ActorID > 0 {
-		actorEmployeeID = actor.ActorID
+	actorEmployeeID, err := ctrl.saleService.ActorEmployeeID(c.Request().Context(), middlewares.GetActor(c))
+	if err != nil {
+		return err
 	}
 
 	sale, err := ctrl.saleService.Create(c.Request().Context(), &companyID, actorEmployeeID, req)
@@ -140,10 +138,9 @@ func (ctrl *SaleController) AdvanceToVerification(c echo.Context) error {
 		return err
 	}
 
-	actor := middlewares.GetActor(c)
-	empID := int64(1)
-	if actor != nil && actor.ActorID > 0 {
-		empID = actor.ActorID
+	empID, err := ctrl.saleService.RequireActorEmployeeID(c.Request().Context(), middlewares.GetActor(c))
+	if err != nil {
+		return err
 	}
 
 	if err := ctrl.saleService.AdvanceToVerification(c.Request().Context(), id, empID); err != nil {
@@ -160,10 +157,9 @@ func (ctrl *SaleController) AdvanceToPicking(c echo.Context) error {
 		return err
 	}
 
-	actor := middlewares.GetActor(c)
-	empID := int64(1)
-	if actor != nil && actor.ActorID > 0 {
-		empID = actor.ActorID
+	empID, err := ctrl.saleService.RequireActorEmployeeID(c.Request().Context(), middlewares.GetActor(c))
+	if err != nil {
+		return err
 	}
 
 	if err := ctrl.saleService.AdvanceToPicking(c.Request().Context(), id, empID); err != nil {
@@ -180,10 +176,9 @@ func (ctrl *SaleController) AdvanceToPacking(c echo.Context) error {
 		return err
 	}
 
-	actor := middlewares.GetActor(c)
-	empID := int64(1)
-	if actor != nil && actor.ActorID > 0 {
-		empID = actor.ActorID
+	empID, err := ctrl.saleService.RequireActorEmployeeID(c.Request().Context(), middlewares.GetActor(c))
+	if err != nil {
+		return err
 	}
 
 	if err := ctrl.saleService.AdvanceToPacking(c.Request().Context(), id, empID); err != nil {
@@ -200,10 +195,9 @@ func (ctrl *SaleController) IssueInvoice(c echo.Context) error {
 		return err
 	}
 
-	actor := middlewares.GetActor(c)
-	empID := int64(1)
-	if actor != nil && actor.ActorID > 0 {
-		empID = actor.ActorID
+	empID, err := ctrl.saleService.RequireActorEmployeeID(c.Request().Context(), middlewares.GetActor(c))
+	if err != nil {
+		return err
 	}
 
 	invoice, err := ctrl.saleService.IssueInvoice(c.Request().Context(), id, empID)
@@ -224,10 +218,9 @@ func (ctrl *SaleController) AdvanceToDispatch(c echo.Context) error {
 	var req dtos.DispatchSaleRequest
 	_ = utils.BindOptionalJSON(c, &req)
 
-	actor := middlewares.GetActor(c)
-	empID := int64(1)
-	if actor != nil && actor.ActorID > 0 {
-		empID = actor.ActorID
+	empID, err := ctrl.saleService.RequireActorEmployeeID(c.Request().Context(), middlewares.GetActor(c))
+	if err != nil {
+		return err
 	}
 
 	if err := ctrl.saleService.AdvanceToDispatch(c.Request().Context(), id, empID, req); err != nil {
@@ -244,10 +237,9 @@ func (ctrl *SaleController) AdvanceToSend(c echo.Context) error {
 		return err
 	}
 
-	actor := middlewares.GetActor(c)
-	empID := int64(1)
-	if actor != nil && actor.ActorID > 0 {
-		empID = actor.ActorID
+	empID, err := ctrl.saleService.RequireActorEmployeeID(c.Request().Context(), middlewares.GetActor(c))
+	if err != nil {
+		return err
 	}
 
 	if err := ctrl.saleService.AdvanceToSend(c.Request().Context(), id, empID); err != nil {
@@ -269,10 +261,9 @@ func (ctrl *SaleController) CancelSale(c echo.Context) error {
 		return err
 	}
 
-	actor := middlewares.GetActor(c)
-	empID := int64(1)
-	if actor != nil && actor.ActorID > 0 {
-		empID = actor.ActorID
+	empID, err := ctrl.saleService.RequireActorEmployeeID(c.Request().Context(), middlewares.GetActor(c))
+	if err != nil {
+		return err
 	}
 
 	if err := ctrl.saleService.CancelSale(c.Request().Context(), id, empID, req); err != nil {

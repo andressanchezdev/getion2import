@@ -1291,6 +1291,19 @@ CREATE TRIGGER trg_warehouse_locations_updated_at
     BEFORE UPDATE ON warehouse_locations
     FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
 
+-- 43. TABLA (se crea aquí, antes de su trigger y de la semilla): screensaver_settings (Configuración de protector de pantalla por empresa)
+CREATE TABLE IF NOT EXISTS screensaver_settings (
+    id              BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    company_id      BIGINT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    image_url       TEXT NOT NULL,
+    is_active       BOOLEAN NOT NULL DEFAULT TRUE,
+    updated_by      BIGINT REFERENCES employees(id) ON DELETE SET NULL,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_screensaver_settings_company ON screensaver_settings(company_id, is_active);
+
 CREATE TRIGGER trg_screensaver_settings_updated_at
     BEFORE UPDATE ON screensaver_settings
     FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
@@ -2414,18 +2427,10 @@ FROM carts c
 JOIN (SELECT id, product_id FROM stock WHERE warehouse_id = 1 AND product_id BETWEEN 20 AND 400 AND product_id % 3 = 2 AND available >= 20 ORDER BY product_id DESC LIMIT 2) s ON TRUE
 WHERE c.employee_id = 3 AND c.warehouse_id = 1 AND c.status = 'open'
 ON CONFLICT (cart_id, stock_id) DO NOTHING;
--- 43. TABLA: screensaver_settings (Configuración de protector de pantalla por empresa)
-CREATE TABLE IF NOT EXISTS screensaver_settings (
-    id              BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    company_id      BIGINT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
-    image_url       TEXT NOT NULL,
-    is_active       BOOLEAN NOT NULL DEFAULT TRUE,
-    updated_by      BIGINT REFERENCES employees(id) ON DELETE SET NULL,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_screensaver_settings_company ON screensaver_settings(company_id, is_active);
+-- 9) IVA por producto: la mayoría al 19 %, algunos al 5 % y otros exentos (0 %), para probar los tres casos al vender
+-- ojo: las tarifas son valores netos; el IVA se suma aparte al vender
+UPDATE products SET iva = 0 WHERE iva = 19 AND id % 10 = 0;
+UPDATE products SET iva = 5 WHERE iva = 19 AND id % 10 = 5;
 
 -- Limpieza de funciones temporales de semilla
 DROP FUNCTION IF EXISTS seed_product CASCADE;

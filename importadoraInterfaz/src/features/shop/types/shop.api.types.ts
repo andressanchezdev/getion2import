@@ -22,6 +22,7 @@ export interface ProductDto {
     prices?: ProductApiPrices | null
     isPromotion?: boolean
     isNew?: boolean
+    iva?: number | null // porcentaje de IVA del producto (las tarifas son netas); 0 o sin valor = exento
     status?: string // 'active' | 'inactive' | ...
     createdAt?: string
 }

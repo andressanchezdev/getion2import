@@ -45,10 +45,13 @@ export function normalizeError(error: AxiosError<unknown>): AppApiError {
       userFriendly = 'El recurso solicitado no fue encontrado en el servidor.'
       break
     case 500:
+      // ojo: el servidor manda la causa en message; antes se tapaba con un texto fijo y no se sabía qué falló
+      userFriendly = serverMessage ? `Error del servidor: ${serverMessage}` : 'Error interno del servidor. Revisa los registros del API.'
+      break
     case 502:
     case 503:
-      userFriendly =
-        'Error interno en el servidor de Railway. Los ingenieros han sido alertados.'
+    case 504:
+      userFriendly = `El servidor no está disponible (${status}). Verifica que el API esté en línea y que VITE_API_BASE_URL apunte a él.`
       break
     default:
       userFriendly = serverMessage || userFriendly

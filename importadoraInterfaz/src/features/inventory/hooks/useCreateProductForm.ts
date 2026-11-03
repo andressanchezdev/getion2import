@@ -9,6 +9,7 @@ import { useWarehouses } from '@/features/warehouses'
 import type { ProductPrices } from '@/features/shop'
 import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { toast } from '@/global/helpers/feedback/toast'
+import { DEFAULT_IVA } from '../constants/inventory.constants'
 import { createProductThunk, loadProductsTableThunk } from '../thunks/inventory.thunks'
 
 const EMPTY_PRICES: ProductPrices = { p0: 0, p1: 0, p2: 0, p3: 0 }
@@ -33,6 +34,7 @@ export const useCreateProductForm = () => {
   const [lastCost, setLastCost] = useState(0)
   const [prices, setPrices] = useState<ProductPrices>(EMPTY_PRICES)
   const [isNew, setIsNew] = useState(false)
+  const [iva, setIva] = useState(DEFAULT_IVA)
   const [warehouseId, setWarehouseId] = useState(activeWarehouseId ? Number(activeWarehouseId) : 0)
   // una fila por ubicación donde queda guardado el producto: dónde (código) y cuántas unidades
   const [places, setPlaces] = useState<Array<{ location: string; quantity: number }>>([{ location: '', quantity: 0 }])
@@ -85,6 +87,7 @@ export const useCreateProductForm = () => {
           lastCost: lastCost || undefined,
           prices,
           isNew,
+          iva,
           status: 'active',
           initialStock: chosen.length > 0 ? chosen.map((place) => ({ warehouseId, location: place.location, quantity: place.quantity })) : undefined,
         })
@@ -114,7 +117,7 @@ export const useCreateProductForm = () => {
     code, setCode, name, setName, description, setDescription,
     categoryId, setCategoryId, brandId, setBrandId, modelId, setModelId,
     compatibleModelIds, toggleCompatibleModel,
-    unit, setUnit, lastCost, setLastCost, prices, setPrice, isNew, setIsNew,
+    unit, setUnit, lastCost, setLastCost, prices, setPrice, isNew, setIsNew, iva, setIva,
     warehouseId, setWarehouseId: (id: number) => { setWarehouseId(id); setPlaces([{ location: '', quantity: 0 }]) },
     places, addPlace, removePlace, changePlace,
     saving, error, submit,

@@ -5,8 +5,11 @@ package repositories
 
 import (
 	"context"
+	"errors"
 
 	"importadoraApi/src/core/db"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // StockForSale es la ubicación de stock bloqueada para vender, con los datos del producto y sus tarifas (tier → precio, en JSON)
@@ -71,4 +74,34 @@ func (r *SaleRepository) UpdateCarrier(ctx context.Context, q db.DBExecutor, sal
 	const sql = `UPDATE sales SET carrier_id = COALESCE($1, carrier_id), tracking_no = COALESCE($2, tracking_no) WHERE id = $3`
 	_, err := q.Exec(ctx, sql, carrierID, trackingNo, saleID)
 	return err
+}
+
+// LinkedEmployeeOfAdmin devuelve el empleado ligado a un administrador (admins.employee_id), o 0 si no tiene
+func (r *SaleRepository) LinkedEmployeeOfAdmin(ctx context.Context, q db.DBExecutor, adminID int64) (int64, error) {
+	var employeeID *int64
+	err := q.QueryRow(ctx, "SELECT employee_id FROM admins WHERE id = $1", adminID).Scan(&employeeID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, nil
+		}
+		return 0, err
+	}
+	if employeeID == nil {
+		return 0, nil
+	}
+	return *employeeID, nil
+}
+
+// CountVerifiedPayments cuenta los pagos verificados de un pedido (un pedido con pagos verificados no se cancela sin revertirlos)
+func (r *SaleRepository) CountVerifiedPayments(ctx context.Context, q db.DBExecutor, saleID int64) (int, error) {
+	var n int
+	err := q.QueryRow(ctx, "SELECT COUNT(*) FROM payments WHERE sale_id = $1 AND status = 'verified'", saleID).Scan(&n)
+	return n, err
+}
+
+// CountInvoices cuenta las facturas emitidas de un pedido (no anuladas)
+func (r *SaleRepository) CountInvoices(ctx context.Context, q db.DBExecutor, saleID int64) (int, error) {
+	var n int
+	err := q.QueryRow(ctx, "SELECT COUNT(*) FROM invoices WHERE sale_id = $1 AND status <> 'annulled'", saleID).Scan(&n)
+	return n, err
 }

@@ -2,6 +2,7 @@
 // conecta con: checkout.service (convierte), CheckoutPanel y sus pasos (cálculos), checkout.api.types y checkout.types
 import type { CheckoutCustomerDto } from '../types/checkout.api.types'
 import type { CheckoutCustomer, CheckoutLine, DeliveryData } from '../types/checkout.types'
+import { normalizePhone } from './checkout.blockers'
 
 const text = (value: string | null | undefined): string => (value ?? '').trim()
 
@@ -13,7 +14,7 @@ const fullName = (dto: CheckoutCustomerDto): string => {
 
 // las direcciones guardadas; si solo trae dirección y ciudad sueltas se arma una con ellas
 const toDeliveries = (dto: CheckoutCustomerDto): DeliveryData[] => {
-  const phone = text(dto.mobile) || text(dto.phone)
+  const phone = normalizePhone(text(dto.mobile) || text(dto.phone))
   const saved = (dto.addresses ?? [])
     .filter((item) => text(item.address))
     .map((item) => ({ address: [text(item.address), text(item.neighborhood)].filter(Boolean).join(', '), city: [text(item.city), text(item.department)].filter(Boolean).join(', '), phone, notes: text(item.additionalInfo) }))
@@ -36,10 +37,32 @@ export const toCheckoutCustomer = (dto: CheckoutCustomerDto, availableCredit: nu
 
 // datos de entrega con los que arranca el formulario: la primera dirección guardada o, si no hay, solo el teléfono
 export const initialDelivery = (customer: CheckoutCustomer): DeliveryData =>
-  customer.deliveries[0] ?? { address: '', city: '', phone: customer.phone, notes: '' }
+  customer.deliveries[0] ?? { address: '', city: '', phone: normalizePhone(customer.phone), notes: '' }
 
 // suma lo que cuestan los renglones (precio por cantidad)
 export const linesTotal = (lines: CheckoutLine[]): number => lines.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0)
+
+export interface CheckoutTotals {
+  subtotal: number // suma neta de los renglones
+  discount: number // descuento general del cliente sobre el neto
+  iva: number // IVA de cada producto sobre su neto ya con descuento
+  total: number // lo que paga el cliente: neto − descuento + IVA
+}
+
+// calcula neto, descuento, IVA y total como lo hace el backend: el descuento va primero y el IVA se calcula sobre lo que queda
+export const computeTotals = (lines: CheckoutLine[], discountPercent: number): CheckoutTotals => {
+  let subtotal = 0
+  let discount = 0
+  let iva = 0
+  for (const line of lines) {
+    const base = line.unitPrice * line.quantity
+    const lineDiscount = base * (discountPercent / 100)
+    subtotal += base
+    discount += lineDiscount
+    iva += (base - lineDiscount) * ((line.ivaPercent ?? 0) / 100)
+  }
+  return { subtotal: Math.round(subtotal), discount: Math.round(discount), iva: Math.round(iva), total: Math.round(subtotal - discount + iva) }
+}
 
 // total con el descuento general del cliente (redondeado al peso)
 export const totalWithDiscount = (total: number, discountPercent: number): number => Math.round(total * (1 - discountPercent / 100))
@@ -48,8 +71,8 @@ export const totalWithDiscount = (total: number, discountPercent: number): numbe
 export const canPayByCredit = (customer: CheckoutCustomer, payable: number): boolean => customer.creditEnabled && customer.availableCredit >= payable
 
 // dirección de entrega como la guarda la API (JSON libre)
-export const toShippingAddress = (delivery: DeliveryData) => ({ address: delivery.address.trim(), city: delivery.city.trim(), phone: delivery.phone.trim(), notes: delivery.notes.trim() })
+export const toShippingAddress = (delivery: DeliveryData) => ({ address: delivery.address.trim(), city: delivery.city.trim(), phone: normalizePhone(delivery.phone), notes: delivery.notes.trim() })
 
 // la entrega es válida con dirección, ciudad y un teléfono de 10 dígitos
 export const isDeliveryValid = (delivery: DeliveryData): boolean =>
-  delivery.address.trim().length >= 5 && delivery.city.trim().length >= 2 && /^\d{10}$/.test(delivery.phone.trim())
+  delivery.address.trim().length >= 5 && delivery.city.trim().length >= 2 && /^\d{10}$/.test(normalizePhone(delivery.phone))

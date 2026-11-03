@@ -9,7 +9,8 @@ import { toast } from '@/global/helpers/feedback/toast'
 import { useAppDispatch } from '@/global/hooks/store/useRedux'
 import { useDebouncedValue } from '@/global/hooks/data/useDebouncedValue'
 import { usePermissions } from '@/global/hooks/access/usePermissions'
-import { canPayByCredit, initialDelivery, isDeliveryValid, linesTotal, totalWithDiscount } from '../helpers/checkout.adapter'
+import { checkoutBlockers } from '../helpers/checkout.blockers'
+import { canPayByCredit, computeTotals, initialDelivery, isDeliveryValid } from '../helpers/checkout.adapter'
 import { confirmQuotationThunk, confirmSaleThunk, loadCheckoutCustomerThunk, loadCheckoutLinesThunk, searchCheckoutCustomersThunk } from '../thunks/checkout.thunks'
 import type { CheckoutCustomer, CheckoutLine, CheckoutPayload, DeliveryData, PaymentChoice } from '../types/checkout.types'
 
@@ -91,14 +92,26 @@ export const useCheckoutFlow = (payload: CheckoutPayload) => {
     setResults([])
   }
 
-  const total = useMemo(() => linesTotal(lines ?? []), [lines])
-  const payable = customer ? totalWithDiscount(total, customer.discountPercent) : total
+  const totals = useMemo(() => computeTotals(lines ?? [], customer?.discountPercent ?? 0), [lines, customer])
+  const total = totals.subtotal
+  const payable = totals.total // con descuento e IVA: es lo que se cobra y contra lo que se mide el cupo de crédito
   const creditAllowed = customer ? canPayByCredit(customer, payable) : false
   const deliveryOk = isQuotation || isDeliveryValid(delivery)
   const transferOk = payment !== 'transfer' || Boolean(transferProof.trim())
   // con la caja de la bodega cerrada no se emite un pedido pagado en efectivo (hay que abrir el turno antes); si no se pudo consultar la caja no se bloquea
   const cashBlocked = !isQuotation && payment === 'cash' && cash.warehouseId > 0 && !cash.loading && !cash.failed && !cash.isOpen
-  const canContinue = Boolean(customer) && (lines?.length ?? 0) > 0 && deliveryOk && (!needsEmployee || employeeId > 0) && (step !== 'payment' || transferOk)
+  // lo que falta para continuar, en frases; el panel las muestra junto al botón en vez de dejarlo gris sin explicación
+  const blockers = checkoutBlockers({
+    hasCustomer: Boolean(customer),
+    linesCount: lines ? lines.length : null,
+    delivery,
+    deliveryRequired: !isQuotation,
+    needsEmployee,
+    employeeId,
+    onPayment: step === 'payment',
+    transferMissingProof: !transferOk,
+  })
+  const canContinue = blockers.length === 0 && deliveryOk
 
   const confirm = async () => {
     if (!customer || !lines || cashBlocked) return
@@ -138,6 +151,6 @@ export const useCheckoutFlow = (payload: CheckoutPayload) => {
     delivery, setDelivery, employeeId, setEmployeeId, payment, setPayment,
     transferProof, setTransferProof, transferReference, setTransferReference, transferBank, setTransferBank,
     immediatePicking, setImmediatePicking,
-    total, payable, creditAllowed, canContinue, cashBlocked, cashWarehouseName: cash.warehouseName, submitting, error, confirm,
+    total, totals, payable, creditAllowed, canContinue, blockers, cashBlocked, cashWarehouseName: cash.warehouseName, submitting, error, confirm,
   }
 }

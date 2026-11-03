@@ -28,6 +28,7 @@ export interface OrderRow {
   paidAmount: number // pagos verificados
   creditAmount: number // lo que el cliente dejó a crédito
   confirmed: boolean // verificación confirmada: el pago quedó cubierto y espera en la cola de la etapa siguiente
+  currentStage: string // la etapa real del pedido en el backend (por ejemplo verification_ok o picking_ok); de ella depende la siguiente acción
 }
 
 export interface OrderLine {

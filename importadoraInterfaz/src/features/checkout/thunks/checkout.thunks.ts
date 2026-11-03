@@ -39,7 +39,7 @@ export const loadCheckoutLinesThunk = createAsyncThunk<CheckoutLine[], CheckoutP
   if (!ctx) return rejectWithValue(NO_SESSION)
   try {
     if (!payload.quotationId) {
-      return selectCartItems(state).map((item) => ({ productId: Number(item.productId), stockId: item.stockId ?? 0, name: item.product.name, quantity: item.quantity, unitPrice: item.selectedPrice }))
+      return selectCartItems(state).map((item) => ({ productId: Number(item.productId), stockId: item.stockId ?? 0, name: item.product.name, quantity: item.quantity, unitPrice: item.selectedPrice, ivaPercent: item.product.iva ?? 0 }))
     }
     const warehouseId = toWarehouseNumber(state.ui.activeWarehouseId)
     if (!warehouseId) return rejectWithValue(NO_WAREHOUSE)

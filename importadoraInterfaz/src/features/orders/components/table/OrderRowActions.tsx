@@ -10,15 +10,16 @@ import './OrderRowActions.css'
 interface OrderRowActionsProps {
   order: OrderRow
   canCancel: boolean
+  canAdvance?: boolean
   onAction: (key: OrderActionKey, order: OrderRow) => void
 }
 
-export const OrderRowActions: React.FC<OrderRowActionsProps> = ({ order, canCancel, onAction }) => {
+export const OrderRowActions: React.FC<OrderRowActionsProps> = ({ order, canCancel, canAdvance = false, onAction }) => {
   const [isOpen, setIsOpen] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
   useClickOutside(wrapperRef, () => setIsOpen(false), isOpen)
 
-  const menu = getOrderActions(order, canCancel).filter((action) => action.key !== 'detail')
+  const menu = getOrderActions(order, canCancel, canAdvance).filter((action) => action.key !== 'detail')
 
   return (
     // ojo: los clics de las acciones no abren el detalle de la fila

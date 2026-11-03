@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "check:type": "node scripts/check-typography.mjs",
     "check:api": "node scripts/check-endpoints.mjs",
+    "smoke:api": "node scripts/smoke-api.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

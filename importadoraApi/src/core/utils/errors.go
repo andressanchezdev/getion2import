@@ -6,6 +6,7 @@ package utils
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -87,7 +88,7 @@ func NormalizeDBError(err error, notFoundMsg string) error {
 	if errors.As(err, &pgErr) {
 		switch pgErr.Code {
 		case "23505": // unique_violation
-			return Conflict("DUPLICATE_RECORD", "Ya existe un registro con los mismos datos únicos ("+pgErr.ConstraintName+").")
+			return Conflict("DUPLICATE_RECORD", duplicateMessage(pgErr.ConstraintName))
 		case "23503": // foreign_key_violation
 			return Conflict("FOREIGN_KEY_CONSTRAINT", "La operación referencia un registro inexistente o protegido ("+pgErr.ConstraintName+").")
 		case "23514": // check_violation
@@ -98,4 +99,26 @@ func NormalizeDBError(err error, notFoundMsg string) error {
 	}
 
 	return Internal("Error interno al procesar la operación en base de datos.", err)
+}
+
+// duplicateMessage dice qué dato se repite según la restricción única que saltó; sin una conocida, nombra la restricción
+func duplicateMessage(constraint string) string {
+	known := []struct{ part, message string }{
+		{"employees_company_doc", "Ya existe un empleado con ese número de documento."},
+		{"employees_email", "Ya existe un empleado con ese correo."},
+		{"externals_company_kind_doc", "Ya existe un proveedor o transportadora con ese tipo y número de documento."},
+		{"externals", "Ya existe un proveedor o transportadora con ese nombre."},
+		{"customers_company_id_document", "Ya existe un cliente con ese documento."},
+		{"customers", "Ya existe un cliente con esos datos."},
+		{"warehouses_company_id_code", "Ya existe una bodega con ese código."},
+		{"roles", "Ya existe un rol con ese código."},
+		{"categories", "Ya existe una categoría con ese nombre en el mismo nivel."},
+		{"products_company_id_code", "Ya existe un producto con ese código."},
+	}
+	for _, k := range known {
+		if strings.Contains(constraint, k.part) {
+			return k.message
+		}
+	}
+	return "Ya existe un registro con los mismos datos únicos (" + constraint + ")."
 }

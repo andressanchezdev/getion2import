@@ -20,8 +20,3 @@
   box-shadow: var(--shadow-rest);
 }
 
-.cash-shift-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-}

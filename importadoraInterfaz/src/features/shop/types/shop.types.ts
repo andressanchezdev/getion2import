@@ -38,6 +38,7 @@ export interface Product {
     isNew?: boolean // Producto creado en los últimos 7 días
     createdAt?: string // Fecha ISO de creación
     status?: 'active' | 'inactive' | 'draft' | 'discontinued'
+    iva?: number // porcentaje de IVA (0 = exento); las tarifas de prices son valores netos y el IVA se suma aparte
 }
 
 export interface CatalogFilter {
@@ -105,6 +106,7 @@ export interface NewProductInput {
   lastCost?: number
   prices: ProductPrices
   isNew?: boolean
+  iva?: number // 0 = exento; si no se manda, el producto queda exento
   status?: 'active' | 'inactive'
   initialStock?: NewProductStock[]
 }

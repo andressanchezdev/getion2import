@@ -61,7 +61,10 @@ export const EditCustomerForm: React.FC<EditCustomerFormProps> = ({ customerId }
     try {
       setIsSubmitting(true)
       setSubmitError(null)
-      await dispatch(updateCustomerThunk({ id: customerId, body: { name: name.trim(), phone, email: email.trim() } })).unwrap()
+      // ojo: el campo muestra el nombre completo (nombre + apellido); si cambia se guarda entero como nombre y se vacía el apellido, para que no se duplique
+      const nameChanged = name.trim() !== (original?.fullName ?? '')
+      const body = { ...(nameChanged ? { name: name.trim(), lastName: '' } : {}), phone, email: email.trim() }
+      await dispatch(updateCustomerThunk({ id: customerId, body })).unwrap()
       toast.success('Cliente actualizado')
       dispatch(loadCustomersThunk())
       dispatch(loadCustomerDetailThunk(customerId))

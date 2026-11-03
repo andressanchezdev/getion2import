@@ -182,7 +182,7 @@ func (s *ExternalService) Create(ctx context.Context, actor *middlewares.ActorCo
 
 	created, err := s.externalRepo.Create(ctx, s.pool, entity)
 	if err != nil {
-		return nil, utils.Internal("Error al registrar externo.", err)
+		return nil, utils.NormalizeDBError(err, "")
 	}
 
 	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
@@ -281,7 +281,7 @@ func (s *ExternalService) Update(ctx context.Context, actor *middlewares.ActorCo
 
 	updated, err := s.externalRepo.Update(ctx, s.pool, current)
 	if err != nil {
-		return nil, utils.Internal("Error al actualizar externo.", err)
+		return nil, utils.NormalizeDBError(err, "El proveedor o transportadora no existe.")
 	}
 
 	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{

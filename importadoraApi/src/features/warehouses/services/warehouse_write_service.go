@@ -123,7 +123,7 @@ func (s *WarehouseService) Create(ctx context.Context, actor *middlewares.ActorC
 		return s.warehouseRepo.InitDefaultWarehouseSeries(ctx, tx, targetCompanyID, w.ID, code)
 	})
 	if err != nil {
-		return nil, utils.Internal("Error al registrar la bodega y sus series fiscales.", err)
+		return nil, utils.NormalizeDBError(err, "")
 	}
 
 	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
@@ -228,7 +228,7 @@ func (s *WarehouseService) Update(ctx context.Context, actor *middlewares.ActorC
 
 	updated, err := s.warehouseRepo.Update(ctx, s.pool, current)
 	if err != nil {
-		return nil, utils.Internal("Error al actualizar la bodega.", err)
+		return nil, utils.NormalizeDBError(err, "La bodega no existe.")
 	}
 
 	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{

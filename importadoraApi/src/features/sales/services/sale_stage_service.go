@@ -5,10 +5,11 @@ package services
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"strings"
 
 	"importadoraApi/src/core/types"
+	"importadoraApi/src/core/utils"
 	inventoryrepos "importadoraApi/src/features/inventory/repositories"
 	"importadoraApi/src/features/sales/dtos"
 )
@@ -26,10 +27,13 @@ func (s *SaleService) AdvanceToVerification(ctx context.Context, saleID, employe
 		return err
 	}
 	if sale == nil {
-		return errors.New("venta no encontrada")
+		return utils.NotFound("SALE_NOT_FOUND", "El pedido no existe.")
 	}
-	if sale.Status == types.SaleCancelled || sale.Status == types.SaleCompleted {
-		return fmt.Errorf("no se puede avanzar una venta con estado '%s'", sale.Status)
+	if err := ensureOpen(sale, "verificar"); err != nil {
+		return err
+	}
+	if sale.CurrentStage != types.StageVerification {
+		return nil // ya pasó la verificación: no se retrocede
 	}
 
 	if err := s.saleRepo.UpdateStageBy(ctx, tx, saleID, types.StageVerification, types.SaleOpen, &employeeID); err != nil {
@@ -55,10 +59,13 @@ func (s *SaleService) AdvanceToPicking(ctx context.Context, saleID, employeeID i
 		return err
 	}
 	if sale == nil {
-		return errors.New("venta no encontrada")
+		return utils.NotFound("SALE_NOT_FOUND", "El pedido no existe.")
 	}
-	if sale.Status == types.SaleCancelled || sale.Status == types.SaleCompleted {
-		return fmt.Errorf("no se puede avanzar una venta con estado '%s'", sale.Status)
+	if err := ensureOpen(sale, "alistar"); err != nil {
+		return err
+	}
+	if err := ensureStageFor(sale, "pick"); err != nil {
+		return err
 	}
 
 	if err := s.saleRepo.UpdateStageBy(ctx, tx, saleID, types.StagePicking, types.SaleOpen, &employeeID); err != nil {
@@ -84,10 +91,13 @@ func (s *SaleService) AdvanceToPacking(ctx context.Context, saleID, employeeID i
 		return err
 	}
 	if sale == nil {
-		return errors.New("venta no encontrada")
+		return utils.NotFound("SALE_NOT_FOUND", "El pedido no existe.")
 	}
-	if sale.Status == types.SaleCancelled || sale.Status == types.SaleCompleted {
-		return fmt.Errorf("no se puede avanzar una venta con estado '%s'", sale.Status)
+	if err := ensureOpen(sale, "empacar"); err != nil {
+		return err
+	}
+	if err := ensureStageFor(sale, "pack"); err != nil {
+		return err
 	}
 
 	if err := s.saleRepo.UpdateStageBy(ctx, tx, saleID, types.StagePacking, types.SaleOpen, &employeeID); err != nil {
@@ -113,10 +123,13 @@ func (s *SaleService) AdvanceToDispatch(ctx context.Context, saleID, employeeID 
 		return err
 	}
 	if sale == nil {
-		return errors.New("venta no encontrada")
+		return utils.NotFound("SALE_NOT_FOUND", "El pedido no existe.")
 	}
-	if sale.Status == types.SaleCancelled || sale.Status == types.SaleCompleted {
-		return fmt.Errorf("no se puede despachar una venta con estado '%s'", sale.Status)
+	if err := ensureOpen(sale, "despachar"); err != nil {
+		return err
+	}
+	if err := ensureStageFor(sale, "dispatch"); err != nil {
+		return err
 	}
 
 	items, err := s.saleRepo.ListItems(ctx, tx, saleID)
@@ -149,7 +162,9 @@ func (s *SaleService) AdvanceToDispatch(ctx context.Context, saleID, employeeID 
 	}
 
 	if req.CarrierID != nil || req.TrackingNo != nil {
-		_ = s.saleRepo.UpdateCarrier(ctx, tx, saleID, req.CarrierID, req.TrackingNo)
+		if err := s.saleRepo.UpdateCarrier(ctx, tx, saleID, req.CarrierID, req.TrackingNo); err != nil {
+			return utils.NormalizeDBError(err, "No se pudo guardar la transportadora del despacho.")
+		}
 	}
 
 	if err := s.saleRepo.UpdateStageBy(ctx, tx, saleID, types.StageDispatch, types.SaleOpen, &employeeID); err != nil {
@@ -175,10 +190,13 @@ func (s *SaleService) AdvanceToSend(ctx context.Context, saleID, employeeID int6
 		return err
 	}
 	if sale == nil {
-		return errors.New("venta no encontrada")
+		return utils.NotFound("SALE_NOT_FOUND", "El pedido no existe.")
 	}
-	if sale.Status == types.SaleCancelled {
-		return errors.New("no se puede enviar una venta cancelada")
+	if err := ensureOpen(sale, "enviar"); err != nil {
+		return err
+	}
+	if err := ensureStageFor(sale, "send"); err != nil {
+		return err
 	}
 
 	if err := s.saleRepo.MarkCompleted(ctx, tx, saleID); err != nil {
@@ -193,8 +211,8 @@ func (s *SaleService) AdvanceToSend(ctx context.Context, saleID, employeeID int6
 
 // CancelSale cancela el pedido y libera el stock que tenía reservado.
 func (s *SaleService) CancelSale(ctx context.Context, saleID, employeeID int64, req dtos.CancelSaleRequest) error {
-	if req.Reason == "" {
-		return errors.New("el motivo de cancelación es obligatorio")
+	if strings.TrimSpace(req.Reason) == "" {
+		return utils.BadRequest("REASON_REQUIRED", "El motivo de cancelación es obligatorio.")
 	}
 
 	tx, err := s.pool.Begin(ctx)
@@ -208,13 +226,23 @@ func (s *SaleService) CancelSale(ctx context.Context, saleID, employeeID int64, 
 		return err
 	}
 	if sale == nil {
-		return errors.New("venta no encontrada")
+		return utils.NotFound("SALE_NOT_FOUND", "El pedido no existe.")
 	}
 	if sale.Status == types.SaleCancelled {
-		return errors.New("la venta ya se encuentra cancelada")
+		return utils.Conflict("SALE_CANCELLED", "El pedido ya está cancelado.")
 	}
 	if sale.Status == types.SaleCompleted || sale.CurrentStage == types.StageDispatch || sale.CurrentStage == types.StageSent {
-		return errors.New("no se puede cancelar una venta que ya ha sido despachada o completada. Use el módulo de devoluciones")
+		return utils.Conflict("SALE_ALREADY_DISPATCHED", "El pedido ya fue despachado o completado; para revertirlo usa una devolución.")
+	}
+	if verified, err := s.saleRepo.CountVerifiedPayments(ctx, tx, saleID); err != nil {
+		return utils.NormalizeDBError(err, "No se pudieron revisar los pagos del pedido.")
+	} else if verified > 0 {
+		return utils.Conflict("SALE_HAS_PAYMENTS", "El pedido tiene pagos verificados; anúlalos o genera una devolución antes de cancelarlo.")
+	}
+	if invoices, err := s.saleRepo.CountInvoices(ctx, tx, saleID); err != nil {
+		return utils.NormalizeDBError(err, "No se pudieron revisar las facturas del pedido.")
+	} else if invoices > 0 {
+		return utils.Conflict("SALE_HAS_INVOICE", "El pedido ya está facturado; para revertirlo usa una devolución.")
 	}
 
 	items, err := s.saleRepo.ListItems(ctx, tx, saleID)

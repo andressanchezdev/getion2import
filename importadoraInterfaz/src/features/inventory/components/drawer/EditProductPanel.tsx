@@ -5,6 +5,7 @@ import './EditProductPanel.css'
 import { closeDrawerForm } from '@/features/navigation'
 import { useAppDispatch } from '@/global/hooks/store/useRedux'
 import type { Product } from '@/features/shop'
+import { IVA_OPTIONS } from '../../constants/inventory.constants'
 import { useEditProductForm } from '../../hooks/useEditProductForm'
 
 interface EditProductPanelProps {
@@ -64,6 +65,15 @@ export const EditProductPanel: React.FC<EditProductPanelProps> = ({ product }) =
               <option key={m.id} value={m.id}>
                 {m.name}
               </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="edit-product-field">
+          <label htmlFor="edit-prod-iva">IVA del producto</label>
+          <select id="edit-prod-iva" className="edit-product-select" value={form.iva} onChange={(e) => form.setIva(Number(e.target.value))} disabled={saving}>
+            {IVA_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
             ))}
           </select>
         </div>

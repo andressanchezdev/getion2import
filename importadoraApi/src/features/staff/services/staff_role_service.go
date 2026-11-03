@@ -118,7 +118,7 @@ func (s *StaffService) CreateRole(ctx context.Context, actor *middlewares.ActorC
 
 	created, err := s.roleRepo.Create(ctx, s.pool, entity)
 	if err != nil {
-		return nil, utils.Internal("Error al registrar rol.", err)
+		return nil, utils.NormalizeDBError(err, "")
 	}
 
 	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
@@ -176,7 +176,7 @@ func (s *StaffService) UpdateRole(ctx context.Context, actor *middlewares.ActorC
 
 	updated, err := s.roleRepo.Update(ctx, s.pool, current)
 	if err != nil {
-		return nil, utils.Internal("Error al actualizar rol.", err)
+		return nil, utils.NormalizeDBError(err, "El rol no existe.")
 	}
 
 	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{

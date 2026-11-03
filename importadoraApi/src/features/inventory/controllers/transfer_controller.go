@@ -40,6 +40,13 @@ func (c *InventoryController) ListTransfers(ctx echo.Context) error {
 		}
 	}
 
+	var anyWhID *int64
+	if wStr := ctx.QueryParam("warehouseId"); wStr != "" {
+		if w, err := strconv.ParseInt(wStr, 10, 64); err == nil && w > 0 {
+			anyWhID = &w
+		}
+	}
+
 	var status *types.TransferStatus
 	if st := ctx.QueryParam("status"); st != "" {
 		parsed := types.TransferStatus(st)
@@ -50,6 +57,7 @@ func (c *InventoryController) ListTransfers(ctx echo.Context) error {
 		CompanyID:              companyID,
 		OriginWarehouseID:      originWhID,
 		DestinationWarehouseID: destWhID,
+		WarehouseID:            anyWhID,
 		Status:                 status,
 		Page:                   params.Page,
 		PageSize:               params.PageSize,

@@ -178,7 +178,7 @@ func (s *StaffService) CreateEmployee(ctx context.Context, actor *middlewares.Ac
 
 	created, err := s.employeeRepo.Create(ctx, s.pool, entity)
 	if err != nil {
-		return nil, utils.Internal("Error al registrar empleado.", err)
+		return nil, utils.NormalizeDBError(err, "")
 	}
 
 	// Asignar permisos iniciales si se proporcionaron

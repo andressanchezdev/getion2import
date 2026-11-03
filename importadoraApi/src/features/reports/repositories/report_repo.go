@@ -54,10 +54,10 @@ func (r *ReportRepository) GetInventoryReport(ctx context.Context, q db.DBExecut
 	const sql = `
 		SELECT
 			COUNT(DISTINCT s.product_id) AS total_skus,
-			COALESCE(SUM(s.available + s.reserved), 0) AS physical_units,
-			COALESCE(SUM(s.available), 0) AS available_units,
+			COALESCE(SUM(s.available), 0) AS physical_units,
+			COALESCE(SUM(s.available - s.reserved), 0) AS available_units,
 			COALESCE(SUM(s.reserved), 0) AS reserved_units,
-			COALESCE(SUM((s.available + s.reserved) * p.last_cost), 0) AS valuation_cost
+			COALESCE(SUM(s.available * p.last_cost), 0) AS valuation_cost
 		FROM stock s
 		JOIN products p ON p.id = s.product_id
 		WHERE s.company_id = $1
@@ -80,7 +80,7 @@ func (r *ReportRepository) GetInventoryReport(ctx context.Context, q db.DBExecut
 func (r *ReportRepository) GetWalletReport(ctx context.Context, q db.DBExecutor, companyID int64) (*dtos.WalletDashboardReport, error) {
 	const sql = `
 		SELECT
-			COUNT(*) AS total_custs,
+			COUNT(*) FILTER (WHERE credit_enabled) AS total_custs,
 			COALESCE(SUM(CASE WHEN credit_balance < 0 THEN ABS(credit_balance) ELSE 0 END), 0) AS outstanding_debt,
 			COALESCE(SUM(CASE WHEN credit_balance > 0 THEN credit_balance ELSE 0 END), 0) AS store_credit
 		FROM v_customer_credit_summary
@@ -114,7 +114,7 @@ func (r *ReportRepository) GetGeneralReport(ctx context.Context, q db.DBExecutor
 			COALESCE(SUM(total), 0),
 			COALESCE(COUNT(*) FILTER (WHERE status = 'completed'), 0)
 		FROM sales
-		WHERE company_id = $1 AND created_at >= CURRENT_DATE
+		WHERE company_id = $1 AND status <> 'cancelled' AND created_at >= CURRENT_DATE
 	`
 	_ = q.QueryRow(ctx, salesSQL, companyID).Scan(&rpt.TodaySalesCount, &rpt.TodayRevenue, &rpt.TodayCompleted)
 
@@ -131,7 +131,7 @@ func (r *ReportRepository) GetGeneralReport(ctx context.Context, q db.DBExecutor
 	const creditSQL = `
 		SELECT COALESCE(SUM(total), 0)
 		FROM sales
-		WHERE company_id = $1 AND payment_method = 'credit' AND created_at >= CURRENT_DATE
+		WHERE company_id = $1 AND payment_method = 'credit' AND status <> 'cancelled' AND created_at >= CURRENT_DATE
 	`
 	_ = q.QueryRow(ctx, creditSQL, companyID).Scan(&rpt.TodayCredit)
 
@@ -139,8 +139,8 @@ func (r *ReportRepository) GetGeneralReport(ctx context.Context, q db.DBExecutor
 	const transfersSQL = `
 		SELECT
 			COUNT(*),
-			COALESCE(COUNT(*) FILTER (WHERE status = 'received' OR status = 'completed'), 0),
-			COALESCE(COUNT(*) FILTER (WHERE status = 'sent' OR status = 'dispatched'), 0),
+			COALESCE(COUNT(*) FILTER (WHERE status IN ('received', 'completed', 'with_novelty')), 0),
+			COALESCE(COUNT(*) FILTER (WHERE status = 'in_transit'), 0),
 			COALESCE(COUNT(*) FILTER (WHERE status = 'pending'), 0)
 		FROM transfers
 		WHERE company_id = $1 AND created_at >= CURRENT_DATE
@@ -166,7 +166,7 @@ func (r *ReportRepository) GetGeneralReport(ctx context.Context, q db.DBExecutor
 		SELECT
 			p.id, p.code, p.name,
 			COALESCE(SUM(si.quantity), 0) AS units_sold,
-			COALESCE(SUM(si.total), 0) AS total_amount
+			COALESCE(SUM(si.line_total), 0) AS total_amount
 		FROM sale_items si
 		JOIN sales s ON s.id = si.sale_id
 		JOIN products p ON p.id = si.product_id

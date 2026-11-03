@@ -41,6 +41,7 @@ export interface CustomerDto {
 // lo que se manda a PUT /customers/:id para editar (solo se envía lo que se cambia)
 export interface UpdateCustomerBody {
   name?: string
+  lastName?: string
   email?: string
   phone?: string
   status?: string

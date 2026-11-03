@@ -147,7 +147,7 @@ func (s *CustomerService) Create(ctx context.Context, actor *middlewares.ActorCo
 
 	created, err := s.customerRepo.Create(ctx, s.pool, entity)
 	if err != nil {
-		return nil, utils.Internal("Error al registrar cliente.", err)
+		return nil, utils.NormalizeDBError(err, "")
 	}
 
 	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
@@ -269,7 +269,7 @@ func (s *CustomerService) Update(ctx context.Context, actor *middlewares.ActorCo
 
 	updated, err := s.customerRepo.Update(ctx, s.pool, current)
 	if err != nil {
-		return nil, utils.Internal("Error al actualizar cliente.", err)
+		return nil, utils.NormalizeDBError(err, "El cliente no existe.")
 	}
 
 	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{

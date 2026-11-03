@@ -12,12 +12,12 @@ import { ADMIN_ENDPOINTS } from './endpoints/admin.endpoints'
 import { SUPPLIERS_ENDPOINTS } from './endpoints/suppliers.endpoints'
 
 /**
- * Configuración maestra de la API (Backend en Railway)
+ * Configuración maestra de la API (backend en Go; su URL sale de VITE_API_BASE_URL)
  */
 export const API_CONFIG = {
   BASE_URL:
     (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
-    'https://importadora-back-production.up.railway.app',
+    'http://localhost:3001', // ojo: antes caía al backend viejo de Railway; ahora el valor por defecto es el API Go local y en producción se define VITE_API_BASE_URL
   STORAGE_BASE_URL:
     (typeof import.meta !== 'undefined' && import.meta.env?.VITE_STORAGE_BASE_URL) ||
     'https://storage.googleapis.com/importadorapremiumonline/',

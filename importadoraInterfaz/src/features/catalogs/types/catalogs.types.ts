@@ -12,12 +12,14 @@ export interface Brand {
 export interface Category {
   id: number
   name: string
+  description?: string
 }
 
 // ojo: se llama MotoModel (y no Model) para no confundirlo con "modelo" de datos o de TypeScript
 export interface MotoModel {
   id: number
   name: string
+  description?: string
 }
 
 // ---- lo que responde la API en Go (GET /brands, /categories y /models: BrandResponse, CategoryResponse y ModelResponse) ----
@@ -32,6 +34,7 @@ export interface BrandDto {
 export interface CategoryDto {
   id: number
   name: string
+  description?: string | null
   parentId?: number | null
   isActive?: boolean
 }
@@ -39,6 +42,7 @@ export interface CategoryDto {
 export interface ModelDto {
   id: number
   name: string
+  description?: string | null
   isActive?: boolean
 }
 

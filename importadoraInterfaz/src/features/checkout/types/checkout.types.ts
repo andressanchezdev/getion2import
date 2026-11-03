@@ -37,5 +37,6 @@ export interface CheckoutLine {
   stockId: number
   name: string
   quantity: number
-  unitPrice: number
+  unitPrice: number // valor NETO (sin IVA)
+  ivaPercent?: number // IVA del producto (0 = exento); solo para mostrar el total, Go aplica el IVA que tiene guardado cada producto
 }

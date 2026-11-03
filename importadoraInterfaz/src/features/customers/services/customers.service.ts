@@ -9,9 +9,10 @@ import type { Customer, CustomerDetail } from '../types/customers.types'
 
 const { CUSTOMERS } = API_CONFIG.ENDPOINTS
 
-export const fetchCustomersPage = async (ctx: RequestContext, page: number, pageSize: number): Promise<Paginated<Customer>> => {
+// ojo: q lo resuelve el servidor (nombre, documento, correo o teléfono) para que la búsqueda cubra todos los clientes y no solo la página cargada
+export const fetchCustomersPage = async (ctx: RequestContext, page: number, pageSize: number, query = ''): Promise<Paginated<Customer>> => {
   const { data } = await apiClient.get<APIResponse<CustomerDto[] | null>>(CUSTOMERS.LIST, {
-    params: withCompany(ctx.companyId, { page, pageSize }),
+    params: withCompany(ctx.companyId, { page, pageSize, q: query.trim() || undefined }),
   })
   const result = toPaginated(data)
   return { items: result.items.map(toCustomer), meta: result.meta }

@@ -156,6 +156,7 @@ type TransferFilterQuery struct {
 	CompanyID              *int64
 	OriginWarehouseID      *int64
 	DestinationWarehouseID *int64
+	WarehouseID            *int64 // la bodega es origen O destino del traslado
 	Status                 *types.TransferStatus
 	Page                   int
 	PageSize               int

@@ -17,6 +17,7 @@ import (
 	"importadoraApi/src/features/sales/dtos"
 	"importadoraApi/src/features/sales/repositories"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -44,12 +45,8 @@ func (s *SaleService) Create(ctx context.Context, actorCompanyID *int64, actorEm
 		companyID = *req.CompanyID
 	}
 
-	if req.WarehouseID <= 0 {
-		return nil, errors.New("warehouseId es requerido")
-	}
-
-	if len(req.Items) == 0 {
-		return nil, errors.New("la venta o pedido debe tener al menos un ítem")
+	if err := validateCreateSale(req); err != nil {
+		return nil, err
 	}
 
 	tx, err := s.pool.Begin(ctx)
@@ -58,11 +55,12 @@ func (s *SaleService) Create(ctx context.Context, actorCompanyID *int64, actorEm
 	}
 	defer tx.Rollback(ctx)
 
-	// Validar límite de crédito si la venta es a crédito
-	isCredit := req.PaymentCondition != nil && *req.PaymentCondition == types.ConditionCredit
-	if isCredit && req.CustomerID == nil {
-		return nil, errors.New("para ventas a crédito se requiere asignar un cliente")
+	// ojo: si otra transacción tiene bloqueado el stock o la serie, se espera poco y se avisa en vez de dejar la petición colgada
+	if _, err := tx.Exec(ctx, "SET LOCAL lock_timeout = '8s'"); err != nil {
+		return nil, err
 	}
+
+	isCredit := req.PaymentCondition != nil && *req.PaymentCondition == types.ConditionCredit
 
 	type itemComputed struct {
 		stockID      int64
@@ -95,7 +93,10 @@ func (s *SaleService) Create(ctx context.Context, actorCompanyID *int64, actorEm
 
 		locked, err := s.saleRepo.LockStockForSale(ctx, tx, itemReq.StockID, req.WarehouseID)
 		if err != nil {
-			return nil, fmt.Errorf("stock ID %d no encontrado o no pertenece a la bodega %d: %w", itemReq.StockID, req.WarehouseID, err)
+			if errors.Is(err, pgx.ErrNoRows) {
+				return nil, utils.NotFound("STOCK_NOT_FOUND", fmt.Sprintf("La ubicación de stock %d no existe en la bodega %d. Vacía el carrito y vuelve a agregar los productos desde la bodega activa.", itemReq.StockID, req.WarehouseID))
+			}
+			return nil, utils.NormalizeDBError(err, "No se pudo bloquear el stock del producto.")
 		}
 		stID, prodID := locked.ID, locked.ProductID
 		avail, res := locked.Available, locked.Reserved
@@ -104,7 +105,7 @@ func (s *SaleService) Create(ctx context.Context, actorCompanyID *int64, actorEm
 
 		sellable := avail - res
 		if sellable < itemReq.Quantity {
-			return nil, fmt.Errorf("stock insuficiente para el producto '%s' (código %s). Disponible para venta: %d, solicitado: %d", pName, pCode, sellable, itemReq.Quantity)
+			return nil, utils.BadRequest("INSUFFICIENT_STOCK", fmt.Sprintf("Stock insuficiente de '%s' (%s): disponible para venta %d y pediste %d.", pName, pCode, sellable, itemReq.Quantity))
 		}
 
 		unitPrice := 0.0
@@ -169,10 +170,10 @@ func (s *SaleService) Create(ctx context.Context, actorCompanyID *int64, actorEm
 			return nil, fmt.Errorf("error al verificar crédito del cliente: %w", err)
 		}
 		if creditInfo == nil || !creditInfo.CreditEnabled {
-			return nil, errors.New("el cliente no tiene habilitada la línea de crédito")
+			return nil, utils.Unprocessable("CREDIT_DISABLED", "El cliente no tiene habilitada la línea de crédito.")
 		}
 		if grandTotal > creditInfo.AvailableCredit {
-			return nil, fmt.Errorf("el total de la orden ($%.2f) excede el crédito disponible ($%.2f) del cliente", grandTotal, creditInfo.AvailableCredit)
+			return nil, utils.Unprocessable("CREDIT_LIMIT_EXCEEDED", fmt.Sprintf("El total del pedido ($%.2f) excede el crédito disponible del cliente ($%.2f).", grandTotal, creditInfo.AvailableCredit))
 		}
 	}
 
@@ -206,9 +207,12 @@ func (s *SaleService) Create(ctx context.Context, actorCompanyID *int64, actorEm
 			return nil, fmt.Errorf("error al verificar empleado vendedor: %w", err)
 		}
 		if !exists {
-			return nil, errors.New("el empleado asignado como vendedor no existe o no está activo en la compañía")
+			return nil, utils.NotFound("SALESPERSON_NOT_FOUND", "El vendedor elegido no existe o no está activo en la compañía.")
 		}
 		effectiveEmployeeID = *req.SalespersonEmployeeID
+	}
+	if effectiveEmployeeID <= 0 {
+		return nil, utils.BadRequest("SALESPERSON_REQUIRED", "Elige el vendedor al que se asigna el pedido: tu cuenta no está ligada a un empleado.")
 	}
 
 	saleEntity := &repositories.SaleEntity{
@@ -260,14 +264,14 @@ func (s *SaleService) Create(ctx context.Context, actorCompanyID *int64, actorEm
 		}
 	}
 
-	if req.PaymentMethod == types.PaymentTransfer {
-		paymentSerial := fmt.Sprintf("PAG-TRF-%s", createdSale.SerialCode)
-		var custID int64
-		if req.CustomerID != nil {
-			custID = *req.CustomerID
+	if req.PaymentMethod == types.PaymentTransfer && req.CustomerID != nil {
+		// ojo: el pago nace en revisión con la serie de pagos; si falla, todo el pedido se deshace (antes el error se ignoraba y dejaba la transacción abortada)
+		paymentSerial, err := utils.NextSerialCode(ctx, tx, companyID, &whID, types.SeriesPayment, "PAG-")
+		if err != nil {
+			return nil, utils.NormalizeDBError(err, "No se pudo generar el consecutivo del pago.")
 		}
-		if custID > 0 {
-			_ = s.saleRepo.InsertTransferPayment(ctx, tx, companyID, paymentSerial, createdSale.ID, custID, effectiveEmployeeID, grandTotal, req.ProofURL, req.PaymentReference, req.Notes)
+		if err := s.saleRepo.InsertTransferPayment(ctx, tx, companyID, paymentSerial, createdSale.ID, *req.CustomerID, effectiveEmployeeID, grandTotal, req.ProofURL, req.PaymentReference, req.Notes); err != nil {
+			return nil, utils.NormalizeDBError(err, "No se pudo registrar el pago por transferencia.")
 		}
 	}
 

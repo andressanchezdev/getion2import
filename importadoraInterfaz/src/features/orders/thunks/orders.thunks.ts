@@ -7,7 +7,7 @@ import { toast } from '@/global/helpers/feedback/toast'
 import type { NavigationState } from '@/features/navigation'
 import { selectRequestContext, type AuthState } from '@/features/auth'
 import { cancelSale, type CancelSaleInput } from '@/features/shop'
-import { fetchOrderCounts, fetchOrderDetail, fetchOrders, verifyTransferPayment, type OrdersResult } from '../services/orders.service'
+import { advanceSale, fetchOrderCounts, fetchOrderDetail, fetchOrders, verifyTransferPayment, type OrdersResult } from '../services/orders.service'
 import type { OrderDetail, OrdersState, StageCounts } from '../types/orders.types'
 
 type ThunkState = { auth: AuthState; ui: NavigationState; orders: OrdersState }
@@ -35,7 +35,7 @@ export const loadOrdersThunk = createAsyncThunk<OrdersResult, void, Config>('ord
   // null = consulta general de todas las bodegas; number = filtro específico
   const warehouseId = state.orders.selectedWarehouseId ?? undefined
   try {
-    return await fetchOrders(ctx, warehouseId, state.orders.stage, state.orders.channel)
+    return await fetchOrders(ctx, warehouseId, state.orders.stage, state.orders.channel, state.orders.query)
   } catch (error) {
     return rejectWithValue(getErrorMessage(error, 'No se pudieron cargar los pedidos.'))
   }
@@ -63,6 +63,22 @@ export const cancelOrderThunk = createAsyncThunk<void, CancelSaleInput, Config>(
     dispatch(loadOrderCountsThunk())
   } catch (error) {
     return rejectWithValue(getErrorMessage(error, 'No se pudo anular el pedido.'))
+  }
+})
+
+const ADVANCE_DONE = { pick: 'Pedido en alistamiento.', pack: 'Pedido en empaque.', invoice: 'Factura emitida.', dispatch: 'Pedido despachado.', send: 'Pedido marcado como enviado.' } as const
+
+// lleva el pedido a la siguiente etapa y recarga la bandeja y los conteos; el mensaje de Go (409, 400) llega tal cual
+export const advanceOrderThunk = createAsyncThunk<void, { saleId: number; action: keyof typeof ADVANCE_DONE }, Config>('orders/advance', async ({ saleId, action }, { dispatch, rejectWithValue }) => {
+  try {
+    await advanceSale(saleId, action)
+    toast.success(ADVANCE_DONE[action])
+    dispatch(loadOrdersThunk())
+    dispatch(loadOrderCountsThunk())
+  } catch (error) {
+    const message = getErrorMessage(error, 'No se pudo avanzar el pedido.')
+    toast.error(message)
+    return rejectWithValue(message)
   }
 })
 

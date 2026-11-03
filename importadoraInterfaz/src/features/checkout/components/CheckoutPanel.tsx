@@ -22,6 +22,11 @@ export const CheckoutPanel: React.FC<{ payload: CheckoutPayload }> = ({ payload 
         {flow.lines?.length === 0 && <p className="checkout-hint">No hay productos para continuar.</p>}
         {onPayment ? <PaymentStep flow={flow} /> : <CustomerStep flow={flow} />}
         {flow.error && <div className="form-field-error-msg">{flow.error}</div>}
+        {!flow.canContinue && flow.blockers.length > 0 && flow.customer && (
+          <ul className="checkout-blockers" aria-live="polite">
+            {flow.blockers.map((message) => <li key={message}>{message}</li>)}
+          </ul>
+        )}
       </div>
 
       <div className="checkout-footer">

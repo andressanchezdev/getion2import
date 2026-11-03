@@ -24,6 +24,7 @@ export const customersSlice = createSlice({
     },
     setCustomersQuery: (state, action: PayloadAction<string>) => {
       state.list.query = action.payload
+      state.list.page = 1
     },
     // abre (o cierra con null) el panel de un cliente
     selectCustomer: (state, action: PayloadAction<number | null>) => {

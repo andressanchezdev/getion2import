@@ -11,7 +11,7 @@ type Flow = ReturnType<typeof useCheckoutFlow>
 export const PaymentStep: React.FC<{ flow: Flow }> = ({ flow }) => {
   const { customer } = flow
   if (!customer || !flow.lines) return null
-  const discount = flow.total - flow.payable
+  const { totals } = flow
 
   return (
     <div className="checkout-section">
@@ -25,9 +25,10 @@ export const PaymentStep: React.FC<{ flow: Flow }> = ({ flow }) => {
         ))}
       </ul>
       <div className="checkout-totals">
-        <span>Subtotal</span><b>{formatPesos(flow.total)}</b>
-        {discount > 0 && (<><span>Descuento del cliente ({customer.discountPercent} %)</span><b>-{formatPesos(discount)}</b></>)}
-        <span>Total a pagar</span><b className="checkout-total">{formatPesos(flow.payable)}</b>
+        <span>Subtotal (neto)</span><b>{formatPesos(totals.subtotal)}</b>
+        {totals.discount > 0 && (<><span>Descuento del cliente ({customer.discountPercent} %)</span><b>-{formatPesos(totals.discount)}</b></>)}
+        <span>IVA</span><b>{formatPesos(totals.iva)}</b>
+        <span>Total a pagar</span><b className="checkout-total">{formatPesos(totals.total)}</b>
       </div>
 
       <h4 className="checkout-title">Forma de pago</h4>

@@ -36,13 +36,11 @@ export const CreditClientsToolbar: React.FC = () => {
         onChange={(value) => dispatch(setStatusFilter(value as 'all' | CreditStatus))}
       />
 
-      <button
-        type="button"
-        className="credit-table-enable-credit-btn"
-        onClick={() => dispatch(openDrawerForm({ kind: 'enableCredit' }))}
-      >
-        + Habilitar crédito
-      </button>
+      <div className="credit-table-toolbar-actions">
+        <button type="button" className="btn-primary" onClick={() => dispatch(openDrawerForm({ kind: 'enableCredit' }))}>
+          + Habilitar crédito
+        </button>
+      </div>
     </div>
   )
 }

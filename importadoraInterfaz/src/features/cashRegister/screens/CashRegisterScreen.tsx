@@ -42,7 +42,7 @@ export const CashRegisterScreen: React.FC = () => {
 
       <CashOrdersPanel
         shiftActions={
-          <div className="cash-shift-actions">
+          <>
             <button
               type="button"
               className="btn-secondary"
@@ -55,8 +55,9 @@ export const CashRegisterScreen: React.FC = () => {
               type="button"
               className="btn-secondary"
               onClick={() => dispatch(openDrawerForm({ kind: 'createAbono', payload: { onDone: cash.reload } }))}
+              title="Registrar el abono de un cliente a su crédito"
             >
-              Registrar abono de cliente
+              Registrar abono
             </button>
             <CashShiftSlider
               isOpen={cash.isOpen}
@@ -66,7 +67,7 @@ export const CashRegisterScreen: React.FC = () => {
               onRequestOpen={cash.requestOpen}
               onRequestClose={cash.requestClose}
             />
-          </div>
+          </>
         }
       />
     </div>

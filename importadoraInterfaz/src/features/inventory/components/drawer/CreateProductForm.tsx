@@ -6,6 +6,7 @@ import '@/global/components/UI/molecules/form/DrawerFormShell.css'
 import { closeDrawerForm } from '@/features/navigation'
 import { MoneyInput } from '@/global/components/UI/molecules/form'
 import { useAppDispatch } from '@/global/hooks/store/useRedux'
+import { IVA_OPTIONS } from '../../constants/inventory.constants'
 import { useCreateProductForm } from '../../hooks/useCreateProductForm'
 
 // niveles de precio con el nombre que usa la lista de precios del producto
@@ -122,6 +123,15 @@ export const CreateProductForm: React.FC = () => {
           <div className="drawer-form-field">
             <label className="drawer-form-label" htmlFor="product-cost">Último costo</label>
             <MoneyInput id="product-cost" className="drawer-form-control" value={form.lastCost || ''} placeholder="0" onValueChange={(digits) => form.setLastCost(Number(digits || 0))} disabled={saving} />
+          </div>
+          <div className="drawer-form-field">
+            <label className="drawer-form-label" htmlFor="product-iva">IVA del producto</label>
+            <select id="product-iva" className="drawer-form-control" value={form.iva} onChange={(e) => form.setIva(Number(e.target.value))} disabled={saving}>
+              {IVA_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+            <small className="drawer-form-hint">Las tarifas se escriben netas (sin IVA); al vender se les suma este porcentaje.</small>
           </div>
           <div className="drawer-form-grid">
             {PRICE_TIERS.map((tier) => (

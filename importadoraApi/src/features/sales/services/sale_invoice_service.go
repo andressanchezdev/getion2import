@@ -27,15 +27,23 @@ func (s *SaleService) IssueInvoice(ctx context.Context, saleID, employeeID int64
 		return nil, err
 	}
 	if sale == nil {
-		return nil, errors.New("venta no encontrada")
+		return nil, utils.NotFound("SALE_NOT_FOUND", "El pedido no existe.")
 	}
-	if sale.Status == types.SaleCancelled {
-		return nil, errors.New("no se puede facturar una venta cancelada")
+	if err := ensureOpen(sale, "facturar"); err != nil {
+		return nil, err
+	}
+	if err := ensureStageFor(sale, "invoice"); err != nil {
+		return nil, err
+	}
+	if existing, err := s.saleRepo.CountInvoices(ctx, tx, saleID); err != nil {
+		return nil, utils.NormalizeDBError(err, "No se pudieron revisar las facturas del pedido.")
+	} else if existing > 0 {
+		return nil, utils.Conflict("ALREADY_INVOICED", "El pedido ya tiene factura emitida.")
 	}
 
 	whFactID, err := s.saleRepo.FindWarehouseFacturation(ctx, tx, sale.WarehouseID)
 	if err != nil {
-		return nil, fmt.Errorf("la bodega %d no tiene configuración de facturación activa: %w", sale.WarehouseID, err)
+		return nil, utils.Unprocessable("WAREHOUSE_WITHOUT_BILLING", fmt.Sprintf("La bodega %d no tiene configuración de facturación activa; configúrala en Facturación antes de facturar.", sale.WarehouseID))
 	}
 
 	whID := sale.WarehouseID
@@ -60,7 +68,9 @@ func (s *SaleService) IssueInvoice(ctx context.Context, saleID, employeeID int64
 		return nil, fmt.Errorf("error al registrar factura: %w", err)
 	}
 
-	_ = s.saleRepo.UpdateStageBy(ctx, tx, saleID, types.StageInvoicing, types.SaleOpen, &employeeID)
+	if err := s.saleRepo.UpdateStageBy(ctx, tx, saleID, types.StageInvoicing, types.SaleOpen, &employeeID); err != nil {
+		return nil, utils.NormalizeDBError(err, "No se pudo mover el pedido a facturación.")
+	}
 
 	// al facturar queda la fecha de venta; si la venta es a crédito, el cliente queda debiendo el total en el libro de crédito
 	// (los abonos verificados lo van descontando; lo que ya pagó al inicio también cuenta como abono)
@@ -73,7 +83,9 @@ func (s *SaleService) IssueInvoice(ctx context.Context, saleID, employeeID int64
 			return nil, fmt.Errorf("error al asentar la deuda de la venta a crédito: %w", err)
 		}
 	}
-	_ = s.saleRepo.AdvanceItemsStage(ctx, tx, saleID, types.StageInvoicing, employeeID, "invoice")
+	if err := s.saleRepo.AdvanceItemsStage(ctx, tx, saleID, types.StageInvoicing, employeeID, "invoice"); err != nil {
+		return nil, utils.NormalizeDBError(err, "No se pudieron actualizar los renglones del pedido.")
+	}
 
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err

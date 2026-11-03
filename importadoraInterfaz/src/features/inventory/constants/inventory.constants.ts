@@ -21,3 +21,11 @@ export const PRODUCT_STOCK_PAGE_SIZE = 100
 
 // resultados que se muestran al elegir un producto del catálogo para asignarlo a una ubicación
 export const CATALOG_SEARCH_LIMIT = 8
+
+// IVA que se puede asignar a un producto: la tarifa del producto es el valor neto y el IVA se suma aparte al vender (0 = exento)
+export const IVA_OPTIONS = [
+  { value: 19, label: '19 %' },
+  { value: 5, label: '5 %' },
+  { value: 0, label: 'Exento (0 %)' },
+]
+export const DEFAULT_IVA = 19

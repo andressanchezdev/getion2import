@@ -249,3 +249,13 @@
   border-top: 1px solid var(--color-border);
   background-color: var(--color-bg-muted);
 }
+/* lo que falta para continuar: lista corta bajo el formulario */
+.checkout-blockers {
+  margin: var(--space-3) 0 0;
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-6);
+  border: 1px solid var(--c-yellow-100);
+  border-radius: var(--radius-md);
+  background: var(--c-yellow-50);
+  color: var(--c-yellow-700);
+  font-size: var(--text-sm);
+}

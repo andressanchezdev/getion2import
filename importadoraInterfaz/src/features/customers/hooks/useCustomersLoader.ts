@@ -1,10 +1,10 @@
 // useCustomersLoader · pide la lista de clientes al backend la primera vez y cada vez que cambia la página
 // conecta con: CustomersScreen (lo usa al montarse); despacha customers.thunks y lee customers.selectors y la sesión de auth
-// ojo: solo corre con sesión (companyId); la búsqueda por texto NO dispara una carga (se filtra en pantalla)
+// ojo: solo corre con sesión (companyId); la búsqueda por texto sí dispara una carga (la resuelve el servidor y vuelve a la página 1)
 import { useEffect } from 'react'
 import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { selectCurrentUser } from '@/features/auth'
-import { selectCustomersPage } from '../selectors/customers.selectors'
+import { selectCustomersPage, selectCustomersQuery } from '../selectors/customers.selectors'
 import { loadCustomersThunk } from '../thunks/customers.thunks'
 
 export const useCustomersLoader = (): void => {
@@ -12,8 +12,9 @@ export const useCustomersLoader = (): void => {
   const user = useAppSelector(selectCurrentUser)
   const companyId = user?.companyId
   const page = useAppSelector(selectCustomersPage)
+  const query = useAppSelector(selectCustomersQuery)
 
   useEffect(() => {
     if (companyId) dispatch(loadCustomersThunk())
-  }, [dispatch, companyId, page])
+  }, [dispatch, companyId, page, query])
 }

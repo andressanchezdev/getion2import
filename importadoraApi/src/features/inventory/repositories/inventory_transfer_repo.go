@@ -118,6 +118,12 @@ func (r *InventoryRepository) ListTransfers(ctx context.Context, q db.DBExecutor
 		argIdx++
 	}
 
+	if f.WarehouseID != nil {
+		where = append(where, fmt.Sprintf("(t.origin_warehouse_id = $%d OR t.destination_warehouse_id = $%d)", argIdx, argIdx))
+		args = append(args, *f.WarehouseID)
+		argIdx++
+	}
+
 	if f.Status != nil && *f.Status != "" {
 		where = append(where, fmt.Sprintf("t.status = $%d", argIdx))
 		args = append(args, *f.Status)

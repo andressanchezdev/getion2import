@@ -70,6 +70,7 @@ describe('toOrderRow', () => {
       paidAmount: 100000,
       creditAmount: 0,
       confirmed: false,
+      currentStage: 'picking',
     })
   })
 

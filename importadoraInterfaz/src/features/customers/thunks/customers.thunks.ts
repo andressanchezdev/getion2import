@@ -24,7 +24,7 @@ export const loadCustomersThunk = createAsyncThunk<CustomersResult, void, { stat
     const ctx = selectRequestContext(state)
     if (!ctx) return rejectWithValue('No hay una sesión activa.')
     try {
-      const page = await fetchCustomersPage(ctx, state.customers.list.page, CUSTOMERS_PAGE_SIZE)
+      const page = await fetchCustomersPage(ctx, state.customers.list.page, CUSTOMERS_PAGE_SIZE, state.customers.list.query)
       return { customers: page.items, meta: page.meta }
     } catch (error) {
       return rejectWithValue(getErrorMessage(error, 'No se pudieron cargar los clientes.'))

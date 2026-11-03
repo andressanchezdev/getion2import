@@ -11,6 +11,11 @@ import type { OrderChannelFilter, OrderDetail, OrderRow, OrderStageKey, StageCou
 
 const { SALES, PAYMENTS } = API_CONFIG.ENDPOINTS
 
+// pasa el pedido a la siguiente etapa (alistar, empacar, facturar, despachar o enviar); Go rechaza con 409 si no corresponde
+export const advanceSale = async (saleId: number, action: 'pick' | 'pack' | 'invoice' | 'dispatch' | 'send'): Promise<void> => {
+  await apiClient.post(SALES.ACTION(saleId, action), {})
+}
+
 // parámetros de una etapa: solo pedidos abiertos de la bodega
 const stageParams = (ctx: RequestContext, warehouseId: number | undefined, stage: OrderStageKey, page: number, pageSize: number) =>
   withCompany(ctx.companyId, { warehouseId: warehouseId || undefined, stage, page, pageSize })
@@ -36,10 +41,12 @@ export const fetchOrders = async (
   ctx: RequestContext,
   warehouseId: number | undefined,
   stage: OrderStageKey,
-  channel: OrderChannelFilter
+  channel: OrderChannelFilter,
+  search = ''
 ): Promise<OrdersResult> => {
+  // ojo: el texto lo filtra el servidor (pedido, cliente o vendedor) para que la búsqueda cubra todos los pedidos de la etapa y no solo los 50 de la pantalla
   const { data } = await apiClient.get<APIResponse<SaleDto[] | null>>(SALES.LIST, {
-    params: stageParams(ctx, warehouseId, stage, 1, ORDERS_PAGE_SIZE),
+    params: { ...stageParams(ctx, warehouseId, stage, 1, ORDERS_PAGE_SIZE), search: search.trim() || undefined },
   })
   const page = toPaginated(data)
   const rows = page.items.map((dto) => toOrderRow(dto, stage))

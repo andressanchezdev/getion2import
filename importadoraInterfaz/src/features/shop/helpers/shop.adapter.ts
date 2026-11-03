@@ -81,6 +81,7 @@ export const toProduct = (dto: ProductDto, warehouseId?: number, stock?: Product
         isNew,
         createdAt: dto.createdAt || undefined,
         status: (dto.status as Product['status']) ?? 'active',
+        iva: dto.iva ?? 0,
     }
 }
 

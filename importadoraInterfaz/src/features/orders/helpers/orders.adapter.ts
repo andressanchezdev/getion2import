@@ -60,6 +60,7 @@ export const toOrderRow = (dto: SaleDto, stage: OrderStageKey): OrderRow => ({
   paidAmount: money(dto.paidTotal),
   creditAmount: money(dto.creditAmount),
   confirmed: text(dto.currentStage) === 'verification_ok',
+  currentStage: text(dto.currentStage),
 })
 
 // convierte un renglón de pedido de la API en el que usa la app

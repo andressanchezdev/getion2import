@@ -4,6 +4,8 @@ package controllers
 // conecta con: los services y dtos de devoluciones y core/utils (respuestas y errores); los registra routes
 
 import (
+	"strconv"
+
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
@@ -69,19 +71,19 @@ func (ctrl *ReturnController) List(c echo.Context) error {
 	}
 
 	if sid := c.QueryParam("saleId"); sid != "" {
-		if id, err := utils.ParamInt64(c, "saleId"); err == nil {
+		if id, err := strconv.ParseInt(c.QueryParam("saleId"), 10, 64); err == nil && id > 0 {
 			f.SaleID = &id
 		}
 	}
 
 	if cid := c.QueryParam("customerId"); cid != "" {
-		if id, err := utils.ParamInt64(c, "customerId"); err == nil {
+		if id, err := strconv.ParseInt(c.QueryParam("customerId"), 10, 64); err == nil && id > 0 {
 			f.CustomerID = &id
 		}
 	}
 
 	if wid := c.QueryParam("warehouseId"); wid != "" {
-		if id, err := utils.ParamInt64(c, "warehouseId"); err == nil {
+		if id, err := strconv.ParseInt(c.QueryParam("warehouseId"), 10, 64); err == nil && id > 0 {
 			f.WarehouseID = &id
 		}
 	}

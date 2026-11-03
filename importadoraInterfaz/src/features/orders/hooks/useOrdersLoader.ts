@@ -12,16 +12,18 @@ export const useOrdersLoader = (): void => {
   const activeWarehouseId = useAppSelector((state) => state.ui.activeWarehouseId)
   const stage = useAppSelector((state) => state.orders.stage)
   const channel = useAppSelector((state) => state.orders.channel)
+  const query = useAppSelector((state) => state.orders.query)
+  const selectedWarehouseId = useAppSelector((state) => state.orders.selectedWarehouseId)
 
   const ready = true
 
   useEffect(() => {
     if (!hasSession || !ready) return
     dispatch(loadOrderCountsThunk())
-  }, [dispatch, hasSession, ready, activeWarehouseId])
+  }, [dispatch, hasSession, ready, activeWarehouseId, selectedWarehouseId])
 
   useEffect(() => {
     if (!hasSession || !ready) return
     dispatch(loadOrdersThunk())
-  }, [dispatch, hasSession, ready, activeWarehouseId, stage, channel])
+  }, [dispatch, hasSession, ready, activeWarehouseId, selectedWarehouseId, stage, channel, query])
 }

@@ -70,7 +70,7 @@ describe('loadCustomersThunk', () => {
     const { store, dispatch } = makeStore()
     store.dispatch(setCustomersPage(2))
     await dispatch(loadCustomersThunk())
-    expect(fetchCustomersPage).toHaveBeenCalledWith(ctx, 2, 20)
+    expect(fetchCustomersPage).toHaveBeenCalledWith(ctx, 2, 20, '')
     expect(store.getState().customers.list).toMatchObject({ status: 'succeeded', meta })
     expect(store.getState().customers.list.items).toHaveLength(1)
   })

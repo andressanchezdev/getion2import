@@ -12,7 +12,7 @@ import type { OrderActionKey } from '../../helpers/orders.actions'
 import { copyOrderSerial } from '../../helpers/orders.clipboard'
 import { selectOpenOrderId, selectOrdersList, selectVisibleOrders } from '../../selectors/orders.selectors'
 import { openOrder } from '../../slices/orders.slice'
-import { loadOrdersThunk } from '../../thunks/orders.thunks'
+import { advanceOrderThunk, loadOrdersThunk } from '../../thunks/orders.thunks'
 import type { OrderRow } from '../../types/orders.types'
 import { dateLabel, paymentLabel } from '../../helpers/orders.labels'
 import { OrderRowActions } from './OrderRowActions'
@@ -37,7 +37,9 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({ onCancel, extraActions
   const orders = useAppSelector(selectVisibleOrders)
   const { pageItems, meta, setPage } = usePagedList(orders, orders)
   const openId = useAppSelector(selectOpenOrderId)
-  const canCancel = usePermissions().canPerformAction('shop', 'orders', 'delete')
+  const { canPerformAction } = usePermissions()
+  const canCancel = canPerformAction('shop', 'orders', 'delete')
+  const canAdvance = canPerformAction('shop', 'orders', 'update')
 
   // lo que se dice en lugar de las filas: cargando, error, nada en la etapa o nada que coincida con la búsqueda
   const message = (() => {
@@ -51,7 +53,8 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({ onCancel, extraActions
   const handleAction = (key: OrderActionKey, order: OrderRow) => {
     if (key === 'detail') dispatch(openOrder(order.id))
     else if (key === 'copy') copyOrderSerial(order.serial)
-    else onCancel(order)
+    else if (key === 'cancel') onCancel(order)
+    else dispatch(advanceOrderThunk({ saleId: order.id, action: key }))
   }
 
   return (
@@ -124,7 +127,7 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({ onCancel, extraActions
                   <td>{dateLabel(order.createdAt)}</td>
                   <td className="orders-table-actions">
                     {extraActions && <span className="orders-table-extra" onClick={(e) => e.stopPropagation()}>{extraActions(order)}</span>}
-                    <OrderRowActions order={order} canCancel={canCancel} onAction={(key) => handleAction(key, order)} />
+                    <OrderRowActions order={order} canCancel={canCancel} canAdvance={canAdvance} onAction={(key) => handleAction(key, order)} />
                   </td>
                 </tr>
               ))
