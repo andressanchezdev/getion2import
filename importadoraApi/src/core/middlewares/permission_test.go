@@ -1,0 +1,68 @@
+package middlewares
+
+// permission_test · pruebas de RequirePermission y RequireActors: el empleado necesita el permiso exacto, administradores y superadministradores pasan siempre
+// conecta con: auth_middleware.go (RequirePermission y RequireActors)
+
+import (
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	"importadoraApi/src/core/types"
+
+	"github.com/labstack/echo/v4"
+)
+
+// run ejecuta el middleware con un actor puesto en el contexto y devuelve si dejó pasar y el error que dio
+func run(mw echo.MiddlewareFunc, actor *ActorContext) (passed bool, err error) {
+	e := echo.New()
+	c := e.NewContext(httptest.NewRequest(http.MethodGet, "/", nil), httptest.NewRecorder())
+	if actor != nil {
+		c.Set(ActorContextKey, actor)
+	}
+	handler := mw(func(echo.Context) error {
+		passed = true
+		return nil
+	})
+	err = handler(c)
+	return passed, err
+}
+
+// TestRequirePermission revisa quién pasa según su tipo de actor y sus permisos.
+func TestRequirePermission(t *testing.T) {
+	mw := RequirePermission("roles", "edit")
+	cases := []struct {
+		name  string
+		actor *ActorContext
+		pass  bool
+	}{
+		{"sin sesión no pasa", nil, false},
+		{"empleado sin el permiso no pasa", &ActorContext{ActorType: types.ActorEmployee, Permissions: map[string]bool{"roles:view": true}}, false},
+		{"empleado sin ningún permiso no pasa", &ActorContext{ActorType: types.ActorEmployee}, false},
+		{"empleado con el permiso exacto pasa (el rol no importa)", &ActorContext{ActorType: types.ActorEmployee, Permissions: map[string]bool{"roles:edit": true}}, true},
+		{"administrador pasa siempre", &ActorContext{ActorType: types.ActorAdmin}, true},
+		{"superadministrador pasa siempre", &ActorContext{ActorType: types.ActorSuperadmin}, true},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			passed, err := run(mw, c.actor)
+			if passed != c.pass {
+				t.Fatalf("pasó = %v, esperaba %v (error: %v)", passed, c.pass, err)
+			}
+			if !c.pass && err == nil {
+				t.Fatal("al no pasar debía devolver un error")
+			}
+		})
+	}
+}
+
+// TestRequireActors revisa que solo pasen los tipos de actor permitidos.
+func TestRequireActors(t *testing.T) {
+	mw := RequireActors(types.ActorSuperadmin, types.ActorAdmin)
+	if passed, _ := run(mw, &ActorContext{ActorType: types.ActorEmployee, Permissions: map[string]bool{"roles:edit": true}}); passed {
+		t.Fatal("un empleado no debe pasar aunque tenga permisos")
+	}
+	if passed, _ := run(mw, &ActorContext{ActorType: types.ActorAdmin}); !passed {
+		t.Fatal("un administrador debe pasar")
+	}
+}

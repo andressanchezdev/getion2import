@@ -7,26 +7,69 @@ export interface Warehouse {
     id: string
     name: string
     code?: string
-    isDefault?: boolean // bodega principal (isMain en el backend)
+    isDefault?: boolean // bodega principal (la API en Go no la marca: queda sin definir y se usa la primera)
+    city?: string
     address?: string
+    phone?: string
+    description?: string
+    managerEmployeeId?: number
+    managerName?: string
+    isActive?: boolean
+    locationCount?: number // ubicaciones de la bodega (solo las trae la lista de gestión)
+    skuCount?: number // productos distintos con existencias
+}
+
+// lo que responde GET /warehouses en la API en Go (WarehouseResponse)
+export interface WarehouseDto {
+    id: number
+    companyId?: number
+    code?: string
+    name: string
+    city?: string
+    address?: string
+    phone?: string
+    description?: string
+    managerEmployeeId?: number
+    managerName?: string
+    isActive?: boolean
+    locationCount?: number
+    skuCount?: number
+}
+
+export interface CreateWarehouseInput {
+    code: string
+    name: string
+    city?: string
+    address?: string
+    phone?: string
+    description?: string
+    managerEmployeeId?: number
+}
+
+export interface UpdateWarehouseInput {
+    code?: string
+    name?: string
+    city?: string
+    address?: string
+    phone?: string
+    description?: string
+    managerEmployeeId?: number
     isActive?: boolean
 }
 
-// lo que responde POST /warehouses (Swagger: models.WarehouseResponse); las series de facturación se usarán al integrar ventas
-export interface WarehouseDto {
-    warehouseId: number
-    name: string
-    address?: string
-    isMain?: boolean
-    isActive?: boolean
-    electronicBillingSerial?: number
-    remissionSerial?: number
-    saleSerial?: number
-    transferSerial?: number
+// a qué bodega se le acaba de dar de alta o se le guardaron cambios (la tabla lo marca un momento)
+export interface RecentWarehouseChange {
+    id: string
+    kind: 'new' | 'updated'
 }
 
 export interface WarehousesState {
-    items: Warehouse[]
+    items: Warehouse[] // las activas: las usan el selector de bodega y el resto de pantallas
     status: LoadStatus
     error: string | null
+    managed: Warehouse[] // todas (también las inactivas) con sus totales: las usa la pantalla de gestión
+    managedStatus: LoadStatus
+    managedError: string | null
+    saving: boolean // hay un cambio en curso (guardar o cambiar el estado)
+    recent: RecentWarehouseChange | null
 }

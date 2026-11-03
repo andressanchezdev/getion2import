@@ -1,5 +1,8 @@
 package services
 
+// recycle_bin_service.go · reglas de negocio de papelera de reciclaje: valida permisos, compañía y datos, coordina las transacciones y arma las respuestas
+// conecta con: los repositories y dtos de papelera de reciclaje; los llama el controller y la conexión llega del contenedor
+
 import (
 	"context"
 	"encoding/json"
@@ -21,6 +24,7 @@ type RecycleBinService struct {
 	auditRepo      *authRepos.AuditRepository
 }
 
+// NewRecycleBinService crea el servicio con las piezas que necesita para funcionar.
 func NewRecycleBinService(
 	pool *pgxpool.Pool,
 	recycleBinRepo *repositories.RecycleBinRepository,
@@ -33,6 +37,7 @@ func NewRecycleBinService(
 	}
 }
 
+// List devuelve los elementos de la papelera paginados según los filtros, limitados a lo que el usuario puede ver.
 func (s *RecycleBinService) List(ctx context.Context, actor *middlewares.ActorContext, f dtos.RecycleBinFilterQuery) ([]dtos.RecycleBinItemResponse, *utils.PaginatorMetadata, error) {
 	if actor == nil {
 		return nil, nil, utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
@@ -75,6 +80,7 @@ func (s *RecycleBinService) List(ctx context.Context, actor *middlewares.ActorCo
 	return resp, &meta, nil
 }
 
+// Restore restaura un elemento de la papelera validando que sea de la compañía del usuario y deja el cambio en auditoría.
 func (s *RecycleBinService) Restore(ctx context.Context, actor *middlewares.ActorContext, id int64, ip, ua string) error {
 	if actor == nil {
 		return utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")

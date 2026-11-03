@@ -1,85 +1,68 @@
-// orders.api.types · lo que responde el backend en pedidos: conteos por etapa (POST /management), lista (POST /management/saleOrders) y detalle (POST /management/saleId)
+// orders.api.types · lo que responde la API en Go en pedidos: la lista (GET /sales), el detalle (GET /sales/:id) y los pagos de un pedido (GET /payments?saleId=)
 // conecta con: orders.adapter (los convierte a los tipos de la app) y orders.service (los pide)
-// ojo: nombres tal cual del backend, verificados con datos reales en la versión anterior (feature management); los campos de itemInformation y payments no están documentados al detalle, por eso son opcionales
-export interface OrderCountsDto {
-  Verification?: number
-  Picking?: number
-  Packing?: number
-  Invoicing?: number
-  Dispatch?: number
-  Sent?: number
-}
+// ojo: nombres tal cual del backend (SaleResponse, SaleItemResponse y PaymentResponse); la lista no trae los renglones, el detalle sí
+// ojo: un pedido y una venta son lo mismo en la API: es un pedido mientras no ha llegado a despacho y está abierto; la etapa actual es currentStage
 
-export interface OrderPersonDto {
-  userId?: number
-  name?: string
-  lastName?: string
-  identification?: string
-  email?: string
-  priceType?: string
-}
+// las etapas que tiene un pedido en la API (verification → picking → packing → invoicing → dispatch → sent); cancelled si se anuló
+export type SaleStageDto = 'verification' | 'picking' | 'packing' | 'invoicing' | 'dispatch' | 'sent' | 'cancelled' | string
 
-// una fila de POST /management/saleOrders
-export interface OrderListItemDto {
-  saleId: number
-  serialCode?: number
-  paymentMethod?: string
-  totalAmount?: number
-  createdAt?: string
-  isPause?: number
-  verifiedTransaction?: number
-  verifiedLocation?: number
-  customerInformation?: OrderPersonDto | null
-  sellerInformation?: OrderPersonDto | null
-}
-
-export interface OrderItemInfoDto {
-  code?: string
-  description?: string
-  brandName?: string
-  categoryName?: string
-  modelName?: string
-}
-
-export interface OrderItemDto {
-  itemId?: number
+export interface SaleItemDto {
+  id: number
   productId: number
+  stockId: number
+  productCode: string
+  productName: string
   quantity: number
-  price?: number
-  discount?: number
-  reservedQuantity?: number
-  itemInformation?: OrderItemInfoDto | null
+  unitPrice: number
+  discount: number
+  lineTotal: number
 }
 
-export interface OrderPaymentDto {
-  paymentId?: number
-  amount?: number
+export interface SaleDto {
+  id: number
+  serialCode: string // ej. PD-1234
+  customerId?: number | null
+  customerName?: string | null
+  employeeId?: number
+  employeeName?: string
+  warehouseId?: number
+  warehouseName?: string
+  priceTier?: string
   paymentMethod?: string
-  status?: string
-  created_at?: string
+  immediatePicking?: boolean
+  status?: string // 'open' | 'completed' | 'cancelled'
+  currentStage?: SaleStageDto
+  subtotal?: number
+  discountTotal?: number
+  ivaTotal?: number
+  total?: number
+  paidTotal?: number
+  creditAmount?: number
+  saleAt?: string | null
+  cancelReason?: string | null
+  paymentProofUrl?: string | null
+  paymentReference?: string | null
+  notes?: string | null
+  createdAt?: string
+  updatedAt?: string
+  items?: SaleItemDto[] | null
 }
 
-// POST /management/saleId: la venta con su cliente, vendedor y líneas; los pagos van aparte
-export interface OrderDetailDto {
-  sale: {
-    saleId: number
-    serialCode?: number
-    invoiceStatus?: string
-    paymentMethod?: string
-    totalAmount?: number
-    status?: string
-    saleType?: string
-    saleChannel?: string
-    isPause?: number
-    isCancelled?: number
-    createdAt?: string
-    updateAt?: string
-    verifiedTransaction?: number
-    verifiedLocation?: number
-    shippingCost?: number
-    customerInformation?: OrderPersonDto | null
-    sellerInformation?: OrderPersonDto | null
-    saleItems?: OrderItemDto[] | null
-  }
-  payments?: OrderPaymentDto[] | null
+export interface SalePaymentDto {
+  id: number
+  method: string
+  amount: number
+  status: string
+  proofUrl?: string | null
+  reference?: string | null
+  createdAt?: string
+}
+
+// una fila de GET /sales/:id/history
+export interface StageHistoryDto {
+  stage: string
+  employeeName?: string | null
+  enteredAt: string
+  leftAt?: string | null
+  minutes?: number
 }

@@ -10,10 +10,7 @@ export const ShopCatalogFilters: React.FC<ShopCatalogFiltersProps> = ({ resultsC
     <div className="shop-catalog-filter-row">
       {/* Resumen de Resultados y Estado de Bodega */}
       <div className="shop-catalog-results-summary">
-        <span className="shop-catalog-results-count">
-          Mostrando <strong>{resultsCount}</strong> de{' '}
-          {totalCount} repuestos
-        </span>
+        Mostrando {resultsCount} de {totalCount} repuestos
       </div>
     </div>
   )

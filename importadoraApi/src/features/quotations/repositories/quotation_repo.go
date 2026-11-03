@@ -1,5 +1,8 @@
 package repositories
 
+// quotation_repo.go · acceso a la base de cotizaciones: aquí vive el SQL; cada método recibe la conexión o la transacción
+// conecta con: core/db (DBExecutor) y los dtos de cotizaciones; los usan los services de cotizaciones
+
 import (
 	"context"
 	"errors"
@@ -50,10 +53,12 @@ type QuotationItemEntity struct {
 
 type QuotationRepository struct{}
 
+// NewQuotationRepository crea el repositorio; no guarda estado, cada método recibe la conexión o transacción.
 func NewQuotationRepository() *QuotationRepository {
 	return &QuotationRepository{}
 }
 
+// FindByID busca la cotización por su id (nil si no existe).
 func (r *QuotationRepository) FindByID(ctx context.Context, q db.DBExecutor, id int64) (*QuotationEntity, error) {
 	const sql = `
 		SELECT
@@ -86,6 +91,7 @@ func (r *QuotationRepository) FindByID(ctx context.Context, q db.DBExecutor, id 
 	return &qe, nil
 }
 
+// List lista las cotizaciones según los filtros, con su total para paginar.
 func (r *QuotationRepository) List(ctx context.Context, q db.DBExecutor, f dtos.QuotationFilterQuery) ([]QuotationEntity, int, error) {
 	where := make([]string, 0)
 	args := make([]interface{}, 0)
@@ -191,6 +197,7 @@ func (r *QuotationRepository) List(ctx context.Context, q db.DBExecutor, f dtos.
 	return list, total, rows.Err()
 }
 
+// Create inserta la cotización y devuelve el registro guardado.
 func (r *QuotationRepository) Create(ctx context.Context, q db.DBExecutor, qe *QuotationEntity) (*QuotationEntity, error) {
 	const sql = `
 		INSERT INTO quotations (
@@ -212,6 +219,7 @@ func (r *QuotationRepository) Create(ctx context.Context, q db.DBExecutor, qe *Q
 	return qe, nil
 }
 
+// Update actualiza los datos de la cotización.
 func (r *QuotationRepository) Update(ctx context.Context, q db.DBExecutor, qe *QuotationEntity) error {
 	const sql = `
 		UPDATE quotations SET
@@ -225,12 +233,14 @@ func (r *QuotationRepository) Update(ctx context.Context, q db.DBExecutor, qe *Q
 	return err
 }
 
+// SetSaleID liga la cotización al pedido en que se convirtió y la marca como convertida.
 func (r *QuotationRepository) SetSaleID(ctx context.Context, q db.DBExecutor, id, saleID int64) error {
 	const sql = `UPDATE quotations SET sale_id = $1, status = 'converted', updated_at = CURRENT_TIMESTAMP WHERE id = $2`
 	_, err := q.Exec(ctx, sql, saleID, id)
 	return err
 }
 
+// CreateItem inserta un renglón.
 func (r *QuotationRepository) CreateItem(ctx context.Context, q db.DBExecutor, item *QuotationItemEntity) error {
 	const sql = `
 		INSERT INTO quotation_items (
@@ -243,6 +253,7 @@ func (r *QuotationRepository) CreateItem(ctx context.Context, q db.DBExecutor, i
 	).Scan(&item.ID)
 }
 
+// ListItems lista los renglones.
 func (r *QuotationRepository) ListItems(ctx context.Context, q db.DBExecutor, quotationID int64) ([]dtos.QuotationItemResponse, error) {
 	const sql = `
 		SELECT

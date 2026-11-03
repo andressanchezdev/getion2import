@@ -1,0 +1,28 @@
+/* FilterSelect.css · lista desplegable de filtro de las barras de tablas y botón «Limpiar» · solo usa tokens de styles/tokens.css */
+.filter-select {
+  min-width: 11rem;
+  height: 2.5rem;
+  padding: 0 0.75rem;
+  font-family: inherit;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  background-color: var(--bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color var(--motion-fast);
+}
+
+.filter-select:hover,
+.filter-select:focus-visible {
+  border-color: var(--color-primary);
+}
+
+/* con una opción elegida el texto pasa a ser el normal (y no el del nombre del filtro) */
+.filter-select-on {
+  color: var(--color-text-primary);
+  border-color: var(--color-primary);
+}
+
+
+

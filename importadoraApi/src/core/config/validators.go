@@ -1,5 +1,8 @@
 package config
 
+// validators.go · revisa que la configuración esté completa y sea válida antes de arrancar
+// conecta con: loader.go (los llama después de leer el entorno)
+
 import (
 	"fmt"
 	"strings"
@@ -26,6 +29,7 @@ func Validate(cfg *Config) error {
 	return nil
 }
 
+// validateDatabase revisa que la configuración de la base de datos esté completa y sea válida.
 func validateDatabase(cfg *Config) error {
 	if strings.TrimSpace(cfg.DBName) == "" {
 		return fmt.Errorf("DB_DATABASE es obligatoria")
@@ -48,6 +52,7 @@ func validateDatabase(cfg *Config) error {
 	return nil
 }
 
+// validateSecurity revisa que la configuración de seguridad (llaves y tiempos de los tokens) esté completa y sea válida.
 func validateSecurity(cfg *Config) error {
 	if len(strings.TrimSpace(cfg.JWTSecret)) < 16 {
 		return fmt.Errorf("JWT_SECRET debe tener al menos 16 caracteres para garantizar seguridad criptográfica")
@@ -64,6 +69,7 @@ func validateSecurity(cfg *Config) error {
 	return nil
 }
 
+// validateServer revisa que la configuración del servidor (puerto y modo) esté completa y sea válida.
 func validateServer(cfg *Config) error {
 	if strings.TrimSpace(cfg.AppPort) == "" {
 		return fmt.Errorf("APP_PORT no puede estar vacío")

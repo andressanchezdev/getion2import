@@ -1,5 +1,8 @@
 package controllers
 
+// cart_controller.go · controlador HTTP de carritos: recibe la petición, valida la entrada y llama al servicio; no tiene lógica de negocio
+// conecta con: los services y dtos de carritos y core/utils (respuestas y errores); los registra routes
+
 import (
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/utils"
@@ -13,6 +16,7 @@ type CartController struct {
 	service *services.CartService
 }
 
+// NewCartController crea el controlador con las piezas que necesita para funcionar.
 func NewCartController(service *services.CartService) *CartController {
 	return &CartController{service: service}
 }

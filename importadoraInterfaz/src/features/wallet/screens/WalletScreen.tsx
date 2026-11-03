@@ -1,17 +1,28 @@
-// WalletScreen · pantalla de cartera: módulo único integrado con KPIs y tabla de clientes
-// conecta con: CreditClientsTable, useWalletLoader (pide la cartera); la monta MainContent
+// WalletScreen · pantalla del módulo Cartera: Créditos, Abonos y Conciliación Entradas (esta última vive en la feature bank)
+// conecta con: CreditClientsTable, AbonosTable, BankReconciliationScreen y useWalletLoader; la monta MainContent
 import React from 'react'
 import './WalletScreen.css'
+import { useAppSelector } from '@/global/hooks/store/useRedux'
 import { CreditClientsTable } from '../components/clientsTable/CreditClientsTable'
+import { AbonosTable } from '../components/paymentsTable/AbonosTable'
+import { BankReconciliationScreen } from '@/features/bank'
 import { useWalletLoader } from '../hooks/useWalletLoader'
 
 export const WalletScreen: React.FC = () => {
-  // ojo: la lista y los totales se piden al backend al abrir la pantalla y al cambiar página o bodega
+  const activeSubitem = useAppSelector((state) => state.ui.activeSubitem)
+
+  // La cartera se carga en la vista de créditos
   useWalletLoader()
 
   return (
     <div className="wallet-screen">
-      <CreditClientsTable />
+      {activeSubitem === 'paymentVerification' ? (
+        <AbonosTable />
+      ) : activeSubitem === 'bankReconciliation' ? (
+        <BankReconciliationScreen />
+      ) : (
+        <CreditClientsTable />
+      )}
     </div>
   )
 }

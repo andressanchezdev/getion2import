@@ -1,5 +1,8 @@
 package bootstrap
 
+// router.go · enrutador: registra el middleware general y las rutas de cada módulo
+// conecta con: container.go (los controladores ya armados), core/middlewares y los routes de cada módulo
+
 import (
 	"github.com/labstack/echo/v4"
 
@@ -25,11 +28,15 @@ import (
 	walletRoutes "importadoraApi/src/features/wallet/routes"
 	warehouseRoutes "importadoraApi/src/features/warehouses/routes"
 	bankStatementRoutes "importadoraApi/src/features/bank_statements/routes"
+	cashSessionRoutes "importadoraApi/src/features/cash_sessions/routes"
+	screensaverRoutes "importadoraApi/src/features/screensaver/routes"
+	swaggerRoutes "importadoraApi/src/features/swagger/routes"
 )
 
 // RegisterAllRoutes conecta los controladores de cada módulo con Echo
 func RegisterAllRoutes(e *echo.Echo, c *AppContainer) {
 	healthRoutes.RegisterRoutes(e, c.HealthCtrl)
+	swaggerRoutes.RegisterRoutes(e, c.SwaggerCtrl)
 	authRoutes.RegisterRoutes(e, c.AuthMiddleware, c.AuthCtrl)
 	companyRoutes.RegisterRoutes(e, c.AuthMiddleware, c.CompanyCtrl)
 	warehouseRoutes.RegisterRoutes(e, c.AuthMiddleware, c.WarehouseCtrl)
@@ -51,5 +58,7 @@ func RegisterAllRoutes(e *echo.Echo, c *AppContainer) {
 	reportRoutes.RegisterRoutes(e, c.AuthMiddleware, c.ReportCtrl)
 	recycleBinRoutes.RegisterRoutes(e, c.AuthMiddleware, c.RecycleBinCtrl)
 	bankStatementRoutes.RegisterRoutes(e, c.AuthMiddleware, c.BankStatementCtrl)
+	cashSessionRoutes.RegisterRoutes(e, c.AuthMiddleware, c.CashSessionCtrl)
+	screensaverRoutes.RegisterRoutes(e, c.AuthMiddleware, c.ScreensaverCtrl)
 }
 

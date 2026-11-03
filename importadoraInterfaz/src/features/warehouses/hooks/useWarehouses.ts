@@ -2,7 +2,7 @@
 // conecta con: WarehouseSelector y WarehouseMenu (los usan); despacha warehouses.thunks y lee warehouses.selectors
 // ojo: solo pide cuando está en "idle"; si falla NO se reintenta solo (evita un bucle con el servidor caído)
 import { useEffect } from 'react'
-import { useAppDispatch, useAppSelector } from '@/global/hooks/useRedux'
+import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { selectWarehouses, selectWarehousesStatus } from '../selectors/warehouses.selectors'
 import { fetchWarehousesThunk } from '../thunks/warehouses.thunks'
 

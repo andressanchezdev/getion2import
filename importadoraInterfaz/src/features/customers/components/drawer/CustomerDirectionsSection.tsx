@@ -2,9 +2,9 @@
 // conecta con: customers.selectors (direcciones y estado), customers.details.thunks (agregar), customers.constants (formulario vacío); el borrado lo confirma CustomerDrawer
 // ojo: el formulario es local (no va al estado global); dirección y ciudad son obligatorias; mientras el backend guarda se bloquean los botones
 import React, { useState } from 'react'
-import { useAppDispatch, useAppSelector } from '@/global/hooks/useRedux'
+import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { ValidatedInput } from '@/global/components/UI/molecules/form'
-import { SANITIZERS } from '@/global/helpers/validation.helpers'
+import { SANITIZERS } from '@/global/helpers/validation/validation.helpers'
 import { EMPTY_DIRECTION_INPUT } from '../../constants/customers.constants'
 import { selectCustomerDirections } from '../../selectors/customers.selectors'
 import { addDirectionThunk } from '../../thunks/customers.details.thunks'

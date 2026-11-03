@@ -7,10 +7,15 @@ import type { CatalogsState } from '../types/catalogs.types'
 type CatalogsRootState = { catalogs: CatalogsState }
 
 export const selectBrands = (state: CatalogsRootState) => state.catalogs.brands.items
+// lee las categorías cargadas
 export const selectCategories = (state: CatalogsRootState) => state.catalogs.categories.items
+// lee los modelos de moto cargados
 export const selectMotoModels = (state: CatalogsRootState) => state.catalogs.models.items
+// lee el estado de carga de las marcas
 export const selectBrandsStatus = (state: CatalogsRootState) => state.catalogs.brands.status
+// lee el estado de carga de las categorías
 export const selectCategoriesStatus = (state: CatalogsRootState) => state.catalogs.categories.status
+// lee el estado de carga de los modelos de moto
 export const selectMotoModelsStatus = (state: CatalogsRootState) => state.catalogs.models.status
 
 // solo los nombres, sin repetir (dos marcas con el mismo nombre se mostrarían iguales en un filtro de texto)

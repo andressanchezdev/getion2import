@@ -1,5 +1,8 @@
 package routes
 
+// company_routes.go · rutas HTTP de compañías y los roles o permisos que exige cada una
+// conecta con: los controllers de compañías y core/middlewares (autenticación y permisos); los arma core/bootstrap
+
 import (
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
@@ -25,10 +28,9 @@ func RegisterRoutes(e *echo.Echo, authMiddleware *middlewares.AuthMiddleware, ct
 		group.GET("/:id", ctrl.GetByID)
 
 		// 5. PUT: PUT /companies/:id (Actualizar datos corporativos)
-		group.PUT("/:id", ctrl.Update)
+		group.PUT("/:id", ctrl.Update, authMiddleware.RequireActors(types.ActorSuperadmin, types.ActorAdmin))
 
 		// 6. DELETE: DELETE /companies/:id (Retiro de la operación, exclusivo Superadmin)
 		group.DELETE("/:id", ctrl.Delete, authMiddleware.RequireActors(types.ActorSuperadmin))
 	}
 }
-

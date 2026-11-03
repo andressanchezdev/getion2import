@@ -1,8 +1,8 @@
 // shop.helpers.test · pruebas de clampQuantity (la cantidad siempre queda entre 1 y el stock)
 // conecta con: shop.helpers; se corre con npm test
 import { describe, expect, it } from 'vitest'
-import type { Product } from '../types/shop.types'
-import { clampQuantity, createCartUuid, getBrandModelLabel, getProductTitle, splitIncludedTax, toWarehouseNumber } from './shop.helpers'
+import type { CartItem, Product } from '../types/shop.types'
+import { clampQuantity, createCartUuid, getBrandModelLabel, buildCartShareText, getAvailableLevels, getFullTitle, getProductDetail, getProductTitle, resolvePriceLevel, splitIncludedTax, toWarehouseNumber } from './shop.helpers'
 
 describe('clampQuantity', () => {
   it('deja pasar una cantidad válida', () => {
@@ -63,6 +63,18 @@ describe('textos de la card y totales con IVA', () => {
     expect(getProductTitle(product({ description: '20w50', modelCompatible: '20W50' }))).toBe('20W50')
   })
 
+  it('el detalle es el modelo; si falta sale de lo que sigue a la descripción en el nombre', () => {
+    expect(getProductDetail(product({ description: 'ACEITE', modelCompatible: '15W40' }))).toBe('15W40')
+    expect(getProductDetail(product({ name: 'ANILLOS PULSAR 135', description: 'ANILLOS' }))).toBe('PULSAR 135')
+    expect(getProductDetail(product({ name: 'ANILLOS', description: 'ANILLOS' }))).toBe('')
+    expect(getBrandModelLabel(product({ brand: 'BAJAJ', name: 'ANILLOS PULSAR 135', description: 'ANILLOS' }))).toBe('BAJAJ - PULSAR 135')
+  })
+
+  it('el nombre completo une la descripción y su detalle sin repetirlos', () => {
+    expect(getFullTitle(product({ name: 'ANILLOS PULSAR 135', description: 'ANILLOS' }))).toBe('ANILLOS PULSAR 135')
+    expect(getFullTitle(product({ description: '20w50', modelCompatible: '20W50' }))).toBe('20W50')
+  })
+
   it('arma «MARCA - MODELO» sin sobrantes', () => {
     expect(getBrandModelLabel(product({ brand: 'KIXX', modelCompatible: '15W40' }))).toBe('KIXX - 15W40')
     expect(getBrandModelLabel(product({ brand: 'KIXX' }))).toBe('KIXX')
@@ -72,5 +84,29 @@ describe('textos de la card y totales con IVA', () => {
     const { subtotal, tax } = splitIncludedTax(11900, 0.19)
     expect(subtotal).toBe(10000)
     expect(subtotal + tax).toBe(11900)
+  })
+})
+
+describe('buildCartShareText', () => {
+  it('arma el resumen del carrito con una línea por producto y el total', () => {
+    const item = { product: { name: 'ANILLOS PULSAR 135', description: 'ANILLOS' }, quantity: 2, subtotal: 150000 } as unknown as CartItem
+    const text = buildCartShareText([item], 150000)
+    expect(text.split('\n')).toEqual(['Mi carrito:', '• ANILLOS PULSAR 135 x2 — $150.000', 'Total: $150.000'])
+  })
+})
+
+describe('niveles de precio de la tabla de precios', () => {
+  const withPrices = (p0: number, p1 = 0, p2 = 0, p3 = 0) => ({ prices: { p0, p1, p2, p3 } }) as unknown as Product
+
+  it('solo cuentan los niveles con precio mayor que 0', () => {
+    expect(getAvailableLevels(withPrices(14400))).toEqual(['P0'])
+    expect(getAvailableLevels(withPrices(14400, 13000, 0, 11000))).toEqual(['P0', 'P1', 'P3'])
+    expect(getAvailableLevels(withPrices(0))).toEqual([])
+  })
+
+  it('el nivel pedido se respeta si tiene precio; si no, se usa el primero que sí tiene', () => {
+    expect(resolvePriceLevel(withPrices(14400, 13000), 'P1')).toBe('P1')
+    expect(resolvePriceLevel(withPrices(14400), 'P2')).toBe('P0')
+    expect(resolvePriceLevel(withPrices(0), 'P2')).toBe('P2')
   })
 })

@@ -1,9 +1,7 @@
-// catalogs.constants · tamaño de página y estado inicial de los catálogos
-// conecta con: catalogs.service (cuántos registros pide) y catalogs.slice (initialState)
-// ojo: el Swagger exige page y pageSize en marcas, categorías y modelos pero no devuelve meta; se pide una sola página grande para traer todo el catálogo
+// catalogs.constants · estado inicial de los catálogos
+// conecta con: catalogs.slice (initialState)
+// ojo: antes aquí estaba CATALOG_PAGE_SIZE (500); la API en Go devuelve marcas, categorías y modelos completos y sin paginar
 import type { CatalogResource, CatalogsState } from '../types/catalogs.types'
-
-export const CATALOG_PAGE_SIZE = 500
 
 const emptyResource = <T>(): CatalogResource<T> => ({ items: [], status: 'idle', error: null })
 

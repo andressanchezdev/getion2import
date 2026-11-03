@@ -2,7 +2,7 @@
 // conecta con: ShopCatalogScreen, ProductCard, ShopCartDrawer
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import type { PriceLevelKey } from '../types/shop.types'
-import { addToCartThunk } from '../thunks/shop.cart.thunks'
+import { addToCartThunk, fetchCartThunk } from '../thunks/shop.cart.thunks'
 import { clearCartThunk } from '../thunks/shop.cart.update.thunks'
 import { setCartCustomerThunk } from '../thunks/shop.cart.customer.thunks'
 import { INITIAL_SHOP_STATE } from '../constants/shop.constants'
@@ -48,7 +48,11 @@ export const shopSlice = createSlice({
     },
     extraReducers: (builder) => {
         builder
-            // al agregar un producto se guarda el uuid del carrito (se crea con el primero) y con qué nivel de precio se agregó (el backend no lo guarda)
+            // al leer el carrito activo se guarda su uuid (lo crea la API)
+            .addCase(fetchCartThunk.fulfilled, (state, action) => {
+                state.cartUuid = action.payload.uuid
+            })
+            // al agregar un producto se guarda el uuid del carrito y con qué nivel de precio se agregó (el backend no lo guarda)
             .addCase(addToCartThunk.fulfilled, (state, action) => {
                 state.cartUuid = action.payload.uuid
                 state.cartLevels[action.meta.arg.product.id] = action.meta.arg.priceLevel

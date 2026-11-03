@@ -3,17 +3,24 @@
 // ojo: como en la maqueta el título es la subgestión (20 px) con el nombre del módulo debajo en letra pequeña; se quitó el ícono del título y la línea inferior
 import React from 'react'
 import './MainContent.css'
-import { useAppSelector } from '@/global/hooks/useRedux'
+import { useAppSelector } from '@/global/hooks/store/useRedux'
 import { getModuleTitle, getSubitemLabel } from '@/features/navigation'
-import { usePermissions } from '@/global/hooks/usePermissions'
+import { usePermissions } from '@/global/hooks/access/usePermissions'
+import { labelForLevel } from '@/global/helpers/access/accessLevels'
 import { renderScreen } from './screenRegistry'
 import { MainContentPlaceholder } from './MainContentPlaceholder'
+import { AppHeader } from '../header/AppHeader'
 
 export const MainContent: React.FC = () => {
-  const { activeModule, activeSubitem } = useAppSelector((state) => state.ui)
-  const { hasScreenAccess } = usePermissions()
+  const { activeModule, activeSubitem, activeWarehouseId } = useAppSelector((state) => state.ui)
+  const warehouses = useAppSelector((state) => state.warehouses.items)
+  const activeWh = warehouses.find((w) => w.id === activeWarehouseId)
+  // La etiqueta de bodega en el encabezado solo aplica para la caja de tienda o traslados, nunca para Gestión Ventas
+  const isCashShift = activeModule === 'shop' && activeSubitem === 'cashRegister'
+  const isTransfers = activeSubitem === 'transfers' || activeModule === 'transfers'
+  const { hasScreenAccess, level } = usePermissions()
   const isAuthorized = hasScreenAccess(activeModule, activeSubitem)
-  const subitemLabel = getSubitemLabel(activeModule, activeSubitem)
+  const subitemLabel = labelForLevel(level, activeModule, activeSubitem, getSubitemLabel(activeModule, activeSubitem))
   const screen = renderScreen(activeModule, activeSubitem)
 
   return (
@@ -21,9 +28,19 @@ export const MainContent: React.FC = () => {
       {/* Encabezado del Área de Trabajo */}
       <div className="main-content-header">
         <div>
-          <h2 className="main-content-title">{subitemLabel || 'Inicio'}</h2>
+          <h2 className="main-content-title">
+            {subitemLabel || 'Inicio'}
+            {(isCashShift || isTransfers) && (
+              <span className="cash-header-warehouse-tag">
+                · {activeWh?.name || 'Bodega Principal'}
+              </span>
+            )}
+          </h2>
           <small className="main-content-subtitle">{getModuleTitle(activeModule)}</small>
         </div>
+
+        {/* compañía (superadmin), bodega y configuración, a la altura del título */}
+        <AppHeader />
       </div>
 
       {/* Contenido dinámico del submódulo activo o guardia de acceso no autorizado */}
@@ -48,6 +65,5 @@ export const MainContent: React.FC = () => {
     </main>
   )
 }
-
 
 export default MainContent

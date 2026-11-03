@@ -1,5 +1,8 @@
 package repositories
 
+// audit_repo.go · acceso a la base de autenticación y sesiones: aquí vive el SQL; cada método recibe la conexión o la transacción
+// conecta con: core/db (DBExecutor) y los dtos de autenticación y sesiones; los usan los services de autenticación y sesiones
+
 import (
 	"context"
 	"encoding/json"
@@ -24,6 +27,7 @@ type AuditLogInput struct {
 
 type AuditRepository struct{}
 
+// NewAuditRepository crea el repositorio; no guarda estado, cada método recibe la conexión o transacción.
 func NewAuditRepository() *AuditRepository {
 	return &AuditRepository{}
 }

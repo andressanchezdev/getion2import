@@ -1,7 +1,8 @@
 // drawerRegistry · define cuándo se abre el panel derecho y qué muestra en cada caso
 import type { ComponentType } from 'react'
+import { createSelector } from '@reduxjs/toolkit'
 import type { AppDispatch, RootState } from '@/app/store/store'
-import { setRightDrawerOpen } from '@/features/navigation'
+import { closeDrawerForm, setRightDrawerOpen } from '@/features/navigation'
 import { ShopCartDrawer, selectCartDrawerMeta } from '@/features/shop'
 import {
   CreditAccountDrawer,
@@ -11,14 +12,15 @@ import {
 } from '@/features/wallet'
 import { CustomerDrawer, selectCustomerDrawerMeta, selectHasOpenCustomer, selectCustomer } from '@/features/customers'
 import { OrderDrawer, closeOrder, selectHasOpenOrder, selectOrderDrawerMeta } from '@/features/orders'
-import { ContextualActionsDrawer } from './parts/ContextualActionsDrawer'
+import { FormDrawerBody } from './parts/FormDrawerBody'
+import { getFormEntry } from './formRegistry'
 import cartIcon from '@/assets/icons/cart.svg'
 import walletIcon from '@/assets/icons/wallet.svg'
 import userIcon from '@/assets/icons/user.svg'
 import orderIcon from '@/assets/icons/file-text.svg'
-import settingsIcon from '@/assets/icons/settings.svg'
 
-export type DrawerMode = 'cart' | 'order' | 'object' | 'customer' | 'actions'
+// ojo: las acciones (crear, recibir, ver detalle) se abren en el modo «form»; ya no hay botón de acciones en el header, cada acción está en su tabla
+export type DrawerMode = 'cart' | 'order' | 'object' | 'customer' | 'form'
 
 // texto del encabezado del panel (lo calcula un selector de cada feature)
 export interface DrawerMeta {
@@ -37,16 +39,10 @@ interface DrawerEntry {
 
 // modo del panel según lo que haya en pantalla; null = el panel no se muestra
 export const selectDrawerMode = (state: RootState): DrawerMode | null => {
-  const { activeModule, activeSubitem, rightDrawerOpen } = state.ui
+  const { activeModule, activeSubitem, drawerForm } = state.ui
 
-  // Si el usuario abrió expresamente el panel mediante el botón de acciones superior derecho
-  if (rightDrawerOpen) {
-    if (activeModule === 'shop' && activeSubitem === 'catalog') return 'cart'
-    if (activeModule === 'shop' && activeSubitem === 'orders' && selectHasOpenOrder(state)) return 'order'
-    if (activeModule === 'wallet' && selectHasSelectedCustomer(state)) return 'object'
-    if (activeModule === 'thirdParties' && activeSubitem === 'customers' && selectHasOpenCustomer(state)) return 'customer'
-    return 'actions'
-  }
+  // una acción abierta manda sobre el contenido automático de la pantalla
+  if (drawerForm) return 'form'
 
   // Modos automáticos por contexto
   if (activeModule === 'shop' && activeSubitem === 'catalog') return 'cart'
@@ -89,14 +85,13 @@ export const DRAWER_REGISTRY: Record<DrawerMode, DrawerEntry> = {
       dispatch(setRightDrawerOpen(false))
     },
   },
-  actions: {
-    Body: ContextualActionsDrawer,
-    icon: settingsIcon,
-    selectMeta: (state: RootState) => ({
-      title: 'Panel de Acciones',
-      subtitle: `Opciones activas para ${state.ui.activeModule}`,
-      tag: 'Acciones Rápidas',
+  form: {
+    Body: FormDrawerBody,
+    icon: userIcon,
+    selectMeta: createSelector([(state: RootState) => state.ui.drawerForm], (form): DrawerMeta => {
+      const entry = form ? getFormEntry(form) : null
+      return { title: entry && form ? entry.title(form.payload) : 'Acción', subtitle: entry?.subtitle }
     }),
-    close: (dispatch) => dispatch(setRightDrawerOpen(false)),
+    close: (dispatch) => dispatch(closeDrawerForm()),
   },
 }

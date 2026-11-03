@@ -5,22 +5,35 @@ import { pickActiveWarehouse, toWarehouses } from './warehouses.helpers'
 import type { Warehouse } from '../types/warehouse.types'
 
 describe('toWarehouses', () => {
-  it('convierte el id a texto y marca la principal', () => {
-    expect(toWarehouses([{ warehouseId: 2, name: ' Bodega Norte ', isMain: true, address: 'Calle 1', isActive: true }])).toEqual([
-      { id: '2', name: 'Bodega Norte', isDefault: true, address: 'Calle 1', isActive: true },
+  it('convierte el id a texto y conserva código y dirección', () => {
+    expect(toWarehouses([{ id: 2, code: 'BOD2', name: ' Bodega Norte ', address: 'Calle 1', isActive: true }])).toEqual([
+      {
+        id: '2',
+        name: 'Bodega Norte',
+        code: 'BOD2',
+        address: 'Calle 1',
+        isActive: true,
+        city: undefined,
+        phone: undefined,
+        description: undefined,
+        managerEmployeeId: undefined,
+        managerName: undefined,
+        locationCount: 0,
+        skuCount: 0,
+      },
     ])
   })
 
   it('descarta las bodegas inactivas pero deja las que no traen el dato', () => {
     const result = toWarehouses([
-      { warehouseId: 1, name: 'A', isActive: false },
-      { warehouseId: 2, name: 'B' },
+      { id: 1, name: 'A', isActive: false },
+      { id: 2, name: 'B' },
     ])
     expect(result.map((w) => w.id)).toEqual(['2'])
   })
 
   it('una dirección vacía queda sin dirección', () => {
-    expect(toWarehouses([{ warehouseId: 1, name: 'A', address: '' }])[0].address).toBeUndefined()
+    expect(toWarehouses([{ id: 1, name: 'A', address: '' }])[0].address).toBeUndefined()
   })
 })
 

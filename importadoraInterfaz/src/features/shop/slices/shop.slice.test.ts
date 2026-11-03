@@ -46,15 +46,15 @@ describe('filtros', () => {
 })
 
 describe('carrito (lo que se guarda)', () => {
-  it('al agregar el primer producto guarda el uuid y el nivel con que se agregó', () => {
-    const state = shopReducer(INITIAL_SHOP_STATE, addToCartThunk.fulfilled({ items: [], uuid: 'u-1' }, 'r1', addArg))
+  it('al agregar un producto guarda el uuid del carrito y el nivel con que se agregó', () => {
+    const state = shopReducer(INITIAL_SHOP_STATE, addToCartThunk.fulfilled({ cartId: 1, items: [], uuid: 'u-1' }, 'r1', addArg))
     expect(state.cartUuid).toBe('u-1')
     expect(state.cartLevels).toEqual({ '5': 'P2' })
   })
 
   it('vaciar el carrito olvida los niveles pero conserva el uuid', () => {
     const withCart = { ...INITIAL_SHOP_STATE, cartUuid: 'u-1', cartLevels: { '5': 'P2' as const } }
-    const state = shopReducer(withCart, clearCartThunk.fulfilled([], 'r2'))
+    const state = shopReducer(withCart, clearCartThunk.fulfilled({ cartId: 1, items: [], uuid: 'u-1' }, 'r2'))
     expect(state).toMatchObject({ cartUuid: 'u-1', cartLevels: {} })
   })
 

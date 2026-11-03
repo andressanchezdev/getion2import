@@ -1,5 +1,8 @@
 package services
 
+// cart_item_service.go · reglas de negocio de carritos: valida permisos, compañía y datos, coordina las transacciones y arma las respuestas
+// conecta con: los repositories y dtos de carritos; los llama el controller y la conexión llega del contenedor
+
 import (
 	"context"
 	"encoding/json"

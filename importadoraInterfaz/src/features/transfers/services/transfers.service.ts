@@ -1,93 +1,154 @@
-// transfers.service · llamadas al backend para traslados multibodega y existencias
-// conecta con: apiClient, API_CONFIG, transfers.types, transfers.adapter y Swagger (/sales/traslades, etc.)
-import { apiClient, API_CONFIG, toPaginated, type APIResponse } from '@/api'
-import type { CreateTransferInput, ProductStockMatrix, TrasladeItem } from '../types/transfers.types'
-import { toProductStockMatrix, toTrasladeItems } from '../helpers/transfers.adapter'
+// transfers.service · llamadas al backend de traslados entre bodegas
+import { apiClient, API_CONFIG, createAppError, toPaginated, withCompany, type APIResponse } from '@/api'
+import type { RequestContext } from '@/features/auth'
+import type { StockFullDto } from '@/features/inventory'
+import { TRANSFERS_PAGE_SIZE, TRANSFER_SEARCH_LIMIT, WAREHOUSE_STOCK_PAGE_SIZE } from '../constants/transfers.constants'
+import { toProductStockMatrix, toTrasladeItem } from '../helpers/transfers.adapter'
+import type {
+  CreateTransferBody,
+  ReceiveTransferBody,
+  TransferDto,
+  TransferProductDto,
+  TransferStockRowDto,
+} from '../types/transfers.api.types'
+import type { CreateTransferBatchInput, ProductStockMatrix, TrasladeItem } from '../types/transfers.types'
 
-const { SALES, CARTS, PRODUCTS } = API_CONFIG.ENDPOINTS
+const { TRANSFERS, PRODUCTS, INVENTORY } = API_CONFIG.ENDPOINTS
 
-export const fetchTraslades = async (
-  warehouseId: number,
-  userId?: number,
-  page = 1,
-  pageSize = 20
-): Promise<TrasladeItem[]> => {
-  const { data } = await apiClient.post<APIResponse<any>>(SALES.TRASLADES, {
-    warehouseId,
-    ...(userId && { userId }),
-    page,
-    pageSize,
-  })
+export type TransferDirection = 'incoming' | 'outgoing'
 
-  const rawItems = Array.isArray(data.data) ? data.data : toPaginated(data).items || []
-  return toTrasladeItems(rawItems)
-}
-
-export const createTransfer = async (
-  input: CreateTransferInput,
-  companyId: number,
-  userId: number
-): Promise<{ serialCode: number; saleId: number }> => {
-  const uuid = crypto.randomUUID()
-
-  // Fase 1A: Registrar ítem en carrito tipo traslade
-  await apiClient.post<APIResponse<any>>(CARTS.REGISTER_ITEM, {
-    companyId,
-    userId,
-    warehouseId: input.originWarehouseId,
-    auxWarehouseId: input.destWarehouseId,
-    uuid,
-    productId: input.productId,
-    price: 0,
-    quantity: input.quantity,
-    typeCart: 'traslade',
-  })
-
-  // Fase 1B: Formalizar el traslado
-  const { data } = await apiClient.post<APIResponse<any>>(SALES.REGISTER, {
-    companyId,
-    userId,
-    warehouseId: input.originWarehouseId,
-    auxWarehouseId: input.destWarehouseId,
-    uuid,
-    saleType: 'traslade',
-    invoiceStatus: 'pendiente',
-  })
-
-  const res = data.data || {}
-  return {
-    serialCode: res.serialCode || Math.floor(100000 + Math.random() * 900000),
-    saleId: res.saleId || res.id || 0,
+// trae todos los traslados de la bodega o compañía
+export const fetchAllTraslades = async (ctx: RequestContext, warehouseId?: number): Promise<TrasladeItem[]> => {
+  try {
+    const { data } = await apiClient.get<APIResponse<TransferDto[] | null>>(TRANSFERS.LIST, {
+      params: withCompany(ctx.companyId, {
+        ...(warehouseId ? { warehouseId } : {}),
+        page: 1,
+        pageSize: TRANSFERS_PAGE_SIZE,
+      }),
+    })
+    return toPaginated(data).items.map(toTrasladeItem)
+  } catch {
+    // Si la ruta genérica falla o no filtra, probamos por incoming y outgoing combinados
+    if (!warehouseId) return []
+    try {
+      const [inc, out] = await Promise.all([
+        fetchTraslades(ctx, 'incoming', warehouseId),
+        fetchTraslades(ctx, 'outgoing', warehouseId),
+      ])
+      const map = new Map<number, TrasladeItem>()
+      inc.forEach((i) => map.set(i.id, i))
+      out.forEach((i) => map.set(i.id, i))
+      return Array.from(map.values())
+    } catch {
+      return []
+    }
   }
 }
 
-export const approveTransfer = async (saleId: number, code: number): Promise<void> => {
-  await apiClient.post(SALES.APPROVED, { saleId, code })
+// los traslados que entran a la bodega (destino) o salen de ella (origen)
+export const fetchTraslades = async (ctx: RequestContext, direction: TransferDirection, warehouseId: number): Promise<TrasladeItem[]> => {
+  const { data } = await apiClient.get<APIResponse<TransferDto[] | null>>(TRANSFERS.LIST, {
+    params: withCompany(ctx.companyId, {
+      [direction === 'incoming' ? 'destinationWarehouseId' : 'originWarehouseId']: warehouseId,
+      page: 1,
+      pageSize: TRANSFERS_PAGE_SIZE,
+    }),
+  })
+  return toPaginated(data).items.map(toTrasladeItem)
 }
 
-export const rejectTransfer = async (saleId: number, reason: string): Promise<void> => {
-  await apiClient.post(SALES.TRASLADES_REJECT, { saleId, reason })
+// la ubicación (stockId) de la bodega de origen de la que sale el producto, la que más vendible tenga y alcance para la cantidad
+const findOriginStockId = async (ctx: RequestContext, originWarehouseId: number, productId: number, quantity: number): Promise<number> => {
+  const { data } = await apiClient.get<APIResponse<TransferStockRowDto[] | null>>(INVENTORY.STOCK, {
+    params: withCompany(ctx.companyId, { warehouseId: originWarehouseId, productId, page: 1, pageSize: 200 }),
+  })
+  const rows = (data.data ?? []).filter((row) => row.sellable >= quantity)
+  if (rows.length === 0) throw createAppError('No hay stock suficiente de este producto en la bodega de origen.')
+  return rows.reduce((best, row) => (row.sellable > best.sellable ? row : best)).stockId
 }
 
-export const updateTransferStatus = async (
-  saleId: number,
-  invoiceStatus: 'picking_verified' | 'packing_verified'
-): Promise<void> => {
-  await apiClient.put(SALES.STATUS, { saleId, invoiceStatus })
+// crea UN traslado con varios productos de una misma bodega de origen hacia el destino; busca antes la ubicación de cada producto
+export const createTransferBatch = async (ctx: RequestContext, input: CreateTransferBatchInput): Promise<TrasladeItem> => {
+  const items = []
+  for (const item of input.items) {
+    items.push({ productId: item.productId, originStockId: await findOriginStockId(ctx, input.originWarehouseId, item.productId, item.quantity), quantity: item.quantity })
+  }
+  const body: CreateTransferBody = {
+    originWarehouseId: input.originWarehouseId,
+    destinationWarehouseId: input.destWarehouseId,
+    ...(input.type ? { transferType: input.type } : {}),
+    ...(input.notes ? { notes: input.notes } : {}),
+    items,
+  }
+  const { data } = await apiClient.post<APIResponse<TransferDto>>(TRANSFERS.LIST, body)
+  return toTrasladeItem(data.data)
 }
 
+// despacha un traslado (pasa a en tránsito)
+
+// detalle completo de un traslado por su id (incluyendo renglones de detalles_transfer)
+export const fetchTransferById = async (transferId: number): Promise<TrasladeItem> => {
+  const { data } = await apiClient.get<APIResponse<TransferDto>>(TRANSFERS.DETAIL(transferId))
+  return toTrasladeItem(data.data)
+}
+
+export const dispatchTransfer = async (transferId: number): Promise<void> => {
+  await apiClient.post(TRANSFERS.DISPATCH(transferId), {})
+}
+
+// recibe o acepta el traslado (OK completo o con novedades)
+export const acceptTransfer = async (transfer: TrasladeItem, noveltyNotes?: string): Promise<void> => {
+  const hasNovelty = Boolean(noveltyNotes?.trim())
+  const body: ReceiveTransferBody = {
+    hasNovelty,
+    noveltyNotes: noveltyNotes?.trim() || undefined,
+    items: transfer.products.map((product) => ({
+      itemId: product.itemId,
+      receivedQty: product.quantity,
+      destinationLocation: product.destinationLocation,
+    })),
+  }
+  await apiClient.post(TRANSFERS.RECEIVE(transfer.id), body)
+}
+
+// función compatible con la llamada original de receiveTransfer
+export const receiveTransfer = async (transfer: TrasladeItem): Promise<void> => {
+  await acceptTransfer(transfer)
+}
+
+// anula el traslado con el motivo
+export const cancelTransfer = async (transferId: number, reason: string): Promise<void> => {
+  await apiClient.post(TRANSFERS.CANCEL(transferId), { reason })
+}
+
+// busca productos activos por texto y trae sus existencias en todas las bodegas
 export const searchProductsMultibodega = async (
-  companyId: number,
+  ctx: RequestContext,
   warehouses: Array<{ id: string | number; name: string }>,
   text?: string
 ): Promise<ProductStockMatrix[]> => {
-  const { data } = await apiClient.post<APIResponse<any>>(PRODUCTS.LIST, {
-    companyId,
-    page: 1,
-    pageSize: 40,
-    isActive: true,
-  })
+  const query = text?.trim()
+  const { data } = query
+    ? await apiClient.get<APIResponse<TransferProductDto[] | null>>(PRODUCTS.SEARCH, { params: { q: query, page: 1, pageSize: TRANSFER_SEARCH_LIMIT } })
+    : await apiClient.get<APIResponse<TransferProductDto[] | null>>(PRODUCTS.LIST, {
+        params: withCompany(ctx.companyId, { status: 'active', page: 1, pageSize: TRANSFER_SEARCH_LIMIT }),
+      })
+  const products = (data.data ?? []).slice(0, TRANSFER_SEARCH_LIMIT)
+  return Promise.all(
+    products.map(async (product) => {
+      const { data: stock } = await apiClient.get<APIResponse<TransferStockRowDto[] | null>>(INVENTORY.STOCK, {
+        params: withCompany(ctx.companyId, { productId: product.id, page: 1, pageSize: 200 }),
+      })
+      return toProductStockMatrix(product, stock.data ?? [], warehouses)
+    })
+  )
+}
 
-  const rawList = toPaginated(data).items as any[]
-  return toProductStockMatrix(rawList, warehouses, text)
+// existencias de una bodega (con búsqueda por repuesto, código o estante) para la pestaña «Repuestos en sede»
+export const fetchWarehouseStock = async (ctx: RequestContext, warehouseId: number, query: string): Promise<StockFullDto[]> => {
+  const { data } = await apiClient.get<APIResponse<StockFullDto[] | null>>(INVENTORY.STOCK, {
+    params: withCompany(ctx.companyId, { warehouseId, q: query.trim(), page: 1, pageSize: WAREHOUSE_STOCK_PAGE_SIZE }),
+  })
+  return data.data ?? []
 }

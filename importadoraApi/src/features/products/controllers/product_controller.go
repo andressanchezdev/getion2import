@@ -1,5 +1,8 @@
 package controllers
 
+// product_controller.go · controlador HTTP de productos: recibe la petición, valida la entrada y llama al servicio; no tiene lógica de negocio
+// conecta con: los services y dtos de productos y core/utils (respuestas y errores); los registra routes
+
 import (
 	"strconv"
 
@@ -16,6 +19,7 @@ type ProductController struct {
 	service *services.ProductService
 }
 
+// NewProductController crea el controlador con las piezas que necesita para funcionar.
 func NewProductController(service *services.ProductService) *ProductController {
 	return &ProductController{service: service}
 }

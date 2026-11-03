@@ -1,0 +1,86 @@
+/* CashClosePanel.css · arqueo y cierre del turno: contexto, totales, filas de gastos y resultado del arqueo · solo usa tokens de styles/tokens.css */
+.cash-close-context {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.cash-close-context strong {
+  color: var(--color-text-primary);
+}
+
+.cash-close-totals {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+
+.cash-close-totals div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-1) 0;
+  font-size: var(--text-sm);
+}
+
+.cash-close-totals dt {
+  color: var(--color-text-secondary);
+}
+
+.cash-close-totals dd {
+  margin: 0;
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.cash-close-expenses-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.cash-close-expense {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--c-slate-50);
+}
+
+.cash-close-remove {
+  grid-column: 1 / -1;
+  justify-self: end;
+}
+
+.cash-close-result {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+}
+
+.cash-close-result.is-balanced {
+  background: var(--color-success-bg);
+  border-color: var(--c-green-200);
+  color: var(--color-success);
+}
+
+.cash-close-result.is-short {
+  background: var(--color-danger-bg);
+  border-color: var(--c-red-200);
+  color: var(--color-danger);
+}
+
+.cash-close-result.is-over {
+  background: var(--c-blue-50);
+  border-color: var(--c-blue-300);
+  color: var(--c-blue-600);
+}

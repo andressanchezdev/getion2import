@@ -1,5 +1,8 @@
 package controllers
 
+// quotation_controller.go · controlador HTTP de cotizaciones: recibe la petición, valida la entrada y llama al servicio; no tiene lógica de negocio
+// conecta con: los services y dtos de cotizaciones y core/utils (respuestas y errores); los registra routes
+
 import (
 	"strconv"
 
@@ -16,6 +19,7 @@ type QuotationController struct {
 	service *services.QuotationService
 }
 
+// NewQuotationController crea el controlador con las piezas que necesita para funcionar.
 func NewQuotationController(service *services.QuotationService) *QuotationController {
 	return &QuotationController{service: service}
 }

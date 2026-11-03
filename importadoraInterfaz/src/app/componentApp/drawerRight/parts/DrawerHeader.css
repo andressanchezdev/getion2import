@@ -1,5 +1,5 @@
 /* DrawerHeader.css · estilos del encabezado único del panel derecho (ícono en caja amarilla, título y botón cerrar) · solo usa tokens de styles/tokens.css */
-/* ojo: como el .dh de la maqueta: caja de ícono de 38 px, título de 16 px (la maqueta usa 15, que no está en la escala de texto) y botón cerrar con borde */
+/* ojo: botón cerrar sin bordes ubicado a la izquierda al límite con contentMain, caja de ícono de 38 px y título de 16 px */
 .drawer-header {
   display: flex;
   align-items: center;
@@ -24,7 +24,6 @@
   display: grid;
   place-items: center;
   border-radius: var(--radius-md);
-  background-color: var(--c-yellow-100);
 }
 
 .drawer-header-icon {
@@ -72,30 +71,100 @@
   text-align: center;
 }
 
+.drawer-header-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
 .drawer-header-close {
   width: 32px;
   height: 32px;
   flex-shrink: 0;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background-color: var(--bg-card-inner);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
   color: var(--color-text-primary);
-  font-size: var(--text-md);
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-bold);
   cursor: pointer;
-  transition: border-color var(--motion-fast);
+  border-radius: var(--radius-md);
+  transition: background-color var(--motion-fast), color var(--motion-fast);
+  margin-left: -4px;
 }
 
 .drawer-header-close:hover {
-  border-color: var(--c-blue-600);
+  background-color: var(--bg-hover);
+  color: var(--c-blue-600);
 }
 
-/* ojo: este bloque estaba comentado en DrawerRight.css y se deja aquí como referencia (la insignia ahora es .drawer-header-badge) */
-/* .drawer-badge {
-  font-size: var(--text-2xs);
-  font-weight: var(--font-weight-semibold);
-  background-color: var(--bg-card-inner);
-  color: var(--color-text-secondary);
+.drawer-header-menu-btn {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-size: var(--text-md);
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  transition: background-color var(--motion-fast), color var(--motion-fast);
+}
+
+.drawer-header-menu-btn:hover {
+  background-color: var(--bg-hover);
+  color: var(--c-blue-600);
+}
+
+/* menú hamburguesa del encabezado (carrito): lista de opciones que se abre bajo el botón */
+.drawer-header-menu {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.drawer-header-menu-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: var(--z-header);
+  display: flex;
+  flex-direction: column;
+  min-width: 11rem;
+  padding: 4px;
+  background: var(--bg-card);
   border: 1px solid var(--color-border);
-  padding: 0.125rem 0.5rem;
-  border-radius: var(--radius-pill);
-} */
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+}
+
+.drawer-header-menu-item {
+  padding: 0.5rem 0.75rem;
+  font-family: inherit;
+  font-size: var(--text-sm);
+  text-align: left;
+  color: var(--color-text-primary);
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.drawer-header-menu-item:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.drawer-header-menu-item-danger {
+  color: var(--color-danger);
+}
+
+.drawer-header-menu-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

@@ -1,5 +1,8 @@
 package routes
 
+// sale_routes.go · rutas HTTP de ventas y los roles o permisos que exige cada una
+// conecta con: los controllers de ventas y core/middlewares (autenticación y permisos); los arma core/bootstrap
+
 import (
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/features/sales/controllers"
@@ -11,21 +14,23 @@ import (
 func RegisterRoutes(e *echo.Echo, authMiddleware *middlewares.AuthMiddleware, ctrl *controllers.SaleController) {
 	salesGroup := e.Group("/sales", authMiddleware.Authenticate())
 	{
-		salesGroup.POST("", ctrl.Create)
-		salesGroup.GET("", ctrl.List)
-		salesGroup.GET("/:id", ctrl.FindByID)
-		salesGroup.POST("/:id/verify", ctrl.AdvanceToVerification)
-		salesGroup.POST("/:id/pick", ctrl.AdvanceToPicking)
-		salesGroup.POST("/:id/pack", ctrl.AdvanceToPacking)
-		salesGroup.POST("/:id/invoice", ctrl.IssueInvoice)
-		salesGroup.POST("/:id/dispatch", ctrl.AdvanceToDispatch)
-		salesGroup.POST("/:id/send", ctrl.AdvanceToSend)
-		salesGroup.POST("/:id/cancel", ctrl.CancelSale)
+		salesGroup.POST("", ctrl.Create, authMiddleware.RequirePermission("orders", "create"))
+		salesGroup.GET("", ctrl.List, authMiddleware.RequirePermission("orders", "view"))
+		salesGroup.GET("/:id", ctrl.FindByID, authMiddleware.RequirePermission("orders", "view"))
+		salesGroup.GET("/:id/history", ctrl.StageHistory, authMiddleware.RequirePermission("orders", "view"))
+		salesGroup.POST("/:id/verify", ctrl.AdvanceToVerification, authMiddleware.RequirePermission("orders", "edit"))
+		salesGroup.POST("/:id/verify-payment", ctrl.AdvanceToVerification, authMiddleware.RequirePermission("orders", "edit"))
+		salesGroup.POST("/:id/pick", ctrl.AdvanceToPicking, authMiddleware.RequirePermission("orders", "edit"))
+		salesGroup.POST("/:id/pack", ctrl.AdvanceToPacking, authMiddleware.RequirePermission("orders", "edit"))
+		salesGroup.POST("/:id/invoice", ctrl.IssueInvoice, authMiddleware.RequirePermission("orders", "edit"))
+		salesGroup.POST("/:id/dispatch", ctrl.AdvanceToDispatch, authMiddleware.RequirePermission("orders", "edit"))
+		salesGroup.POST("/:id/send", ctrl.AdvanceToSend, authMiddleware.RequirePermission("orders", "edit"))
+		salesGroup.POST("/:id/cancel", ctrl.CancelSale, authMiddleware.RequirePermission("orders", "delete"))
 	}
 
 	invoicesGroup := e.Group("/invoices", authMiddleware.Authenticate())
 	{
-		invoicesGroup.GET("", ctrl.ListInvoices)
-		invoicesGroup.GET("/:id", ctrl.FindInvoiceByID)
+		invoicesGroup.GET("", ctrl.ListInvoices, authMiddleware.RequirePermission("orders", "view"))
+		invoicesGroup.GET("/:id", ctrl.FindInvoiceByID, authMiddleware.RequirePermission("orders", "view"))
 	}
 }

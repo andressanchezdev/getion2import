@@ -1,0 +1,74 @@
+/* CashShiftSlider.css · interruptor del turno de caja: Abierta a la izquierda, Cerrada a la derecha · solo usa tokens de styles/tokens.css */
+/* ojo: abierta se ve en verde y cerrada en ámbar; mientras carga o sin permiso se atenúa; el movimiento respeta «reducir movimiento» */
+.cash-slider {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  user-select: none;
+}
+
+.cash-slider-label {
+  color: var(--color-text-secondary);
+}
+
+.cash-slider-label.is-on {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.cash-slider-track {
+  position: relative;
+  width: 64px;
+  height: 30px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  touch-action: none;
+  transition: background-color 0.2s ease;
+}
+
+.cash-slider-track.is-open {
+  background: var(--color-success-bg);
+  border-color: var(--c-green-200);
+}
+
+.cash-slider-track.is-closed {
+  background: var(--c-yellow-50);
+  border-color: var(--c-yellow-600);
+}
+
+.cash-slider-track:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.cash-slider-knob {
+  position: absolute;
+  top: 2px;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-rest);
+  transition: left 0.2s ease;
+}
+
+.cash-slider-knob.is-dragging {
+  transition: none;
+}
+
+.cash-slider.is-blocked {
+  opacity: 0.55;
+}
+
+.cash-slider.is-blocked .cash-slider-track {
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cash-slider-knob,
+  .cash-slider-track {
+    transition: none;
+  }
+}

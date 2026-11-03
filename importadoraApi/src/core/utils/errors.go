@@ -1,5 +1,8 @@
 package utils
 
+// errors.go · AppError: errores con código HTTP y mensaje listo para el cliente
+// conecta con: todos los services (los crean) y controllers (los devuelven)
+
 import (
 	"errors"
 	"net/http"
@@ -16,6 +19,7 @@ type AppError struct {
 	Err     error
 }
 
+// Error devuelve el mensaje del error para que cumpla la interfaz error.
 func (e *AppError) Error() string {
 	if e.Err != nil {
 		return e.Message + ": " + e.Err.Error()
@@ -23,34 +27,42 @@ func (e *AppError) Error() string {
 	return e.Message
 }
 
+// Unwrap devuelve el error original que causó este, para poder revisarlo con errors.Is y errors.As.
 func (e *AppError) Unwrap() error {
 	return e.Err
 }
 
+// BadRequest crea un error 400: la petición es inválida.
 func BadRequest(code, message string) *AppError {
 	return &AppError{Status: http.StatusBadRequest, Code: code, Message: message}
 }
 
+// Unauthorized crea un error 401: falta iniciar sesión o el token no sirve.
 func Unauthorized(code, message string) *AppError {
 	return &AppError{Status: http.StatusUnauthorized, Code: code, Message: message}
 }
 
+// Forbidden crea un error 403: no tiene permiso para esto.
 func Forbidden(code, message string) *AppError {
 	return &AppError{Status: http.StatusForbidden, Code: code, Message: message}
 }
 
+// NotFound crea un error 404: el recurso no existe.
 func NotFound(code, message string) *AppError {
 	return &AppError{Status: http.StatusNotFound, Code: code, Message: message}
 }
 
+// Conflict crea un error 409: choca con algo que ya existe.
 func Conflict(code, message string) *AppError {
 	return &AppError{Status: http.StatusConflict, Code: code, Message: message}
 }
 
+// Unprocessable crea un error 422: los datos llegaron bien pero el negocio no los acepta.
 func Unprocessable(code, message string) *AppError {
 	return &AppError{Status: http.StatusUnprocessableEntity, Code: code, Message: message}
 }
 
+// Internal crea un error 500: falla inesperada, con el error original adentro.
 func Internal(message string, err error) *AppError {
 	return &AppError{Status: http.StatusInternalServerError, Code: "INTERNAL_ERROR", Message: message, Err: err}
 }

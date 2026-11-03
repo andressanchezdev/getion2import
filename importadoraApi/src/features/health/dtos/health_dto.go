@@ -1,5 +1,8 @@
 package dtos
 
+// health_dto.go · formas de lo que entra y sale por la API en salud del servicio (peticiones y respuestas)
+// conecta con: los controllers y services de salud del servicio
+
 type HealthResponse struct {
 	Status      string `json:"status"`
 	Service     string `json:"service"`

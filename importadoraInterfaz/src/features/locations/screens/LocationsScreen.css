@@ -1,0 +1,14 @@
+/* LocationsScreen.css · Inventario > Ubicaciones: ruta de navegación sobre la tarjeta · solo usa tokens de styles/tokens.css */
+.loc-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.loc-breadcrumb strong {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+}

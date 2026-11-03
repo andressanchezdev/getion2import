@@ -2,9 +2,9 @@
 // conecta con: CreditAccountDetail (lo usa); wallet.payments.thunks (payThunk), wallet.helpers (parsePaymentAmount), global toast
 // ojo: antes el abono se sumaba en el slice; ahora se registra en el backend (POST /payments/register) y los saldos se vuelven a leer. El monto digitado se limpia solo si el abono salió bien
 import { useState } from 'react'
-import { formatCOP } from '@/global/helpers/format'
-import { toast } from '@/global/helpers/toast'
-import { useAppDispatch } from '@/global/hooks/useRedux'
+import { formatCOP } from '@/global/helpers/formatting/format'
+import { toast } from '@/global/helpers/feedback/toast'
+import { useAppDispatch } from '@/global/hooks/store/useRedux'
 import { payThunk } from '../thunks/wallet.payments.thunks'
 import { parsePaymentAmount } from '../helpers/wallet.helpers'
 

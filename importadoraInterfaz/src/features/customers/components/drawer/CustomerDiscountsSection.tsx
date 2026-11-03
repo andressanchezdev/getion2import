@@ -2,7 +2,7 @@
 // conecta con: customers.selectors (descuentos), features/catalogs (nombres de marca, categoría y modelo); el borrado lo confirma CustomerDrawer
 // ojo: por ahora solo se listan y se borran; crear o editar un descuento queda para después (el servicio del backend existe)
 import React from 'react'
-import { useAppSelector } from '@/global/hooks/useRedux'
+import { useAppSelector } from '@/global/hooks/store/useRedux'
 import { selectBrands, selectCategories, selectMotoModels } from '@/features/catalogs'
 import { selectCustomerDiscounts } from '../../selectors/customers.selectors'
 import type { Discount } from '../../types/customers.types'

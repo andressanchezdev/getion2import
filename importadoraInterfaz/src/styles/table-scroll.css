@@ -1,0 +1,119 @@
+/* table-scroll.css · alto limitado y scroll interno de todas las tablas, con el encabezado fijo · solo usa tokens de styles/tokens.css */
+/* ojo: la clase va en el contenedor de cada tabla; así la barra de búsqueda, los filtros y los botones de acción (que están fuera de ese contenedor) quedan siempre a la vista mientras se navega por las filas */
+/* ojo: cada tabla ya pinta un fondo opaco en sus th (necesario para que no se vean las filas pasar por debajo del encabezado fijo) */
+.table-scroll {
+  min-height: 480px;
+  max-height: max(580px, calc(100vh - 180px));
+  overflow: auto;
+}
+
+.table-scroll thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+/* los montos de todas las tablas se ven igual: misma letra de la tabla, cifras del mismo ancho (se alinean en columna), seminegrita y sin cortarse */
+.table-amount {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
+/* CONTRATO DE PANTALLA: lo de arriba (barra de búsqueda, filtros y botones de acción) es una zona fija y la tabla es la zona que se desplaza */
+/* ojo: dentro del lienzo central, cada contenedor que lleva una tabla ocupa el alto que sobra y la tabla se estira hasta ahí con scroll propio; así ninguna barra se pierde al bajar y no hace falta calcular alturas a ojo (los 480 y 580 de arriba solo valen fuera del lienzo) */
+.main-content-viewport :is(div, section):has(.table-scroll, .screen-scroll) {
+  display: flex;
+  flex: 1 1 0%;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.main-content-viewport .table-scroll {
+  flex: 1 1 0%;
+  min-height: 0;
+  max-height: none;
+}
+
+/* zona que se desplaza cuando el contenido no es una tabla (por ejemplo la rejilla de productos del catálogo o un tablero de resumen) */
+.main-content-viewport .screen-scroll {
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* ==========================================================================
+   ESTILOS COMPARTIDOS DE TABLAS: BADGES, TIPOGRAFÍAS Y ALINEACIÓN
+   ========================================================================== */
+
+.table-badge-bg {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: var(--text-xs, 12px);
+  font-weight: var(--font-weight-bold, 700);
+  background-color: var(--c-slate-100);
+  color: var(--c-slate-800);
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.table-badge-bg.is-code {
+  background-color: var(--c-blue-50);
+  color: var(--c-blue-700);
+  border: 1px solid var(--c-blue-200);
+  font-family: monospace;
+  font-weight: 700;
+}
+
+.table-badge-bg.is-document {
+  background-color: var(--c-slate-100);
+  color: var(--c-slate-900);
+  border: 1px solid var(--c-slate-200);
+  font-weight: 600;
+}
+
+.table-badge-bg.is-pill {
+  border-radius: 9999px;
+  padding: 2px 10px;
+  background-color: var(--c-slate-100);
+  color: var(--c-slate-700);
+  text-transform: capitalize;
+  font-weight: 600;
+}
+
+.table-badge-bg.is-success {
+  background-color: var(--color-success-bg, #ecfdf5);
+  color: var(--color-success, #059669);
+  border: 1px solid var(--c-green-200);
+}
+
+.table-badge-bg.is-warning {
+  background-color: var(--color-warning-bg, #fffbeb);
+  color: var(--color-warning, #d97706);
+  border: 1px solid var(--c-amber-200);
+}
+
+.table-badge-bg.is-danger {
+  background-color: var(--color-danger-bg, #fef2f2);
+  color: var(--color-danger, #dc2626);
+  border: 1px solid var(--c-red-200);
+}
+
+.table-badge-bg.is-info {
+  background-color: var(--color-info-bg, #eff6ff);
+  color: var(--color-info, #2563eb);
+  border: 1px solid var(--c-blue-200);
+}
+
+.table-cell-muted {
+  font-weight: var(--font-weight-normal, 400);
+  color: var(--c-slate-500);
+}
+
+.table-cell-center {
+  text-align: center;
+}
+

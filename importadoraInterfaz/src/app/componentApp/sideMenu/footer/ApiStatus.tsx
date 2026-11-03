@@ -2,7 +2,7 @@
 // conecta con: global useApiHealth (consulta), SideMenu (le pasa si el menú está contraído); ojo: antes este indicador estaba en el header
 // ojo: como en la maqueta es una línea de texto con un punto de color (ya no una pastilla con fondo); con el menú contraído no se muestra
 import React from 'react'
-import { useApiHealth } from '@/global/hooks/useApiHealth'
+import { useApiHealth } from '@/global/hooks/data/useApiHealth'
 import './ApiStatus.css'
 
 interface ApiStatusProps {

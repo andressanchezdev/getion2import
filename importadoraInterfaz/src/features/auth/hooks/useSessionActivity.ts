@@ -2,8 +2,8 @@
 // conecta con: auth.thunks (logoutThunk y refreshSessionThunk), auth.token (vencimiento del JWT), auth.session (token guardado) y auth.session.constants (tiempos); lo monta ErpLayout
 // ojo: solo se monta con sesión activa (ErpLayout no existe en el login); la inactividad y el vencimiento se calculan con la hora (Date.now), no sumando timers, porque los timers se frenan en pestañas dormidas
 import { useEffect, useRef } from 'react'
-import { useAppDispatch } from '@/global/hooks/useRedux'
-import { toast } from '@/global/helpers/toast'
+import { useAppDispatch } from '@/global/hooks/store/useRedux'
+import { toast } from '@/global/helpers/feedback/toast'
 import { ACTIVITY_EVENTS, SESSION_TIMING, SESSION_WARNING_TOAST_ID } from '../constants/auth.session.constants'
 import { LOGIN_MESSAGES } from '../constants/auth.constants'
 import { getStoredAccessToken } from '../helpers/auth.session'

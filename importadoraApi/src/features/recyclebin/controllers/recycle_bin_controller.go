@@ -1,5 +1,8 @@
 package controllers
 
+// recycle_bin_controller.go · controlador HTTP de papelera de reciclaje: recibe la petición, valida la entrada y llama al servicio; no tiene lógica de negocio
+// conecta con: los services y dtos de papelera de reciclaje y core/utils (respuestas y errores); los registra routes
+
 import (
 	"strconv"
 
@@ -15,6 +18,7 @@ type RecycleBinController struct {
 	service *services.RecycleBinService
 }
 
+// NewRecycleBinController crea el controlador con las piezas que necesita para funcionar.
 func NewRecycleBinController(service *services.RecycleBinService) *RecycleBinController {
 	return &RecycleBinController{service: service}
 }

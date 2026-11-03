@@ -1,36 +1,41 @@
 // OrdersTable · tabla de pedidos (la .dt de la maqueta): una columna por cada dato importante y, al final, las acciones; el resto de datos va en el detalle del panel derecho
 // conecta con: orders.selectors (tabla filtrada y estado), orders.slice (abrir un pedido), orders.thunks (reintentar), orders.clipboard (copiar), OrderRowActions, global Pill y usePermissions
+// ojo: no lleva borde propio: la tarjeta que la envuelve (OrdersScreen o Caja) junta barra y tabla en una sola; con extraActions otra pantalla suma sus acciones
 // ojo: columnas: Pedido, Cliente, Etapa, Pago, Total, Fecha y Acciones; un clic en la fila abre el detalle; el canal y el vendedor van en letra pequeña debajo del pedido y del cliente
 import React from 'react'
-import { formatPesos } from '@/global/helpers/format'
-import { useAppDispatch, useAppSelector } from '@/global/hooks/useRedux'
-import { usePermissions } from '@/global/hooks/usePermissions'
+import { formatPesos } from '@/global/helpers/formatting/format'
+import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
+import { usePermissions } from '@/global/hooks/access/usePermissions'
 import { Pill } from '@/global/components/UI/atoms/Pill'
-import { ORDER_CHANNELS, ORDER_STAGES, PAYMENT_METHOD_LABELS } from '../../constants/orders.constants'
+import { ORDER_STAGES } from '../../constants/orders.constants'
 import type { OrderActionKey } from '../../helpers/orders.actions'
 import { copyOrderSerial } from '../../helpers/orders.clipboard'
 import { selectOpenOrderId, selectOrdersList, selectVisibleOrders } from '../../selectors/orders.selectors'
 import { openOrder } from '../../slices/orders.slice'
 import { loadOrdersThunk } from '../../thunks/orders.thunks'
 import type { OrderRow } from '../../types/orders.types'
+import { dateLabel, paymentLabel } from '../../helpers/orders.labels'
 import { OrderRowActions } from './OrderRowActions'
 import './OrdersTable.css'
+import { usePagedList } from '@/global/hooks/data/usePagedList'
+import { Pagination } from '@/global/components/UI/molecules/table/Pagination'
 
 const COLUMNS = 7
 
+// texto en español de la etapa en que va el pedido
 const stageLabel = (order: OrderRow): string => ORDER_STAGES.find((stage) => stage.key === order.stage)?.label ?? order.stage
-const channelLabel = (order: OrderRow): string => ORDER_CHANNELS.find((channel) => channel.key === order.channel)?.label ?? order.channel
-const paymentLabel = (method: string): string => PAYMENT_METHOD_LABELS[method.toLowerCase()] ?? (method || '—')
-const dateLabel = (day: string): string => (day ? day.split('-').reverse().join('/') : '—')
 
 interface OrdersTableProps {
   onCancel: (order: OrderRow) => void
+  extraActions?: (order: OrderRow) => React.ReactNode // acciones propias de otra pantalla (por ejemplo, el cobro de Caja) junto a las de siempre
 }
 
-export const OrdersTable: React.FC<OrdersTableProps> = ({ onCancel }) => {
+// tabla de los pedidos de la etapa activa, con sus acciones
+export const OrdersTable: React.FC<OrdersTableProps> = ({ onCancel, extraActions }) => {
   const dispatch = useAppDispatch()
   const { status, error, items } = useAppSelector(selectOrdersList)
   const orders = useAppSelector(selectVisibleOrders)
+  const { pageItems, meta, setPage } = usePagedList(orders, orders)
   const openId = useAppSelector(selectOpenOrderId)
   const canCancel = usePermissions().canPerformAction('shop', 'orders', 'delete')
 
@@ -51,7 +56,7 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({ onCancel }) => {
 
   return (
     <div className="orders-table-card" aria-busy={status === 'loading'}>
-      <div className="orders-table-scroll">
+      <div className="orders-table-scroll table-scroll">
         <table className="orders-table">
           <thead>
             <tr>
@@ -77,7 +82,7 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({ onCancel }) => {
                 </td>
               </tr>
             ) : (
-              orders.map((order) => (
+              pageItems.map((order) => (
                 <tr
                   key={order.id}
                   className={order.id === openId ? 'orders-table-row orders-table-row-open' : 'orders-table-row'}
@@ -89,7 +94,11 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({ onCancel }) => {
                 >
                   <td>
                     <b className="orders-table-strong">{order.serial}</b>
-                    <small className="orders-table-sub">{channelLabel(order)}</small>
+                    {order.channel === 'immediate' ? (
+                      <span className="orders-badge-immediate">⚡ Picking Inmediato</span>
+                    ) : (
+                      <small className="orders-table-sub">Normal</small>
+                    )}
                   </td>
                   <td>
                     <b className="orders-table-strong">{order.customerName}</b>
@@ -97,20 +106,25 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({ onCancel }) => {
                   </td>
                   <td>
                     <div className="orders-table-pills">
-                      <Pill tone="blue">{stageLabel(order)}</Pill>
-                      {order.paused && <Pill tone="amber">En pausa</Pill>}
+                      {order.confirmed ? <Pill tone="green">Verificación confirmada</Pill> : <Pill tone="blue">{stageLabel(order)}</Pill>}
                     </div>
                   </td>
                   <td>
-                    <span>{paymentLabel(order.paymentMethod)}</span>
-                    <div className="orders-table-pills">
-                      <Pill tone={order.paymentVerified ? 'green' : 'gray'}>{order.paymentVerified ? 'Pago verificado' : 'Sin verificar'}</Pill>
-                    </div>
+                    {order.paymentMethod.toLowerCase() === 'transfer' ? (
+                      <span className={`orders-badge-transfer ${order.paymentVerified ? 'is-verified' : 'is-pending'}`}>
+                        {order.paymentVerified ? '✓ Transf. verificada' : '📸 Transf. por verificar'}
+                      </span>
+                    ) : (
+                      paymentLabel(order.paymentMethod)
+                    )}
                   </td>
-                  <td className="orders-table-num orders-table-strong">{formatPesos(order.totalAmount)}</td>
+                  <td className="orders-table-num table-amount">
+                    <b className="orders-table-strong">{formatPesos(order.totalAmount)}</b>
+                  </td>
                   <td>{dateLabel(order.createdAt)}</td>
-                  <td>
-                    <OrderRowActions order={order} canCancel={canCancel} onAction={handleAction} />
+                  <td className="orders-table-actions">
+                    {extraActions && <span className="orders-table-extra" onClick={(e) => e.stopPropagation()}>{extraActions(order)}</span>}
+                    <OrderRowActions order={order} canCancel={canCancel} onAction={(key) => handleAction(key, order)} />
                   </td>
                 </tr>
               ))
@@ -118,6 +132,7 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({ onCancel }) => {
           </tbody>
         </table>
       </div>
+      <Pagination meta={meta} label="Paginación de pedidos" onPageChange={setPage} />
     </div>
   )
 }

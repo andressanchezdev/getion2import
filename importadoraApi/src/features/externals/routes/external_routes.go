@@ -1,5 +1,8 @@
 package routes
 
+// external_routes.go · rutas HTTP de terceros (proveedores y transportadoras) y los roles o permisos que exige cada una
+// conecta con: los controllers de terceros (proveedores y transportadoras) y core/middlewares (autenticación y permisos); los arma core/bootstrap
+
 import (
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/features/externals/controllers"
@@ -14,9 +17,8 @@ func RegisterRoutes(e *echo.Echo, authMiddleware *middlewares.AuthMiddleware, ct
 		ext.GET("", ctrl.Get)
 		ext.GET("/search", ctrl.Search)
 		ext.GET("/:id", ctrl.GetByID)
-		ext.POST("", ctrl.Create)
-		ext.PUT("/:id", ctrl.Update)
-		ext.DELETE("/:id", ctrl.Delete)
+		ext.POST("", ctrl.Create, authMiddleware.RequirePermission("suppliers", "create"))
+		ext.PUT("/:id", ctrl.Update, authMiddleware.RequirePermission("suppliers", "edit"))
+		ext.DELETE("/:id", ctrl.Delete, authMiddleware.RequirePermission("suppliers", "delete"))
 	}
 }
-

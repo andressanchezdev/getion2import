@@ -18,6 +18,7 @@ export const ShopCartSearch: React.FC<ShopCartSearchProps> = ({ value, onChange 
         type="text"
         className="shop-cart-search-input"
         value={value}
+        maxLength={100}
         placeholder="Buscar en el carrito"
         aria-label="Buscar ítems del carrito"
         onChange={(e) => onChange(e.target.value)}

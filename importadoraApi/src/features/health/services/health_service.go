@@ -1,5 +1,8 @@
 package services
 
+// health_service.go · reglas de negocio de salud del servicio: valida permisos, compañía y datos, coordina las transacciones y arma las respuestas
+// conecta con: los repositories y dtos de salud del servicio; los llama el controller y la conexión llega del contenedor
+
 import (
 	"context"
 	"time"
@@ -14,10 +17,12 @@ type HealthService struct {
 	database *db.Database
 }
 
+// NewHealthService crea el servicio con las piezas que necesita para funcionar.
 func NewHealthService(cfg *config.Config, database *db.Database) *HealthService {
 	return &HealthService{cfg: cfg, database: database}
 }
 
+// Check revisa que el servicio esté vivo y mide la latencia de la base.
 func (s *HealthService) Check(ctx context.Context) (*dtos.HealthResponse, error) {
 	latency, err := s.database.PingLatency(ctx)
 	if err != nil {
@@ -32,6 +37,7 @@ func (s *HealthService) Check(ctx context.Context) (*dtos.HealthResponse, error)
 	}, nil
 }
 
+// Readiness revisa que las dependencias (la base) respondan para poder recibir tráfico.
 func (s *HealthService) Readiness(ctx context.Context) (*dtos.ReadinessResponse, error) {
 	latency, err := s.database.PingLatency(ctx)
 	if err != nil {

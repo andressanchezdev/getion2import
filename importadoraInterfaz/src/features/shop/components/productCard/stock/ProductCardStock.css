@@ -1,0 +1,24 @@
+/* ProductCardStock.css · estilos de la ícono de advertencia de bajo stock de la tarjeta · solo usa tokens de styles/tokens.css */
+
+.product-card-stock-alert {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    background-color: var(--c-amber-50);
+    border: 1px solid var(--c-amber-200);
+    border-radius: var(--radius-circle);
+    cursor: help;
+}
+
+.product-card-stock-alert:focus-visible {
+    outline: var(--focus-outline);
+}
+
+.product-card-warning-icon {
+    width: 14px;
+    height: 14px;
+    fill: var(--c-amber-600);
+    flex-shrink: 0;
+}

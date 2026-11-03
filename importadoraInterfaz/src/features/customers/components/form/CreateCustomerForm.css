@@ -1,0 +1,23 @@
+/* CreateCustomerForm.css · formulario de registro de cliente dentro del panel derecho · solo usa tokens de styles/tokens.css */
+.customer-form {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.customer-form-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+
+.customer-form-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--color-border);
+  background-color: var(--color-bg-muted);
+}

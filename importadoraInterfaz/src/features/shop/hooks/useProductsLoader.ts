@@ -2,8 +2,8 @@
 // conecta con: ShopCatalogScreen (lo usa al montarse); despacha shop.products.thunks y lee shop.products.selectors, shop.slice (filtros), navigation (bodega) y warehouses (estado de carga)
 // ojo: no pide hasta que haya bodega activa (los productos y su stock dependen de ella), salvo que las bodegas hayan fallado: ahí pide igual para no dejar la pantalla vacía
 import { useEffect } from 'react'
-import { useAppDispatch, useAppSelector } from '@/global/hooks/useRedux'
-import { useDebouncedValue } from '@/global/hooks/useDebouncedValue'
+import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
+import { useDebouncedValue } from '@/global/hooks/data/useDebouncedValue'
 import { selectCurrentUser } from '@/features/auth'
 import { selectWarehousesStatus } from '@/features/warehouses'
 import { loadProductsThunk } from '../thunks/shop.products.thunks'
@@ -21,12 +21,12 @@ export const useProductsLoader = (): void => {
   const page = useAppSelector(selectProductsPage)
   const debouncedQuery = useDebouncedValue(filters.searchQuery, SEARCH_DEBOUNCE_MS)
 
-  const companyId = user?.companyId
+  const hasSession = Boolean(user) // ojo: el superadmin no tiene compañía (companyId 0); basta con que haya sesión
   const ready = activeWarehouseId !== '' || warehousesStatus === 'failed'
 
   useEffect(() => {
-    if (!companyId || !ready) return
+    if (!hasSession || !ready) return
     dispatch(loadProductsThunk())
     // ojo: el thunk lee los filtros del store; aquí solo se listan los que deben disparar una nueva carga (el texto va ya con espera)
-  }, [dispatch, companyId, ready, activeWarehouseId, page, filters.selectedBrandId, filters.selectedCategoryId, filters.onlyInStock, debouncedQuery])
+  }, [dispatch, hasSession, ready, activeWarehouseId, page, filters.selectedBrandId, filters.selectedCategoryId, filters.onlyInStock, debouncedQuery])
 }

@@ -1,4 +1,4 @@
-// warehouses.thunks.test · pruebas de la carga de bodegas: éxito, error y sin sesión
+// warehouses.thunks.test — pruebas de la carga de bodegas: éxito, error y sin sesión
 // conecta con: warehouses.thunks y warehouses.slice; el service y la sesión están simulados (no hay red)
 import { configureStore, type ThunkDispatch, type UnknownAction } from '@reduxjs/toolkit'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -33,7 +33,7 @@ describe('warehouses.thunks', () => {
     vi.mocked(fetchWarehouses).mockResolvedValue([{ id: '1', name: 'Principal', isDefault: true }])
     const { store, dispatch } = makeStore()
     await dispatch(fetchWarehousesThunk())
-    expect(fetchWarehouses).toHaveBeenCalledWith(ctx)
+    expect(fetchWarehouses).toHaveBeenCalledWith(3)
     expect(store.getState().warehouses.status).toBe('succeeded')
     expect(store.getState().warehouses.items).toHaveLength(1)
   })

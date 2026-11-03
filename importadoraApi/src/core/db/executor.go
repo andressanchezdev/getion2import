@@ -1,5 +1,8 @@
 package db
 
+// executor.go · DBExecutor: interfaz común del pool y de las transacciones, para que un repositorio acepte cualquiera de los dos
+// conecta con: todos los repositories de cada módulo
+
 import (
 	"context"
 

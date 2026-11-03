@@ -1,6 +1,7 @@
 // auth.slice · estado de la sesión: usuario, estado (anónimo, ingresando, autenticado) y último error
 // conecta con: auth.thunks (login/logout), auth.selectors (lecturas) y AuthGate (decide login o ERP)
 import { createSlice } from '@reduxjs/toolkit'
+import { toPermissionMatrix } from '../helpers/auth.permissions'
 import { getInitialAuthState } from '../helpers/auth.session'
 import { loginThunk, logoutThunk } from '../thunks/auth.thunks'
 
@@ -16,6 +17,7 @@ export const authSlice = createSlice({
       })
       .addCase(loginThunk.fulfilled, (state, action) => {
         state.user = action.payload
+        state.permissions = toPermissionMatrix(action.payload)
         state.status = 'authenticated'
       })
       .addCase(loginThunk.rejected, (state, action) => {
@@ -24,6 +26,7 @@ export const authSlice = createSlice({
       })
       .addCase(logoutThunk.fulfilled, (state) => {
         state.user = null
+        state.permissions = null
         state.status = 'anonymous'
         state.error = null
       })

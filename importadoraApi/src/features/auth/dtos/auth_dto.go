@@ -1,5 +1,8 @@
 package dtos
 
+// auth_dto.go · formas de lo que entra y sale por la API en autenticación y sesiones (peticiones y respuestas)
+// conecta con: los controllers y services de autenticación y sesiones
+
 import (
 	"time"
 
@@ -21,6 +24,7 @@ type RefreshRequest struct {
 	Device          string `json:"device,omitempty"`
 }
 
+// Token devuelve el token de renovación que llegó, sin importar con qué nombre de campo se envió.
 func (r RefreshRequest) Token() string {
 	if r.RefreshToken != "" {
 		return r.RefreshToken
@@ -35,6 +39,7 @@ type LogoutRequest struct {
 	AllSessions     bool   `json:"allSessions,omitempty"`
 }
 
+// Token devuelve el token de renovación que llegó, sin importar con qué nombre de campo se envió.
 func (r LogoutRequest) Token() string {
 	if r.RefreshToken != "" {
 		return r.RefreshToken

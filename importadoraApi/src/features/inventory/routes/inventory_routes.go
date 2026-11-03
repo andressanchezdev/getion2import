@@ -1,5 +1,8 @@
 package routes
 
+// inventory_routes.go · rutas HTTP de inventario y los roles o permisos que exige cada una
+// conecta con: los controllers de inventario y core/middlewares (autenticación y permisos); los arma core/bootstrap
+
 import (
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/features/inventory/controllers"
@@ -14,8 +17,9 @@ func RegisterRoutes(e *echo.Echo, authMiddleware *middlewares.AuthMiddleware, ct
 	{
 		st.GET("", ctrl.ListWarehouseStock)
 		st.GET("/company", ctrl.ListCompanyStock)
-		st.POST("/adjust", ctrl.AdjustStock)
-		st.POST("/relocate", ctrl.RelocateStock)
+		st.POST("/adjust", ctrl.AdjustStock, authMiddleware.RequirePermission("stock", "edit"))
+		st.POST("/assign", ctrl.AssignStock, authMiddleware.RequirePermission("stock", "edit"))
+		st.POST("/relocate", ctrl.RelocateStock, authMiddleware.RequirePermission("stock", "edit"))
 	}
 
 	// Grupo /transfers
@@ -23,10 +27,10 @@ func RegisterRoutes(e *echo.Echo, authMiddleware *middlewares.AuthMiddleware, ct
 	{
 		tr.GET("", ctrl.ListTransfers)
 		tr.GET("/:id", ctrl.GetTransferByID)
-		tr.POST("", ctrl.CreateTransfer)
-		tr.POST("/:id/dispatch", ctrl.DispatchTransfer)
-		tr.POST("/:id/receive", ctrl.ReceiveTransfer)
-		tr.POST("/:id/cancel", ctrl.CancelTransfer)
+		tr.POST("", ctrl.CreateTransfer, authMiddleware.RequirePermission("transfers", "create"))
+		tr.POST("/:id/dispatch", ctrl.DispatchTransfer, authMiddleware.RequirePermission("transfers", "edit"))
+		tr.POST("/:id/receive", ctrl.ReceiveTransfer, authMiddleware.RequirePermission("transfers", "edit"))
+		tr.POST("/:id/cancel", ctrl.CancelTransfer, authMiddleware.RequirePermission("transfers", "edit"))
 	}
 
 	// Grupo /counts
@@ -34,16 +38,15 @@ func RegisterRoutes(e *echo.Echo, authMiddleware *middlewares.AuthMiddleware, ct
 	{
 		cnt.GET("", ctrl.ListCounts)
 		cnt.GET("/:id", ctrl.GetCountByID)
-		cnt.POST("", ctrl.CreateCount)
-		cnt.PUT("/:id/items", ctrl.UpdateCountItems)
-		cnt.POST("/:id/verify", ctrl.VerifyCount)
-		cnt.POST("/:id/corroborate", ctrl.CorroborateCount)
+		cnt.POST("", ctrl.CreateCount, authMiddleware.RequirePermission("stock", "create"))
+		cnt.PUT("/:id/items", ctrl.UpdateCountItems, authMiddleware.RequirePermission("stock", "edit"))
+		cnt.POST("/:id/verify", ctrl.VerifyCount, authMiddleware.RequirePermission("stock", "edit"))
+		cnt.POST("/:id/corroborate", ctrl.CorroborateCount, authMiddleware.RequirePermission("stock", "edit"))
 	}
 
 	// Grupo /audit-movements (Kardex operativo)
 	mv := e.Group("/audit-movements", authMiddleware.Authenticate())
 	{
-		mv.GET("", ctrl.ListMovements)
+		mv.GET("", ctrl.ListMovements, authMiddleware.RequirePermission("stock", "view"))
 	}
 }
-

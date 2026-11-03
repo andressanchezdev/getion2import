@@ -5,15 +5,16 @@ import type { LoadStatus } from '@/api'
 // etapas con lista de pedidos (los «Enviados» no tienen lista en el backend)
 export type OrderStageKey = 'verification' | 'picking' | 'packing' | 'invoicing' | 'dispatch'
 
-export type OrderChannelKey = 'majority' | 'immediate' | 'corporate' | 'minority' | 'direct'
+// ojo: la API no tiene canales de venta; lo único que distingue un pedido es si se hace con picking inmediato
+export type OrderChannelKey = 'standard' | 'immediate'
 
-// «all» junta los cinco canales
+// «all» junta los dos canales
 export type OrderChannelFilter = 'all' | OrderChannelKey
 
 // una fila de la tabla: lo más importante de cada pedido
 export interface OrderRow {
   id: number
-  serial: string // PD-1234, o «Venta 9» si el backend no manda consecutivo
+  serial: string // PD-1234, o «Venta 9» si el backend no manda el consecutivo
   stage: OrderStageKey
   channel: OrderChannelKey
   customerName: string
@@ -22,8 +23,11 @@ export interface OrderRow {
   totalAmount: number
   createdAt: string // AAAA-MM-DD, o '' si el backend no trae fecha
   paused: boolean
-  paymentVerified: boolean
+  paymentVerified: boolean // el pago ya cubre el total (lo verificado más lo que quedó a crédito)
   locationVerified: boolean
+  paidAmount: number // pagos verificados
+  creditAmount: number // lo que el cliente dejó a crédito
+  confirmed: boolean // verificación confirmada: el pago quedó cubierto y espera en la cola de la etapa siguiente
 }
 
 export interface OrderLine {
@@ -42,6 +46,8 @@ export interface OrderPayment {
   method: string
   amount: number
   status: string
+  proofUrl?: string | null
+  reference?: string | null
   createdAt: string
 }
 
@@ -60,6 +66,8 @@ export interface OrderDetail {
   stage: string
   channel: string
   paymentMethod: string
+  paymentProofUrl?: string | null
+  paymentReference?: string | null
   totalAmount: number
   shippingCost: number
   createdAt: string
@@ -72,6 +80,16 @@ export interface OrderDetail {
   seller: OrderPerson
   lines: OrderLine[]
   payments: OrderPayment[]
+  history: OrderStageEntry[] // etapas por las que pasó el pedido
+}
+
+// una etapa del historial del pedido: quién lo movió, cuándo entró, cuándo salió y cuánto estuvo
+export interface OrderStageEntry {
+  stage: string
+  employeeName: string
+  enteredAt: string
+  leftAt: string // '' si todavía está en esa etapa
+  minutes: number
 }
 
 export type StageCounts = Record<OrderStageKey, number>
@@ -81,7 +99,7 @@ export interface OrdersListState {
   status: LoadStatus
   error: string | null
   requestId: string | null
-  capped: boolean // true si algún canal tenía más pedidos de los que se piden por página (se muestran los más recientes)
+  capped: boolean // true si la etapa tiene más pedidos de los que se piden en la página (se muestran los más recientes)
 }
 
 export interface OrderDetailState {
@@ -95,6 +113,7 @@ export interface OrdersState {
   stage: OrderStageKey
   channel: OrderChannelFilter
   query: string
+  selectedWarehouseId: number | null
   counts: StageCounts | null
   list: OrdersListState
   openId: number | null

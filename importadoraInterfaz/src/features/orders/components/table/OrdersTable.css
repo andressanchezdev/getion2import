@@ -1,10 +1,9 @@
 /* OrdersTable.css · estilos de la tabla de pedidos (la .dt de la maqueta: caja con borde y radio 10, encabezado gris, filas con hover) · solo usa tokens de styles/tokens.css */
 .orders-table-card {
   background: var(--bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-base);
   overflow: hidden;
 }
+
 
 .orders-table-scroll {
   width: 100%;
@@ -48,6 +47,7 @@
 }
 
 .orders-table-strong {
+  display: block;
   color: var(--color-text-primary);
   font-weight: var(--font-weight-semibold);
 }
@@ -55,18 +55,45 @@
 .orders-table-sub {
   display: block;
   color: var(--color-text-secondary);
+  font-size: var(--text-xs);
 }
 
-.orders-table-num {
-  text-align: right;
-  white-space: nowrap;
+.orders-badge-immediate {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: var(--text-11px);
+  font-weight: var(--font-weight-bold);
+  margin-top: 2px;
+  width: fit-content;
 }
 
 .orders-table-pills {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1);
-  margin-top: 2px;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.orders-table-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.orders-table-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* acciones que suma otra pantalla (Caja: cobrar, cotejar) */
+.orders-table-extra {
+  display: inline-flex;
+  gap: var(--space-2);
+  margin-right: var(--space-2);
 }
 
 /* lo que se dice en lugar de las filas */
@@ -91,4 +118,28 @@
 
 .orders-table-retry:hover {
   border-color: var(--c-blue-600);
+}
+
+/* Distintivo de pago por transferencia */
+.orders-badge-transfer {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-11px);
+  font-weight: var(--font-weight-bold);
+  padding: 2px 7px;
+  border-radius: 5px;
+  line-height: var(--leading-normal);
+}
+
+.orders-badge-transfer.is-pending {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.orders-badge-transfer.is-verified {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
 }

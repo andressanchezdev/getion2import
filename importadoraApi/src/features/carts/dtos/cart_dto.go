@@ -1,5 +1,8 @@
 package dtos
 
+// cart_dto.go · formas de lo que entra y sale por la API en carritos (peticiones y respuestas)
+// conecta con: los controllers y services de carritos
+
 import (
 	"time"
 

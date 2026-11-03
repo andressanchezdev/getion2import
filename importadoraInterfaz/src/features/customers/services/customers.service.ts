@@ -1,25 +1,47 @@
-// customers.service · llamadas al backend de usuarios: POST /users (listado paginado) y GET /users/{id} (detalle)
-// conecta con: api/client, api/config y api/pagination (toPaginated), customers.adapter (convierte); las usa customers.thunks
-// ojo: el companyId llega en el contexto de petición; este service no lee el almacenamiento ni el store
-import { apiClient, API_CONFIG, toPaginated, type APIResponse, type Paginated } from '@/api'
+// customers.service · llamadas al backend de clientes: GET /customers (listado paginado), GET /customers/:id (detalle), POST /customers, PUT /customers/:id y DELETE /customers/:id
+// conecta con: api/client, api/config, api/params y api/pagination (toPaginated), customers.adapter (convierte); las usa customers.thunks
+// ojo: la compañía sale del token; solo el superadmin (sin compañía) manda companyId. Los clientes de otros estados (inactivos) no se listan
+import { apiClient, API_CONFIG, toPaginated, withCompany, type APIResponse, type Paginated } from '@/api'
 import type { RequestContext } from '@/features/auth'
 import { toCustomer, toCustomerDetail } from '../helpers/customers.adapter'
-import type { UserDto } from '../types/customers.api.types'
+import type { CreateCustomerBody, CustomerDto, UpdateCustomerBody } from '../types/customers.api.types'
 import type { Customer, CustomerDetail } from '../types/customers.types'
 
-const { USERS } = API_CONFIG.ENDPOINTS
+const { CUSTOMERS } = API_CONFIG.ENDPOINTS
 
 export const fetchCustomersPage = async (ctx: RequestContext, page: number, pageSize: number): Promise<Paginated<Customer>> => {
-  const { data } = await apiClient.post<APIResponse<UserDto[] | null>>(USERS.LIST, {
-    companyId: ctx.companyId,
-    page,
-    pageSize,
+  const { data } = await apiClient.get<APIResponse<CustomerDto[] | null>>(CUSTOMERS.LIST, {
+    params: withCompany(ctx.companyId, { page, pageSize }),
   })
   const result = toPaginated(data)
   return { items: result.items.map(toCustomer), meta: result.meta }
 }
 
+// trae el detalle completo de un cliente por su id
 export const fetchCustomerDetail = async (id: number): Promise<CustomerDetail> => {
-  const { data } = await apiClient.get<APIResponse<UserDto>>(USERS.BY_ID(id))
+  const { data } = await apiClient.get<APIResponse<CustomerDto>>(CUSTOMERS.BY_ID(id))
   return toCustomerDetail(data.data)
+}
+
+// ¿ya existe un cliente con este documento o correo? busca por texto y compara de forma exacta (la API no tiene rutas de "validar")
+export const customerExists = async (field: 'document' | 'email', value: string): Promise<boolean> => {
+  const { data } = await apiClient.get<APIResponse<CustomerDto[] | null>>(CUSTOMERS.SEARCH, { params: { q: value, page: 1, pageSize: 20 } })
+  const wanted = value.trim().toLowerCase()
+  return (data.data ?? []).some((customer) => String(customer[field] ?? '').trim().toLowerCase() === wanted)
+}
+
+// registra un cliente (la compañía sale del token); devuelve el cliente creado
+export const createCustomer = async (body: CreateCustomerBody): Promise<Customer> => {
+  const { data } = await apiClient.post<APIResponse<CustomerDto>>(CUSTOMERS.LIST, body)
+  return toCustomer(data.data)
+}
+
+// edita datos de un cliente (PUT /customers/:id); la API actualiza solo los campos que llegan
+export const updateCustomer = async (id: number, body: UpdateCustomerBody): Promise<void> => {
+  await apiClient.put(CUSTOMERS.BY_ID(id), body)
+}
+
+// elimina un cliente (DELETE /customers/:id): la API lo manda a la papelera de reciclaje, no lo borra del todo
+export const deleteCustomer = async (id: number): Promise<void> => {
+  await apiClient.delete(CUSTOMERS.BY_ID(id))
 }

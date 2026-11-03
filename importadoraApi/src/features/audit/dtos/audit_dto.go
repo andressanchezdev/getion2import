@@ -1,5 +1,8 @@
 package dtos
 
+// audit_dto.go · formas de lo que entra y sale por la API en auditoría (peticiones y respuestas)
+// conecta con: los controllers y services de auditoría
+
 import (
 	"encoding/json"
 	"time"

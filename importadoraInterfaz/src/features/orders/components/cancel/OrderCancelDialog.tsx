@@ -2,8 +2,8 @@
 // conecta con: global ConfirmDialog (el diálogo), orders.thunks (cancelOrderThunk); lo usan OrdersScreen (desde la fila) y OrderDetail (desde el panel)
 // ojo: si la anulación falla, el aviso ya salió y el diálogo queda abierto para reintentar; al terminar bien se cierra
 import React, { useState } from 'react'
-import { ConfirmDialog } from '@/global/components/UI/molecules/ConfirmDialog'
-import { useAppDispatch } from '@/global/hooks/useRedux'
+import { ConfirmDialog } from '@/global/components/UI/molecules/dialogs/ConfirmDialog'
+import { useAppDispatch } from '@/global/hooks/store/useRedux'
 import { MIN_CANCEL_REASON } from '../../constants/orders.constants'
 import { cancelOrderThunk } from '../../thunks/orders.thunks'
 import './OrderCancelDialog.css'

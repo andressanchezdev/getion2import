@@ -1,0 +1,17 @@
+/* CashClosedBanner.css · aviso de caja cerrada · solo usa tokens de styles/tokens.css */
+.cash-closed-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--c-yellow-600);
+  border-radius: var(--radius-md);
+  background: var(--c-yellow-50);
+  color: var(--c-yellow-700);
+  font-size: var(--text-sm);
+}
+
+.cash-closed-banner p {
+  margin: 0;
+}

@@ -1,5 +1,8 @@
 package dtos
 
+// return_dto.go · formas de lo que entra y sale por la API en devoluciones (peticiones y respuestas)
+// conecta con: los controllers y services de devoluciones
+
 import (
 	"time"
 
@@ -23,6 +26,8 @@ type ReturnResponse struct {
 	CompanyID              int64                      `json:"companyId"`
 	SaleID                 int64                      `json:"saleId"`
 	SaleSerial             string                     `json:"saleSerial"`
+	WarehouseID             int64                      `json:"warehouseId"`
+	WarehouseName           string                     `json:"warehouseName"`
 	CustomerID             int64                      `json:"customerId"`
 	CustomerName           string                     `json:"customerName"`
 	EmployeeID             int64                      `json:"employeeId"`
@@ -52,7 +57,7 @@ type CreateReturnItemRequest struct {
 type CreateReturnRequest struct {
 	SaleID             int64                      `json:"saleId" validate:"required"`
 	Reason             string                     `json:"reason" validate:"required"`
-	ReasonType         types.ReturnReasonType     `json:"reasonType" validate:"required"`
+	ReasonType         types.ReturnReasonType     `json:"reasonType"`
 	ResolutionType     types.ReturnResolutionType `json:"resolutionType" validate:"required"`
 	ReplacementStockID *int64                     `json:"replacementStockId,omitempty"`
 	Items              []CreateReturnItemRequest  `json:"items" validate:"required,min=1"`
@@ -62,8 +67,8 @@ type ReturnFilterQuery struct {
 	CompanyID  *int64
 	SaleID     *int64
 	CustomerID *int64
+	WarehouseID *int64
 	Status     *types.ReturnStatus
 	Page       int
 	PageSize   int
 }
-

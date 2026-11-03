@@ -1,0 +1,219 @@
+/* InventoryTables.css · tarjeta, barra de búsqueda y tabla de las pantallas de inventario (productos, marcas, categorías, modelos y stock) · solo usa tokens de styles/tokens.css */
+.inv-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.inv-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-rest);
+}
+
+.inv-toolbar {
+  background: var(--bg-card);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.inv-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-left: auto;
+}
+
+.inv-search {
+  flex: 0 0 40%;
+  width: 40%;
+  max-width: 40%;
+  min-width: 240px;
+}
+
+.inv-count {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.inv-table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  min-height: 480px;
+}
+
+.inv-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: var(--text-sm);
+}
+
+.inv-table th {
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: var(--c-slate-50);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.inv-table td {
+  padding: 0.75rem var(--space-4);
+  vertical-align: middle;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.inv-table tbody tr:hover {
+  background: var(--bg-card-inner);
+}
+
+.inv-row-inactive {
+  opacity: 0.65;
+  background-color: var(--color-bg-muted);
+}
+
+.inv-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.inv-name {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.inv-code {
+  display: inline-block;
+  padding: 2px var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--c-slate-700);
+  background: var(--c-slate-100);
+  border-radius: var(--radius-sm);
+}
+
+.inv-thumb {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  background: var(--c-slate-50);
+  border-radius: var(--radius-md);
+}
+
+.inv-thumb-empty {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  background: var(--c-slate-50);
+  border-radius: var(--radius-md);
+}
+
+.inv-level {
+  display: inline-block;
+  padding: 2px var(--space-3);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  background: var(--color-bg-muted);
+  border-radius: var(--radius-pill);
+}
+
+.inv-status-select {
+  padding: 0.25rem 0.6rem;
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-bold);
+  border-radius: var(--radius-pill);
+  border: 1px solid transparent;
+  cursor: pointer;
+  outline: none;
+  text-transform: uppercase;
+  transition: all 0.15s ease;
+}
+
+.inv-status-select.is-active {
+  background-color: var(--color-success-bg);
+  color: var(--color-success);
+  border-color: var(--c-green-200);
+}
+
+.inv-status-select.is-inactive {
+  background-color: var(--color-danger-bg);
+  color: var(--color-danger);
+  border-color: var(--c-red-200);
+}
+
+.inv-status-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.inv-actions-header {
+  text-align: right;
+}
+
+.inv-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.inv-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-md);
+  border: none !important;
+  background: transparent !important;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+
+.inv-action-btn img {
+  width: 15px;
+  height: 15px;
+}
+
+.inv-action-btn:hover:not(:disabled) {
+  background-color: var(--bg-hover) !important;
+  color: var(--color-primary);
+}
+
+.inv-action-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.inv-message {
+  padding: 3rem var(--space-4);
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.inv-total-row td {
+  position: sticky;
+  bottom: 0;
+  background: var(--c-slate-50);
+  border-top: 1px solid var(--color-border);
+  font-weight: var(--font-weight-semibold);
+}

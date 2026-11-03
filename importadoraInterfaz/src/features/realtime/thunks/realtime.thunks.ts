@@ -3,7 +3,7 @@
 // ojo: la conexión vive fuera de redux (no es serializable); si no hay WS_URL o token, el tiempo real queda "disabled" y no se conecta a nada
 import { createAsyncThunk } from '@reduxjs/toolkit'
 import { API_CONFIG } from '@/api'
-import { readSession } from '@/global/helpers/session.storage'
+import { readSession } from '@/global/helpers/storage/session.storage'
 import { createRealtimeConnection } from '../services/realtime.service'
 import { handleRealtimeEvent } from '../helpers/realtime.handlers'
 import { buildSocketUrl } from '../helpers/realtime.url'

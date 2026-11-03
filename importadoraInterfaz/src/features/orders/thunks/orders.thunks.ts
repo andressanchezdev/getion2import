@@ -1,15 +1,13 @@
-// orders.thunks · carga los conteos por etapa, la tabla de pedidos y el detalle de uno, y anula un pedido
-// conecta con: orders.service (llamadas), auth (selectRequestContext), navigation (bodega activa), features/shop (cancelSale) y orders.slice (reacciona); las despachan useOrdersLoader, useOpenOrderDetail y las pantallas
-// ojo: cada carga lleva su requestId y el slice descarta respuestas viejas; sin bodega elegida no se llama al backend; el aviso de anulación sale aquí, en un solo lugar
+// orders.thunks · carga los conteos por etapa, la tabla de pedidos y el detalle de uno; anula un pedido y verifica el comprobante de una transferencia
+// conecta con: orders.service (llamadas), auth (selectRequestContext), features/shop (cancelSale) y orders.slice (reacciona); las despachan useOrdersLoader, useOpenOrderDetail y las pantallas
+// ojo: cada carga lleva su requestId y el slice descarta respuestas viejas; si selectedWarehouseId es null se consultan todas las bodegas a nivel general
 import { createAsyncThunk } from '@reduxjs/toolkit'
 import { getErrorMessage } from '@/api'
-import { toast } from '@/global/helpers/toast'
-import { toWarehouseNumber } from '@/global/helpers/warehouse'
+import { toast } from '@/global/helpers/feedback/toast'
 import type { NavigationState } from '@/features/navigation'
 import { selectRequestContext, type AuthState } from '@/features/auth'
 import { cancelSale, type CancelSaleInput } from '@/features/shop'
-import { NO_WAREHOUSE_ORDERS } from '../constants/orders.constants'
-import { fetchOrderCounts, fetchOrderDetail, fetchOrders, type OrdersResult } from '../services/orders.service'
+import { fetchOrderCounts, fetchOrderDetail, fetchOrders, verifyTransferPayment, type OrdersResult } from '../services/orders.service'
 import type { OrderDetail, OrdersState, StageCounts } from '../types/orders.types'
 
 type ThunkState = { auth: AuthState; ui: NavigationState; orders: OrdersState }
@@ -21,8 +19,8 @@ export const loadOrderCountsThunk = createAsyncThunk<StageCounts, void, Config>(
   const state = getState()
   const ctx = selectRequestContext(state)
   if (!ctx) return rejectWithValue(NO_SESSION)
-  const warehouseId = toWarehouseNumber(state.ui.activeWarehouseId)
-  if (warehouseId === undefined) return rejectWithValue(NO_WAREHOUSE_ORDERS)
+  // null = consulta general de todas las bodegas; number = filtro específico
+  const warehouseId = state.orders.selectedWarehouseId ?? undefined
   try {
     return await fetchOrderCounts(ctx, warehouseId)
   } catch (error) {
@@ -34,8 +32,8 @@ export const loadOrdersThunk = createAsyncThunk<OrdersResult, void, Config>('ord
   const state = getState()
   const ctx = selectRequestContext(state)
   if (!ctx) return rejectWithValue(NO_SESSION)
-  const warehouseId = toWarehouseNumber(state.ui.activeWarehouseId)
-  if (warehouseId === undefined) return rejectWithValue(NO_WAREHOUSE_ORDERS)
+  // null = consulta general de todas las bodegas; number = filtro específico
+  const warehouseId = state.orders.selectedWarehouseId ?? undefined
   try {
     return await fetchOrders(ctx, warehouseId, state.orders.stage, state.orders.channel)
   } catch (error) {
@@ -47,8 +45,7 @@ export const loadOrderDetailThunk = createAsyncThunk<OrderDetail, number, Config
   const state = getState()
   const ctx = selectRequestContext(state)
   if (!ctx) return rejectWithValue(NO_SESSION)
-  const warehouseId = toWarehouseNumber(state.ui.activeWarehouseId)
-  if (warehouseId === undefined) return rejectWithValue(NO_WAREHOUSE_ORDERS)
+  const warehouseId = state.orders.selectedWarehouseId ?? undefined
   try {
     return await fetchOrderDetail(ctx, warehouseId, saleId)
   } catch (error) {
@@ -56,18 +53,29 @@ export const loadOrderDetailThunk = createAsyncThunk<OrderDetail, number, Config
   }
 })
 
-// anula un pedido con su motivo (POST /sales/cancel) y vuelve a leer la tabla y los conteos; el backend devuelve el stock «si aplica»
 export const cancelOrderThunk = createAsyncThunk<void, CancelSaleInput, Config>('orders/cancel', async (input, { getState, dispatch, rejectWithValue }) => {
   const ctx = selectRequestContext(getState())
   if (!ctx) return rejectWithValue(NO_SESSION)
   try {
     await cancelSale(ctx, input)
-    toast.success('Pedido anulado.')
+    toast.success('Pedido anulado exitosamente.')
     dispatch(loadOrdersThunk())
     dispatch(loadOrderCountsThunk())
   } catch (error) {
-    const message = getErrorMessage(error, 'No se pudo anular el pedido.')
-    toast.error(message)
-    return rejectWithValue(message)
+    return rejectWithValue(getErrorMessage(error, 'No se pudo anular el pedido.'))
   }
 })
+
+export const verifyTransferPaymentThunk = createAsyncThunk<void, OrderDetail, Config>(
+  'orders/verifyTransfer',
+  async (order, { dispatch, rejectWithValue }) => {
+    try {
+      await verifyTransferPayment(order)
+      toast.success('Comprobante verificado exitosamente.')
+      dispatch(loadOrdersThunk())
+      dispatch(loadOrderCountsThunk())
+    } catch (error) {
+      return rejectWithValue(getErrorMessage(error, 'No se pudo verificar el comprobante.'))
+    }
+  }
+)

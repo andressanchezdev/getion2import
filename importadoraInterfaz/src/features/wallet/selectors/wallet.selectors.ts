@@ -8,14 +8,22 @@ import type { WalletState } from '../types/wallet.types'
 type WalletRootState = { wallet: WalletState }
 
 const selectItems = (state: WalletRootState) => state.wallet.list.items
+// lee los filtros de la tabla de clientes con crédito
 const selectFilters = (state: WalletRootState) => state.wallet.filters
 
+// lee el estado de carga de la lista de clientes con crédito
 export const selectWalletListStatus = (state: WalletRootState) => state.wallet.list.status
+// lee el mensaje de error de la lista de clientes con crédito
 export const selectWalletListError = (state: WalletRootState) => state.wallet.list.error
+// lee los datos de paginación de la lista de clientes con crédito
 export const selectWalletMeta = (state: WalletRootState) => state.wallet.list.meta
+// lee la página actual de la lista de clientes con crédito
 export const selectWalletPage = (state: WalletRootState) => state.wallet.list.page
+// lee los totales de cartera (por cobrar, en mora, cupo y clientes con crédito)
 export const selectWalletSummary = (state: WalletRootState) => state.wallet.summary.data
+// lee las facturas del cliente abierto en el estado de cuenta
 export const selectWalletInvoices = (state: WalletRootState) => state.wallet.invoices
+// lee el cliente abierto en el estado de cuenta
 export const selectSelectedCustomer = (state: WalletRootState) => state.wallet.selectedCustomer
 
 // totales de las tarjetas de arriba (0 mientras llegan)
@@ -46,3 +54,8 @@ export const selectAccountDrawerMeta = createSelector([selectSelectedCustomer], 
 
 // true si hay un cliente seleccionado (el panel derecho solo se abre en ese caso)
 export const selectHasSelectedCustomer = (state: WalletRootState) => state.wallet.selectedCustomer !== null
+
+// lee el historial de abonos y recaudos
+export const selectPaymentsHistory = (state: { wallet: WalletState }) => state.wallet.history
+// lee los clientes encontrados al habilitar crédito
+export const selectCreditSearch = (state: { wallet: WalletState }) => state.wallet.creditSearch

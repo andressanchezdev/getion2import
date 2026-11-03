@@ -1,5 +1,8 @@
 package dtos
 
+// sale_dto.go · formas de lo que entra y sale por la API en ventas (peticiones y respuestas)
+// conecta con: los controllers y services de ventas
+
 import (
 	"encoding/json"
 	"time"
@@ -71,6 +74,7 @@ type SaleResponse struct {
 	IVATotal              float64                 `json:"ivaTotal"`
 	Total                 float64                 `json:"total"`
 	PaidTotal             float64                 `json:"paidTotal"`
+	CreditAmount          float64                 `json:"creditAmount"`
 	SaleAt                *time.Time              `json:"saleAt,omitempty"`
 	DueDate               *string                 `json:"dueDate,omitempty"`
 	ShippingAddress       json.RawMessage         `json:"shippingAddress,omitempty"`
@@ -80,6 +84,8 @@ type SaleResponse struct {
 	CancelReason          *string                 `json:"cancelReason,omitempty"`
 	CancelledByEmployeeID *int64                  `json:"cancelledByEmployeeId,omitempty"`
 	CancelledByName       *string                 `json:"cancelledByName,omitempty"`
+	PaymentProofURL       *string                 `json:"paymentProofUrl,omitempty"`
+	PaymentReference      *string                 `json:"paymentReference,omitempty"`
 	Notes                 *string                 `json:"notes,omitempty"`
 	CreatedAt             time.Time               `json:"createdAt"`
 	UpdatedAt             time.Time               `json:"updatedAt"`
@@ -110,6 +116,8 @@ type CreateSaleRequest struct {
 	ShippingAddress       json.RawMessage         `json:"shippingAddress"`
 	CarrierID             *int64                  `json:"carrierId"`
 	TrackingNo            *string                 `json:"trackingNo"`
+	ProofURL              *string                 `json:"proofUrl,omitempty"`
+	PaymentReference      *string                 `json:"paymentReference,omitempty"`
 	Notes                 *string                 `json:"notes"`
 	Items                 []CreateSaleItemRequest `json:"items"`
 }
@@ -168,4 +176,13 @@ type InvoiceFilterQuery struct {
 	Kind        *types.InvoiceKind
 	Page        int
 	PageSize    int
+}
+
+// StageHistoryResponse es una etapa por la que pasó el pedido: quién lo movió, cuándo entró, cuándo salió y cuánto estuvo.
+type StageHistoryResponse struct {
+	Stage        string     `json:"stage"`
+	EmployeeName *string    `json:"employeeName,omitempty"`
+	EnteredAt    time.Time  `json:"enteredAt"`
+	LeftAt       *time.Time `json:"leftAt,omitempty"`
+	Minutes      int        `json:"minutes"` // minutos en la etapa (hasta ahora si sigue ahí)
 }

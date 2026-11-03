@@ -13,12 +13,16 @@ import settingsIcon from '@/assets/icons/settings.svg'
 export const MENU_ITEMS: NavItem[] = [
     {
         id: 'shop',
-        label: 'Tienda & Cotización',
+        label: 'Tienda',
         icon: storeIcon,
         subitems: [
-            { id: 'catalog', label: 'Catálogo de Repuestos' },
+            { id: 'catalog', label: 'Catálogo' },
             { id: 'quotations', label: 'Cotizaciones' },
             { id: 'orders', label: 'Pedidos Activos' },
+            { id: 'transfers', label: 'Traslados' },
+            { id: 'receiving', label: 'Recepción de Compra' },
+            { id: 'cashRegister', label: 'Caja' },
+            { id: 'generalReport', label: 'Reporte General' },
         ],
     },
     {
@@ -26,20 +30,10 @@ export const MENU_ITEMS: NavItem[] = [
         label: 'Gestión Ventas',
         icon: packageIcon,
         subitems: [
-            { id: 'posBilling', label: 'Facturación / POS' },
             { id: 'billingHistory', label: 'Historial de Ventas' },
-            { id: 'returns', label: 'Devolución & Garantía' },
-            { id: 'shiftClose', label: 'Cierre de Caja' },
-        ],
-    },
-    {
-        id: 'purchases',
-        label: 'Gestión Compras',
-        icon: shoppingBagIcon,
-        subitems: [
+            { id: 'invoices', label: 'Facturas' },
             { id: 'purchaseOrders', label: 'Órdenes de Compra' },
-            { id: 'receiving', label: 'Recepción en Bodega' },
-            { id: 'suppliers', label: 'Proveedores' },
+            { id: 'returns', label: 'Devolución & Garantía' },
         ],
     },
     {
@@ -47,22 +41,21 @@ export const MENU_ITEMS: NavItem[] = [
         label: 'Gestión Inventario',
         icon: databaseIcon,
         subitems: [
-            { id: 'products', label: 'Repuestos & Precios' },
-            { id: 'transfers', label: 'Traslados entre Bodegas' },
+            { id: 'warehouses', label: 'Bodegas' },
+            { id: 'products', label: 'Productos' },
             { id: 'brands', label: 'Marcas' },
             { id: 'categories', label: 'Categorías' },
             { id: 'models', label: 'Modelos' },
-            { id: 'movements', label: 'Auditoría de Stock' },
         ],
     },
     {
         id: 'wallet',
-        label: 'Cartera & Banco',
+        label: 'Cartera',
         icon: walletIcon,
         subitems: [
-            { id: 'creditClients', label: 'Créditos & Cupos' },
-            { id: 'paymentVerification', label: 'Abonos & Recaudos' },
-            { id: 'bankReconciliation', label: 'Careo Bancario' },
+            { id: 'creditClients', label: 'Créditos' },
+            { id: 'paymentVerification', label: 'Abonos' },
+            { id: 'bankReconciliation', label: 'Conciliación Entradas' },
         ],
     },
     {
@@ -71,8 +64,9 @@ export const MENU_ITEMS: NavItem[] = [
         icon: userIcon,
         subitems: [
             { id: 'customers', label: 'Clientes' },
-            { id: 'employees', label: 'Empleados & Sedes' },
-            { id: 'rolesPermissions', label: 'Roles & Permisos' },
+            { id: 'employees', label: 'Empleados' },
+            { id: 'suppliers', label: 'Proveedores' },
+            { id: 'carriers', label: 'Transportadoras' },
         ],
     },
     {
@@ -80,26 +74,45 @@ export const MENU_ITEMS: NavItem[] = [
         label: 'Reportes & Auditoría',
         icon: fileTextIcon,
         subitems: [
-            { id: 'dailySales', label: 'Ventas & Rentabilidad' },
-            { id: 'generalReport', label: 'Reporte General' },
-            { id: 'inventoryReport', label: 'Stock & Rotación' },
+            { id: 'dashboard', label: 'Dashboard' },
+            { id: 'general', label: 'Reporte General' },
             { id: 'recycleBin', label: 'Papelera de Reciclaje' },
+            { id: 'audit', label: 'Auditoría de Movimientos' },
+        ],
+    },
+    {
+        id: 'settings',
+        label: 'Configuración',
+        icon: settingsIcon,
+        subitems: [
+            { id: 'company', label: 'Empresa' },
+            { id: 'billing', label: 'Facturación' },
+            { id: 'rolesPermissions', label: 'Roles y permisos' },
+        ],
+    },
+    {
+        id: 'superadmin',
+        label: 'Gestión Superadmin',
+        icon: databaseIcon,
+        subitems: [
+            { id: 'admins', label: 'Administradores' },
         ],
     },
 ]
 
 // Título de la cabecera por módulo
 export const MODULE_HEADER_TITLES: Record<ERPModule, string> = {
-    shop: 'Tienda & Cotización',
+    shop: 'Tienda',
     sales: 'Gestión Ventas',
     cashRegister: 'Gestión Ventas',
     purchases: 'Gestión Compras',
     inventory: 'Gestión Inventario',
-    transfers: 'Traslados entre Bodegas',
-    wallet: 'Cartera & Banco',
-    thirdParties: 'Terceros & Roles',
-    reports: 'Reportes & Auditoría',
-    settings: 'Configuración del Sistema',
+    transfers: 'Traslados',
+    wallet: 'Cartera',
+    thirdParties: 'Terceros',
+    reports: 'Auditoría',
+    settings: 'Configuración',
+    superadmin: 'Gestión Superadmin',
 }
 
 // Ícono del encabezado por módulo
@@ -114,4 +127,5 @@ export const MODULE_HEADER_ICONS: Record<ERPModule, string> = {
     thirdParties: userIcon,
     reports: fileTextIcon,
     settings: settingsIcon,
+    superadmin: databaseIcon,
 }

@@ -1,5 +1,8 @@
 package repositories
 
+// auth_repo.go · acceso a la base de autenticación y sesiones: aquí vive el SQL; cada método recibe la conexión o la transacción
+// conecta con: core/db (DBExecutor) y los dtos de autenticación y sesiones; los usan los services de autenticación y sesiones
+
 import (
 	"context"
 	"errors"
@@ -47,35 +50,14 @@ type ActorAccount struct {
 	LastLoginAt      *time.Time
 }
 
-
-// LoginAttemptRecord fila de employee_login_attempts.
-type LoginAttemptRecord struct {
-	ID               int64
-	EmployeeID       *int64
-	Email            string
-	FailedLoginCount int
-	BlockedUntil     *time.Time
-}
-
-// RefreshTokenRecord fila de refresh_tokens.
-type RefreshTokenRecord struct {
-	ID           int64
-	EmployeeID   *int64
-	AdminID      *int64
-	SuperadminID *int64
-	TokenHash    string
-	Device       string
-	IPAddress    string
-	ExpiresAt    time.Time
-	RevokedAt    *time.Time
-}
-
 type AuthRepository struct{}
 
+// NewAuthRepository crea el repositorio; no guarda estado, cada método recibe la conexión o transacción.
 func NewAuthRepository() *AuthRepository {
 	return &AuthRepository{}
 }
 
+// FindSuperadminByEmail busca un superadministrador por su correo.
 func (r *AuthRepository) FindSuperadminByEmail(ctx context.Context, q db.DBExecutor, email string) (*ActorAccount, error) {
 	const sqlQuery = `
 		SELECT
@@ -109,6 +91,7 @@ func (r *AuthRepository) FindSuperadminByEmail(ctx context.Context, q db.DBExecu
 	return acc, nil
 }
 
+// FindSuperadminByID busca un superadministrador por su id.
 func (r *AuthRepository) FindSuperadminByID(ctx context.Context, q db.DBExecutor, id int64) (*ActorAccount, error) {
 	const sqlQuery = `
 		SELECT
@@ -142,6 +125,7 @@ func (r *AuthRepository) FindSuperadminByID(ctx context.Context, q db.DBExecutor
 	return acc, nil
 }
 
+// FindAdminByEmail busca un administrador por su correo.
 func (r *AuthRepository) FindAdminByEmail(ctx context.Context, q db.DBExecutor, email string) (*ActorAccount, error) {
 	const sqlQuery = `
 		SELECT
@@ -184,6 +168,7 @@ func (r *AuthRepository) FindAdminByEmail(ctx context.Context, q db.DBExecutor, 
 	return acc, nil
 }
 
+// FindAdminByID busca un administrador por su id.
 func (r *AuthRepository) FindAdminByID(ctx context.Context, q db.DBExecutor, id int64) (*ActorAccount, error) {
 	const sqlQuery = `
 		SELECT
@@ -226,122 +211,6 @@ func (r *AuthRepository) FindAdminByID(ctx context.Context, q db.DBExecutor, id 
 	return acc, nil
 }
 
-func (r *AuthRepository) FindEmployeeByEmail(ctx context.Context, q db.DBExecutor, email string) (*ActorAccount, error) {
-	const sqlQuery = `
-		SELECT
-			e.id, e.company_id, c.name, c.is_active,
-			e.role_id, rl.code, rl.name,
-			e.warehouse_id, COALESCE(w.code, ''), COALESCE(w.name, ''),
-			e.email, e.password_hash, e.first_name, e.last_name, e.full_name,
-			e.document_type, COALESCE(e.document, ''), COALESCE(e.phone, ''),
-			COALESCE(e.address, ''), COALESCE(e.photo_url, ''),
-			e.work_modality, e.employment_status, e.status, e.last_login_at
-		FROM employees e
-		JOIN companies c ON c.id = e.company_id
-		JOIN roles rl ON rl.id = e.role_id
-		LEFT JOIN warehouses w ON w.id = e.warehouse_id
-		WHERE e.email = $1 AND e.deleted_at IS NULL
-	`
-	var (
-		companyID int64
-		roleID    int64
-	)
-	acc := &ActorAccount{ActorType: types.ActorEmployee}
-	err := q.QueryRow(ctx, sqlQuery, email).Scan(
-		&acc.ID,
-		&companyID,
-		&acc.CompanyName,
-		&acc.CompanyIsActive,
-		&roleID,
-		&acc.RoleCode,
-		&acc.RoleName,
-		&acc.WarehouseID,
-		&acc.WarehouseCode,
-		&acc.WarehouseName,
-		&acc.Email,
-		&acc.PasswordHash,
-		&acc.FirstName,
-		&acc.LastName,
-		&acc.FullName,
-		&acc.DocumentType,
-		&acc.Document,
-		&acc.Phone,
-		&acc.Address,
-		&acc.PhotoURL,
-		&acc.WorkModality,
-		&acc.EmploymentStatus,
-		&acc.Status,
-		&acc.LastLoginAt,
-	)
-	if err != nil {
-		return nil, err
-	}
-	acc.CompanyID = &companyID
-	acc.RoleID = &roleID
-	empID := acc.ID
-	acc.LinkedEmployeeID = &empID
-	acc.IsActive = acc.Status == string(types.EmployeeActive) && acc.EmploymentStatus == string(types.EmploymentActive)
-	return acc, nil
-}
-
-func (r *AuthRepository) FindEmployeeByID(ctx context.Context, q db.DBExecutor, id int64) (*ActorAccount, error) {
-	const sqlQuery = `
-		SELECT
-			e.id, e.company_id, c.name, c.is_active,
-			e.role_id, rl.code, rl.name,
-			e.warehouse_id, COALESCE(w.code, ''), COALESCE(w.name, ''),
-			e.email, e.password_hash, e.first_name, e.last_name, e.full_name,
-			e.document_type, COALESCE(e.document, ''), COALESCE(e.phone, ''),
-			COALESCE(e.address, ''), COALESCE(e.photo_url, ''),
-			e.work_modality, e.employment_status, e.status, e.last_login_at
-		FROM employees e
-		JOIN companies c ON c.id = e.company_id
-		JOIN roles rl ON rl.id = e.role_id
-		LEFT JOIN warehouses w ON w.id = e.warehouse_id
-		WHERE e.id = $1 AND e.deleted_at IS NULL
-	`
-	var (
-		companyID int64
-		roleID    int64
-	)
-	acc := &ActorAccount{ActorType: types.ActorEmployee}
-	err := q.QueryRow(ctx, sqlQuery, id).Scan(
-		&acc.ID,
-		&companyID,
-		&acc.CompanyName,
-		&acc.CompanyIsActive,
-		&roleID,
-		&acc.RoleCode,
-		&acc.RoleName,
-		&acc.WarehouseID,
-		&acc.WarehouseCode,
-		&acc.WarehouseName,
-		&acc.Email,
-		&acc.PasswordHash,
-		&acc.FirstName,
-		&acc.LastName,
-		&acc.FullName,
-		&acc.DocumentType,
-		&acc.Document,
-		&acc.Phone,
-		&acc.Address,
-		&acc.PhotoURL,
-		&acc.WorkModality,
-		&acc.EmploymentStatus,
-		&acc.Status,
-		&acc.LastLoginAt,
-	)
-	if err != nil {
-		return nil, err
-	}
-	acc.CompanyID = &companyID
-	acc.RoleID = &roleID
-	empID := acc.ID
-	acc.LinkedEmployeeID = &empID
-	acc.IsActive = acc.Status == string(types.EmployeeActive) && acc.EmploymentStatus == string(types.EmploymentActive)
-	return acc, nil
-}
-
 // ResolveActorByEmail busca la cuenta en el actorType indicado, o en orden jerárquico si actorType está vacío.
 func (r *AuthRepository) ResolveActorByEmail(ctx context.Context, q db.DBExecutor, email string, actorType types.ActorType) (*ActorAccount, error) {
 	switch actorType {
@@ -366,6 +235,7 @@ func (r *AuthRepository) ResolveActorByEmail(ctx context.Context, q db.DBExecuto
 	}
 }
 
+// FindActorByID busca a la persona por su id según su tipo de actor (superadmin, administrador o empleado).
 func (r *AuthRepository) FindActorByID(ctx context.Context, q db.DBExecutor, actorType types.ActorType, actorID int64) (*ActorAccount, error) {
 	switch actorType {
 	case types.ActorSuperadmin:
@@ -379,101 +249,7 @@ func (r *AuthRepository) FindActorByID(ctx context.Context, q db.DBExecutor, act
 	}
 }
 
-// GetEmployeeLoginAttempt obtiene el control de intentos fallidos del empleado en employee_login_attempts.
-func (r *AuthRepository) GetEmployeeLoginAttempt(ctx context.Context, q db.DBExecutor, employeeID int64, email string) (*LoginAttemptRecord, error) {
-	const sqlQuery = `
-		SELECT id, employee_id, email, failed_login_count, blocked_until
-		FROM employee_login_attempts
-		WHERE employee_id = $1 OR email = $2
-		LIMIT 1
-	`
-	rec := &LoginAttemptRecord{}
-	err := q.QueryRow(ctx, sqlQuery, employeeID, email).Scan(
-		&rec.ID,
-		&rec.EmployeeID,
-		&rec.Email,
-		&rec.FailedLoginCount,
-		&rec.BlockedUntil,
-	)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	return rec, nil
-}
-
-// RecordFailedEmployeeLogin incrementa failed_login_count y bloquea temporalmente si alcanza maxAttempts.
-func (r *AuthRepository) RecordFailedEmployeeLogin(
-	ctx context.Context,
-	q db.DBExecutor,
-	employeeID int64,
-	email string,
-	ip string,
-	maxAttempts int,
-	blockDuration time.Duration,
-) (int, *time.Time, error) {
-	now := time.Now().UTC()
-	var (
-		newCount     int
-		blockedUntil *time.Time
-	)
-
-	existing, err := r.GetEmployeeLoginAttempt(ctx, q, employeeID, email)
-	if err != nil {
-		return 0, nil, err
-	}
-
-	if existing == nil {
-		newCount = 1
-		if newCount >= maxAttempts {
-			bt := now.Add(blockDuration)
-			blockedUntil = &bt
-		}
-		const insertSQL = `
-			INSERT INTO employee_login_attempts (employee_id, email, failed_login_count, blocked_until, last_attempt_at, last_ip)
-			VALUES ($1, $2, $3, $4, $5, $6)
-		`
-		_, err = q.Exec(ctx, insertSQL, employeeID, email, newCount, blockedUntil, now, ip)
-		return newCount, blockedUntil, err
-	}
-
-	newCount = existing.FailedLoginCount + 1
-	if newCount >= maxAttempts {
-		bt := now.Add(blockDuration)
-		blockedUntil = &bt
-	}
-	const updateSQL = `
-		UPDATE employee_login_attempts
-		SET employee_id = $1,
-		    email = $2,
-		    failed_login_count = $3,
-		    blocked_until = $4,
-		    last_attempt_at = $5,
-		    last_ip = $6
-		WHERE id = $7
-	`
-	_, err = q.Exec(ctx, updateSQL, employeeID, email, newCount, blockedUntil, now, ip, existing.ID)
-	return newCount, blockedUntil, err
-}
-
-// ResetEmployeeLoginAttempts limpia el contador de fallos y actualiza last_login_at tras login exitoso.
-func (r *AuthRepository) ResetEmployeeLoginAttempts(ctx context.Context, q db.DBExecutor, employeeID int64, email, ip string) error {
-	now := time.Now().UTC()
-	const upsertSQL = `
-		INSERT INTO employee_login_attempts (employee_id, email, failed_login_count, blocked_until, last_attempt_at, last_ip)
-		VALUES ($1, $2, 0, NULL, $3, $4)
-		ON CONFLICT (employee_id) DO UPDATE
-		SET failed_login_count = 0,
-		    blocked_until = NULL,
-		    last_attempt_at = EXCLUDED.last_attempt_at,
-		    last_ip = EXCLUDED.last_ip
-	`
-	_, err := q.Exec(ctx, upsertSQL, employeeID, email, now, ip)
-	return err
-}
-
+// TouchLastLogin guarda la fecha y hora del último ingreso del actor.
 func (r *AuthRepository) TouchLastLogin(ctx context.Context, q db.DBExecutor, actorType types.ActorType, actorID int64) error {
 	var sqlQuery string
 	switch actorType {
@@ -530,130 +306,3 @@ func (r *AuthRepository) LoadPermissionsForActor(ctx context.Context, q db.DBExe
 	return list, rows.Err()
 }
 
-// CreateRefreshToken registra una nueva sesión activa respetando CHECK (num_nonnulls(...) = 1).
-func (r *AuthRepository) CreateRefreshToken(
-	ctx context.Context,
-	q db.DBExecutor,
-	actorType types.ActorType,
-	actorID int64,
-	tokenHash string,
-	device string,
-	ip string,
-	expiresAt time.Time,
-) (int64, error) {
-	var (
-		empID *int64
-		admID *int64
-		supID *int64
-	)
-	switch actorType {
-	case types.ActorEmployee:
-		empID = &actorID
-	case types.ActorAdmin:
-		admID = &actorID
-	case types.ActorSuperadmin:
-		supID = &actorID
-	}
-
-	var devPtr *string
-	if device != "" {
-		devPtr = &device
-	}
-	var ipPtr *string
-	if ip != "" {
-		ipPtr = &ip
-	}
-
-	const insertSQL = `
-		INSERT INTO refresh_tokens (
-			employee_id, admin_id, superadmin_id, token_hash, device, ip_address, expires_at
-		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		RETURNING id
-	`
-	var id int64
-	err := q.QueryRow(ctx, insertSQL, empID, admID, supID, tokenHash, devPtr, ipPtr, expiresAt).Scan(&id)
-	return id, err
-}
-
-func (r *AuthRepository) FindActiveRefreshTokenByHash(ctx context.Context, q db.DBExecutor, tokenHash string) (*RefreshTokenRecord, error) {
-	const sqlQuery = `
-		SELECT
-			id, employee_id, admin_id, superadmin_id, token_hash,
-			COALESCE(device, ''), COALESCE(ip_address, ''), expires_at, revoked_at
-		FROM refresh_tokens
-		WHERE token_hash = $1
-		  AND revoked_at IS NULL
-		  AND expires_at > CURRENT_TIMESTAMP
-	`
-	rec := &RefreshTokenRecord{}
-	err := q.QueryRow(ctx, sqlQuery, tokenHash).Scan(
-		&rec.ID,
-		&rec.EmployeeID,
-		&rec.AdminID,
-		&rec.SuperadminID,
-		&rec.TokenHash,
-		&rec.Device,
-		&rec.IPAddress,
-		&rec.ExpiresAt,
-		&rec.RevokedAt,
-	)
-	if err != nil {
-		return nil, err
-	}
-	return rec, nil
-}
-
-func (r *AuthRepository) RevokeRefreshTokenByID(ctx context.Context, q db.DBExecutor, id int64) error {
-	const sqlQuery = `
-		UPDATE refresh_tokens
-		SET revoked_at = CURRENT_TIMESTAMP,
-		    last_used_at = CURRENT_TIMESTAMP
-		WHERE id = $1 AND revoked_at IS NULL
-	`
-	_, err := q.Exec(ctx, sqlQuery, id)
-	return err
-}
-
-func (r *AuthRepository) RevokeRefreshTokenByHash(ctx context.Context, q db.DBExecutor, tokenHash string) error {
-	const sqlQuery = `
-		UPDATE refresh_tokens
-		SET revoked_at = CURRENT_TIMESTAMP,
-		    last_used_at = CURRENT_TIMESTAMP
-		WHERE token_hash = $1 AND revoked_at IS NULL
-	`
-	_, err := q.Exec(ctx, sqlQuery, tokenHash)
-	return err
-}
-
-func (r *AuthRepository) RevokeAllActorSessions(ctx context.Context, q db.DBExecutor, actorType types.ActorType, actorID int64) error {
-	var sqlQuery string
-	switch actorType {
-	case types.ActorEmployee:
-		sqlQuery = `UPDATE refresh_tokens SET revoked_at = CURRENT_TIMESTAMP WHERE employee_id = $1 AND revoked_at IS NULL`
-	case types.ActorAdmin:
-		sqlQuery = `UPDATE refresh_tokens SET revoked_at = CURRENT_TIMESTAMP WHERE admin_id = $1 AND revoked_at IS NULL`
-	case types.ActorSuperadmin:
-		sqlQuery = `UPDATE refresh_tokens SET revoked_at = CURRENT_TIMESTAMP WHERE superadmin_id = $1 AND revoked_at IS NULL`
-	default:
-		return nil
-	}
-	_, err := q.Exec(ctx, sqlQuery, actorID)
-	return err
-}
-
-// IsSessionActive valida que el registro de sesión en refresh_tokens siga vigente y no revocado.
-func (r *AuthRepository) IsSessionActive(ctx context.Context, q db.DBExecutor, sessionID int64) (bool, error) {
-	const sqlQuery = `
-		SELECT EXISTS (
-			SELECT 1
-			FROM refresh_tokens
-			WHERE id = $1
-			  AND revoked_at IS NULL
-			  AND expires_at > CURRENT_TIMESTAMP
-		)
-	`
-	var active bool
-	err := q.QueryRow(ctx, sqlQuery, sessionID).Scan(&active)
-	return active, err
-}

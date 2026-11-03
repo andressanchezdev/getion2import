@@ -15,6 +15,8 @@ export interface Customer {
   userType: string
   priceType?: string // nivel de precio del cliente (P0..P3)
   businessName: string // razón social o nombre comercial ('' si no hay)
+  isActive?: boolean
+  status?: string
 }
 
 export interface CustomerCompany {
@@ -72,6 +74,36 @@ export interface Discount {
   isActive: boolean
 }
 
+// vigencia de un documento: vigente, vence pronto o ya venció
+export type DocumentStatus = 'valid' | 'expiring' | 'expired'
+
+// un documento adjunto del cliente (RUT, cédula, cámara de comercio...) con su vencimiento
+export interface CustomerDocument {
+  id: number
+  customerId: number
+  type: string // 'rut' | 'id_card' | 'chamber' | 'credit_form' | 'other'
+  fileName: string
+  fileUrl: string
+  notes: string
+  uploadedAt: string
+  expiresAt: string
+  status: DocumentStatus
+  daysLeft: number // negativo si ya venció
+}
+
+// un documento vencido o por vencer junto al cliente que debe renovarlo
+export interface CustomerDocumentAlert {
+  documentId: number
+  customerId: number
+  customerName: string
+  customerDocument: string
+  type: string
+  fileName: string
+  expiresAt: string
+  status: DocumentStatus
+  daysLeft: number
+}
+
 // ---- estado del slice (no se guarda en el navegador) ----
 export interface CustomersListState {
   items: Customer[]
@@ -104,4 +136,6 @@ export interface CustomersState {
   detail: CustomerDetailState
   directions: CustomerListResource<Direction>
   discounts: CustomerListResource<Discount>
+  documents: CustomerListResource<CustomerDocument> // documentos del cliente abierto
+  documentAlerts: CustomerListResource<CustomerDocumentAlert> // vencidos o por vencer de toda la compañía
 }

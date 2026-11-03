@@ -3,9 +3,9 @@
 // ojo: antes el usuario salía del estado ui con datos fijos; ahora sale de la sesión (login)
 // ojo: con el menú contraído solo se ve el avatar (como en la maqueta)
 import React, { useState } from 'react'
-import { useAppDispatch, useAppSelector } from '@/global/hooks/useRedux'
-import { getInitials } from '@/global/helpers/format'
-import { ConfirmDialog } from '@/global/components/UI/molecules/ConfirmDialog'
+import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
+import { getInitials } from '@/global/helpers/formatting/format'
+import { ConfirmDialog } from '@/global/components/UI/molecules/dialogs/ConfirmDialog'
 import { getDisplayName, logoutThunk, selectCurrentUser } from '@/features/auth'
 import logoutIcon from '@/assets/icons/logout.svg'
 import './SideMenuUser.css'

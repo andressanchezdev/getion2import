@@ -1,5 +1,8 @@
 package controllers
 
+// external_controller.go · controlador HTTP de terceros (proveedores y transportadoras): recibe la petición, valida la entrada y llama al servicio; no tiene lógica de negocio
+// conecta con: los services y dtos de terceros (proveedores y transportadoras) y core/utils (respuestas y errores); los registra routes
+
 import (
 	"strconv"
 
@@ -16,6 +19,7 @@ type ExternalController struct {
 	service *services.ExternalService
 }
 
+// NewExternalController crea el controlador con las piezas que necesita para funcionar.
 func NewExternalController(service *services.ExternalService) *ExternalController {
 	return &ExternalController{service: service}
 }

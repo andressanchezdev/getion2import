@@ -1,0 +1,15 @@
+// inventory/index · API pública de la feature inventario (tablas de productos, marcas, categorías y modelos)
+// conecta con: rootReducer (reducer), screenRegistry (pantallas) y formRegistry (paneles laterales)
+export * from './slices/inventory.slice'
+export type { StockFullDto } from './types/inventory.api.types'
+export { relocateStockThunk, saveProductPricesThunk, searchCatalogThunk } from './thunks/inventory.thunks'
+export { useProductStock } from './hooks/useProductStock'
+export { ProductsScreen } from './screens/ProductsScreen'
+export { BrandsScreen, CategoriesScreen, ModelsScreen } from './screens/CatalogScreens'
+export { ProductDetailPanel } from './components/drawer/ProductDetailPanel'
+export { EditProductPanel } from './components/drawer/EditProductPanel'
+export { ProductLocationsPanel } from './components/drawer/ProductLocationsPanel'
+export { CreateProductForm } from './components/drawer/CreateProductForm'
+export { StockScreen } from './screens/StockScreen'
+export { AssignStockPanel } from './components/drawer/AssignStockPanel'
+export type { AssignStockPayload } from './hooks/useAssignStockForm'

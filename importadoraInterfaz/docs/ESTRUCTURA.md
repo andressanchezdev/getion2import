@@ -172,7 +172,7 @@ Configuración de redux, persistencia y reducers raíz.
 
 | Archivo | Qué hace | Conecta con |
 |---|---|---|
-| `icon.ico` | Ícono de la marca | reserva |
+| `ip-logo.svg` | Marca IP sobre el fondo oscuro de la marca | SideMenuBrand (menú lateral) |
 
 ### `src/features/auth/`
 
@@ -689,8 +689,6 @@ Configuración de redux, persistencia y reducers raíz.
 | `CreditClientRow.tsx` | fila de un cliente: nombre, documento, plazo, cupo, saldo, disponible, estado y botón con ícono "Ver Estado" | wallet.slice (seleccionar cliente); partes: CreditStatusBadge; la pinta CreditClientsTable |
 | `CreditStatusBadge.css` | estilos de la etiqueta de estado de crédito | estilos de CreditStatusBadge |
 | `CreditStatusBadge.tsx` | etiqueta del estado de crédito del cliente (al día, alerta, mora o bloqueado) | CreditClientRow (le pasa el estado); el texto y la variante salen de wallet.constants (CREDIT_STATUS_BADGES) |
-| `CreditUsageBar.css` | estilos de la barra de uso del cupo | estilos de CreditUsageBar |
-| `CreditUsageBar.tsx` | barra con el porcentaje de cupo usado (verde, ámbar o roja según el nivel) | CreditClientRow (le pasa el porcentaje); el nivel sale de wallet.helpers (getUsageLevel) |
 
 ### `src/features/wallet/components/clientsTable/`
 
@@ -773,7 +771,7 @@ Configuración de redux, persistencia y reducers raíz.
 |---|---|---|
 | `wallet.account.types.ts` | props de las partes del estado de cuenta (detalle, abono, cupo y facturas) | CreditAccountDetail, CreditAccountMetrics, CreditPaymentForm, CreditLimitForm, CreditInvoiceList, CreditInvoiceCard |
 | `wallet.api.types.ts` | lo que responde el backend en cartera (nombres tal cual del Swagger) y los datos que se envían al pagar o cambiar el cupo | wallet.adapter (convierte a los tipos de la app), wallet.service y wallet.payments.service (los piden y envían) |
-| `wallet.table.types.ts` | props de las partes de la tabla de clientes | CreditClientRow (la pinta CreditClientsTable), CreditUsageBar y CreditStatusBadge (las pinta CreditClientRow) |
+| `wallet.table.types.ts` | props de las partes de la tabla de clientes | CreditClientRow (la pinta CreditClientsTable) y CreditStatusBadge (la pinta CreditClientRow) |
 | `wallet.types.ts` | contratos de cartera que usa la app: clientes con crédito, facturas, resumen, filtros y estado del slice | wallet.adapter (convierte lo del backend), wallet.constants, wallet.slice, wallet.selectors y los componentes de wallet (lo que responde el backend está en wallet.api.types) |
 
 ### `src/features/warehouses/`

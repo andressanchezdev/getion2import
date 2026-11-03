@@ -72,6 +72,61 @@ export interface WalletInvoicesState {
   saving: boolean
 }
 
+// un abono o recaudo del historial de pagos
+export interface AbonoRecord {
+  id: number
+  serialCode: string
+  date: string
+  customerName: string
+  customerDoc: string
+  saleSerial?: string
+  method: 'cash' | 'transfer' | string
+  reference?: string
+  amount: number
+  status: 'verified' | 'pending' | 'void'
+  saleId?: number
+  warehouseId?: number
+  warehouseCode?: string
+  warehouseName?: string
+  employeeName?: string // quien registró el pago
+  verifiedByName?: string
+  proofUrl?: string
+  note?: string
+}
+
+export interface AbonoFilters {
+  query: string
+  method: string
+  status: string
+  warehouse?: string
+}
+
+// un cliente que se puede elegir para habilitarle crédito
+export interface CreditCustomerOption {
+  id: number
+  name: string
+  identification: string
+  email?: string
+  creditLimit: number
+  creditDays: number
+  isCredit: boolean
+}
+
+// el cliente con el que se abre «Habilitar crédito» desde otra pantalla (por ejemplo la tabla de clientes); sin él el panel muestra el buscador
+export interface EnableCreditPayload {
+  id: number
+  name: string
+  identification: string
+}
+
+// una lista que se pide al backend; requestId descarta respuestas de pedidos anteriores
+interface RemoteList<T> {
+  items: T[]
+  status: LoadStatus
+  error: string | null
+  requestId: string | null
+}
+
 export interface WalletState {
   list: WalletListState
   summary: WalletSummaryState
@@ -79,4 +134,6 @@ export interface WalletState {
   selectedCustomer: CustomerCreditProfile | null // cliente abierto en el panel (copia: no se pierde si cambia la página)
   isAccountDrawerOpen: boolean
   invoices: WalletInvoicesState
+  history: RemoteList<AbonoRecord> // historial de abonos y recaudos
+  creditSearch: RemoteList<CreditCustomerOption> // clientes encontrados al habilitar crédito
 }

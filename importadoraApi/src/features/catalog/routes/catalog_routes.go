@@ -1,5 +1,8 @@
 package routes
 
+// catalog_routes.go · rutas HTTP de catálogo (marcas, categorías y modelos) y los roles o permisos que exige cada una
+// conecta con: los controllers de catálogo (marcas, categorías y modelos) y core/middlewares (autenticación y permisos); los arma core/bootstrap
+
 import (
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/features/catalog/controllers"
@@ -14,9 +17,9 @@ func RegisterRoutes(e *echo.Echo, authMiddleware *middlewares.AuthMiddleware, ct
 	{
 		b.GET("", ctrl.ListBrands)
 		b.GET("/:id", ctrl.GetBrandByID)
-		b.POST("", ctrl.CreateBrand)
-		b.PUT("/:id", ctrl.UpdateBrand)
-		b.DELETE("/:id", ctrl.DeleteBrand)
+		b.POST("", ctrl.CreateBrand, authMiddleware.RequirePermission("brands", "create"))
+		b.PUT("/:id", ctrl.UpdateBrand, authMiddleware.RequirePermission("brands", "edit"))
+		b.DELETE("/:id", ctrl.DeleteBrand, authMiddleware.RequirePermission("brands", "delete"))
 	}
 
 	// Grupo /models
@@ -24,9 +27,9 @@ func RegisterRoutes(e *echo.Echo, authMiddleware *middlewares.AuthMiddleware, ct
 	{
 		m.GET("", ctrl.ListModels)
 		m.GET("/:id", ctrl.GetModelByID)
-		m.POST("", ctrl.CreateModel)
-		m.PUT("/:id", ctrl.UpdateModel)
-		m.DELETE("/:id", ctrl.DeleteModel)
+		m.POST("", ctrl.CreateModel, authMiddleware.RequirePermission("models", "create"))
+		m.PUT("/:id", ctrl.UpdateModel, authMiddleware.RequirePermission("models", "edit"))
+		m.DELETE("/:id", ctrl.DeleteModel, authMiddleware.RequirePermission("models", "delete"))
 	}
 
 	// Grupo /categories
@@ -34,9 +37,8 @@ func RegisterRoutes(e *echo.Echo, authMiddleware *middlewares.AuthMiddleware, ct
 	{
 		c.GET("", ctrl.ListCategories)
 		c.GET("/:id", ctrl.GetCategoryByID)
-		c.POST("", ctrl.CreateCategory)
-		c.PUT("/:id", ctrl.UpdateCategory)
-		c.DELETE("/:id", ctrl.DeleteCategory)
+		c.POST("", ctrl.CreateCategory, authMiddleware.RequirePermission("categories", "create"))
+		c.PUT("/:id", ctrl.UpdateCategory, authMiddleware.RequirePermission("categories", "edit"))
+		c.DELETE("/:id", ctrl.DeleteCategory, authMiddleware.RequirePermission("categories", "delete"))
 	}
 }
-

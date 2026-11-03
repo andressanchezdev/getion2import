@@ -4,7 +4,7 @@
 import { createSlice, isAnyOf, type PayloadAction } from '@reduxjs/toolkit'
 import { setActiveWarehouse } from '@/features/navigation'
 import { resetFilters, setOnlyInStock, setSearchQuery, setSelectedBrand, setSelectedCategory } from './shop.slice'
-import { loadProductsThunk } from '../thunks/shop.products.thunks'
+import { loadProductsThunk, updateProductPricesThunk } from '../thunks/shop.products.thunks'
 import type { ProductsState } from '../types/shop.api.types'
 import type { StockUpdate } from '../types/shop.types'
 
@@ -50,6 +50,11 @@ export const productsSlice = createSlice({
                 if (state.requestId !== action.meta.requestId) return
                 state.status = 'failed'
                 state.error = action.payload ?? 'No se pudieron cargar los repuestos.'
+            })
+            // precios guardados: la tarjeta del catálogo muestra las tarifas nuevas sin recargar la lista
+            .addCase(updateProductPricesThunk.fulfilled, (state, action) => {
+                const product = state.items.find((item) => item.id === action.payload.productId)
+                if (product) product.prices = action.payload.prices
             })
             // cualquier cambio de filtro, búsqueda o bodega empieza de nuevo en la página 1
             .addMatcher(

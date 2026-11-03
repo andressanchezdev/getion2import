@@ -1,11 +1,11 @@
-// ShopCartFooter · pie del carrito (como los totales de la maqueta): subtotal, IVA, total, finalizar compra y vaciar
-// conecta con: shop.cart.thunks (vaciar en el backend), shop.selectors (total), shop.helpers (separa el IVA), global toast (aviso de pedido listo)
+// ShopCartFooter · pie del carrito (como los totales de la maqueta): subtotal, IVA, total, finalizar compra y crear cotización (vaciar y compartir están en el menú ☰ del encabezado del carrito)
+// conecta con: navigation (abre el panel de finalizar compra), usePermissions (permiso de ventas), shop.selectors (total) y shop.helpers (separa el IVA)
 // ojo: el subtotal y el IVA (19 %) se calculan como en la maqueta, con los precios con IVA incluido, hasta que el backend envíe los impuestos (ver IVA_RATE en shop.constants)
 import React from 'react'
-import { formatPesos } from '@/global/helpers/format'
-import { toast } from '@/global/helpers/toast'
-import { useAppDispatch, useAppSelector } from '@/global/hooks/useRedux'
-import { clearCartThunk } from '../../thunks/shop.cart.update.thunks'
+import { formatPesos } from '@/global/helpers/formatting/format'
+import { usePermissions } from '@/global/hooks/access/usePermissions'
+import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
+import { openDrawerForm } from '@/features/navigation'
 import { selectCartMutating, selectCartTotals } from '../../selectors/shop.selectors'
 import { IVA_RATE } from '../../constants/shop.constants'
 import { splitIncludedTax } from '../../helpers/shop.helpers'
@@ -17,6 +17,11 @@ export const ShopCartFooter: React.FC = () => {
   const isBusy = useAppSelector(selectCartMutating)
   const { subtotal, tax } = splitIncludedTax(totalAmount)
   const isEmpty = totalItemsCount === 0
+  // vender o cotizar es de quien tiene permiso de ventas (el administrador también, pero asigna la venta a un empleado)
+  const canSell = usePermissions().canPerformAction('shop', 'orders', 'create')
+
+  // finalizar compra y cotizar abren el mismo panel: cliente y entrega, y después el pago (la cotización termina en el cliente)
+  const openCheckout = (mode: 'sale' | 'quotation') => dispatch(openDrawerForm({ kind: 'checkout', payload: { mode } }))
 
   return (
     <div className="shop-cart-footer">
@@ -36,17 +41,16 @@ export const ShopCartFooter: React.FC = () => {
       <button
         type="button"
         className="shop-cart-btn-checkout"
-        disabled={isEmpty}
-        onClick={() => toast.success('¡Pedido listo para confirmación de venta!')}
+        disabled={isEmpty || isBusy || !canSell}
+        title={canSell ? undefined : 'No tienes permiso de ventas'}
+        onClick={() => openCheckout('sale')}
       >
         Finalizar compra
       </button>
 
-      {!isEmpty && (
-        <button type="button" onClick={() => dispatch(clearCartThunk())} disabled={isBusy} className="shop-cart-btn-clear">
-          Vaciar carrito
-        </button>
-      )}
+      <button type="button" className="shop-cart-btn-quote" disabled={isEmpty || isBusy || !canSell} title={canSell ? undefined : 'No tienes permiso de ventas'} onClick={() => openCheckout('quotation')}>
+        Crear cotización
+      </button>
     </div>
   )
 }

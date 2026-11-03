@@ -9,9 +9,13 @@ import type { ShopState } from '../types/shop.types'
 type ShopRootState = { shop: ShopState; cart: CartState }
 
 const selectShop = (state: ShopRootState) => state.shop
+// lee todo el estado del carrito
 const selectCartState = (state: ShopRootState) => state.cart
+// lee el cliente del carrito
 export const selectCartCustomer = (state: ShopRootState) => state.shop.cartCustomer
+// dice si hay un cambio al carrito en curso
 export const selectCartMutating = (state: ShopRootState) => state.cart.mutating
+// lee el estado de carga del carrito
 export const selectCartStatus = (state: ShopRootState) => state.cart.status
 
 // líneas del carrito (del backend) con el nivel de precio con que se agregó cada una (si se sabe)

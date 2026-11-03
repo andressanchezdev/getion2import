@@ -1,0 +1,78 @@
+/* ExternalsTable.css · proveedores y transportadoras: una sola tarjeta con barra de herramientas pegada a la tabla · solo usa tokens de styles/tokens.css */
+/* ojo: la tarjeta es la misma de créditos y conciliación (borde, radio y sombra); la barra queda arriba y la tabla hace scroll por dentro */
+.externals-screen {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.externals-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-rest);
+  overflow: hidden;
+}
+
+.externals-toolbar {
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.externals-search {
+  flex: 1 1 240px;
+}
+
+.externals-create {
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.externals-table-responsive {
+  width: 100%;
+}
+
+.externals-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: var(--text-sm);
+}
+
+.externals-table th {
+  background: var(--c-slate-50);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-semibold);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.externals-table td {
+  padding: 0.875rem var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+
+.externals-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.externals-cell small {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.externals-empty-td {
+  padding: 3rem var(--space-4);
+  text-align: center;
+  color: var(--color-text-secondary);
+}

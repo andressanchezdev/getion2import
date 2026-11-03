@@ -12,13 +12,20 @@ import type { ShopState } from '../types/shop.types'
 type ProductsRootState = { products: ProductsState; shop: ShopState; ui: NavigationState; catalogs: CatalogsState }
 
 export const selectProducts = (state: ProductsRootState) => state.products.items
+// lee el estado de carga de los productos del catálogo
 export const selectProductsStatus = (state: ProductsRootState) => state.products.status
+// lee el mensaje de error de los productos del catálogo
 export const selectProductsError = (state: ProductsRootState) => state.products.error
+// lee los datos de paginación de los productos
 export const selectProductsMeta = (state: ProductsRootState) => state.products.meta
+// lee el modo de la lista de productos: catálogo normal o resultados de búsqueda
 export const selectProductsMode = (state: ProductsRootState) => state.products.mode
+// lee la página actual de los productos
 export const selectProductsPage = (state: ProductsRootState) => state.products.page
 
+// lee los filtros del catálogo (búsqueda, categoría, marca y solo con stock)
 const selectFilters = (state: ProductsRootState) => state.shop.filters
+// lee el id de la bodega activa
 const selectActiveWarehouseId = (state: ProductsRootState) => state.ui.activeWarehouseId
 
 // productos que se pintan: sin cambios en modo "list"; en modo "search" se filtran por marca, categoría y stock de la bodega activa

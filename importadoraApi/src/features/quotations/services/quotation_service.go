@@ -1,5 +1,8 @@
 package services
 
+// quotation_service.go · reglas de negocio de cotizaciones: valida permisos, compañía y datos, coordina las transacciones y arma las respuestas
+// conecta con: los repositories y dtos de cotizaciones; los llama el controller y la conexión llega del contenedor
+
 import (
 	"context"
 	"fmt"
@@ -31,6 +34,7 @@ type QuotationService struct {
 	auditRepo     *authRepos.AuditRepository
 }
 
+// NewQuotationService crea el servicio con las piezas que necesita para funcionar.
 func NewQuotationService(
 	cfg *config.Config,
 	pool *pgxpool.Pool,
@@ -51,6 +55,7 @@ func NewQuotationService(
 	}
 }
 
+// List devuelve las cotizaciones paginados según los filtros, limitados a lo que el usuario puede ver.
 func (s *QuotationService) List(ctx context.Context, actor *middlewares.ActorContext, filter dtos.QuotationFilterQuery) ([]dtos.QuotationResponse, *utils.PaginatorMetadata, error) {
 	if actor == nil {
 		return nil, nil, utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
@@ -74,6 +79,7 @@ func (s *QuotationService) List(ctx context.Context, actor *middlewares.ActorCon
 	return result, &meta, nil
 }
 
+// GetByID devuelve la cotización por su id, validando que sea de la compañía del usuario.
 func (s *QuotationService) GetByID(ctx context.Context, actor *middlewares.ActorContext, id int64) (*dtos.QuotationResponse, error) {
 	if actor == nil {
 		return nil, utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
@@ -101,6 +107,7 @@ func (s *QuotationService) GetByID(ctx context.Context, actor *middlewares.Actor
 	return s.mapQuotationToDTO(quo, items), nil
 }
 
+// Create crea la cotización con las validaciones del negocio (compañía, duplicados y permisos).
 func (s *QuotationService) Create(ctx context.Context, actor *middlewares.ActorContext, req dtos.CreateQuotationRequest, ip, ua string) (*dtos.QuotationResponse, error) {
 	if actor == nil {
 		return nil, utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
@@ -277,6 +284,7 @@ func (s *QuotationService) Create(ctx context.Context, actor *middlewares.ActorC
 	return s.mapQuotationToDTO(createdQuo, items), nil
 }
 
+// Update actualiza la cotización con las validaciones del negocio.
 func (s *QuotationService) Update(ctx context.Context, actor *middlewares.ActorContext, id int64, req dtos.UpdateQuotationRequest, ip, ua string) (*dtos.QuotationResponse, error) {
 	if actor == nil {
 		return nil, utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
@@ -325,6 +333,7 @@ func (s *QuotationService) Update(ctx context.Context, actor *middlewares.ActorC
 	return s.mapQuotationToDTO(quo, items), nil
 }
 
+// mapQuotationToDTO convierte la cotización de la base en la respuesta que sale por la API.
 func (s *QuotationService) mapQuotationToDTO(q *repositories.QuotationEntity, items []dtos.QuotationItemResponse) *dtos.QuotationResponse {
 	var validUntilStr *string
 	if q.ValidUntil != nil {

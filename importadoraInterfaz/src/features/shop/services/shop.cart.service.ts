@@ -1,58 +1,36 @@
-// shop.cart.service · llamadas al backend del carrito: POST /carts (leer), POST /carts/register (agregar), PUT /carts/update (cantidad), DELETE /carts/delete (quitar) y DELETE /carts/deleteall (vaciar) y PUT /carts/reassignuser (cambiar de cliente)
-// conecta con: api/client y api/config, shop.adapter (toCartItem); las usa shop.cart.thunks
-// ojo: el companyId y el usuario llegan en el contexto de petición; este service no lee el almacenamiento ni el store
-// ojo: el vendedor es el usuario de la sesión; el cliente (userId) es el elegido en Terceros > Clientes, o el mismo usuario si no se eligió ninguno. typeCart es 'sale'
+// shop.cart.service · llamadas al backend del carrito: GET /carts/active (leer), POST /carts/:id/items (agregar), PUT y DELETE de un renglón y DELETE /carts/:id (vaciar)
+// conecta con: api/client y api/config, shop.adapter (toCartSnapshot); las usa shop.cart.thunks
+// ojo: la API crea sola el carrito del empleado y toma la compañía y el vendedor del token; este service no lee el almacenamiento ni el store
+// ojo: el cliente de la venta ya no viaja en el carrito: se guarda en la app (shop.slice) y se manda al crear la venta
 import { apiClient, API_CONFIG, type APIResponse } from '@/api'
-import type { RequestContext } from '@/features/auth'
-import { toCartItem } from '../helpers/shop.adapter'
-import type { CartAddInput, CartDto, CartQuery } from '../types/shop.cart.api.types'
-import type { CartItem } from '../types/shop.types'
+import { toCartSnapshot } from '../helpers/shop.adapter'
+import type { CartAddInput, CartDto, CartSnapshot } from '../types/shop.cart.api.types'
+import type { Product } from '../types/shop.types'
 
 const { CARTS } = API_CONFIG.ENDPOINTS
 
-const CART_TYPE_SALE = 'sale'
-
-// el carrito de una venta: todas sus líneas
-export const fetchCartItems = async (ctx: RequestContext, query: CartQuery): Promise<CartItem[]> => {
-    const { data } = await apiClient.post<APIResponse<CartDto[] | null>>(CARTS.GET, {
-        companyId: ctx.companyId,
-        userId: query.customerId ?? ctx.userId,
-        sellerId: ctx.userId,
-        uuid: query.uuid,
-        ...(query.warehouseId !== undefined && { warehouseId: query.warehouseId }),
-    })
-    return (data.data ?? []).map(toCartItem)
+// el carrito activo del empleado con todas sus líneas
+export const fetchActiveCart = async (known: Record<string, Product> = {}): Promise<CartSnapshot> => {
+    const { data } = await apiClient.get<APIResponse<CartDto>>(CARTS.ACTIVE)
+    return toCartSnapshot(data.data, known)
 }
 
-// agrega un producto (el backend descuenta ese stock de la bodega)
-export const addCartItem = async (ctx: RequestContext, input: CartAddInput): Promise<void> => {
-    const { customerId, ...line } = input
-    await apiClient.post(CARTS.REGISTER_ITEM, {
-        companyId: ctx.companyId,
-        userId: customerId ?? ctx.userId,
-        sellerId: ctx.userId,
-        typeCart: CART_TYPE_SALE,
-        discount: 0,
-        ...line,
-    })
+// agrega un producto desde una ubicación de la bodega (stockId); el precio es el del nivel elegido en la pantalla
+export const addCartItem = async ({ cartId, stockId, quantity, price }: CartAddInput): Promise<void> => {
+    await apiClient.post(CARTS.ITEMS(cartId), { stockId, quantity, unitPrice: price })
 }
 
-// cambia la cantidad de una línea (el backend ajusta el stock)
-export const updateCartItemQuantity = async (cartId: number, quantity: number): Promise<void> => {
-    await apiClient.put(CARTS.UPDATE, { cartId, quantity })
+// cambia la cantidad de un renglón
+export const updateCartItemQuantity = async (cartId: number, itemId: number, quantity: number): Promise<void> => {
+    await apiClient.put(CARTS.ITEM(cartId, itemId), { quantity })
 }
 
-// quita una línea (el backend devuelve su cantidad al stock disponible); DELETE con cuerpo: { cartId }
-export const deleteCartItem = async (cartId: number): Promise<void> => {
-    await apiClient.delete(CARTS.DELETE, { data: { cartId } })
+// quita un renglón
+export const deleteCartItem = async (cartId: number, itemId: number): Promise<void> => {
+    await apiClient.delete(CARTS.ITEM(cartId, itemId))
 }
 
-// vacía todo el carrito de la venta (todas las líneas con ese uuid del usuario)
-export const deleteCart = async (ctx: RequestContext, uuid: string, customerId?: number): Promise<void> => {
-    await apiClient.delete(CARTS.DELETE_ALL, { data: { userId: customerId ?? ctx.userId, uuid } })
-}
-
-// pasa el carrito de un usuario a otro (cuando se elige o se cambia el cliente de la venta): PUT /carts/reassignuser
-export const reassignCart = async (oldUserId: number, newUserId: number, uuid: string): Promise<void> => {
-    await apiClient.put(CARTS.REASSIGN_USER, { oldUserId, newUserId, uuid })
+// vacía todo el carrito
+export const clearCart = async (cartId: number): Promise<void> => {
+    await apiClient.delete(CARTS.BY_ID(cartId))
 }

@@ -1,0 +1,14 @@
+/* CashShiftSummary.css · resumen del turno de caja en una línea que se acomoda · solo usa tokens de styles/tokens.css */
+.cash-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.cash-summary-item strong {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+}

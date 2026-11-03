@@ -1,5 +1,8 @@
 package repositories
 
+// company_repo.go · acceso a la base de compañías: aquí vive el SQL; cada método recibe la conexión o la transacción
+// conecta con: core/db (DBExecutor) y los dtos de compañías; los usan los services de compañías
+
 import (
 	"context"
 	"errors"
@@ -30,10 +33,12 @@ type CompanyEntity struct {
 
 type CompanyRepository struct{}
 
+// NewCompanyRepository crea el repositorio; no guarda estado, cada método recibe la conexión o transacción.
 func NewCompanyRepository() *CompanyRepository {
 	return &CompanyRepository{}
 }
 
+// FindByID busca la compañía por su id (nil si no existe).
 func (r *CompanyRepository) FindByID(ctx context.Context, q db.DBExecutor, id int64) (*CompanyEntity, error) {
 	const sql = `
 		SELECT
@@ -58,6 +63,7 @@ func (r *CompanyRepository) FindByID(ctx context.Context, q db.DBExecutor, id in
 	return &c, nil
 }
 
+// FindByName busca la compañía por su nombre (nil si no existe).
 func (r *CompanyRepository) FindByName(ctx context.Context, q db.DBExecutor, name string) (*CompanyEntity, error) {
 	const sql = `
 		SELECT
@@ -82,6 +88,7 @@ func (r *CompanyRepository) FindByName(ctx context.Context, q db.DBExecutor, nam
 	return &c, nil
 }
 
+// List lista las compañías según los filtros, con su total para paginar.
 func (r *CompanyRepository) List(ctx context.Context, q db.DBExecutor, params utils.PageParams, companyIDFilter *int64) ([]CompanyEntity, int, error) {
 	where := "WHERE deleted_at IS NULL"
 	args := []any{}
@@ -134,6 +141,7 @@ func (r *CompanyRepository) List(ctx context.Context, q db.DBExecutor, params ut
 	return items, total, nil
 }
 
+// Search busca las compañías por texto.
 func (r *CompanyRepository) Search(ctx context.Context, q db.DBExecutor, query string, params utils.PageParams, companyIDFilter *int64) ([]CompanyEntity, int, error) {
 	cleanQuery := "%" + strings.ToLower(strings.TrimSpace(query)) + "%"
 
@@ -188,6 +196,7 @@ func (r *CompanyRepository) Search(ctx context.Context, q db.DBExecutor, query s
 	return items, total, nil
 }
 
+// Create inserta la compañía y devuelve el registro guardado.
 func (r *CompanyRepository) Create(ctx context.Context, q db.DBExecutor, c *CompanyEntity) (*CompanyEntity, error) {
 	const sql = `
 		INSERT INTO companies (
@@ -205,6 +214,7 @@ func (r *CompanyRepository) Create(ctx context.Context, q db.DBExecutor, c *Comp
 	return c, nil
 }
 
+// Update actualiza los datos de la compañía.
 func (r *CompanyRepository) Update(ctx context.Context, q db.DBExecutor, c *CompanyEntity) (*CompanyEntity, error) {
 	const sql = `
 		UPDATE companies
@@ -230,6 +240,7 @@ func (r *CompanyRepository) Update(ctx context.Context, q db.DBExecutor, c *Comp
 	return c, nil
 }
 
+// SoftDelete marca la compañía como eliminada (borrado lógico: no se pierde el registro).
 func (r *CompanyRepository) SoftDelete(ctx context.Context, q db.DBExecutor, id int64) error {
 	const sql = `
 		UPDATE companies

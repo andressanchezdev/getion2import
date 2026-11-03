@@ -1,5 +1,6 @@
-// transfers.types · contratos y modelos para traslados y reubicación multibodega
-// conecta con: transfers.service, TransfersScreen, CreateTransferModal y Swagger
+// transfers.types · modelos que usa la app en traslados y reubicación multibodega
+// conecta con: transfers.adapter (los arma desde la API), transfers.service, transfers.slice (estado), TransfersScreen, CreateTransferForm y ReceiveTransferForm
+import type { StockFullDto } from '@/features/inventory'
 
 export interface WarehouseStockLocation {
   warehouseId: number
@@ -20,36 +21,96 @@ export interface ProductStockMatrix {
 }
 
 export interface TransferProductItem {
+  itemId: number
   productId: number
   code?: string
   description: string
   quantity: number
+  destinationLocation: string
 }
 
-export type TransferStatus =
-  | 'pendiente'
-  | 'picking_verified'
-  | 'packing_verified'
-  | 'approved'
-  | 'rejected'
+// pending (creado) -> in_transit (despachado) -> received | with_novelty | cancelled
+export type TransferStatus = 'pending' | 'in_transit' | 'received' | 'with_novelty' | 'cancelled'
+export type TransferType = 'inter_warehouse' | 'relocation' | 'central_dispatch' | string
+export type TransferPriority = 'normal' | 'high'
 
 export interface TrasladeItem {
-  saleId: number
-  serialCode: number
-  invoiceStatus: TransferStatus | string
+  id: number
+  serialCode: string
+  type: TransferType
+  typeLabel: string
+  status: TransferStatus
+  priority: TransferPriority
   originWarehouse: { id: number; name: string }
   destWarehouse: { id: number; name: string }
   products: TransferProductItem[]
-  operatorName?: string
+  employeeId?: number
+  employeeName?: string // Quién lo pidió
+  dispatchedByEmployeeId?: number
+  dispatchedByEmployeeName?: string // Quién lo sacó
+  receivedByEmployeeId?: number
+  receivedByEmployeeName?: string // Quién lo recibió
   createdAt?: string
-  reason?: string
+  dispatchedAt?: string
+  receivedAt?: string
+  notes?: string
+  noveltyNotes?: string
 }
 
-export interface CreateTransferInput {
-  productId: number
-  productName: string
-  productCode: string
+// un traslado con varios productos que salen de UNA misma bodega
+export interface CreateTransferBatchInput {
   originWarehouseId: number
   destWarehouseId: number
+  items: Array<{ productId: number; quantity: number }>
+  type?: TransferType
+  notes?: string
+}
+
+// una línea del pedido de traslado: un producto, de qué bodega sale y cuántas unidades (max = lo disponible allá)
+export interface TransferRequestLine {
+  productId: number
+  code: string
+  description: string
+  originWarehouseId: number
+  originWarehouseName: string
   quantity: number
+  max: number
+}
+
+// lo que pasó con cada bodega de origen al enviar el pedido: el traslado creado o por qué falló
+export interface TransferRequestResult {
+  originWarehouseId: number
+  originWarehouseName: string
+  transfer?: TrasladeItem
+  error?: string
+}
+
+export type TransfersLoadStatus = 'idle' | 'loading' | 'succeeded' | 'failed'
+
+// una lista que se pide al backend; requestId descarta respuestas de pedidos anteriores
+interface RemoteList<T> {
+  items: T[]
+  status: TransfersLoadStatus
+  error: string | null
+  requestId: string | null
+}
+
+export interface TransferDraft {
+  destWarehouseId: number
+  lines: TransferRequestLine[]
+}
+
+export interface TransfersState {
+  list: RemoteList<TrasladeItem> // traslados de la bodega activa
+  stock: RemoteList<StockFullDto> // existencias de la bodega activa (pestaña «Repuestos en sede»)
+  search: RemoteList<ProductStockMatrix> // resultados del buscador del formulario de nuevo traslado
+  draft: TransferDraft
+}
+
+// filtros de la tabla de traslados
+export interface TransferFilters {
+  query: string
+  type: string
+  direction: 'all' | 'incoming' | 'outgoing'
+  status: string
 }

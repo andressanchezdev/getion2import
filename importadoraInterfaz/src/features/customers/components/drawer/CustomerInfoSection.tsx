@@ -2,6 +2,8 @@
 // conecta con: CustomerDrawer (le pasa el estado del detalle); los datos vienen de GET /users/{id} (customers.selectors → selectCustomerDetail)
 // ojo: solo se muestran los datos que vienen con valor; mientras carga o si falla se avisa en el mismo lugar
 import React from 'react'
+import { useOpenHistory } from '@/features/audit'
+import { usePermissions } from '@/global/hooks/access/usePermissions'
 import type { CustomerDetailState } from '../../types/customers.types'
 
 interface InfoRow {
@@ -10,6 +12,8 @@ interface InfoRow {
 }
 
 export const CustomerInfoSection: React.FC<{ detail: CustomerDetailState }> = ({ detail }) => {
+  const openHistory = useOpenHistory()
+  const canSeeHistory = usePermissions().hasScreenAccess('reports', 'audit')
   if (detail.status === 'failed') return <p className="customer-drawer-note customer-drawer-note-error">{detail.error}</p>
   if (!detail.data) return <p className="customer-drawer-note">Cargando datos del cliente…</p>
 
@@ -44,6 +48,11 @@ export const CustomerInfoSection: React.FC<{ detail: CustomerDetailState }> = ({
           </div>
         ))}
       </dl>
+      {canSeeHistory && (
+        <button type="button" className="btn-secondary" onClick={() => openHistory('customers', data.id)}>
+          Ver historial
+        </button>
+      )}
     </section>
   )
 }

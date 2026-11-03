@@ -1,8 +1,9 @@
 // OrdersScreen · pantalla de Tienda > Bandeja de Pedidos: barra con etapas, buscador y canal, y la tabla de pedidos
 // conecta con: useOrdersLoader (pide conteos y tabla), OrdersToolbar, OrdersTable y OrderCancelDialog; la monta MainContent (screenRegistry); al elegir un pedido se abre OrderDrawer en el panel derecho (drawerRegistry, modo «order»)
+// ojo: la barra y la tabla van juntas en una sola tarjeta (igual que créditos, abonos y bodegas)
 // ojo: el backend pagina por canal; si hay más pedidos de los que se muestran, se avisa debajo de la tabla
 import React, { useState } from 'react'
-import { useAppSelector } from '@/global/hooks/useRedux'
+import { useAppSelector } from '@/global/hooks/store/useRedux'
 import { OrderCancelDialog } from '../components/cancel/OrderCancelDialog'
 import { OrdersTable } from '../components/table/OrdersTable'
 import { OrdersToolbar } from '../components/toolbar/OrdersToolbar'
@@ -19,9 +20,11 @@ export const OrdersScreen: React.FC = () => {
 
   return (
     <div className="orders-screen">
-      <OrdersToolbar />
-      <OrdersTable onCancel={setOrderToCancel} />
-      {capped && <p className="orders-screen-note">Hay más pedidos de los que se muestran: se ven los {ORDERS_PAGE_SIZE} más recientes de cada canal.</p>}
+      <div className="orders-card">
+        <OrdersToolbar />
+        <OrdersTable onCancel={setOrderToCancel} />
+      </div>
+      {capped && <p className="orders-screen-note">Hay más pedidos de los que se muestran: se ven los {ORDERS_PAGE_SIZE} más recientes de esta etapa.</p>}
       <OrderCancelDialog order={orderToCancel} onClose={() => setOrderToCancel(null)} />
     </div>
   )

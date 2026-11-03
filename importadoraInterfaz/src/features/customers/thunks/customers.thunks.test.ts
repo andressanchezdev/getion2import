@@ -3,7 +3,7 @@
 import { configureStore, type ThunkDispatch, type UnknownAction } from '@reduxjs/toolkit'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AuthState } from '@/features/auth'
-import { toast } from '@/global/helpers/toast'
+import { toast } from '@/global/helpers/feedback/toast'
 import { customersReducer, selectCustomer, setCustomersPage } from '../slices/customers.slice'
 import { loadCustomerDetailThunk, loadCustomersThunk } from './customers.thunks'
 import {
@@ -25,13 +25,13 @@ vi.mock('../services/customers.details.service', () => ({
   fetchDiscounts: vi.fn(),
   deleteDiscount: vi.fn(),
 }))
-vi.mock('@/global/helpers/toast', () => ({ toast: { error: vi.fn(), success: vi.fn() } }))
+vi.mock('@/global/helpers/feedback/toast', () => ({ toast: { error: vi.fn(), success: vi.fn() } }))
 vi.mock('@/features/auth', () => ({
   selectRequestContext: (state: { auth: { ctx: unknown } }) => state.auth.ctx,
 }))
 
 const ctx = { companyId: 3, userId: 7 }
-const meta = { currentPage: 1, pageSize: 30, totalRecords: 1, totalPages: 1, hasNextPage: false, hasPrevPage: false }
+const meta = { currentPage: 1, pageSize: 20, totalRecords: 1, totalPages: 1, hasNextPage: false, hasPrevPage: false }
 
 // ojo: el dispatch se tipa a mano para aceptar thunks que leen state.auth (el store de prueba solo tiene los slices que se prueban)
 const makeStore = (sessionCtx: unknown = ctx) => {
@@ -70,7 +70,7 @@ describe('loadCustomersThunk', () => {
     const { store, dispatch } = makeStore()
     store.dispatch(setCustomersPage(2))
     await dispatch(loadCustomersThunk())
-    expect(fetchCustomersPage).toHaveBeenCalledWith(ctx, 2, 30)
+    expect(fetchCustomersPage).toHaveBeenCalledWith(ctx, 2, 20)
     expect(store.getState().customers.list).toMatchObject({ status: 'succeeded', meta })
     expect(store.getState().customers.list.items).toHaveLength(1)
   })
@@ -152,8 +152,8 @@ describe('detalle, direcciones y descuentos', () => {
     const { store, dispatch } = makeStore()
     await dispatch(deleteDirectionThunk({ customerId: 5, directionId: 1 }))
     await dispatch(deleteDiscountThunk({ customerId: 5, discountId: 2 }))
-    expect(deleteDirection).toHaveBeenCalledWith(1)
-    expect(deleteDiscount).toHaveBeenCalledWith(2)
+    expect(deleteDirection).toHaveBeenCalledWith(5, 1)
+    expect(deleteDiscount).toHaveBeenCalledWith()
     expect(store.getState().customers.directions.items).toEqual([])
     expect(store.getState().customers.discounts.items).toEqual([])
   })

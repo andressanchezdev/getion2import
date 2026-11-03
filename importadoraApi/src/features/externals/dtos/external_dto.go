@@ -1,5 +1,8 @@
 package dtos
 
+// external_dto.go · formas de lo que entra y sale por la API en terceros (proveedores y transportadoras) (peticiones y respuestas)
+// conecta con: los controllers y services de terceros (proveedores y transportadoras)
+
 import (
 	"time"
 

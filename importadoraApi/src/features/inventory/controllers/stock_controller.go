@@ -1,5 +1,8 @@
 package controllers
 
+// stock_controller.go · controlador HTTP de inventario: recibe la petición, valida la entrada y llama al servicio; no tiene lógica de negocio
+// conecta con: los services y dtos de inventario y core/utils (respuestas y errores); los registra routes
+
 import (
 	"strconv"
 
@@ -93,6 +96,22 @@ func (c *InventoryController) AdjustStock(ctx echo.Context) error {
 		return err
 	}
 	return utils.RespondOK(ctx, "Ajuste de inventario aplicado exitosamente", res)
+}
+
+// AssignStock POST /stock/assign
+func (c *InventoryController) AssignStock(ctx echo.Context) error {
+	actor := middlewares.GetActor(ctx)
+
+	var req dtos.AssignStockRequest
+	if err := utils.BindJSON(ctx, &req); err != nil {
+		return err
+	}
+
+	stock, err := c.service.AssignStock(ctx.Request().Context(), actor, req, utils.EchoClientIP(ctx), ctx.Request().UserAgent())
+	if err != nil {
+		return err
+	}
+	return utils.RespondOK(ctx, "Producto asignado a la ubicación", stock)
 }
 
 // RelocateStock POST /stock/relocate

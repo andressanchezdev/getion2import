@@ -1,5 +1,8 @@
 package repositories
 
+// employee_repo.go · acceso a la base de personal (administradores, empleados, roles y permisos): aquí vive el SQL; cada método recibe la conexión o la transacción
+// conecta con: core/db (DBExecutor) y los dtos de personal (administradores, empleados, roles y permisos); los usan los services de personal (administradores, empleados, roles y permisos)
+
 import (
 	"context"
 	"errors"
@@ -42,10 +45,12 @@ type EmployeeEntity struct {
 
 type EmployeeRepository struct{}
 
+// NewEmployeeRepository crea el repositorio; no guarda estado, cada método recibe la conexión o transacción.
 func NewEmployeeRepository() *EmployeeRepository {
 	return &EmployeeRepository{}
 }
 
+// FindByID busca el empleado por su id (nil si no existe).
 func (r *EmployeeRepository) FindByID(ctx context.Context, q db.DBExecutor, id int64) (*EmployeeEntity, error) {
 	const sql = `
 		SELECT
@@ -78,6 +83,7 @@ func (r *EmployeeRepository) FindByID(ctx context.Context, q db.DBExecutor, id i
 	return &e, nil
 }
 
+// FindByEmail busca el empleado por su correo (nil si no existe).
 func (r *EmployeeRepository) FindByEmail(ctx context.Context, q db.DBExecutor, email string) (*EmployeeEntity, error) {
 	const sql = `
 		SELECT
@@ -110,6 +116,7 @@ func (r *EmployeeRepository) FindByEmail(ctx context.Context, q db.DBExecutor, e
 	return &e, nil
 }
 
+// List lista los empleados según los filtros, con su total para paginar.
 func (r *EmployeeRepository) List(ctx context.Context, q db.DBExecutor, f dtos.EmployeeFilterQuery) ([]EmployeeEntity, int, error) {
 	where := []string{"e.deleted_at IS NULL"}
 	args := make([]interface{}, 0)
@@ -206,6 +213,7 @@ func (r *EmployeeRepository) List(ctx context.Context, q db.DBExecutor, f dtos.E
 	return employees, total, rows.Err()
 }
 
+// Create inserta el empleado y devuelve el registro guardado.
 func (r *EmployeeRepository) Create(ctx context.Context, q db.DBExecutor, e *EmployeeEntity) (*EmployeeEntity, error) {
 	const insertEmpSQL = `
 		INSERT INTO employees (
@@ -237,6 +245,7 @@ func (r *EmployeeRepository) Create(ctx context.Context, q db.DBExecutor, e *Emp
 	return e, nil
 }
 
+// Update actualiza los datos de el empleado.
 func (r *EmployeeRepository) Update(ctx context.Context, q db.DBExecutor, e *EmployeeEntity) (*EmployeeEntity, error) {
 	const sql = `
 		UPDATE employees SET
@@ -267,18 +276,7 @@ func (r *EmployeeRepository) Update(ctx context.Context, q db.DBExecutor, e *Emp
 	return e, nil
 }
 
-func (r *EmployeeRepository) UpdateCredentials(ctx context.Context, q db.DBExecutor, id int64, passwordHash string) error {
-	const sql = `UPDATE employees SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND deleted_at IS NULL`
-	cmdTag, err := q.Exec(ctx, sql, passwordHash, id)
-	if err != nil {
-		return err
-	}
-	if cmdTag.RowsAffected() == 0 {
-		return errors.New("empleado no encontrado")
-	}
-	return nil
-}
-
+// SoftDelete marca el empleado como eliminado (borrado lógico: no se pierde el registro).
 func (r *EmployeeRepository) SoftDelete(ctx context.Context, q db.DBExecutor, id int64) error {
 	const sql = `
 		UPDATE employees SET
@@ -295,97 +293,5 @@ func (r *EmployeeRepository) SoftDelete(ctx context.Context, q db.DBExecutor, id
 		return errors.New("empleado no encontrado o ya eliminado")
 	}
 	return nil
-}
-
-func (r *EmployeeRepository) AssignPermissions(ctx context.Context, q db.DBExecutor, employeeID int64, permissionIDs []int64, grantedByAdminID, grantedByEmployeeID *int64) error {
-	// Borrar permisos previos
-	const deleteSQL = `DELETE FROM employee_permissions WHERE employee_id = $1`
-	if _, err := q.Exec(ctx, deleteSQL, employeeID); err != nil {
-		return err
-	}
-
-	if len(permissionIDs) == 0 {
-		return nil
-	}
-
-	// Insertar permisos en lote
-	insertSQL := `
-		INSERT INTO employee_permissions (employee_id, permission_id, granted_by_admin_id, granted_by_employee_id)
-		VALUES ($1, $2, $3, $4)
-		ON CONFLICT (employee_id, permission_id) DO NOTHING
-	`
-	for _, permID := range permissionIDs {
-		if _, err := q.Exec(ctx, insertSQL, employeeID, permID, grantedByAdminID, grantedByEmployeeID); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (r *EmployeeRepository) UnlockEmployee(ctx context.Context, q db.DBExecutor, employeeID int64) error {
-	// 1. Limpiar intentos de login
-	const resetAttemptsSQL = `
-		UPDATE employee_login_attempts
-		SET failed_login_count = 0,
-		    blocked_until = NULL,
-		    updated_at = CURRENT_TIMESTAMP
-		WHERE employee_id = $1
-	`
-	_, err := q.Exec(ctx, resetAttemptsSQL, employeeID)
-	if err != nil {
-		return err
-	}
-
-	// 2. Reactivar estado en employees si estaba bloqueado
-	const activateSQL = `
-		UPDATE employees
-		SET status = 'active',
-		    updated_at = CURRENT_TIMESTAMP
-		WHERE id = $1 AND status = 'blocked' AND deleted_at IS NULL
-	`
-	_, _ = q.Exec(ctx, activateSQL, employeeID)
-	return nil
-}
-
-func (r *EmployeeRepository) ListSalespersons(ctx context.Context, q db.DBExecutor, companyID int64) ([]EmployeeEntity, error) {
-	const sql = `
-		SELECT
-			e.id, e.company_id, e.role_id, COALESCE(r.name, ''),
-			e.warehouse_id, w.name,
-			e.email, '', e.first_name, e.last_name, e.full_name,
-			e.document_type, e.document, e.phone, e.address, e.photo_url,
-			e.work_modality, e.employment_status, e.status, e.last_login_at,
-			e.created_at, e.updated_at, e.deleted_at
-		FROM employees e
-		LEFT JOIN roles r ON r.id = e.role_id
-		LEFT JOIN warehouses w ON w.id = e.warehouse_id
-		WHERE e.company_id = $1
-		  AND e.status = 'active'
-		  AND e.deleted_at IS NULL
-		  AND (r.code = 'vendedor' OR LOWER(r.name) LIKE '%vendedor%' OR LOWER(r.name) LIKE '%comercial%' OR LOWER(r.name) LIKE '%vent%')
-		ORDER BY e.full_name ASC
-	`
-	rows, err := q.Query(ctx, sql, companyID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var list []EmployeeEntity
-	for rows.Next() {
-		var e EmployeeEntity
-		if err := rows.Scan(
-			&e.ID, &e.CompanyID, &e.RoleID, &e.RoleName,
-			&e.WarehouseID, &e.WarehouseName,
-			&e.Email, &e.PasswordHash, &e.FirstName, &e.LastName, &e.FullName,
-			&e.DocumentType, &e.Document, &e.Phone, &e.Address, &e.PhotoURL,
-			&e.WorkModality, &e.EmploymentStatus, &e.Status, &e.LastLoginAt,
-			&e.CreatedAt, &e.UpdatedAt, &e.DeletedAt,
-		); err != nil {
-			return nil, err
-		}
-		list = append(list, e)
-	}
-	return list, rows.Err()
 }
 

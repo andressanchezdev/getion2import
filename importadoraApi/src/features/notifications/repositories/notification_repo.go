@@ -1,5 +1,8 @@
 package repositories
 
+// notification_repo.go · acceso a la base de notificaciones: aquí vive el SQL; cada método recibe la conexión o la transacción
+// conecta con: core/db (DBExecutor) y los dtos de notificaciones; los usan los services de notificaciones
+
 import (
 	"context"
 	"fmt"
@@ -24,10 +27,12 @@ type NotificationEntity struct {
 
 type NotificationRepository struct{}
 
+// NewNotificationRepository crea el repositorio; no guarda estado, cada método recibe la conexión o transacción.
 func NewNotificationRepository() *NotificationRepository {
 	return &NotificationRepository{}
 }
 
+// List lista las notificaciones según los filtros, con su total para paginar.
 func (r *NotificationRepository) List(ctx context.Context, q db.DBExecutor, f dtos.NotificationFilterQuery) ([]NotificationEntity, int, error) {
 	where := []string{fmt.Sprintf("employee_id = %d", f.EmployeeID)}
 	if f.UnreadOnly {
@@ -80,12 +85,14 @@ func (r *NotificationRepository) List(ctx context.Context, q db.DBExecutor, f dt
 	return list, total, rows.Err()
 }
 
+// MarkAsRead marca una notificación como leída.
 func (r *NotificationRepository) MarkAsRead(ctx context.Context, q db.DBExecutor, notificationID, employeeID int64) error {
 	const sql = `UPDATE notifications SET read_at = CURRENT_TIMESTAMP WHERE id = $1 AND employee_id = $2 AND read_at IS NULL`
 	_, err := q.Exec(ctx, sql, notificationID, employeeID)
 	return err
 }
 
+// MarkAllAsRead marca como leídas todas las notificaciones del destinatario.
 func (r *NotificationRepository) MarkAllAsRead(ctx context.Context, q db.DBExecutor, employeeID int64) error {
 	const sql = `UPDATE notifications SET read_at = CURRENT_TIMESTAMP WHERE employee_id = $1 AND read_at IS NULL`
 	_, err := q.Exec(ctx, sql, employeeID)

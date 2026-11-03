@@ -1,5 +1,8 @@
 package repositories
 
+// permission_repo.go · acceso a la base de personal (administradores, empleados, roles y permisos): aquí vive el SQL; cada método recibe la conexión o la transacción
+// conecta con: core/db (DBExecutor) y los dtos de personal (administradores, empleados, roles y permisos); los usan los services de personal (administradores, empleados, roles y permisos)
+
 import (
 	"context"
 
@@ -7,19 +10,14 @@ import (
 	"importadoraApi/src/features/staff/dtos"
 )
 
-type PermissionEntity struct {
-	ID          int64
-	Module      string
-	Action      string
-	Description *string
-}
-
 type PermissionRepository struct{}
 
+// NewPermissionRepository crea el repositorio; no guarda estado, cada método recibe la conexión o transacción.
 func NewPermissionRepository() *PermissionRepository {
 	return &PermissionRepository{}
 }
 
+// ListAll lista el catálogo completo de permisos.
 func (r *PermissionRepository) ListAll(ctx context.Context, q db.DBExecutor) ([]dtos.PermissionResponse, error) {
 	const sql = `
 		SELECT id, module, action, description
@@ -44,6 +42,7 @@ func (r *PermissionRepository) ListAll(ctx context.Context, q db.DBExecutor) ([]
 	return list, rows.Err()
 }
 
+// ListByEmployeeID lista los permisos que tiene asignados un empleado.
 func (r *PermissionRepository) ListByEmployeeID(ctx context.Context, q db.DBExecutor, employeeID int64) ([]dtos.PermissionResponse, error) {
 	const sql = `
 		SELECT p.id, p.module, p.action, p.description

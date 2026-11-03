@@ -29,6 +29,7 @@ export interface AuthUser {
   priceType?: string // nivel de precio del usuario (P0..P3)
   comissionRate?: number // comisión (así se escribe en el backend)
   companyInformation?: AuthCompanyInfo
+  permissions?: string[] // permisos del empleado como «módulo:acción» (los administradores no los traen: tienen acceso total); una sesión guardada antes de esta versión no los trae
 }
 
 // datos que casi todo request del backend necesita en su cuerpo (companyId, userId, bodega y nivel de precio)

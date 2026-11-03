@@ -1,55 +1,62 @@
-// customers.adapter · convierte lo que responde el backend (usuarios, direcciones y descuentos) a lo que usa la app, y filtra la lista por texto
+// customers.adapter · convierte lo que responde la API en Go (clientes y sus direcciones) a lo que usa la app, y filtra la lista por texto
 // conecta con: customers.service y customers.details.service (lo aplican a cada respuesta); customers.selectors (filterCustomers); es el único lugar que conoce los nombres del backend
-import type { CompanyDto, DirectionDto, DiscountDto, UserDto } from '../types/customers.api.types'
-import type { Customer, CustomerCompany, CustomerDetail, Direction, Discount } from '../types/customers.types'
+// ojo: lo que la API no trae queda vacío (foto, comisión, descuentos por producto)
+import { fromApiPriceTier } from '@/global/helpers/pricing/priceTier'
+import type { AddressDto, CustomerDto } from '../types/customers.api.types'
+import type { Customer, CustomerCompany, CustomerDetail, Direction, DirectionInput } from '../types/customers.types'
 
 const text = (value: string | null | undefined): string => (value ?? '').trim()
 
-const toCompany = (dto: CompanyDto | null | undefined): CustomerCompany => ({
-  businessName: text(dto?.businessName),
-  tradeName: text(dto?.tradeName),
-  corporateName: text(dto?.corporateName),
-  nit: text(dto?.nit),
-  address: text(dto?.address),
-  cityAndDepartment: text(dto?.cityAndDepartment),
-  phone: dto?.phone || undefined,
-  cellPhone: dto?.cellPhone || undefined,
-  email: text(dto?.email),
-  customerType: text(dto?.customerType),
-  personType: text(dto?.personType),
-  regimeType: text(dto?.regimeType),
-  legalRepresentative: text(dto?.legalRepresentative),
-  mailInvoicing: text(dto?.mailInvoicing),
-})
+// los teléfonos de la app son números; la API los guarda como texto
+const phoneNumber = (value: string | null | undefined): number | undefined => Number(text(value).replace(/\D/g, '')) || undefined
 
-// usuario del backend → cliente de la lista; businessName sale de la razón social o del nombre comercial
-export const toCustomer = (dto: UserDto): Customer => {
+// el cliente de la API → cliente de la lista; businessName sale del nombre comercial
+export const toCustomer = (dto: CustomerDto): Customer => {
   const name = text(dto.name)
   const lastName = text(dto.lastName)
-  const company = dto.companyInformation
   return {
-    id: dto.userId,
+    id: dto.id,
     name,
     lastName,
-    fullName: `${name} ${lastName}`.trim() || text(dto.email) || `Usuario ${dto.userId}`,
-    identification: text(dto.identification),
+    fullName: `${name} ${lastName}`.trim() || text(dto.email) || `Cliente ${dto.id}`,
+    identification: text(dto.document),
     email: text(dto.email),
-    photo: text(dto.photo),
-    userType: text(dto.userType),
-    priceType: text(dto.priceType) || undefined,
-    businessName: text(company?.businessName) || text(company?.tradeName),
+    photo: '',
+    userType: text(dto.personType),
+    priceType: fromApiPriceTier(dto.priceTier),
+    businessName: text(dto.tradeName),
+    isActive: dto.status !== 'inactive',
+    status: dto.status || 'active',
   }
 }
 
-// GET /users/{id}: lo mismo más la comisión y los datos completos de la empresa
-export const toCustomerDetail = (dto: UserDto): CustomerDetail => ({
-  ...toCustomer(dto),
-  commissionRate: dto.comissionRate,
-  company: toCompany(dto.companyInformation),
+// los datos de la empresa del cliente: la API los trae planos en el mismo cliente
+const toCompany = (dto: CustomerDto): CustomerCompany => ({
+  businessName: text(dto.tradeName),
+  tradeName: text(dto.tradeName),
+  corporateName: text(dto.name),
+  nit: dto.documentType === 'NIT' ? text(dto.document) : '',
+  address: text(dto.address),
+  cityAndDepartment: text(dto.city),
+  phone: phoneNumber(dto.phone),
+  cellPhone: phoneNumber(dto.mobile),
+  email: text(dto.email),
+  customerType: '',
+  personType: text(dto.personType),
+  regimeType: '',
+  legalRepresentative: text(dto.legalRepresentative),
+  mailInvoicing: '',
 })
 
-export const toDirection = (dto: DirectionDto): Direction => ({
-  id: dto.directionId,
+// GET /customers/:id: lo mismo más los datos completos de la empresa
+export const toCustomerDetail = (dto: CustomerDto): CustomerDetail => ({
+  ...toCustomer(dto),
+  company: toCompany(dto),
+})
+
+// la dirección de la lista de direcciones del cliente; si no trae id se le da su posición (1, 2, 3…)
+const toDirection = (dto: AddressDto, index: number): Direction => ({
+  id: dto.id ?? index + 1,
   address: text(dto.address),
   neighborhood: text(dto.neighborhood),
   city: text(dto.city),
@@ -58,20 +65,17 @@ export const toDirection = (dto: DirectionDto): Direction => ({
   additionalInfo: text(dto.additionalInfo),
 })
 
-// un id en 0 significa "no aplica a esto" en el backend: se deja sin definir
-const idOrUndefined = (value: number | undefined): number | undefined => (value ? value : undefined)
+// convierte las direcciones del cliente de la API en las que usa la app
+export const toDirections = (dto: CustomerDto): Direction[] => (dto.addresses ?? []).map(toDirection)
 
-export const toDiscount = (dto: DiscountDto): Discount => ({
-  id: dto.discountId,
-  brandId: idOrUndefined(dto.brandId),
-  categoryId: idOrUndefined(dto.categoryId),
-  modelId: idOrUndefined(dto.modelId),
-  productId: idOrUndefined(dto.productId),
-  quantity: dto.quantity ?? 0,
-  price: dto.price ?? 0,
-  rate: dto.rate ?? 0,
-  isActive: dto.isActive !== false,
-})
+// la lista de direcciones como se guarda en la API (PUT /customers/:id { addresses })
+export const toAddressList = (directions: Direction[]): AddressDto[] => directions.map((item) => ({ ...item }))
+
+// la dirección nueva con el siguiente id libre
+export const withNewDirection = (current: Direction[], input: DirectionInput): Direction[] => [
+  ...current,
+  { id: current.reduce((max, item) => Math.max(max, item.id), 0) + 1, ...input },
+]
 
 // filtra por texto (nombre, documento, correo o razón social); sin texto devuelve todos
 export const filterCustomers = (customers: Customer[], query: string): Customer[] => {

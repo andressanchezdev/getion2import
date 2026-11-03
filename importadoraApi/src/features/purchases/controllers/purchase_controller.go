@@ -1,5 +1,8 @@
 package controllers
 
+// purchase_controller.go · controlador HTTP de compras: recibe la petición, valida la entrada y llama al servicio; no tiene lógica de negocio
+// conecta con: los services y dtos de compras y core/utils (respuestas y errores); los registra routes
+
 import (
 	"fmt"
 	"net/http"
@@ -18,6 +21,7 @@ type PurchaseController struct {
 	service *services.PurchaseService
 }
 
+// NewPurchaseController crea el controlador con las piezas que necesita para funcionar.
 func NewPurchaseController(service *services.PurchaseService) *PurchaseController {
 	return &PurchaseController{service: service}
 }

@@ -1,5 +1,8 @@
 package controllers
 
+// sale_controller.go · controlador HTTP de ventas: recibe la petición, valida la entrada y llama al servicio; no tiene lógica de negocio
+// conecta con: los services y dtos de ventas y core/utils (respuestas y errores); los registra routes
+
 import (
 	"strconv"
 
@@ -16,6 +19,7 @@ type SaleController struct {
 	saleService *services.SaleService
 }
 
+// NewSaleController crea el controlador con las piezas que necesita para funcionar.
 func NewSaleController(saleService *services.SaleService) *SaleController {
 	return &SaleController{saleService: saleService}
 }
@@ -56,6 +60,21 @@ func (ctrl *SaleController) FindByID(c echo.Context) error {
 	}
 
 	return utils.RespondOK(c, "Venta recuperada", sale)
+}
+
+// StageHistory GET /sales/:id/history
+func (ctrl *SaleController) StageHistory(c echo.Context) error {
+	id, err := utils.ParamInt64(c, "id")
+	if err != nil {
+		return err
+	}
+	companyID, _ := middlewares.EffectiveCompanyID(c)
+
+	items, err := ctrl.saleService.StageHistory(c.Request().Context(), companyID, id)
+	if err != nil {
+		return err
+	}
+	return utils.RespondOK(c, "Historial de etapas del pedido", items)
 }
 
 // List GET /sales

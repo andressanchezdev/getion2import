@@ -1,5 +1,8 @@
 package dtos
 
+// warehouse_dto.go · formas de lo que entra y sale por la API en bodegas (peticiones y respuestas)
+// conecta con: los controllers y services de bodegas
+
 import (
 	"time"
 
@@ -36,41 +39,47 @@ type WarehouseFacturationResponse struct {
 
 // WarehouseResponse representa los datos de una bodega junto a su facturación si está configurada.
 type WarehouseResponse struct {
-	ID          int64                         `json:"id"`
-	CompanyID   int64                         `json:"companyId"`
-	Code        string                        `json:"code"`
-	Name        string                        `json:"name"`
-	City        string                        `json:"city,omitempty"`
-	Address     string                        `json:"address,omitempty"`
-	Phone       string                        `json:"phone,omitempty"`
-	Description string                        `json:"description,omitempty"`
-	IsActive    bool                          `json:"isActive"`
-	CreatedAt   time.Time                     `json:"createdAt"`
-	UpdatedAt   time.Time                     `json:"updatedAt"`
-	Facturation *WarehouseFacturationResponse `json:"facturation,omitempty"`
+	ID                int64                         `json:"id"`
+	CompanyID         int64                         `json:"companyId"`
+	Code              string                        `json:"code"`
+	Name              string                        `json:"name"`
+	City              string                        `json:"city,omitempty"`
+	Address           string                        `json:"address,omitempty"`
+	Phone             string                        `json:"phone,omitempty"`
+	Description       string                        `json:"description,omitempty"`
+	ManagerEmployeeID *int64                        `json:"managerEmployeeId,omitempty"`
+	ManagerName       *string                       `json:"managerName,omitempty"`
+	LocationCount     int                           `json:"locationCount"`
+	SkuCount          int                           `json:"skuCount"`
+	IsActive          bool                          `json:"isActive"`
+	CreatedAt         time.Time                     `json:"createdAt"`
+	UpdatedAt         time.Time                     `json:"updatedAt"`
+	Facturation       *WarehouseFacturationResponse `json:"facturation,omitempty"`
 }
 
 // CreateWarehouseRequest entrada para POST /warehouses.
 type CreateWarehouseRequest struct {
-	CompanyID   *int64 `json:"companyId,omitempty"` // Superadmin puede especificar, otros heredan del token
-	Code        string `json:"code"`
-	Name        string `json:"name"`
-	City        string `json:"city,omitempty"`
-	Address     string `json:"address,omitempty"`
-	Phone       string `json:"phone,omitempty"`
-	Description string `json:"description,omitempty"`
-	IsActive    *bool  `json:"isActive,omitempty"`
+	CompanyID         *int64 `json:"companyId,omitempty"` // Superadmin puede especificar, otros heredan del token
+	Code              string `json:"code"`
+	Name              string `json:"name"`
+	City              string `json:"city,omitempty"`
+	Address           string `json:"address,omitempty"`
+	Phone             string `json:"phone,omitempty"`
+	Description       string `json:"description,omitempty"`
+	ManagerEmployeeID *int64 `json:"managerEmployeeId,omitempty"`
+	IsActive          *bool  `json:"isActive,omitempty"`
 }
 
 // UpdateWarehouseRequest entrada para PUT /warehouses/:id.
 type UpdateWarehouseRequest struct {
-	Code        *string `json:"code,omitempty"`
-	Name        *string `json:"name,omitempty"`
-	City        *string `json:"city,omitempty"`
-	Address     *string `json:"address,omitempty"`
-	Phone       *string `json:"phone,omitempty"`
-	Description *string `json:"description,omitempty"`
-	IsActive    *bool   `json:"isActive,omitempty"`
+	Code              *string `json:"code,omitempty"`
+	Name              *string `json:"name,omitempty"`
+	City              *string `json:"city,omitempty"`
+	Address           *string `json:"address,omitempty"`
+	Phone             *string `json:"phone,omitempty"`
+	Description       *string `json:"description,omitempty"`
+	ManagerEmployeeID *int64  `json:"managerEmployeeId,omitempty"`
+	IsActive          *bool   `json:"isActive,omitempty"`
 }
 
 // UpdateFacturationRequest entrada para PUT /warehouses/:id/facturation.
@@ -114,14 +123,18 @@ type UpdateDocSeriesRequest struct {
 
 // WarehouseLocationResponse representa una ubicación física administrada por bodega.
 type WarehouseLocationResponse struct {
-	ID          int64     `json:"id"`
-	CompanyID   int64     `json:"companyId"`
-	WarehouseID int64     `json:"warehouseId"`
-	Code        string    `json:"code"`
-	Description *string   `json:"description,omitempty"`
-	IsActive    bool      `json:"isActive"`
-	CreatedAt   time.Time `json:"createdAt"`
-	UpdatedAt   time.Time `json:"updatedAt"`
+	ID           int64     `json:"id"`
+	CompanyID    int64     `json:"companyId"`
+	WarehouseID  int64     `json:"warehouseId"`
+	Code         string    `json:"code"`
+	QRCode       string    `json:"qrCode"`
+	Status       string    `json:"status"` // "libre" si units == 0, "ocupada" si units > 0
+	Description  *string   `json:"description,omitempty"`
+	IsActive     bool      `json:"isActive"`
+	ProductCount int       `json:"productCount"` // productos distintos guardados en la ubicación
+	Units        int       `json:"units"`        // unidades totales (disponibles) guardadas en la ubicación
+	CreatedAt    time.Time `json:"createdAt"`
+	UpdatedAt    time.Time `json:"updatedAt"`
 }
 
 type CreateWarehouseLocationRequest struct {

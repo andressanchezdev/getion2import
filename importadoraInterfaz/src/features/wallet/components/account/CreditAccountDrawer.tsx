@@ -2,7 +2,7 @@
 // conecta con: wallet.selectors (cliente seleccionado); muestra CreditAccountEmpty o CreditAccountDetail; lo muestra DrawerRight
 // ojo: antes este archivo traía todo (detalle, abono y facturas); ahora solo decide qué mostrar
 import React from 'react'
-import { useAppSelector } from '@/global/hooks/useRedux'
+import { useAppSelector } from '@/global/hooks/store/useRedux'
 import { selectSelectedCustomer } from '../../selectors/wallet.selectors'
 import { CreditAccountEmpty } from './CreditAccountEmpty'
 import { CreditAccountDetail } from './CreditAccountDetail'

@@ -1,5 +1,8 @@
 package controllers
 
+// warehouse_controller.go · controlador HTTP de bodegas: recibe la petición, valida la entrada y llama al servicio; no tiene lógica de negocio
+// conecta con: los services y dtos de bodegas y core/utils (respuestas y errores); los registra routes
+
 import (
 	"strconv"
 
@@ -16,6 +19,7 @@ type WarehouseController struct {
 	service *services.WarehouseService
 }
 
+// NewWarehouseController crea el controlador con las piezas que necesita para funcionar.
 func NewWarehouseController(service *services.WarehouseService) *WarehouseController {
 	return &WarehouseController{service: service}
 }
@@ -25,7 +29,8 @@ func (c *WarehouseController) Get(ctx echo.Context) error {
 	actor := middlewares.GetActor(ctx)
 	params := utils.ParsePagination(ctx)
 
-	items, meta, err := c.service.List(ctx.Request().Context(), actor, params)
+	companyID, _ := middlewares.EffectiveCompanyID(ctx)
+	items, meta, err := c.service.List(ctx.Request().Context(), actor, companyID, params)
 	if err != nil {
 		return err
 	}
@@ -56,7 +61,8 @@ func (c *WarehouseController) Search(ctx echo.Context) error {
 	query := ctx.QueryParam("q")
 	params := utils.ParsePagination(ctx)
 
-	items, meta, err := c.service.Search(ctx.Request().Context(), actor, query, params)
+	companyID, _ := middlewares.EffectiveCompanyID(ctx)
+	items, meta, err := c.service.Search(ctx.Request().Context(), actor, companyID, query, params)
 	if err != nil {
 		return err
 	}

@@ -1,5 +1,8 @@
 package services
 
+// auth_service.go · reglas de negocio de autenticación y sesiones: valida permisos, compañía y datos, coordina las transacciones y arma las respuestas
+// conecta con: los repositories y dtos de autenticación y sesiones; los llama el controller y la conexión llega del contenedor
+
 import (
 	"context"
 	"fmt"
@@ -24,6 +27,7 @@ type AuthService struct {
 	auditRepo *repositories.AuditRepository
 }
 
+// NewAuthService crea el servicio con las piezas que necesita para funcionar.
 func NewAuthService(
 	cfg *config.Config,
 	pool *pgxpool.Pool,
@@ -294,6 +298,7 @@ func (s *AuthService) GetMe(ctx context.Context, actorType types.ActorType, acto
 	}, nil
 }
 
+// mapActorToDTO convierte la cuenta de la base en la respuesta que sale por la API.
 func (s *AuthService) mapActorToDTO(acc *repositories.ActorAccount) dtos.AuthActorDTO {
 	return dtos.AuthActorDTO{
 		ID:               acc.ID,

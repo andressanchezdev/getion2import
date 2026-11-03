@@ -1,0 +1,303 @@
+/* GeneralReportScreen.css · 4 cards estructuradas con la línea de diseño del proyecto */
+.gen-report-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.gen-report-title {
+  font-size: var(--text-base, 16px);
+  font-weight: var(--font-weight-bold);
+  color: var(--c-slate-900);
+  margin: 0;
+}
+
+.gen-report-subtitle {
+  font-size: var(--text-xs);
+  color: var(--c-slate-500);
+  margin: 2px 0 0;
+}
+
+.gen-report-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .gen-report-cards-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.gen-report-card-wide {
+  grid-column: 1 / -1;
+}
+
+.gen-report-card {
+  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--c-slate-200);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+}
+
+.gen-report-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--c-slate-200);
+  background: var(--c-slate-50);
+}
+
+.gen-report-card-title {
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--c-slate-900);
+  margin: 0;
+}
+
+.gen-report-card-desc {
+  font-size: var(--text-xs);
+  color: var(--c-slate-500);
+  margin: 2px 0 0;
+}
+
+.gen-report-card-body {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 16px;
+}
+
+@media (max-width: 680px) {
+  .gen-report-card-body {
+    flex-direction: column;
+  }
+}
+
+.gen-report-kpi-highlight {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 14px 16px;
+  background: var(--c-slate-50);
+  border: 1px solid var(--c-slate-200);
+  border-radius: 8px;
+}
+
+.gen-report-kpi-label {
+  font-size: var(--text-xs);
+  color: var(--c-slate-500);
+  font-weight: var(--font-weight-medium);
+}
+
+.gen-report-kpi-value {
+  font-size: var(--text-2xl, 24px);
+  font-weight: var(--font-weight-bold);
+  color: var(--c-slate-900);
+}
+
+.gen-report-kpi-value.is-sales {
+  color: var(--c-emerald-600);
+}
+
+.gen-report-kpi-value.is-transfers {
+  color: var(--c-blue-600);
+}
+
+.gen-report-kpi-highlight small {
+  font-size: var(--text-xs);
+  color: var(--c-slate-500);
+}
+
+.gen-report-submetrics-list {
+  flex: 1.2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+}
+
+.gen-report-submetric-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--c-slate-100);
+  border-radius: 6px;
+  font-size: var(--text-xs);
+}
+
+.submetric-name {
+  color: var(--c-slate-700);
+  font-weight: var(--font-weight-medium);
+}
+
+.submetric-val {
+  font-weight: var(--font-weight-bold);
+}
+
+.submetric-val.is-cash {
+  color: var(--c-emerald-700);
+}
+
+.submetric-val.is-transfer {
+  color: #2563eb;
+}
+
+.submetric-val.is-credit {
+  color: #7c3aed;
+}
+
+.submetric-val.is-in {
+  color: var(--c-emerald-700);
+}
+
+.submetric-val.is-out {
+  color: #ea580c;
+}
+
+.submetric-val.is-pending {
+  color: #d97706;
+}
+
+.gen-report-badge {
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-bold);
+}
+
+.gen-report-badge.is-success {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.gen-report-badge.is-info {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.gen-report-badge.is-warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.gen-report-badge.is-rotation {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.gen-report-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.gen-report-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: var(--text-sm);
+}
+
+.gen-report-table th {
+  padding: 10px 16px;
+  background: var(--c-slate-50);
+  color: var(--c-slate-500);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--c-slate-200);
+}
+
+.gen-report-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--c-slate-100);
+  color: var(--c-slate-800);
+}
+
+.gen-report-code {
+  font-family: var(--font-family-mono);
+  font-size: var(--text-xs);
+  color: var(--c-slate-900);
+}
+
+.gen-report-product-name {
+  font-weight: var(--font-weight-medium);
+  color: var(--c-slate-900);
+}
+
+.gen-report-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  background: var(--c-slate-100);
+  color: var(--c-slate-700);
+  border-radius: 4px;
+  font-size: var(--text-11px);
+}
+
+.gen-report-stock-pill {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-bold);
+}
+
+.gen-report-stock-pill.is-low {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.gen-report-stock-pill.is-out {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.gen-report-status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: var(--text-11px);
+  font-weight: var(--font-weight-semibold);
+}
+
+.gen-report-status-badge.is-warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.gen-report-status-badge.is-danger {
+  background: var(--c-red-50);
+  color: var(--c-rose-700);
+  border: 1px solid var(--c-red-200);
+}
+
+.gen-report-units-sold {
+  color: var(--c-emerald-600);
+}
+
+.gen-report-empty {
+  text-align: center;
+  padding: 28px 16px;
+  color: var(--c-slate-400);
+  font-style: italic;
+}
+
+.align-center {
+  text-align: center;
+}
+
+.align-right {
+  text-align: right;
+}

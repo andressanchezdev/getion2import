@@ -5,6 +5,7 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import { INITIAL_WALLET_STATE } from '../constants/wallet.constants'
 import { loadInvoicesThunk, loadWalletSummaryThunk, loadWalletThunk } from '../thunks/wallet.thunks'
 import { payThunk, updateCreditThunk } from '../thunks/wallet.payments.thunks'
+import { loadPaymentsHistoryThunk, searchCreditCustomersThunk } from '../thunks/wallet.history.thunks'
 import type { CreditStatus, CustomerCreditProfile } from '../types/wallet.types'
 
 export const walletSlice = createSlice({
@@ -39,6 +40,38 @@ export const walletSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      // historial de abonos
+      .addCase(loadPaymentsHistoryThunk.pending, (state, action) => {
+        state.history.status = 'loading'
+        state.history.error = null
+        state.history.requestId = action.meta.requestId
+      })
+      .addCase(loadPaymentsHistoryThunk.fulfilled, (state, action) => {
+        if (state.history.requestId !== action.meta.requestId) return
+        state.history.items = action.payload
+        state.history.status = 'succeeded'
+      })
+      .addCase(loadPaymentsHistoryThunk.rejected, (state, action) => {
+        if (state.history.requestId !== action.meta.requestId) return
+        state.history.status = 'failed'
+        state.history.error = action.payload ?? 'No se pudo cargar el historial de abonos.'
+      })
+      // clientes encontrados al habilitar crédito
+      .addCase(searchCreditCustomersThunk.pending, (state, action) => {
+        state.creditSearch.status = 'loading'
+        state.creditSearch.requestId = action.meta.requestId
+      })
+      .addCase(searchCreditCustomersThunk.fulfilled, (state, action) => {
+        if (state.creditSearch.requestId !== action.meta.requestId) return
+        state.creditSearch.items = action.payload
+        state.creditSearch.status = 'succeeded'
+      })
+      .addCase(searchCreditCustomersThunk.rejected, (state, action) => {
+        if (state.creditSearch.requestId !== action.meta.requestId) return
+        state.creditSearch.items = []
+        state.creditSearch.status = 'failed'
+        state.creditSearch.error = action.payload ?? 'No se pudieron buscar los clientes.'
+      })
       // lista de clientes
       .addCase(loadWalletThunk.pending, (state, action) => {
         state.list.status = 'loading'

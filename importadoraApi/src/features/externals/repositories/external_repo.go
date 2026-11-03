@@ -1,5 +1,8 @@
 package repositories
 
+// external_repo.go · acceso a la base de terceros (proveedores y transportadoras): aquí vive el SQL; cada método recibe la conexión o la transacción
+// conecta con: core/db (DBExecutor) y los dtos de terceros (proveedores y transportadoras); los usan los services de terceros (proveedores y transportadoras)
+
 import (
 	"context"
 	"errors"
@@ -39,10 +42,12 @@ type ExternalEntity struct {
 
 type ExternalRepository struct{}
 
+// NewExternalRepository crea el repositorio; no guarda estado, cada método recibe la conexión o transacción.
 func NewExternalRepository() *ExternalRepository {
 	return &ExternalRepository{}
 }
 
+// FindByID busca el tercero por su id (nil si no existe).
 func (r *ExternalRepository) FindByID(ctx context.Context, q db.DBExecutor, id int64) (*ExternalEntity, error) {
 	const sql = `
 		SELECT
@@ -71,6 +76,7 @@ func (r *ExternalRepository) FindByID(ctx context.Context, q db.DBExecutor, id i
 	return &e, nil
 }
 
+// FindByCompanyKindAndName busca el tercero por compañía, tipo y nombre (nil si no existe).
 func (r *ExternalRepository) FindByCompanyKindAndName(ctx context.Context, q db.DBExecutor, companyID int64, kind types.ExternalKind, name string) (*ExternalEntity, error) {
 	const sql = `
 		SELECT
@@ -99,6 +105,7 @@ func (r *ExternalRepository) FindByCompanyKindAndName(ctx context.Context, q db.
 	return &e, nil
 }
 
+// List lista los terceros según los filtros, con su total para paginar.
 func (r *ExternalRepository) List(ctx context.Context, q db.DBExecutor, f dtos.ExternalFilterQuery) ([]ExternalEntity, int, error) {
 	where := make([]string, 0)
 	args := make([]interface{}, 0)
@@ -194,6 +201,7 @@ func (r *ExternalRepository) List(ctx context.Context, q db.DBExecutor, f dtos.E
 	return list, total, rows.Err()
 }
 
+// Create inserta el tercero y devuelve el registro guardado.
 func (r *ExternalRepository) Create(ctx context.Context, q db.DBExecutor, e *ExternalEntity) (*ExternalEntity, error) {
 	const sql = `
 		INSERT INTO externals (
@@ -221,6 +229,7 @@ func (r *ExternalRepository) Create(ctx context.Context, q db.DBExecutor, e *Ext
 	return e, nil
 }
 
+// Update actualiza los datos de el tercero.
 func (r *ExternalRepository) Update(ctx context.Context, q db.DBExecutor, e *ExternalEntity) (*ExternalEntity, error) {
 	const sql = `
 		UPDATE externals SET
@@ -256,6 +265,7 @@ func (r *ExternalRepository) Update(ctx context.Context, q db.DBExecutor, e *Ext
 	return e, nil
 }
 
+// SoftDelete marca el tercero como eliminado (borrado lógico: no se pierde el registro).
 func (r *ExternalRepository) SoftDelete(ctx context.Context, q db.DBExecutor, id int64) error {
 	const sql = `UPDATE externals SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP WHERE id = $1`
 	cmdTag, err := q.Exec(ctx, sql, id)

@@ -1,5 +1,8 @@
 package server
 
+// server.go · servidor HTTP: configuración de Echo, arranque y apagado ordenado
+// conecta con: core/config y core/bootstrap (el enrutador); lo llama main.go
+
 import (
 	"context"
 	"fmt"
@@ -21,6 +24,7 @@ type Server struct {
 	cfg  *config.Config
 }
 
+// NewServer crea el servidor HTTP con su configuración y su enrutador.
 func NewServer(cfg *config.Config) *Server {
 	e := echo.New()
 	e.HideBanner = true

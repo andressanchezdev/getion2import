@@ -1,5 +1,8 @@
 package services
 
+// payment_service.go · reglas de negocio de pagos: valida permisos, compañía y datos, coordina las transacciones y arma las respuestas
+// conecta con: los repositories y dtos de pagos; los llama el controller y la conexión llega del contenedor
+
 import (
 	"context"
 	"fmt"
@@ -22,6 +25,7 @@ type PaymentService struct {
 	auditRepo   *authRepos.AuditRepository
 }
 
+// NewPaymentService crea el servicio con las piezas que necesita para funcionar.
 func NewPaymentService(
 	pool *pgxpool.Pool,
 	paymentRepo *repositories.PaymentRepository,
@@ -36,6 +40,7 @@ func NewPaymentService(
 	}
 }
 
+// Create crea el pago con las validaciones del negocio (compañía, duplicados y permisos).
 func (s *PaymentService) Create(ctx context.Context, actor *middlewares.ActorContext, req dtos.CreatePaymentRequest, ip, ua string) (*dtos.PaymentResponse, error) {
 	if actor == nil {
 		return nil, utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
@@ -125,6 +130,7 @@ func (s *PaymentService) Create(ctx context.Context, actor *middlewares.ActorCon
 	return s.FindByID(ctx, actor, created.ID)
 }
 
+// FindByID devuelve el pago por su id, validando que sea de la compañía del usuario.
 func (s *PaymentService) FindByID(ctx context.Context, actor *middlewares.ActorContext, id int64) (*dtos.PaymentResponse, error) {
 	if actor == nil {
 		return nil, utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
@@ -147,6 +153,7 @@ func (s *PaymentService) FindByID(ctx context.Context, actor *middlewares.ActorC
 	return s.mapToDTO(p), nil
 }
 
+// List devuelve los pagos paginados según los filtros, limitados a lo que el usuario puede ver.
 func (s *PaymentService) List(ctx context.Context, actor *middlewares.ActorContext, f dtos.PaymentFilterQuery) ([]dtos.PaymentResponse, *utils.PaginatorMetadata, error) {
 	if actor == nil {
 		return nil, nil, utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
@@ -200,28 +207,13 @@ func (s *PaymentService) Verify(ctx context.Context, actor *middlewares.ActorCon
 		return nil, utils.BadRequest("INVALID_STATUS", fmt.Sprintf("El pago no se puede verificar porque ya está en estado '%s'.", p.Status))
 	}
 
-	// 1. Cambiar estado a verified
-	if err := s.paymentRepo.Verify(ctx, tx, id, actor.ActorID, req.IssueNote); err != nil {
-		return nil, utils.Internal("Error al actualizar estado del pago.", err)
+	// 1-3. verificado, suma a lo pagado de la venta y, si la venta es a crédito, abono en el libro de crédito
+	if err := s.verifyInTx(ctx, tx, p, actor.ActorID, req.IssueNote); err != nil {
+		return nil, utils.Internal("Error al verificar el pago.", err)
 	}
-
-	// 2. Incrementar paid_total en la venta
-	const updateSaleSQL = `UPDATE sales SET paid_total = paid_total + $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`
-	if _, err := tx.Exec(ctx, updateSaleSQL, p.Amount, p.SaleID); err != nil {
-		return nil, utils.Internal("Error al actualizar saldo abonado en la venta.", err)
-	}
-
-	// 3. Asentar abono positivo en credit_entries
-	creditReason := fmt.Sprintf("Abono verificado por pago %s sobre venta %s", p.SerialCode, p.SaleSerial)
-	const insertCreditSQL = `
-		INSERT INTO credit_entries (
-			company_id, customer_id, employee_id, entry_type, amount, sale_id, payment_id, reason
-		) VALUES (
-			$1, $2, $3, 'payment', $4, $5, $6, $7
-		)
-	`
-	if _, err := tx.Exec(ctx, insertCreditSQL, p.CompanyID, p.CustomerID, actor.ActorID, p.Amount, p.SaleID, p.ID, creditReason); err != nil {
-		return nil, utils.Internal("Error al asentar abono en el libro de crédito del cliente.", err)
+	// si con este pago el pedido queda cubierto, pasa a «verificación confirmada»
+	if err := s.syncVerificationStage(ctx, tx, p.SaleID, actor.ActorID); err != nil {
+		return nil, utils.Internal("Error al actualizar la etapa del pedido.", err)
 	}
 
 	// 4. Registro de auditoría
@@ -271,8 +263,20 @@ func (s *PaymentService) Void(ctx context.Context, actor *middlewares.ActorConte
 		return utils.BadRequest("INVALID_STATUS", fmt.Sprintf("Solo se pueden anular pagos en revisión. Estado actual: '%s'.", p.Status))
 	}
 
-	if err := s.paymentRepo.Void(ctx, s.pool, id, actor.ActorID, req.VoidReason); err != nil {
+	// anular y reevaluar la etapa en la misma transacción: sin el pago en revisión el pedido puede quedar cubierto o no
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return utils.Internal("Error al iniciar la transacción de anulación.", err)
+	}
+	defer tx.Rollback(ctx)
+	if err := s.paymentRepo.Void(ctx, tx, id, actor.ActorID, req.VoidReason); err != nil {
 		return utils.Internal("Error al anular pago.", err)
+	}
+	if err := s.syncVerificationStage(ctx, tx, p.SaleID, actor.ActorID); err != nil {
+		return utils.Internal("Error al actualizar la etapa del pedido.", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return utils.Internal("Error al confirmar la anulación.", err)
 	}
 
 	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
@@ -290,6 +294,7 @@ func (s *PaymentService) Void(ctx context.Context, actor *middlewares.ActorConte
 	return nil
 }
 
+// mapToDTO convierte el pago de la base en la respuesta que sale por la API.
 func (s *PaymentService) mapToDTO(p *repositories.PaymentEntity) *dtos.PaymentResponse {
 	return &dtos.PaymentResponse{
 		ID:                   p.ID,
@@ -312,5 +317,8 @@ func (s *PaymentService) mapToDTO(p *repositories.PaymentEntity) *dtos.PaymentRe
 		VoidReason:           p.VoidReason,
 		VerifiedAt:           p.VerifiedAt,
 		CreatedAt:            p.CreatedAt,
+		WarehouseID:          p.WarehouseID,
+		WarehouseCode:        p.WarehouseCode,
+		WarehouseName:        p.WarehouseName,
 	}
 }

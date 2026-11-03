@@ -14,3 +14,19 @@ export const getModuleTitle = (moduleId: ERPModule): string => MODULE_HEADER_TIT
 
 // ícono del módulo para el encabezado
 export const getModuleIcon = (moduleId: ERPModule): string => MODULE_HEADER_ICONS[moduleId]
+
+// ---- ruta del navegador ----
+// la URL refleja la pantalla activa: /módulo/subgestión (por ejemplo /shop/orders); la pantalla la sigue decidiendo screenRegistry
+export const toRoutePath = (moduleId: ERPModule, subitemId: string): string => `/${moduleId}/${subitemId}`
+
+// lee una ruta y devuelve el módulo y la subgestión que le corresponden, o null si no es una pantalla del ERP
+// ojo: /módulo (sin subgestión) abre la primera del módulo; un módulo sin subgestiones en el menú (como settings) acepta cualquiera
+export const parseRoutePath = (pathname: string): { module: ERPModule; subitem: string } | null => {
+  const [moduleId, subitemId] = pathname.split('/').filter(Boolean)
+  if (!moduleId || !(moduleId in MODULE_HEADER_TITLES)) return null
+  const module = moduleId as ERPModule
+  const subitems = MENU_ITEMS.find((item) => item.id === module)?.subitems ?? []
+  if (subitems.length === 0) return subitemId ? { module, subitem: subitemId } : null
+  if (!subitemId) return { module, subitem: subitems[0].id }
+  return subitems.some((sub) => sub.id === subitemId) ? { module, subitem: subitemId } : null
+}

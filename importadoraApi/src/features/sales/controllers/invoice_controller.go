@@ -1,5 +1,8 @@
 package controllers
 
+// invoice_controller.go · controlador HTTP de ventas: recibe la petición, valida la entrada y llama al servicio; no tiene lógica de negocio
+// conecta con: los services y dtos de ventas y core/utils (respuestas y errores); los registra routes
+
 import (
 	"strconv"
 

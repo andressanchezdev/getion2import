@@ -1,6 +1,6 @@
 /* MainContent.css · estilos del lienzo central · solo usa tokens de styles/tokens.css */
 /* ojo: se quitaron las reglas sin uso (subtitle, header-actions, btn-sync, btn-action y kpis-grid) y el aviso de "Próxima Fase" pasó a MainContentPlaceholder.css */
-/* ojo: ahora es el lienzo de la maqueta (.scr): relleno de 18 px y título de 20 px con el módulo debajo; la cabecera con la bodega vive en AppHeader */
+/* ojo: ahora es el lienzo de la maqueta (.scr): relleno de 18 px y título de 20 px con el módulo debajo; los controles de compañía, bodega y configuración (AppHeader) van a la derecha del título */
 .main-content {
   flex: 1 1 0%;
   min-height: 0;
@@ -15,8 +15,17 @@
 .main-content-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  flex-direction: row;
   gap: 12px;
-  margin-bottom: 14px;
+  position: sticky;
+  top: -18px;
+  padding-top: 18px;
+  padding-bottom: 12px;
+  margin-top: -18px;
+  background-color: var(--bg-main);
+  /* por encima del contenido para que los menús de compañía y bodega no queden tapados */
+  z-index: var(--z-header);
 }
 
 .main-content-title {
@@ -34,7 +43,10 @@
 /* ojo: el flex:1 antes estaba en línea dentro de MainContent.tsx */
 /* entrada del contenido: cada vez que cambia el módulo o la subgestión aparece con un fundido y un leve desplazamiento */
 .main-content-viewport {
-  flex: 1;
+  flex: 1 1 0%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   animation: main-content-enter var(--duration-enter) var(--ease-out);
 }
 
@@ -96,4 +108,11 @@
 .main-content-unauthorized-detail {
   font-size: var(--text-xs);
   color: var(--color-text-muted);
+}
+
+.cash-header-warehouse-tag {
+  font-size: var(--text-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--c-blue-600);
+  margin-left: 8px;
 }

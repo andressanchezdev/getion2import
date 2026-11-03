@@ -1,4 +1,4 @@
-// check-endpoints · revisa que cada ruta de src/api/config.ts exista en el Swagger del backend
+// check-endpoints · revisa que cada ruta de src/api/config.ts y de src/api/endpoints/* exista en el Swagger del backend
 // uso: npm run check:api  (descarga el Swagger público; con un archivo local: node scripts/check-endpoints.mjs ruta/swagger.json)
 // ojo: solo lee; termina con error si una ruta de config.ts no existe o si cambió su método
 import fs from 'node:fs'
@@ -9,8 +9,9 @@ const source = process.argv[2]
 const swagger = source ? JSON.parse(fs.readFileSync(source, 'utf8')) : await (await fetch(SWAGGER_URL)).json()
 const paths = Object.keys(swagger.paths)
 
-// busca todas las rutas escritas entre comillas o plantillas en config.ts ('/users/${id}' se compara como /users/{id})
-const config = fs.readFileSync('src/api/config.ts', 'utf8')
+// busca todas las rutas escritas entre comillas o plantillas en config.ts y en endpoints/* ('/users/${id}' se compara como /users/{id})
+const endpointFiles = fs.readdirSync('src/api/endpoints').filter((file) => file.endsWith('.ts')).map((file) => `src/api/endpoints/${file}`)
+const config = ['src/api/config.ts', ...endpointFiles].map((file) => fs.readFileSync(file, 'utf8')).join(String.fromCharCode(10))
 const found = [...config.matchAll(/['`](\/[A-Za-z0-9/_${}.-]+)['`]/g)].map((m) => m[1].replace('${id}', '{id}'))
 
 const unique = [...new Set(found)].filter((route) => route !== '/swagger/doc.json') // el Swagger mismo no es una ruta de la API

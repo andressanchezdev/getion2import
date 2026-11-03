@@ -1,0 +1,176 @@
+// PurchasesTable · tarjeta de órdenes de compra con buscador, filtros de bodega y estado, y tabla global
+// conecta con: PurchaseOrdersScreen y ReceivingScreen (la usan), usePurchases y usePurchaseActions, RowActions, Pill, ConfirmDialog, Pagination y navigation
+import React, { useState } from 'react'
+import './PurchasesTable.css'
+import { Pill } from '@/global/components/UI/atoms/Pill'
+import { ConfirmDialog } from '@/global/components/UI/molecules/dialogs/ConfirmDialog'
+import { SearchBar } from '@/global/components/UI/molecules/filters/SearchBar'
+import { Pagination } from '@/global/components/UI/molecules/table/Pagination'
+import { RowActions } from '@/global/components/UI/molecules/table/RowActions'
+import { formatCOP } from '@/global/helpers/formatting/format'
+import { usePagedList } from '@/global/hooks/data/usePagedList'
+import { useAppDispatch } from '@/global/hooks/store/useRedux'
+import { openDrawerForm } from '@/features/navigation'
+import eyeIcon from '@/assets/icons/eye.svg?raw'
+import fileIcon from '@/assets/icons/file-text.svg?raw'
+import receiveIcon from '@/assets/icons/shipping.svg?raw'
+import banIcon from '@/assets/icons/ban.svg?raw'
+import { PURCHASE_STATUS, PURCHASE_STATUS_OPTIONS } from '../../constants/purchases.constants'
+import { canReceive } from '../../helpers/purchases.rules'
+import { usePurchaseActions } from '../../hooks/usePurchaseActions'
+import { usePurchases, type PurchasesMode } from '../../hooks/usePurchases'
+import type { Purchase, PurchaseStatus } from '../../types/purchases.types'
+
+export const PurchasesTable: React.FC<{ mode: PurchasesMode }> = ({ mode }) => {
+  const dispatch = useAppDispatch()
+  const list = usePurchases(mode)
+  const actions = usePurchaseActions()
+  const [toVoid, setToVoid] = useState<Purchase | null>(null)
+  const { pageItems, meta, setPage } = usePagedList(list.items, `${list.search}|${list.status}|${list.selectedWarehouseId}|${mode}`)
+  const receiving = mode === 'receiving'
+
+  const warehouseOptions = [
+    { value: 'all', label: 'Todas las bodegas' },
+    ...list.warehouses.map((wh) => ({ value: String(wh.id), label: wh.name })),
+  ]
+
+  const message = list.failed
+    ? list.error
+    : list.loading
+    ? 'Cargando compras…'
+    : list.items.length === 0
+    ? list.hasFilters
+      ? 'No hay órdenes que coincidan con la búsqueda.'
+      : receiving
+      ? 'No hay órdenes esperando mercancía.'
+      : 'Todavía no hay órdenes de compra registradas.'
+    : null
+
+  const confirmVoid = async () => {
+    const target = toVoid
+    setToVoid(null)
+    if (target) await actions.voidOrder(target)
+  }
+
+  return (
+    <div className="purchases-card">
+      <div className="purchases-toolbar">
+        <SearchBar
+          value={list.search}
+          onChange={list.setSearch}
+          hasActiveFilters={list.hasFilters}
+          onClear={list.clearFilters}
+          placeholder="Buscar por orden, proveedor o referencia..."
+          className="purchases-search"
+        />
+        <div className="purchases-toolbar-middle">
+          <label className="purchases-toolbar-filter">
+            <span>Bodega:</span>
+            <select
+              className="purchases-toolbar-select"
+              value={list.selectedWarehouseId ? String(list.selectedWarehouseId) : 'all'}
+              onChange={(e) => list.setSelectedWarehouseId(!e.target.value || e.target.value === 'all' ? null : Number(e.target.value))}
+            >
+              {warehouseOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </label>
+          {!receiving && (
+            <label className="purchases-toolbar-filter">
+              <span>Estado:</span>
+              <select
+                className="purchases-toolbar-select"
+                value={list.status}
+                onChange={(e) => list.setStatus((e.target.value || 'all') as PurchaseStatus | 'all')}
+              >
+                {PURCHASE_STATUS_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </label>
+          )}
+        </div>
+        <div className="purchases-toolbar-actions">
+          <span className="purchases-count" aria-live="polite">
+            {list.items.length} de {list.total} órdenes
+          </span>
+          {!receiving && (
+            <button
+              type="button"
+              className="btn-primary purchases-create"
+              onClick={() => dispatch(openDrawerForm({ kind: 'purchaseForm' }))}
+            >
+              + Nueva orden
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="purchases-table-responsive table-scroll">
+        <table className="purchases-table">
+          <thead>
+            <tr>
+              <th>Orden</th>
+              <th>Proveedor</th>
+              <th>Bodega Destino</th>
+              <th>Creada</th>
+              <th>Esperada</th>
+              <th>Referencia</th>
+              <th className="purchases-num">Total</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {message ? (
+              <tr>
+                <td colSpan={9} className="purchases-empty">{message}</td>
+              </tr>
+            ) : (
+              pageItems.map((purchase) => (
+                <tr key={purchase.id}>
+                  <td><strong>{purchase.serial}</strong></td>
+                  <td>{purchase.supplierName}</td>
+                  <td>
+                    <strong className="purchases-table-wh">{purchase.warehouseName || 'Bodega Principal'}</strong>
+                  </td>
+                  <td>{purchase.createdAt || '—'}</td>
+                  <td>{purchase.expectedDate || '—'}</td>
+                  <td>{purchase.supplierRef || '—'}</td>
+                  <td className="purchases-num table-amount">{formatCOP(purchase.total)}</td>
+                  <td><Pill tone={PURCHASE_STATUS[purchase.status].tone}>{PURCHASE_STATUS[purchase.status].label}</Pill></td>
+                  <td>
+                    <RowActions
+                      actions={[
+                        { key: 'detail', label: `Ver la orden ${purchase.serial}`, icon: eyeIcon, onClick: () => dispatch(openDrawerForm({ kind: 'purchaseDetail', payload: { id: purchase.id } })) },
+                        { key: 'receive', label: `Recibir mercancía de ${purchase.serial}`, icon: receiveIcon, tone: 'success', visible: canReceive(purchase), onClick: () => dispatch(openDrawerForm({ kind: 'purchaseReceive', payload: { id: purchase.id } })) },
+                        { key: 'excel', label: `Bajar el Excel de ${purchase.serial}`, icon: fileIcon, onClick: () => actions.exportExcel(purchase) },
+                        { key: 'void', label: `Anular la orden ${purchase.serial}`, icon: banIcon, tone: 'danger', visible: purchase.status === 'ordered', onClick: () => setToVoid(purchase) },
+                      ]}
+                    />
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+      <Pagination meta={meta} label="Paginación de compras" onPageChange={setPage} />
+
+      {toVoid && (
+        <ConfirmDialog
+          open={Boolean(toVoid)}
+          title={`¿Anular la orden ${toVoid.serial}?`}
+          message="Esta orden quedará anulada y no podrá recibir mercancía. El consecutivo se conservará como anulado."
+          confirmLabel="Sí, anular orden"
+          cancelLabel="No, mantenerla"
+          onConfirm={confirmVoid}
+          onCancel={() => setToVoid(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+export default PurchasesTable

@@ -1,5 +1,8 @@
 package repositories
 
+// wallet_repo.go · acceso a la base de cartera: aquí vive el SQL; cada método recibe la conexión o la transacción
+// conecta con: core/db (DBExecutor) y los dtos de cartera; los usan los services de cartera
+
 import (
 	"context"
 	"errors"
@@ -47,10 +50,12 @@ type CustomerCreditSummaryEntity struct {
 
 type WalletRepository struct{}
 
+// NewWalletRepository crea el repositorio; no guarda estado, cada método recibe la conexión o transacción.
 func NewWalletRepository() *WalletRepository {
 	return &WalletRepository{}
 }
 
+// GetCustomerCreditSummary trae el resumen de crédito de un cliente: cupo, saldo, pedidos reservados y disponible.
 func (r *WalletRepository) GetCustomerCreditSummary(ctx context.Context, q db.DBExecutor, customerID int64) (*CustomerCreditSummaryEntity, error) {
 	const sql = `
 		SELECT
@@ -75,6 +80,7 @@ func (r *WalletRepository) GetCustomerCreditSummary(ctx context.Context, q db.DB
 	return &e, nil
 }
 
+// ListEntries lista los movimientos del libro de crédito de un cliente, con su total para paginar.
 func (r *WalletRepository) ListEntries(ctx context.Context, q db.DBExecutor, f dtos.CreditEntryFilterQuery) ([]CreditEntryEntity, int, error) {
 	where := make([]string, 0)
 	args := make([]interface{}, 0)
@@ -164,6 +170,7 @@ func (r *WalletRepository) ListEntries(ctx context.Context, q db.DBExecutor, f d
 	return list, total, rows.Err()
 }
 
+// CreateAdjustment asienta un ajuste manual en el libro de crédito del cliente.
 func (r *WalletRepository) CreateAdjustment(ctx context.Context, q db.DBExecutor, companyID, customerID int64, employeeID *int64, amount float64, reason string) (int64, error) {
 	const sql = `
 		INSERT INTO credit_entries (

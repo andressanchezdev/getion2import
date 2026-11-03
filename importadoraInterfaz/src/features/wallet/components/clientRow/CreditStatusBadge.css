@@ -11,12 +11,6 @@
   white-space: nowrap;
 }
 
-.credit-table-badge-up-to-date {
-  background: var(--c-emerald-50);
-  color: var(--c-emerald-700);
-  border: 1px solid var(--c-emerald-200);
-}
-
 .credit-table-badge-warning {
   background: var(--c-amber-50);
   color: var(--c-amber-700);

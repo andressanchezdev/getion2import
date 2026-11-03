@@ -1,16 +1,20 @@
 // OrderDrawer · contenido del panel derecho al abrir un pedido: resumen, cliente y vendedor, líneas, pagos y, abajo, las acciones del pedido
-// conecta con: useOpenOrderDetail (pide el detalle), orders.selectors (pedido abierto y detalle), OrderDetailSections (las cajas), OrderCancelDialog, orders.clipboard y usePermissions; lo muestra DrawerRight (drawerRegistry, modo «order»)
+// conecta con: useOpenOrderDetail (pide el detalle), orders.selectors (pedido abierto y detalle), orders.thunks (aprobar el comprobante), las cajas de sections/ (resumen, personas, líneas y pagos), OrderCancelDialog, orders.clipboard y usePermissions; lo muestra DrawerRight (drawerRegistry, modo «order»)
 // ojo: el encabezado del panel (serie y cliente) lo pinta DrawerHeader con selectOrderDrawerMeta; al anular bien, el slice cierra el panel
 import React, { useState } from 'react'
-import { useAppDispatch, useAppSelector } from '@/global/hooks/useRedux'
-import { usePermissions } from '@/global/hooks/usePermissions'
+import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
+import { usePermissions } from '@/global/hooks/access/usePermissions'
 import { Button } from '@/global/components/UI/atoms/Button'
 import { copyOrderSerial } from '../../helpers/orders.clipboard'
 import { useOpenOrderDetail } from '../../hooks/useOpenOrderDetail'
 import { selectOpenOrderId, selectOrderDetail } from '../../selectors/orders.selectors'
-import { loadOrderDetailThunk } from '../../thunks/orders.thunks'
+import { loadOrderDetailThunk, verifyTransferPaymentThunk } from '../../thunks/orders.thunks'
 import { OrderCancelDialog } from '../cancel/OrderCancelDialog'
-import { OrderLinesSection, OrderPaymentsSection, OrderPeopleSection, OrderSummarySection } from './OrderDetailSections'
+import { OrderHistorySection } from './sections/OrderHistorySection'
+import { OrderLinesSection } from './sections/OrderLinesSection'
+import { OrderPaymentsSection } from './sections/OrderPaymentsSection'
+import { OrderPeopleSection } from './sections/OrderPeopleSection'
+import { OrderSummarySection } from './sections/OrderSummarySection'
 import './OrderDrawer.css'
 
 export const OrderDrawer: React.FC = () => {
@@ -18,11 +22,28 @@ export const OrderDrawer: React.FC = () => {
   useOpenOrderDetail()
   const openId = useAppSelector(selectOpenOrderId)
   const { data: order, status, error } = useAppSelector(selectOrderDetail)
-  const canCancel = usePermissions().canPerformAction('shop', 'orders', 'delete')
+  const { level, canPerformAction } = usePermissions()
+  const canCancel = canPerformAction('shop', 'orders', 'delete')
+  const canVerifyPayment = level === 'admin' || level === 'superadmin' || canPerformAction('shop', 'orders', 'update')
   const [isCancelOpen, setIsCancelOpen] = useState(false)
+  const [verifying, setVerifying] = useState(false)
 
   if (openId === null) return null
   const failed = status === 'failed'
+
+  const handleVerifyTransfer = async () => {
+    if (!order) return
+    setVerifying(true)
+    try {
+      await dispatch(verifyTransferPaymentThunk(order)).unwrap()
+    } catch {
+      // el aviso de error ya lo muestra el thunk
+    } finally {
+      setVerifying(false)
+    }
+  }
+
+  const isTransferPending = order && order.paymentMethod.toLowerCase() === 'transfer' && !order.paymentVerified
 
   return (
     <div className="order-drawer">
@@ -33,6 +54,7 @@ export const OrderDrawer: React.FC = () => {
             <OrderPeopleSection order={order} />
             <OrderLinesSection order={order} />
             <OrderPaymentsSection order={order} />
+            <OrderHistorySection order={order} />
           </>
         ) : (
           <div className="order-drawer-state">
@@ -47,6 +69,15 @@ export const OrderDrawer: React.FC = () => {
       {order && (
         <div className="order-drawer-foot">
           <Button onClick={() => copyOrderSerial(order.serial)}>Copiar número</Button>
+          {isTransferPending && canVerifyPayment && (
+            <Button
+              variant="primary"
+              disabled={verifying}
+              onClick={handleVerifyTransfer}
+            >
+              {verifying ? 'Verificando...' : '✓ Aprobar comprobante'}
+            </Button>
+          )}
           {canCancel && !order.cancelled && (
             <Button variant="danger" onClick={() => setIsCancelOpen(true)}>
               Anular pedido

@@ -1,54 +1,120 @@
-// OrdersToolbar · barra de la tabla de pedidos: chips de etapa con su conteo, buscador y chip de canal
-// conecta con: orders.slice (etapa, canal y búsqueda), orders.selectors (chips con conteo), global SearchBar, FilterChip y ChipSelect
-// ojo: la etapa y el canal cambian lo que pide el backend; la búsqueda solo filtra lo ya cargado en la tabla
+// OrdersToolbar · barra de la tabla de pedidos: búsqueda (40%), filtros centrales (bodega, etapa, canal) y acciones
+// conecta con: orders.slice (filtros), orders.selectors, global SearchBar
+// ojo: sigue estrictamente la misma estructura y línea de diseño de QuotationsToolbar
 import React from 'react'
-import { useAppDispatch, useAppSelector } from '@/global/hooks/useRedux'
-import { SearchBar } from '@/global/components/UI/molecules/SearchBar'
-import { ChipSelect } from '@/global/components/UI/molecules/chips/ChipSelect'
-import { FilterChip } from '@/global/components/UI/molecules/chips/FilterChip'
+import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
+import { SearchBar } from '@/global/components/UI/molecules/filters/SearchBar'
+import { selectWarehouses } from '@/features/warehouses'
 import { ORDER_CHANNELS } from '../../constants/orders.constants'
 import { selectOrderStageChips } from '../../selectors/orders.selectors'
-import { setOrderChannel, setOrderQuery, setOrderStage } from '../../slices/orders.slice'
-import type { OrderChannelFilter } from '../../types/orders.types'
+import { setOrderChannel, setOrderQuery, setOrderStage, setOrderWarehouse } from '../../slices/orders.slice'
+import { loadOrderCountsThunk, loadOrdersThunk } from '../../thunks/orders.thunks'
+import type { OrderChannelFilter, OrderStageKey } from '../../types/orders.types'
 import './OrdersToolbar.css'
 
-const CHANNEL_OPTIONS = ORDER_CHANNELS.map((channel) => ({ value: channel.key, label: channel.label }))
+export interface OrdersToolbarProps {
+  hideWarehouseFilter?: boolean
+  extraActions?: React.ReactNode
+}
 
-export const OrdersToolbar: React.FC = () => {
+export const OrdersToolbar: React.FC<OrdersToolbarProps> = ({ hideWarehouseFilter = false, extraActions }) => {
   const dispatch = useAppDispatch()
-  const { stage, channel, query } = useAppSelector((state) => state.orders)
+  const { stage, channel, query, selectedWarehouseId } = useAppSelector((state) => state.orders)
   const chips = useAppSelector(selectOrderStageChips)
+  const warehouses = useAppSelector(selectWarehouses)
+
+  const handleWarehouseChange = (val: string) => {
+    const nextId = !val || val === 'all' ? null : Number(val)
+    dispatch(setOrderWarehouse(nextId))
+    dispatch(loadOrdersThunk())
+    dispatch(loadOrderCountsThunk())
+  }
+
+  const hasCombinedFilters = Boolean(
+    query.trim() ||
+    (channel && channel !== 'all') ||
+    (!hideWarehouseFilter && selectedWarehouseId !== null)
+  )
+
+  const handleClearCombined = () => {
+    dispatch(setOrderQuery(''))
+    dispatch(setOrderChannel('all'))
+    if (!hideWarehouseFilter) {
+      dispatch(setOrderWarehouse(null))
+    }
+    dispatch(loadOrdersThunk())
+    dispatch(loadOrderCountsThunk())
+  }
 
   return (
     <div className="orders-toolbar">
-      {/* Etapas del pedido con cuántos hay en cada una */}
-      <div className="orders-toolbar-stages" role="tablist" aria-label="Etapas del pedido">
-        {chips.map((chip) => (
-          <FilterChip
-            key={chip.key}
-            role="tab"
-            label={chip.label}
-            count={chip.count ?? '–'}
-            active={chip.key === stage}
-            onClick={() => dispatch(setOrderStage(chip.key))}
-          />
-        ))}
+      <SearchBar
+        value={query}
+        onChange={(value) => dispatch(setOrderQuery(value))}
+        hasActiveFilters={hasCombinedFilters}
+        onClear={handleClearCombined}
+        placeholder="Buscar por pedido, cliente, vendedor o método de pago…"
+        className="orders-toolbar-search"
+      />
+
+      <div className="orders-toolbar-middle">
+        {!hideWarehouseFilter && (
+          <label className="orders-toolbar-filter">
+            <span>Bodega:</span>
+            <select
+              className="orders-toolbar-select"
+              value={selectedWarehouseId ? String(selectedWarehouseId) : 'all'}
+              onChange={(e) => handleWarehouseChange(e.target.value)}
+            >
+              <option value="all">Todas las bodegas</option>
+              {warehouses.map((wh) => (
+                <option key={wh.id} value={String(wh.id)}>
+                  {wh.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+
+        <label className="orders-toolbar-filter">
+          <span>Etapa:</span>
+          <select
+            className="orders-toolbar-select"
+            value={stage}
+            onChange={(e) => {
+              if (e.target.value) dispatch(setOrderStage(e.target.value as OrderStageKey))
+            }}
+          >
+            {chips.map((chip) => (
+              <option key={chip.key} value={chip.key}>
+                {chip.label} ({chip.count ?? '–'})
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="orders-toolbar-filter">
+          <span>Canal:</span>
+          <select
+            className="orders-toolbar-select"
+            value={channel}
+            onChange={(e) => dispatch(setOrderChannel(e.target.value as OrderChannelFilter))}
+          >
+            <option value="all">Todos los canales</option>
+            {ORDER_CHANNELS.map((ch) => (
+              <option key={ch.key} value={ch.key}>
+                {ch.label}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
-      <div className="orders-toolbar-tools">
-        <SearchBar
-          value={query}
-          onChange={(value) => dispatch(setOrderQuery(value))}
-          placeholder="Buscar por pedido, cliente, vendedor o método de pago…"
-          className="orders-toolbar-search"
-        />
-        <ChipSelect
-          label="Todos los canales"
-          value={channel === 'all' ? null : channel}
-          options={CHANNEL_OPTIONS}
-          onChange={(value) => dispatch(setOrderChannel((value ?? 'all') as OrderChannelFilter))}
-        />
-      </div>
+      {extraActions && (
+        <div className="orders-toolbar-actions">
+          {extraActions}
+        </div>
+      )}
     </div>
   )
 }

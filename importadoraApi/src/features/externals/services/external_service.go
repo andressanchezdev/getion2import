@@ -1,5 +1,8 @@
 package services
 
+// external_service.go · reglas de negocio de terceros (proveedores y transportadoras): valida permisos, compañía y datos, coordina las transacciones y arma las respuestas
+// conecta con: los repositories y dtos de terceros (proveedores y transportadoras); los llama el controller y la conexión llega del contenedor
+
 import (
 	"context"
 	"strings"
@@ -22,6 +25,7 @@ type ExternalService struct {
 	auditRepo    *authRepos.AuditRepository
 }
 
+// NewExternalService crea el servicio con las piezas que necesita para funcionar.
 func NewExternalService(
 	cfg *config.Config,
 	pool *pgxpool.Pool,
@@ -36,6 +40,7 @@ func NewExternalService(
 	}
 }
 
+// List devuelve los terceros paginados según los filtros, limitados a lo que el usuario puede ver.
 func (s *ExternalService) List(ctx context.Context, actor *middlewares.ActorContext, filter dtos.ExternalFilterQuery) ([]dtos.ExternalResponse, *utils.PaginatorMetadata, error) {
 	if actor == nil {
 		return nil, nil, utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
@@ -59,6 +64,7 @@ func (s *ExternalService) List(ctx context.Context, actor *middlewares.ActorCont
 	return result, &meta, nil
 }
 
+// Search busca los terceros por texto.
 func (s *ExternalService) Search(ctx context.Context, actor *middlewares.ActorContext, query string, params utils.PageParams) ([]dtos.ExternalResponse, *utils.PaginatorMetadata, error) {
 	if actor == nil {
 		return nil, nil, utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
@@ -79,6 +85,7 @@ func (s *ExternalService) Search(ctx context.Context, actor *middlewares.ActorCo
 	return s.List(ctx, actor, filter)
 }
 
+// GetByID devuelve el tercero por su id, validando que sea de la compañía del usuario.
 func (s *ExternalService) GetByID(ctx context.Context, actor *middlewares.ActorContext, id int64) (*dtos.ExternalResponse, error) {
 	if actor == nil {
 		return nil, utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
@@ -101,6 +108,7 @@ func (s *ExternalService) GetByID(ctx context.Context, actor *middlewares.ActorC
 	return s.mapExternalToDTO(entity), nil
 }
 
+// Create crea el tercero con las validaciones del negocio (compañía, duplicados y permisos).
 func (s *ExternalService) Create(ctx context.Context, actor *middlewares.ActorContext, req dtos.CreateExternalRequest, ip, ua string) (*dtos.ExternalResponse, error) {
 	if actor == nil {
 		return nil, utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
@@ -192,6 +200,7 @@ func (s *ExternalService) Create(ctx context.Context, actor *middlewares.ActorCo
 	return s.mapExternalToDTO(created), nil
 }
 
+// Update actualiza el tercero con las validaciones del negocio.
 func (s *ExternalService) Update(ctx context.Context, actor *middlewares.ActorContext, id int64, req dtos.UpdateExternalRequest, ip, ua string) (*dtos.ExternalResponse, error) {
 	if actor == nil {
 		return nil, utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
@@ -290,6 +299,7 @@ func (s *ExternalService) Update(ctx context.Context, actor *middlewares.ActorCo
 	return s.mapExternalToDTO(updated), nil
 }
 
+// Delete elimina el tercero validando que sea de la compañía del usuario.
 func (s *ExternalService) Delete(ctx context.Context, actor *middlewares.ActorContext, id int64, ip, ua string) error {
 	if actor == nil {
 		return utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
@@ -328,6 +338,7 @@ func (s *ExternalService) Delete(ctx context.Context, actor *middlewares.ActorCo
 	return nil
 }
 
+// mapExternalToDTO convierte el tercero de la base en la respuesta que sale por la API.
 func (s *ExternalService) mapExternalToDTO(e *repositories.ExternalEntity) *dtos.ExternalResponse {
 	return &dtos.ExternalResponse{
 		ID:           e.ID,

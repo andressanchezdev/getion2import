@@ -1,5 +1,6 @@
 /* App.css · reset y estilos base de la app; importa los tokens · solo usa tokens de styles/tokens.css */
 @import './styles/tokens.css';
+@import './styles/table-scroll.css';
 
 /* ============================================================================
    RESET Y ESTILOS BASE
@@ -94,25 +95,11 @@ th {
   }
 }
 
-.shop-catalog-filter-pills-scroll {
-  display: flex;
-  gap: 0.5rem;
-  padding-bottom: 0.5rem;
-  padding-right: 0.5rem;
-  scrollbar-gutter: stable;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  background-color: transparent;
-}
-
-.shop-catalog-filter-pills-scroll::-webkit-scrollbar {
-  display: none;
-}
-
 /* ============================================================================
    ESTILOS GLOBALES DE SCROLLBAR
    Barras verticales transparentes/invisibles · Barras horizontales visibles y estilizadas
-   ============================================================================ 
+   ============================================================================ */
+
 /* Dimensiones base: ancho 0 para vertical (oculto), alto para horizontal */
 ::-webkit-scrollbar {
   width: 0px;

@@ -1,5 +1,8 @@
 package repositories
 
+// model_repo.go · acceso a la base de catálogo (marcas, categorías y modelos): aquí vive el SQL; cada método recibe la conexión o la transacción
+// conecta con: core/db (DBExecutor) y los dtos de catálogo (marcas, categorías y modelos); los usan los services de catálogo (marcas, categorías y modelos)
+
 import (
 	"context"
 	"errors"
@@ -21,10 +24,12 @@ type ModelEntity struct {
 
 type ModelRepository struct{}
 
+// NewModelRepository crea el repositorio; no guarda estado, cada método recibe la conexión o transacción.
 func NewModelRepository() *ModelRepository {
 	return &ModelRepository{}
 }
 
+// FindByID busca el modelo de moto por su id (nil si no existe).
 func (r *ModelRepository) FindByID(ctx context.Context, q db.DBExecutor, id int64) (*ModelEntity, error) {
 	const sql = `SELECT id, company_id, name, description, is_active, created_at FROM models WHERE id = $1`
 	var m ModelEntity
@@ -38,6 +43,7 @@ func (r *ModelRepository) FindByID(ctx context.Context, q db.DBExecutor, id int6
 	return &m, nil
 }
 
+// FindByCompanyAndName busca el modelo de moto por compañía y nombre (nil si no existe).
 func (r *ModelRepository) FindByCompanyAndName(ctx context.Context, q db.DBExecutor, companyID int64, name string) (*ModelEntity, error) {
 	const sql = `SELECT id, company_id, name, description, is_active, created_at FROM models WHERE company_id = $1 AND LOWER(name) = LOWER($2)`
 	var m ModelEntity
@@ -51,6 +57,7 @@ func (r *ModelRepository) FindByCompanyAndName(ctx context.Context, q db.DBExecu
 	return &m, nil
 }
 
+// ListByCompany lista los modelos de moto de una compañía.
 func (r *ModelRepository) ListByCompany(ctx context.Context, q db.DBExecutor, companyID int64, activeOnly bool) ([]ModelEntity, error) {
 	sql := `SELECT id, company_id, name, description, is_active, created_at FROM models WHERE company_id = $1`
 	if activeOnly {
@@ -75,6 +82,7 @@ func (r *ModelRepository) ListByCompany(ctx context.Context, q db.DBExecutor, co
 	return list, rows.Err()
 }
 
+// Create inserta el modelo de moto y devuelve el registro guardado.
 func (r *ModelRepository) Create(ctx context.Context, q db.DBExecutor, m *ModelEntity) (*ModelEntity, error) {
 	const sql = `
 		INSERT INTO models (company_id, name, description, is_active)
@@ -88,6 +96,7 @@ func (r *ModelRepository) Create(ctx context.Context, q db.DBExecutor, m *ModelE
 	return m, nil
 }
 
+// Update actualiza los datos de el modelo de moto.
 func (r *ModelRepository) Update(ctx context.Context, q db.DBExecutor, m *ModelEntity) (*ModelEntity, error) {
 	const sql = `UPDATE models SET name = $1, description = $2, is_active = $3 WHERE id = $4`
 	cmdTag, err := q.Exec(ctx, sql, m.Name, m.Description, m.IsActive, m.ID)
@@ -100,6 +109,7 @@ func (r *ModelRepository) Update(ctx context.Context, q db.DBExecutor, m *ModelE
 	return m, nil
 }
 
+// SoftDelete marca el modelo de moto como eliminado (borrado lógico: no se pierde el registro).
 func (r *ModelRepository) SoftDelete(ctx context.Context, q db.DBExecutor, id int64) error {
 	const sql = `UPDATE models SET is_active = FALSE WHERE id = $1`
 	cmdTag, err := q.Exec(ctx, sql, id)

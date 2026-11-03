@@ -1,0 +1,70 @@
+/* CompanyWarehousesPanel.css · sedes de una compañía dentro del panel derecho · solo usa tokens de styles/tokens.css */
+.company-sites {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+}
+
+.company-sites-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.25rem;
+}
+
+.company-sites-title {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--color-text-primary);
+}
+
+.company-sites-empty {
+    margin: 0;
+    color: var(--color-text-muted);
+}
+
+.company-sites-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.company-sites-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+}
+
+.company-sites-item small {
+    display: block;
+    color: var(--color-text-secondary);
+}
+
+.company-sites-on {
+    font-size: var(--text-xs);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-success);
+}
+
+.company-sites-off {
+    font-size: var(--text-xs);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-danger);
+}
+
+.company-sites-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding: 1rem 1.25rem;
+    border-top: 1px solid var(--color-border);
+    background-color: var(--color-bg-muted);
+}

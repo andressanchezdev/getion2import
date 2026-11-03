@@ -1,5 +1,8 @@
 package controllers
 
+// audit_controller.go · controlador HTTP de auditoría: recibe la petición, valida la entrada y llama al servicio; no tiene lógica de negocio
+// conecta con: los services y dtos de auditoría y core/utils (respuestas y errores); los registra routes
+
 import (
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/utils"
@@ -13,6 +16,7 @@ type AuditController struct {
 	service *services.AuditService
 }
 
+// NewAuditController crea el controlador con las piezas que necesita para funcionar.
 func NewAuditController(service *services.AuditService) *AuditController {
 	return &AuditController{service: service}
 }

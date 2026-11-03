@@ -4,7 +4,7 @@
 // ojo: como en la maqueta el pie (totales y botón) se ve siempre, aunque el carrito esté vacío (con el botón inactivo)
 import React, { useState } from 'react'
 import './ShopCartDrawer.css'
-import { useAppSelector } from '@/global/hooks/useRedux'
+import { useAppSelector } from '@/global/hooks/store/useRedux'
 import { selectCartItems } from '../../selectors/shop.selectors'
 import { ShopCartItem } from './ShopCartItem'
 import { ShopCartCustomer } from './customer/ShopCartCustomer'
@@ -20,6 +20,7 @@ const searchableText = ({ product }: CartItem): string =>
     .join(' ')
     .toLowerCase()
 
+// contenido del panel del carrito: renglones, cliente, totales y pie con las acciones
 export const ShopCartDrawer: React.FC = () => {
   // ojo: las líneas vienen del backend (shop.cart.slice) con el nivel de precio con que se agregó cada una
   const cart = useAppSelector(selectCartItems)

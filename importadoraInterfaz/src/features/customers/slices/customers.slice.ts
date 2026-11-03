@@ -11,6 +11,7 @@ import {
   loadDirectionsThunk,
   loadDiscountsThunk,
 } from '../thunks/customers.details.thunks'
+import { addDocumentCases } from './customers.documents.reducers'
 
 const directionChanges = [addDirectionThunk, deleteDirectionThunk] as const
 
@@ -31,9 +32,17 @@ export const customersSlice = createSlice({
       state.detail = INITIAL_CUSTOMERS_STATE.detail
       state.directions = INITIAL_CUSTOMERS_STATE.directions
       state.discounts = INITIAL_CUSTOMERS_STATE.discounts
+      state.documents = INITIAL_CUSTOMERS_STATE.documents
+    },
+    updateCustomerStatusLocally: (state, action: PayloadAction<{ id: number; isActive: boolean }>) => {
+      const item = state.list.items.find((c) => c.id === action.payload.id)
+      if (item) {
+        item.isActive = action.payload.isActive
+      }
     },
   },
   extraReducers: (builder) => {
+    addDocumentCases(builder)
     builder
       // lista
       .addCase(loadCustomersThunk.pending, (state, action) => {
@@ -125,6 +134,6 @@ export const customersSlice = createSlice({
   },
 })
 
-export const { setCustomersPage, setCustomersQuery, selectCustomer } = customersSlice.actions
+export const { setCustomersPage, setCustomersQuery, selectCustomer, updateCustomerStatusLocally } = customersSlice.actions
 export const customersReducer = customersSlice.reducer
 export default customersSlice.reducer

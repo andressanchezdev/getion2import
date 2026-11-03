@@ -1,5 +1,8 @@
 package services
 
+// notification_service.go · reglas de negocio de notificaciones: valida permisos, compañía y datos, coordina las transacciones y arma las respuestas
+// conecta con: los repositories y dtos de notificaciones; los llama el controller y la conexión llega del contenedor
+
 import (
 	"context"
 
@@ -16,6 +19,7 @@ type NotificationService struct {
 	notificationRepo *repositories.NotificationRepository
 }
 
+// NewNotificationService crea el servicio con las piezas que necesita para funcionar.
 func NewNotificationService(pool *pgxpool.Pool, notificationRepo *repositories.NotificationRepository) *NotificationService {
 	return &NotificationService{
 		pool:             pool,
@@ -23,6 +27,7 @@ func NewNotificationService(pool *pgxpool.Pool, notificationRepo *repositories.N
 	}
 }
 
+// List devuelve las notificaciones paginados según los filtros, limitados a lo que el usuario puede ver.
 func (s *NotificationService) List(ctx context.Context, actor *middlewares.ActorContext, unreadOnly bool, params utils.PageParams) ([]dtos.NotificationResponse, *utils.PaginatorMetadata, error) {
 	if actor == nil || actor.ActorID <= 0 {
 		return nil, nil, utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
@@ -59,6 +64,7 @@ func (s *NotificationService) List(ctx context.Context, actor *middlewares.Actor
 	return resp, &meta, nil
 }
 
+// MarkAsRead marca una notificación como leída, validando que sea del usuario.
 func (s *NotificationService) MarkAsRead(ctx context.Context, actor *middlewares.ActorContext, id int64) error {
 	if actor == nil || actor.ActorID <= 0 {
 		return utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
@@ -66,6 +72,7 @@ func (s *NotificationService) MarkAsRead(ctx context.Context, actor *middlewares
 	return s.notificationRepo.MarkAsRead(ctx, s.pool, id, actor.ActorID)
 }
 
+// MarkAllAsRead marca como leídas todas las notificaciones del usuario.
 func (s *NotificationService) MarkAllAsRead(ctx context.Context, actor *middlewares.ActorContext) error {
 	if actor == nil || actor.ActorID <= 0 {
 		return utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")

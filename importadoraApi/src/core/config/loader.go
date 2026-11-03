@@ -1,5 +1,8 @@
 package config
 
+// loader.go · carga la configuración de la API desde el entorno al arrancar
+// conecta con: env.go (lee las variables) y validators.go (revisa que estén completas); lo llama main.go
+
 import (
 	"fmt"
 	"time"
@@ -9,7 +12,7 @@ import (
 
 // Load carga el archivo .env (si existe), parsea las variables y orquesta la validación del struct Config.
 func Load() (*Config, error) {
-	_ = godotenv.Load()
+	_ = godotenv.Load(".env", "../.env", "../../.env", "../../../.env")
 
 	dbPort, err := envInt("DB_PORT", 5432)
 	if err != nil {

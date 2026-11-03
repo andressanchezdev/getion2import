@@ -3,13 +3,15 @@
 // ojo: lee los filtros y la página DEL STORE en el momento de ejecutarse; si llegan dos cargas seguidas, el slice se queda solo con la última (compara requestId)
 import { createAsyncThunk } from '@reduxjs/toolkit'
 import { getErrorMessage, type PaginatorMetadata } from '@/api'
+import { toast } from '@/global/helpers/feedback/toast'
 import type { NavigationState } from '@/features/navigation'
 import { selectRequestContext, type AuthState } from '@/features/auth'
 import { PRODUCTS_PAGE_SIZE, SEARCH_LIMIT } from '../constants/shop.constants'
 import { toWarehouseNumber } from '../helpers/shop.helpers'
-import { fetchProductsPage, searchProducts } from '../services/shop.products.service'
+import { toProductPrices } from '../helpers/shop.adapter'
+import { fetchProductsPage, searchProducts, updateProductPrices } from '../services/shop.products.service'
 import type { ProductsMode, ProductsState } from '../types/shop.api.types'
-import type { Product, ShopState } from '../types/shop.types'
+import type { Product, ProductPrices, ShopState } from '../types/shop.types'
 
 type ThunkState = { auth: AuthState; shop: ShopState; ui: NavigationState; products: ProductsState }
 
@@ -49,3 +51,25 @@ export const loadProductsThunk = createAsyncThunk<ProductsResult, void, { state:
         }
     }
 )
+
+export interface UpdateProductPricesInput {
+    productId: string
+    prices: ProductPrices
+}
+
+// guarda las tarifas de un producto (PUT /products/:id) y devuelve las que quedaron en la base; el aviso de éxito o error sale aquí
+export const updateProductPricesThunk = createAsyncThunk<
+    { productId: string; prices: ProductPrices },
+    UpdateProductPricesInput,
+    { state: ThunkState; rejectValue: string }
+>('shop/updateProductPrices', async ({ productId, prices }, { rejectWithValue }) => {
+    try {
+        const dto = await updateProductPrices(Number(productId), prices)
+        toast.success('Precios actualizados.')
+        return { productId, prices: toProductPrices(dto.prices) }
+    } catch (error) {
+        const message = getErrorMessage(error, 'No se pudieron guardar los precios.')
+        toast.error(message)
+        return rejectWithValue(message)
+    }
+})

@@ -1,77 +1,85 @@
-// transfers.adapter · adaptadores de datos para traslados y matriz de existencias multibodega
-// conecta con: transfers.service, transfers.types y toPaginated
-import type {
-  ProductStockMatrix,
-  TrasladeItem,
-  WarehouseStockLocation,
-} from '../types/transfers.types'
+// transfers.adapter · convierte lo que responde la API a lo que usa la app
+import type { TransferDto, TransferProductDto, TransferStockRowDto } from '../types/transfers.api.types'
+import type { ProductStockMatrix, TransferStatus, TrasladeItem, WarehouseStockLocation } from '../types/transfers.types'
 
-export const toTrasladeItems = (rawItems: any[]): TrasladeItem[] =>
-  rawItems.map((item: any) => ({
-    saleId: item.saleId || item.id,
-    serialCode: item.serialCode || item.code || 0,
-    invoiceStatus: item.invoiceStatus || 'pendiente',
-    originWarehouse: {
-      id: item.warehouseInformation?.warehouseId || item.warehouseId || 0,
-      name: item.warehouseInformation?.name || 'Bodega Origen',
-    },
-    destWarehouse: {
-      id: item.auxWarehouseInformation?.warehouseId || item.auxWarehouseId || 0,
-      name: item.auxWarehouseInformation?.name || 'Bodega Destino',
-    },
-    products: (item.products || []).map((p: any) => ({
-      productId: p.productId || 0,
-      code: p.code || '',
-      description: p.description || p.name || 'Repuesto',
-      quantity: p.quantity || 1,
+const STATUSES: TransferStatus[] = ['pending', 'in_transit', 'received', 'with_novelty', 'cancelled']
+
+export const toTransferStatus = (status: string): TransferStatus =>
+  STATUSES.includes(status as TransferStatus) ? (status as TransferStatus) : 'pending'
+
+// texto en español del tipo de traslado
+export const getTransferTypeLabel = (type?: string): string => {
+  switch (type) {
+    case 'relocation':
+      return 'Reubicación Interna'
+    case 'central_dispatch':
+      return 'Despacho Central'
+    case 'inter_warehouse':
+    case 'standard':
+    default:
+      return 'Solicitud entre Bodegas'
+  }
+}
+
+// convierte un traslado de la API en el que usa la app
+export const toTrasladeItem = (dto: TransferDto): TrasladeItem => {
+  const status = toTransferStatus(dto.status)
+  const isNovelty = status === 'with_novelty' || Boolean(dto.noveltyNotes)
+  return {
+    id: dto.id,
+    serialCode: dto.serialCode || String(dto.id),
+    type: dto.transferType || 'standard',
+    typeLabel: getTransferTypeLabel(dto.transferType),
+    status: isNovelty ? 'with_novelty' : status,
+    priority: isNovelty || dto.priority === 'high' ? 'high' : 'normal',
+    originWarehouse: { id: dto.originWarehouseId, name: dto.originWarehouseName || 'Bodega Origen' },
+    destWarehouse: { id: dto.destinationWarehouseId, name: dto.destinationWarehouseName || 'Bodega Destino' },
+    products: (dto.items ?? []).map((item) => ({
+      itemId: item.id,
+      productId: item.productId,
+      code: item.productCode,
+      description: item.productName || item.productCode || 'Repuesto',
+      quantity: item.quantity,
+      destinationLocation: item.destinationLocation ?? '',
     })),
-    operatorName: item.userInformation?.name
-      ? `${item.userInformation.name} ${item.userInformation.lastName || ''}`.trim()
-      : undefined,
-    createdAt: item.created_at || item.createdAt,
-    reason: item.reason,
-  }))
+    employeeId: dto.employeeId,
+    employeeName: dto.employeeName || (dto.employeeId ? `Empleado #${dto.employeeId}` : undefined),
+    dispatchedByEmployeeId: dto.dispatchedByEmployeeId,
+    dispatchedByEmployeeName: dto.dispatchedByEmployeeName || (dto.dispatchedByEmployeeId ? `Empleado #${dto.dispatchedByEmployeeId}` : undefined),
+    receivedByEmployeeId: dto.receivedByEmployeeId,
+    receivedByEmployeeName: dto.receivedByEmployeeName || (dto.receivedByEmployeeId ? `Empleado #${dto.receivedByEmployeeId}` : undefined),
+    createdAt: dto.createdAt,
+    dispatchedAt: dto.dispatchedAt,
+    receivedAt: dto.receivedAt,
+    notes: dto.notes || undefined,
+    noveltyNotes: dto.noveltyNotes || undefined,
+  }
+}
 
 export const toProductStockMatrix = (
-  rawList: any[],
-  warehouses: Array<{ id: string | number; name: string }>,
-  text?: string
-): ProductStockMatrix[] =>
-  rawList
-    .filter((p) => {
-      if (!text || text.trim() === '') return true
-      const q = text.toLowerCase()
-      return (
-        p.code?.toLowerCase().includes(q) ||
-        p.description?.toLowerCase().includes(q) ||
-        p.brandName?.toLowerCase().includes(q)
-      )
-    })
-    .map((p) => {
-      const locationsMap: WarehouseStockLocation[] = warehouses.map((w) => {
-        const numId = Number(w.id)
-        const loc = (p.locations || []).find((l: any) => Number(l.warehouseId) === numId)
-        const stock = loc ? Number(loc.stock) || 0 : 0
-        const reserved = loc ? Number(loc.reservedStock) || 0 : 0
-        return {
-          warehouseId: numId,
-          warehouseName: w.name,
-          stock,
-          reservedStock: reserved,
-          availableStock: Math.max(0, stock - reserved),
-        }
-      })
-
-      const totalStock = locationsMap.reduce((acc, curr) => acc + curr.stock, 0)
-      const totalAvailable = locationsMap.reduce((acc, curr) => acc + curr.availableStock, 0)
-
-      return {
-        productId: p.productId,
-        code: p.code || '',
-        description: p.description || '',
-        brandName: p.brandName,
-        locations: locationsMap,
-        totalStock,
-        totalAvailable,
-      }
-    })
+  product: TransferProductDto,
+  rows: TransferStockRowDto[],
+  warehouses: Array<{ id: string | number; name: string }>
+): ProductStockMatrix => {
+  const locations: WarehouseStockLocation[] = warehouses.map((warehouse) => {
+    const own = rows.filter((row) => row.warehouseId === Number(warehouse.id))
+    const available = own.reduce((sum, row) => sum + row.available, 0)
+    const reserved = own.reduce((sum, row) => sum + row.reserved, 0)
+    return {
+      warehouseId: Number(warehouse.id),
+      warehouseName: warehouse.name,
+      stock: available,
+      reservedStock: reserved,
+      availableStock: own.reduce((sum, row) => sum + row.sellable, 0),
+    }
+  })
+  return {
+    productId: product.id,
+    code: product.code ?? '',
+    description: product.description || product.name || '',
+    brandName: product.brandName ?? undefined,
+    locations,
+    totalStock: locations.reduce((sum, loc) => sum + loc.stock, 0),
+    totalAvailable: locations.reduce((sum, loc) => sum + loc.availableStock, 0),
+  }
+}

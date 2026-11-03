@@ -1,7 +1,7 @@
 // shop.card.types · props de la tarjeta de producto y de sus partes (stock, precios y acciones)
 // conecta con: ProductCard, ProductCardStock, ProductCardPricing, ProductCardActions y las partes (Media, Info, TierMenu)
 // ojo: ProductCardProps antes estaba en shop.types; se separó para que ese archivo no crezca
-import type { PriceLevelKey, Product, ProductStockStatus } from './shop.types'
+import type { PriceLevelKey, Product } from './shop.types'
 
 export interface ProductCardProps {
     product: Product
@@ -12,8 +12,7 @@ export interface ProductCardProps {
 }
 
 export interface ProductCardStockProps {
-    status: ProductStockStatus
-    stock: number
+    stock: number // lo que queda en la bodega activa (se lee en el tooltip del ícono)
 }
 
 export interface ProductCardPricingProps {
@@ -26,7 +25,9 @@ export interface ProductCardActionsProps {
     quantityText: string // lo que se ve en el campo (puede ser lo que el usuario está escribiendo)
     maxQuantity: number
     isOutOfStock: boolean
+    noPrice?: boolean // el producto no tiene ningún precio en la tabla de precios: no se puede ordenar
     cartQuantity: number
+    lowStockQuantity?: number // lo que queda cuando el producto está en bajo stock en la bodega activa; sin valor no se muestra el ícono de advertencia
     onQuantityChange: (value: string) => void
     onQuantityBlur: () => void
     onAdd: () => void
@@ -42,10 +43,11 @@ export interface ProductCardMediaProps {
     onLevelChange: (level: PriceLevelKey) => void
 }
 
-// ojo: la info de la card ahora es categoría + título, «MARCA - MODELO» (con la ubicación a la derecha) y la referencia
+// ojo: la card solo avisa el bajo stock con un ícono de advertencia junto al contador de cantidad (ProductCardStock, dentro de ProductCardActions); el agotado se ve en el botón «Agotado» y no lleva aviso aparte
+// ojo: la info de la card son tres filas como en importadora-online: título con su detalle («ACEITE 15W40»), «MARCA - MODELO» (con la ubicación a la derecha) y la referencia; la categoría ya no se muestra (todos los productos comparten una)
 export interface ProductCardInfoProps {
-    category: string
     title: string // descripción o modelo (getProductTitle)
+    detail?: string // modelo o referencia técnica al lado del título (getProductDetail)
     meta: string // «MARCA - MODELO» (getBrandModelLabel)
     code: string
     location?: string

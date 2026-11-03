@@ -1,5 +1,8 @@
 package dtos
 
+// customer_dto.go · formas de lo que entra y sale por la API en clientes (peticiones y respuestas)
+// conecta con: los controllers y services de clientes
+
 import (
 	"encoding/json"
 	"time"
@@ -145,11 +148,22 @@ type CustomerDocumentDTO struct {
 	MimeType   *string               `json:"mimeType,omitempty"`
 	Notes      *string               `json:"notes,omitempty"`
 	UploadedAt time.Time             `json:"uploadedAt"`
+	ExpiresAt  time.Time             `json:"expiresAt"` // subida + meses de vigencia del cliente
+	Status     string                `json:"status"`    // valid, expiring o expired
+	DaysLeft   int                   `json:"daysLeft"`  // negativo si ya venció
 }
 
-type CreateCustomerDocumentRequest struct {
-	DocType types.CustomerDocType `json:"docType" validate:"required"`
-	Notes   *string               `json:"notes"`
+// CustomerDocumentAlertDTO es un documento vencido o por vencer con los datos del cliente al que pertenece.
+type CustomerDocumentAlertDTO struct {
+	DocumentID       int64                 `json:"documentId"`
+	CustomerID       int64                 `json:"customerId"`
+	CustomerName     string                `json:"customerName"`
+	CustomerDocument string                `json:"customerDocument"`
+	DocType          types.CustomerDocType `json:"docType"`
+	FileName         string                `json:"fileName"`
+	ExpiresAt        time.Time             `json:"expiresAt"`
+	Status           string                `json:"status"`
+	DaysLeft         int                   `json:"daysLeft"`
 }
 
 type CustomerSelectorResponse struct {

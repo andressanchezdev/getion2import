@@ -1,5 +1,8 @@
 package db
 
+// postgres.go · conexión directa a PostgreSQL con pgx y ayuda para correr una función dentro de una transacción
+// conecta con: core/config (DSN); los services usan WithTx para sus transacciones
+
 import (
 	"context"
 	"fmt"

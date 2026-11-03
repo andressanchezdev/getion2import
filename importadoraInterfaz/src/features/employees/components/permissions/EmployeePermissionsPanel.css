@@ -1,0 +1,46 @@
+/* EmployeePermissionsPanel.css · permisos de un empleado dentro del panel derecho · solo usa tokens de styles/tokens.css */
+.employee-permissions {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.employee-permissions-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1rem;
+  min-height: 0;
+  padding: 1.25rem;
+  overflow: hidden;
+}
+
+.employee-permissions-who {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+}
+
+.employee-permissions-who span {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.employee-permissions-empty {
+  padding: 2rem 0;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.employee-permissions-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--color-border);
+  background-color: var(--color-bg-muted);
+}

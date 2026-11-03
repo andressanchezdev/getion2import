@@ -1,0 +1,61 @@
+/* ReceiveTransferForm.css · piezas propias del formulario de recibir un traslado (lo común está en CreateTransferForm.css) · solo usa tokens de styles/tokens.css */
+.receive-transfer-note {
+  margin: var(--space-3) 0 0;
+  padding: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  background: var(--color-bg-muted);
+  border-radius: var(--radius-md);
+}
+
+.receive-transfer-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+}
+
+.receive-transfer-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.receive-transfer-option {
+  padding: var(--space-3);
+  text-align: center;
+  font-size: var(--text-sm);
+}
+
+.receive-transfer-option small {
+  display: block;
+  font-size: var(--text-xs);
+  opacity: 0.85;
+}
+
+.receive-transfer-summary {
+  padding: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  background: var(--color-bg-muted);
+  border-radius: var(--radius-md);
+}
+
+.receive-transfer-summary p {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.receive-transfer-summary ul {
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-4);
+}
+
+.receive-transfer-warning {
+  margin: 0;
+  padding: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
+  border-radius: var(--radius-md);
+}

@@ -1,16 +1,17 @@
-// CreditAccountDetail · estado de cuenta de un cliente: métricas, abono y facturas
+// CreditAccountDetail · estado de cuenta de un cliente: métricas, estado de cuenta, abono y facturas
 // ojo: el encabezado (nombre, NIT y cerrar) ahora lo pinta el panel derecho (DrawerHeader) con wallet.selectors (selectAccountDrawerMeta)
 // conecta con: CreditAccountDrawer (le pasa el cliente), useAccountData (facturas), useCreditPayment (abonos) y CreditLimitForm (cupo y plazo)
 import React from 'react'
 import './CreditAccountDetail.css'
-import { useAppSelector } from '@/global/hooks/useRedux'
+import { useAppSelector } from '@/global/hooks/store/useRedux'
 import { useAccountData } from '../../hooks/useAccountData'
 import { useCreditPayment } from '../../hooks/useCreditPayment'
 import { selectWalletInvoices } from '../../selectors/wallet.selectors'
-import { CreditLimitForm } from '../billing/CreditLimitForm'
+import { CreditLimitForm } from '../billing/forms/CreditLimitForm'
 import { CreditAccountMetrics } from './CreditAccountMetrics'
-import { CreditPaymentForm } from '../billing/CreditPaymentForm'
-import { CreditInvoiceList } from '../billing/CreditInvoiceList'
+import { CreditPaymentForm } from '../billing/forms/CreditPaymentForm'
+import { CreditInvoiceList } from '../billing/invoices/CreditInvoiceList'
+import { CreditStatusBadge } from '../clientRow/CreditStatusBadge'
 import type { CreditAccountDetailProps } from '../../types/wallet.account.types'
 
 export const CreditAccountDetail: React.FC<CreditAccountDetailProps> = ({ customer }) => {
@@ -22,6 +23,12 @@ export const CreditAccountDetail: React.FC<CreditAccountDetailProps> = ({ custom
   return (
     <div className="credit-drawer">
       <div className="credit-drawer-body">
+        {/* Indicador de estado de la cuenta */}
+        <div className="credit-drawer-status-bar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--bg-subtle, #f8fafc)', borderRadius: '8px', marginBottom: '12px', border: '1px solid var(--border-color, #e2e8f0)' }}>
+          <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary, #64748b)' }}>Estado del Crédito:</span>
+          <CreditStatusBadge status={customer.creditStatus} />
+        </div>
+
         <CreditAccountMetrics
           usedCredit={customer.usedCredit}
           availableCredit={customer.availableCredit}

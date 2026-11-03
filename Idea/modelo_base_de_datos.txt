@@ -1,0 +1,256 @@
+====================================================================================================
+MODELO VISUAL Y ESTRUCTURA DE LA BASE DE DATOS · GESTIÓN IMPORTADORA
+====================================================================================================
+Arquitectura PostgreSQL 51 tablas normalizadas con soporte multi-inquilino (multi-tenant)
+Aislamiento por compañía (company_id) y trazabilidad integral de inventario físico y contable.
+====================================================================================================
+
++--------------------------------------------------------------------------------------------------+
+|                                  MAPA VISUAL DE ENTIDADES Y RELACIONES                           |
++--------------------------------------------------------------------------------------------------+
+
+                                         [ superadmins ]
+                                                |
+                                                v
+                                         [ companies ] <--------------------------------------+
+                     +--------------------------+-----------------------+                      |
+                     |                          |                       |                      |
+                     v                          v                       v                      v
+             [ warehouses ]              [ employees ]            [ customers ]          [ brands ]
+             +-------+-----+             +------+----+            +------+----+          [ models ]
+             |       |                   |      |                |      |           [ categories ]
+             v       v                   v      v                v      v                 |
+  [ locations ]   [ doc_series ]     [ roles ] [ permissions ]  [ cust_docs ]             v
+     |                                          |                                    [ products ]
+     |                                          v                                         |
+     |                                [ employee_perms ]                     +------------+------------+
+     |                                                                       v            v            v
+     |   +------------------------------------------------------------> [ stock ]   [ prices ]    [ codes ]
+     |   |                                                                  |
+     +---+-----------------------------------------+                        |
+         |                                         |                        |
+         v                                         v                        v
+  [ transfers ] <----> [ details_transfer ]        |                  [ audit_movements ]
+                                                   |
+         +-----------------------------------------+
+         |
+         v
+     [ carts ] <----> [ cart_items ]
+         |
+         v
+     [ sales ] <----> [ sale_items ]
+         |
+         +------------> [ sale_stage_history ]
+         |
+         +------------> [ invoices ]
+         |
+         +------------> [ payments ] <----> [ bank_statement_records ]
+         |                   |
+         |                   v
+         |            [ cash_sessions ] <----> [ cash_session_expenses ]
+         |
+         +------------> [ credit_entries ] (Cartera)
+         |
+         +------------> [ returns ] <----> [ return_items ]
+
+
+====================================================================================================
+1. DESGLOSE DE TABLAS POR DOMINIO FUNCIONAL
+====================================================================================================
+
+1.1 MULTI-TENANT, EMPRESAS Y SEDES
+----------------------------------------------------------------------------------------------------
+* superadmins            (id, email, password_hash, full_name, is_active, created_at, updated_at)
+  -> Administradores maestros del sistema y gestión de inquilinos.
+
+* companies              (id, nit, name, legal_name, email, phone, address, city, logo_url, is_active)
+  -> Inquilino principal. Aísla toda la información operativa del sistema.
+
+* warehouses             (id, company_id [FK], code, name, city, address, phone, manager_employee_id [FK], is_active)
+  -> Sedes y bodegas físicas o virtuales de la empresa.
+
+* warehouse_facturation  (id, company_id [FK], warehouse_id [FK UNIQUE], person_type, regime, resolution_number, prefix, current_number)
+  -> Parámetros de facturación electrónica/POS específicos por cada bodega.
+
+* warehouse_locations    (id, company_id [FK], warehouse_id [FK], code, description, qr_code, is_active)
+  -> Estanterías, pasillos y niveles físicos (P-01-A-01). Identificador QR inmutable.
+
+* screensaver_settings   (id, company_id [FK], image_url, is_active, updated_by [FK])
+  -> Configuración de personalización visual para pantallas inactivas.
+
+
+1.2 SEGURIDAD, EMPLEADOS Y CONTROL DE ACCESO (RBAC)
+----------------------------------------------------------------------------------------------------
+* roles                  (id, name, description, is_system)
+  -> Perfiles predefinidos (superadmin, admin, cajero, vendedor, bodeguero).
+
+* permissions            (id, module, submodule, action, description)
+  -> Permisos granulares de acción (ej. orders:create, stock:edit, payments:verify).
+
+* employees              (id, company_id [FK], warehouse_id [FK], role_id [FK], document, first_name, last_name, email, pin_hash, is_active)
+  -> Personal contratado y usuarios operativos.
+
+* admins                 (id, company_id [FK], employee_id [FK UNIQUE], username, password_hash, can_manage_all_warehouses)
+  -> Credenciales de acceso administrativo local.
+
+* employee_permissions   (id, employee_id [FK], permission_id [FK], is_granted)
+  -> Sobrescritura de permisos atómicos por empleado.
+
+* employee_login_attempts(id, employee_id [FK], ip_address, user_agent, success, attempted_at)
+  -> Auditoría de seguridad y control de bloqueo por intentos fallidos.
+
+* refresh_tokens         (id, employee_id [FK], token_hash, expires_at, revoked_at)
+  -> Tokens JWT de refresco con revocación atómica.
+
+
+1.3 TERCEROS Y CLIENTES
+----------------------------------------------------------------------------------------------------
+* customers              (id, company_id [FK], document_type, document, person_type, name, last_name, trade_name, email, phone, mobile, address, city, addresses, price_tier [p1..p4], discount_percent, credit_enabled, credit_limit, credit_days, credit_warning_pct, status)
+  -> Directorio de clientes con condiciones comerciales, cupos y días de crédito.
+
+* customer_documents     (id, customer_id [FK], doc_type [rut, chamber, id_card, promissory_note], file_name, file_url, expires_at, is_approved)
+  -> Archivos soporte adjuntos para asignación y renovación de crédito.
+
+* externals              (id, company_id [FK], external_type [supplier, carrier], nit, name, contact_name, email, phone, city)
+  -> Proveedores de mercancía y empresas transportadoras de encomiendas.
+
+
+1.4 CATÁLOGO DE PRODUCTOS
+----------------------------------------------------------------------------------------------------
+* brands                 (id, company_id [FK], name, is_active)
+  -> Marcas de repuestos y motopartes.
+
+* models                 (id, company_id [FK], name, brand_id [FK], year_from, year_to)
+  -> Modelos compatibles de motocicleta o maquinaria.
+
+* categories             (id, company_id [FK], name, description, is_active)
+  -> Categorías y familias de producto (Frenos, Motor, Eléctrico).
+
+* products               (id, company_id [FK], brand_id [FK], model_id [FK], category_id [FK], code, name, description, iva, is_new, easysearch, is_active)
+  -> Maestro de repuestos con índice de texto easysearch para búsquedas en tiempo real.
+
+* product_prices         (id, product_id [FK], price_tier [p1, p2, p3, p4], price)
+  -> Tarifas de precio diferenciadas (taller, mayorista, distribuidor, mostrador).
+
+* product_codes          (id, product_id [FK], code_type [barcode, oem, alternate], code)
+  -> Códigos de barra adicionales y referencias originales de fábrica.
+
+* product_suppliers      (id, product_id [FK], external_id [FK], supplier_cost, lead_days)
+  -> Catálogo de proveedores y costos de adquisición.
+
+
+1.5 INVENTARIO, UBICACIONES Y KARDEX
+----------------------------------------------------------------------------------------------------
+* stock                  (id, company_id [FK], product_id [FK], warehouse_id [FK], location, available, reserved, min_stock, max_stock)
+  -> Existencias físicas (available) y comprometidas en pedidos (reserved) por estante.
+  -> VENDIBLE NETO = available - reserved.
+
+* transfers              (id, company_id [FK], serial_code, origin_warehouse_id [FK], destination_warehouse_id [FK], employee_id [FK], status [pending, in_transit, received, with_novelty, cancelled])
+  -> Solicitudes y órdenes de traslado físico entre sedes.
+
+* details_transfer       (id, transfer_id [FK], product_id [FK], origin_stock_id [FK], destination_stock_id [FK], destination_location, quantity, received_qty)
+  -> Renglones con detalle de despacho y novedades de recepción.
+
+* audit_movements        (id, company_id [FK], stock_id [FK], employee_id [FK], movement_type [purchase_in, sale_out, transfer_out, transfer_in, adjustment, relocate, return_in, count_adjust], quantity, previous_qty, new_qty, reference_type, reference_id, reason)
+  -> Kardex inmutable de cada unidad física que entra, sale o se reubica.
+
+* counts                 (id, company_id [FK], warehouse_id [FK], employee_id [FK], status [pending, verifying, completed], notes)
+  -> Sesiones de conteo físico y auditoría cíclica de inventario.
+
+* count_items            (id, count_id [FK], stock_id [FK], expected_qty, counted_qty, difference)
+  -> Renglones de conteo físico comparados contra stock teórico.
+
+
+1.6 VENTAS, COTIZACIONES Y DESPACHO
+----------------------------------------------------------------------------------------------------
+* carts                  (id, company_id [FK], employee_id [FK], customer_id [FK], warehouse_id [FK], price_tier, status [open, closed])
+  -> Canasta temporal de venta asistida en mostrador o WhatsApp.
+
+* cart_items             (id, cart_id [FK], product_id [FK], stock_id [FK], quantity, unit_price, discount)
+  -> Ítems del carrito enlazados al stock específico del estante origen.
+
+* sales                  (id, company_id [FK], serial_code, customer_id [FK], employee_id [FK], warehouse_id [FK], current_stage [verification, picking, packing, invoicing, dispatch, sent], payment_method [cash, transfer, credit], total, paid_total, credit_amount, status)
+  -> Pedidos y órdenes de venta en su pipeline operativo.
+
+* sale_items             (id, sale_id [FK], product_id [FK], stock_id [FK], quantity, picked_qty, packed_qty, dispatched_qty, unit_price, discount, line_total, process_stage, stage_status)
+  -> Renglones facturados que descuentan y reservan sobre el stock_id asignado.
+
+* sale_stage_history     (id, sale_id [FK], stage, employee_id [FK], entered_at, left_at)
+  -> Trazabilidad cronológica de tiempos por cada etapa de alistamiento y despacho.
+
+* quotations             (id, company_id [FK], serial_code, customer_id [FK], employee_id [FK], total, expires_at, status [draft, sent, accepted, rejected, expired])
+  -> Cotizaciones comerciales generadas con pase directo a compra.
+
+* quotation_items        (id, quotation_id [FK], product_id [FK], quantity, unit_price, line_total)
+  -> Líneas de producto cotizadas.
+
+* returns                (id, company_id [FK], sale_id [FK], customer_id [FK], employee_id [FK], reason, refund_type, status)
+  -> Solicitudes de devolución sobre ventas concluidas.
+
+* return_items           (id, return_id [FK], sale_item_id [FK], product_id [FK], quantity, restock_condition)
+  -> Detalle de ítems devueltos y resolución a inventario o garantía.
+
+
+1.7 CAJA, PAGOS Y CARTERA
+----------------------------------------------------------------------------------------------------
+* cash_sessions          (id, company_id [FK], warehouse_id [FK], opened_by_name, opening_amount, cash_total, transfer_total, expected_cash, counted_cash, difference, status [open, closed])
+  -> Turnos de caja con arqueo ciego diario en cada bodega.
+
+* cash_session_expenses  (id, cash_session_id [FK], receipt_number, concept, cash_amount, transfer_amount)
+  -> Salidas de dinero para gastos menores de mostrador.
+
+* payments               (id, company_id [FK], serial_code, sale_id [FK], customer_id [FK], method [cash, transfer, credit], amount, status [review, verified, voided], reference, voucher_url)
+  -> Transacciones de pago y recibos de caja.
+
+* credit_entries         (id, company_id [FK], customer_id [FK], employee_id [FK], entry_type [charge, payment], amount, sale_id [FK], payment_id [FK], reason)
+  -> Libro mayor de cartera: cargos (-) por ventas a crédito y abonos (+) registrados.
+
+* bank_statement_records (id, company_id [FK], bank_name, account_number, movement_date, description, reference1, amount, is_income, status [pending, confirmed, ignored])
+  -> Movimientos extraídos de extractos bancarios PDF para conciliación automática.
+
+
+1.8 FACTURACIÓN, COMPRAS Y AUDITORÍA GENERAL
+----------------------------------------------------------------------------------------------------
+* purchases              (id, company_id [FK], external_id [FK], warehouse_id [FK], serial_code, total, status [ordered, received, cancelled])
+  -> Órdenes de compra a proveedores externos.
+
+* purchase_items         (id, purchase_id [FK], product_id [FK], quantity, received_qty, unit_cost, line_total)
+  -> Renglones de la compra que alimentan el disponible físico al recibirse en bodega.
+
+* invoices               (id, company_id [FK], sale_id [FK], warehouse_id [FK], invoice_number, cufe, qr_data, total, subtotal, tax_amount)
+  -> Facturas oficiales emitidas y validadas.
+
+* doc_series             (id, company_id [FK], warehouse_id [FK], doc_type [FAC, PD, TR, PAG], prefix, current_val, max_val)
+  -> Consecutivos atómicos de numeración oficial.
+
+* audit_logs             (id, company_id [FK], employee_id [FK], entity, entity_id, action, changes, ip_address, created_at)
+  -> Registro inmutable protegido por trigger: prohíbe UPDATE y DELETE.
+
+
+====================================================================================================
+2. VISTAS OPERATIVAS MAESTRAS
+====================================================================================================
+1. v_warehouse_stock:
+   Combina disponible físico, reservas, neto vendible y tarifas JSON P1-P4 por producto y bodega.
+
+2. v_company_stock:
+   Totaliza el stock a nivel corporativo respetando el aislamiento entre empresas.
+
+3. v_customer_credit_summary:
+   Calcula en tiempo real la deuda neta acumulada, saldo retenido en pedidos abiertos y cupo restante disponible.
+
+4. v_warehouse_locations_status:
+   Calcula dinámicamente si cada ubicación física de la bodega está 'libre' (0 unidades físicas) u 'ocupada' (> 0 unidades), junto con su total de productos y unidades.
+
+====================================================================================================
+3. REGLAS DE ORO EN LA OPERACIÓN DE STOCK Y UBICACIONES
+====================================================================================================
+1. sale_items y cart_items apuntan a stock.id: cada venta sabe exactamente de qué estante sale cada pieza.
+2. Unidades vendibles = available - reserved. Nunca se puede vender por encima de esta diferencia.
+3. Al crear un pedido en etapa 'verification' o 'picking', las unidades se RESERVAN (reserved += qty).
+4. Al despachar / enviar el pedido ('sent'), las unidades se DESCUENTAN físicamente (available -= qty, reserved -= qty) y se asienta el kardex en audit_movements.
+5. Al cancelar un pedido, la reserva se libera inmediatamente (reserved -= qty).
+6. Una ubicación no se puede eliminar ni desactivar mientras tenga existencias físicas asignadas.
+7. Al renombrar una ubicación (ej. A-01 a A-02), el qr_code se conserva inmutable: las etiquetas físicas impresas siguen siendo 100% válidas.
+====================================================================================================
+

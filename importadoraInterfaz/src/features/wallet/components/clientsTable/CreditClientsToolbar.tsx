@@ -1,39 +1,48 @@
-// CreditClientsToolbar · barra de la tabla de clientes: búsqueda y pestañas de estado de crédito
-// conecta con: wallet.slice (filtros), wallet.constants (pestañas), global SearchBar; la pinta CreditClientsTable
+// CreditClientsToolbar · barra de la tabla de clientes: búsqueda, un solo desplegable de estado de crédito y Habilitar crédito (el limpiar va dentro de la búsqueda)
+// conecta con: wallet.slice (filtros), wallet.constants (opciones de estado), global SearchBar, FilterSelect, openDrawerForm; la pinta CreditClientsTable
 import React from 'react'
-import { useAppDispatch, useAppSelector } from '@/global/hooks/useRedux'
-import { SearchBar } from '@/global/components/UI/molecules/SearchBar'
+import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
+import { SearchBar } from '@/global/components/UI/molecules/filters/SearchBar'
+import { FilterSelect } from '@/global/components/UI/molecules/filters/FilterSelect'
+import { openDrawerForm } from '@/features/navigation'
 import { CREDIT_STATUS_TABS } from '../../constants/wallet.constants'
-import { setSearchQuery, setStatusFilter } from '../../slices/wallet.slice'
+import { resetFilters, setSearchQuery, setStatusFilter } from '../../slices/wallet.slice'
+import type { CreditStatus } from '../../types/wallet.types'
 import './CreditClientsToolbar.css'
+
+const STATUS_OPTIONS = CREDIT_STATUS_TABS.filter((tab) => tab.key !== 'all').map((tab) => ({ value: tab.key, label: tab.label }))
 
 export const CreditClientsToolbar: React.FC = () => {
   const dispatch = useAppDispatch()
   const filters = useAppSelector((state) => state.wallet.filters)
+  const hasFilters = filters.searchQuery !== '' || filters.statusFilter !== 'all'
 
   return (
-    /* Barra de Filtros y Búsqueda */
     <div className="credit-table-toolbar">
       <SearchBar
         value={filters.searchQuery}
         onChange={(val) => dispatch(setSearchQuery(val))}
+        hasActiveFilters={hasFilters}
+        onClear={() => dispatch(resetFilters())}
         placeholder="Buscar por NIT, razón social, contacto o ciudad..."
         className="credit-table-search-bar"
       />
 
-      {/* Pestañas de Estado Crediticio */}
-      <div className="credit-table-status-tabs">
-        {CREDIT_STATUS_TABS.map((tab) => (
-          <button
-            key={tab.key}
-            type="button"
-            onClick={() => dispatch(setStatusFilter(tab.key))}
-            className={`credit-table-tab-btn ${filters.statusFilter === tab.key ? 'credit-table-tab-btn-active' : ''}`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <FilterSelect
+        label="Filtrar por estado"
+        emptyValue="all"
+        value={filters.statusFilter}
+        options={STATUS_OPTIONS}
+        onChange={(value) => dispatch(setStatusFilter(value as 'all' | CreditStatus))}
+      />
+
+      <button
+        type="button"
+        className="credit-table-enable-credit-btn"
+        onClick={() => dispatch(openDrawerForm({ kind: 'enableCredit' }))}
+      >
+        + Habilitar crédito
+      </button>
     </div>
   )
 }

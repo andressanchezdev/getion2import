@@ -1,6 +1,6 @@
 // store · configura redux + persistencia y exporta los tipos RootState y AppDispatch
 // conecta con: rootReducer, global/helpers/storage; ojo: antes se llamaba store.tsx (no tenía JSX)
-import { configureStore, type UnknownAction } from '@reduxjs/toolkit'
+import { configureStore, type UnknownAction, type ThunkDispatch } from '@reduxjs/toolkit'
 import {
   persistStore,
   persistReducer,
@@ -11,7 +11,7 @@ import {
   PURGE,
   REGISTER,
 } from 'redux-persist'
-import storage from '@/global/helpers/storage'
+import storage from '@/global/helpers/storage/storage'
 import { setUnauthorizedHandler } from '@/api'
 import { logoutThunk, selectIsAuthenticated } from '@/features/auth'
 
@@ -52,15 +52,8 @@ setUnauthorizedHandler(() => {
 // ============================================================================
 
 export type RootState = ReturnType<typeof store.getState>
-export type AppDispatch = typeof store.dispatch
+export type AppDispatch = ThunkDispatch<RootState, unknown, UnknownAction> & typeof store.dispatch
 
 // ojo: useAppDispatch y useAppSelector ahora viven en global/hooks/useRedux.ts
 
-// ============================================================================
-// 3. RE-EXPORTACIONES PARA MANTENER RETROCOMPATIBILIDAD LIMPIA
-// ============================================================================
-
-//export * from './types/ui.types'
-//export * from './constants/ui.constants'
-//export * from './slices/ui.slice'
 export default store

@@ -1,0 +1,100 @@
+/* ProductCardActions.css · estilos del campo de cantidad y del botón de ordenar de la tarjeta · solo usa tokens de styles/tokens.css */
+
+.product-card-action-row {
+    width: 100%;
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* contador de cantidad con el ícono de bajo stock a su lado, a la misma altura del botón de ordenar */
+.product-card-qty-group {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.product-card-qty {
+    flex: 0 0 auto;
+    width: clamp(56px, 20%, 80px);
+    min-width: 56px;
+    height: 36px;
+    padding: 0;
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--radius-base);
+    background-color: var(--bg-card);
+    color: var(--color-text-primary);
+    font-family: inherit;
+    font-size: var(--text-md);
+    text-align: center;
+    appearance: textfield;
+    -moz-appearance: textfield;
+}
+
+.product-card-qty::-webkit-inner-spin-button,
+.product-card-qty::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.product-card-qty-hidden {
+    visibility: hidden;
+}
+
+.product-card-btn-add-to-cart {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 130px;
+    height: 36px;
+    min-height: 36px;
+    border: none;
+    border-radius: var(--radius-md);
+    background-color: var(--c-yellow-400);
+    color: var(--color-text-primary);
+    font-family: inherit;
+    font-size: var(--text-md);
+    font-weight: var(--font-weight-extrabold);
+    cursor: pointer;
+    transition: box-shadow var(--motion-fast), transform 0.15s ease;
+}
+
+.product-card-btn-add-to-cart:hover:not(:disabled) {
+    box-shadow: var(--shadow-card);
+}
+
+.product-card-btn-add-to-cart:focus-visible,
+.product-card-qty:focus-visible {
+    outline: var(--focus-outline);
+    outline-offset: 2px;
+}
+
+.product-card-btn-add-to-cart.product-card-btn-off {
+    background-color: var(--bg-card-media);
+    color: var(--color-card-muted);
+    cursor: not-allowed;
+}
+
+@keyframes btn-jump-ordered {
+    0% {
+        transform: scale(1);
+    }
+    35% {
+        transform: translateY(-5px) scale(1.06);
+    }
+    70% {
+        transform: translateY(-1px) scale(0.98);
+    }
+    100% {
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* ya está en el carrito: verde suave y animación de salto */
+.product-card-btn-add-to-cart.product-card-already-ordered {
+    background-color: var(--c-ip-green-100);
+    color: var(--c-ip-green-800);
+    cursor: not-allowed;
+    animation: btn-jump-ordered 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}

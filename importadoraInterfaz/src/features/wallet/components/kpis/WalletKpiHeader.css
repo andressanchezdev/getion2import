@@ -1,7 +1,47 @@
-/* WalletKpiHeader.css · estilos de la fila de tarjetas de cartera · solo usa tokens de styles/tokens.css */
-.wallet-kpi-grid {
+/* WalletKpiHeader.css · estilos idénticos a los KPIs de conciliación bancaria */
+.wallet-kpis {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: var(--space-3);
   width: 100%;
+}
+
+@media (max-width: 1024px) {
+  .wallet-kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .wallet-kpis {
+    grid-template-columns: 1fr;
+  }
+}
+
+.wallet-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-rest);
+}
+
+.wallet-kpi-label {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
+}
+
+.wallet-kpi-value {
+  font-size: var(--text-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+.wallet-kpi small {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
 }

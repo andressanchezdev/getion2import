@@ -1,5 +1,8 @@
 package services
 
+// company_service.go · reglas de negocio de compañías: valida permisos, compañía y datos, coordina las transacciones y arma las respuestas
+// conecta con: los repositories y dtos de compañías; los llama el controller y la conexión llega del contenedor
+
 import (
 	"context"
 	"strings"
@@ -22,6 +25,7 @@ type CompanyService struct {
 	auditRepo   *authRepos.AuditRepository
 }
 
+// NewCompanyService crea el servicio con las piezas que necesita para funcionar.
 func NewCompanyService(
 	cfg *config.Config,
 	pool *pgxpool.Pool,
@@ -347,6 +351,7 @@ func (s *CompanyService) Delete(ctx context.Context, actor *middlewares.ActorCon
 	return nil
 }
 
+// mapToDTO convierte la compañía de la base en la respuesta que sale por la API.
 func (s *CompanyService) mapToDTO(c *repositories.CompanyEntity) *dtos.CompanyResponse {
 	var email, phone, address, city, logoURL string
 	if c.Email != nil {

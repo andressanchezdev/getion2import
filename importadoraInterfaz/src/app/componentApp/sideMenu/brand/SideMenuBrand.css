@@ -19,13 +19,8 @@
   width: 34px;
   height: 34px;
   flex: none;
-  display: grid;
-  place-items: center;
   border-radius: var(--radius-md);
-  background-color: var(--c-yellow-400);
-  color: var(--color-text-primary);
-  font-size: var(--text-md);
-  font-weight: var(--font-weight-extrabold);
+  object-fit: cover;
 }
 
 /* el nombre pasa a dos líneas ("Importadora" / "Premium") para que quepa junto al botón */

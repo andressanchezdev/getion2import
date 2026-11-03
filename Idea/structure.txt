@@ -1,0 +1,1706 @@
+#########################################################################################################
+# COMPLETE AND EXHAUSTIVE FILE STRUCTURE · PROJECT GETION2IMPORT (BACKEND API + FRONTEND INTERFACE)
+# 100% detailed index of every file and directory across both projects with English technical descriptions
+#########################################################################################################
+
+=========================================================================================================
+1. importadoraApi/ (BACKEND: GO 1.23 + ECHO V4 + PGXPOOL + POSTGRESQL - 100% EXHAUSTIVE)
+=========================================================================================================
+
+importadoraApi/ # Go backend root: Echo microframework, PostgreSQL connection pool, clean layered architecture
+├── src/
+│   ├── core/
+│   │   ├── bootstrap/
+│   │   │   ├── container.go                                    # Dependency injection container: instantiates and wires repositories, services and controllers
+│   │   │   ├── router.go                                       # Master HTTP router: registers global middlewares (CORS, Recover, Logger) and routes
+│   │   │   └── routes_guard_test.go                            # Go backend domain file for : routes_guard_test.go
+│   │   ├── config/
+│   │   │   ├── config.go                                       # Central AppConfig struct: server, PostgreSQL database, JWT keys and environment settings
+│   │   │   ├── dsn.go                                          # Builds PostgreSQL Data Source Name (DSN) connection string from environment parameters
+│   │   │   ├── env.go                                          # Typed environment variable reader with fallback defaults (string, int, bool, duration)
+│   │   │   ├── loader.go                                       # Loads environment variables and initializes AppConfig at server startup
+│   │   │   └── validators.go                                   # Validates required configuration settings before server boot
+│   │   ├── db/
+│   │   │   ├── migrations/
+│   │   │   │   ├── 001_product_prices_locations_returns.pgsql  # Migration 001: P1..P4 price levels, warehouse locations and return resolutions
+│   │   │   │   ├── 002_recycle_bin.pgsql                       # Migration 002: Soft-deletion recycle bin table for administrative restoration
+│   │   │   │   ├── 003_bank_statements_and_credit_pct.pgsql    # Migration 003: Bank statement records and customer credit percentage thresholds
+│   │   │   │   ├── 004_product_is_new.pgsql                    # Migration 004: Product is_new badge support for catalog discovery
+│   │   │   │   ├── 005_customer_addresses_and_transfers.pgsql  # Migration 005: Customer shipping addresses and transfer novelty traceability
+│   │   │   │   ├── 006_sale_transfer_proof.pgsql               # Migration 006: Bank transfer voucher proof and reference tracking for sales
+│   │   │   │   ├── 007_product_price_tiers.pgsql               # Migration 007: Product price tiers structure and catalog tier associations
+│   │   │   │   ├── 008_locations_catalog.pgsql                 # PostgreSQL SQL schema definition or migration script for 008_locations_catalog.pgsql
+│   │   │   │   ├── 009_permissions_catalog.pgsql               # PostgreSQL SQL schema definition or migration script for 009_permissions_catalog.pgsql
+│   │   │   │   ├── 010_cash_sessions.pgsql                     # PostgreSQL SQL schema definition or migration script for 010_cash_sessions.pgsql
+│   │   │   │   ├── 011_screensaver_and_warehouse_manager.pgsql  # PostgreSQL SQL schema definition or migration script for 011_screensaver_and_warehouse_manager.pgsql
+│   │   │   │   ├── 012_cash_session_expenses.pgsql             # PostgreSQL SQL schema definition or migration script for 012_cash_session_expenses.pgsql
+│   │   │   │   ├── 013_payments_flow.pgsql                     # PostgreSQL SQL schema definition or migration script for 013_payments_flow.pgsql
+│   │   │   │   └── 014_operations_seed.pgsql                   # PostgreSQL SQL schema definition or migration script for 014_operations_seed.pgsql
+│   │   │   ├── executor.go                                     # DBExecutor interface unifying *pgxpool.Pool and pgx.Tx for database queries
+│   │   │   ├── gorm.go                                         # Optional GORM ORM connector and connection pool management
+│   │   │   ├── postgres.go                                     # PostgreSQL pool initialization using pgxpool with transaction execution helper
+│   │   │   └── startdb.pgsql                                   # Master DDL SQL schema: 38 tables, constraints, sequences, triggers and seed data
+│   │   ├── middlewares/
+│   │   │   ├── auth_middleware.go                              # JWT authentication and RBAC authorization middleware: verifies token and permissions
+│   │   │   ├── context.go                                      # ActorContext extractor: retrieves ActorID, CompanyID, EmployeeID and Role from Echo context
+│   │   │   └── permission_test.go                              # Go backend domain file for : permission_test.go
+│   │   ├── server/
+│   │   │   └── server.go                                       # Echo HTTP server lifecycle management with graceful shutdown on OS signals
+│   │   ├── types/
+│   │   │   ├── actor_types.go                                  # Actor domain types: Superadmin, Admin, Employee and Customer identities
+│   │   │   ├── catalog_types.go                                # Catalog domain types: spare part categories, brands, vehicle models and statuses
+│   │   │   ├── company_types.go                                # Company and tenant types, regimes and warehouse electronic invoicing types
+│   │   │   ├── customer_types.go                               # Customer entity types: natural/legal person types, credit quotas and payment terms
+│   │   │   ├── inventory_types.go                              # Inventory types: stock statuses, physical aisle locations and transfer kinds
+│   │   │   ├── payment_types.go                                # Payment method types ('cash', 'transfer', 'credit') and verification statuses
+│   │   │   ├── purchase_types.go                               # Purchase order domain types, statuses (draft, ordered, received) and suppliers
+│   │   │   └── sale_types.go                                   # Sales pipeline types: stages (verification, picking, packing, invoicing, dispatch, sent)
+│   │   └── utils/
+│   │       ├── crypto.go                                       # Cryptographic utilities: Bcrypt password hashing, secure token generation and SHA-256
+│   │       ├── doc_series.go                                   # Atomic document numbering sequence generator (FAC-*, PD-*, TR-*, PAG-*)
+│   │       ├── errors.go                                       # Standard AppError constructors for HTTP errors (BadRequest, Unauthorized, NotFound)
+│   │       ├── jwt.go                                          # JWT access and refresh token generation, claims encoding and validation
+│   │       ├── request.go                                      # HTTP request parsing helpers: JSON body decoding, route params and client IP extraction
+│   │       └── response.go                                     # Standard JSON API response envelope builder { success, message, data, meta }
+│   └── features/
+│       ├── audit/
+│       │   ├── controllers/
+│       │   │   └── audit_controller.go                         # HTTP REST controller handling audit requests and delegating to service
+│       │   ├── dtos/
+│       │   │   └── audit_dto.go                                # Request/response DTO contracts and payload validation for audit
+│       │   ├── repositories/
+│       │   │   └── audit_repo.go                               # PostgreSQL repository layer executing SQL queries for auth
+│       │   ├── routes/
+│       │   │   └── audit_routes.go                             # Echo HTTP route bindings and RBAC protections for audit
+│       │   └── services/
+│       │       └── audit_service.go                            # Business logic service managing transactions and domain rules for audit
+│       ├── auth/
+│       │   ├── controllers/
+│       │   │   └── auth_controller.go                          # HTTP REST controller handling auth requests and delegating to service
+│       │   ├── dtos/
+│       │   │   └── auth_dto.go                                 # Request/response DTO contracts and payload validation for auth
+│       │   ├── repositories/
+│       │   │   ├── audit_repo.go                               # PostgreSQL repository layer executing SQL queries for auth
+│       │   │   ├── auth_employee_repo.go                       # PostgreSQL repository layer executing SQL queries for auth
+│       │   │   ├── auth_login_attempt_repo.go                  # PostgreSQL repository layer executing SQL queries for auth
+│       │   │   ├── auth_repo.go                                # PostgreSQL repository layer executing SQL queries for auth
+│       │   │   └── auth_session_repo.go                        # PostgreSQL repository layer executing SQL queries for auth
+│       │   ├── routes/
+│       │   │   └── auth_routes.go                              # Echo HTTP route bindings and RBAC protections for auth
+│       │   └── services/
+│       │       └── auth_service.go                             # Business logic service managing transactions and domain rules for auth
+│       ├── bank_statements/
+│       │   ├── controllers/
+│       │   │   └── bank_statement_controller.go                # HTTP REST controller handling bank_statements requests and delegating to service
+│       │   ├── dtos/
+│       │   │   └── bank_statement_dto.go                       # Request/response DTO contracts and payload validation for bank_statements
+│       │   ├── entities/
+│       │   │   └── bank_statement_entity.go                    # Go backend domain file for bank_statements: bank_statement_entity.go
+│       │   ├── repositories/
+│       │   │   └── bank_statement_repo.go                      # PostgreSQL repository layer executing SQL queries for bank_statements
+│       │   ├── routes/
+│       │   │   └── bank_statement_routes.go                    # Echo HTTP route bindings and RBAC protections for bank_statements
+│       │   └── services/
+│       │       ├── bank_statement_service.go                   # Business logic service managing transactions and domain rules for bank_statements
+│       │       └── bank_statement_upload_service.go            # Business logic service managing transactions and domain rules for bank_statements
+│       ├── carts/
+│       │   ├── controllers/
+│       │   │   └── cart_controller.go                          # HTTP REST controller handling carts requests and delegating to service
+│       │   ├── dtos/
+│       │   │   └── cart_dto.go                                 # Request/response DTO contracts and payload validation for carts
+│       │   ├── repositories/
+│       │   │   ├── cart_item_repo.go                           # PostgreSQL repository layer executing SQL queries for carts
+│       │   │   └── cart_repo.go                                # PostgreSQL repository layer executing SQL queries for carts
+│       │   ├── routes/
+│       │   │   └── cart_routes.go                              # Echo HTTP route bindings and RBAC protections for carts
+│       │   └── services/
+│       │       ├── cart_item_service.go                        # Business logic service managing transactions and domain rules for carts
+│       │       └── cart_service.go                             # Business logic service managing transactions and domain rules for carts
+│       ├── cash_sessions/
+│       │   ├── controllers/
+│       │   │   └── cash_session_controller.go                  # HTTP REST controller handling cash_sessions requests and delegating to service
+│       │   ├── dtos/
+│       │   │   └── cash_session_dto.go                         # Request/response DTO contracts and payload validation for cash_sessions
+│       │   ├── repositories/
+│       │   │   └── cash_session_repo.go                        # PostgreSQL repository layer executing SQL queries for cash_sessions
+│       │   ├── routes/
+│       │   │   └── cash_session_routes.go                      # Echo HTTP route bindings and RBAC protections for cash_sessions
+│       │   └── services/
+│       │       └── cash_session_service.go                     # Business logic service managing transactions and domain rules for cash_sessions
+│       ├── catalog/
+│       │   ├── controllers/
+│       │   │   ├── brand_controller.go                         # HTTP REST controller handling catalog requests and delegating to service
+│       │   │   ├── catalog_controller.go                       # HTTP REST controller handling catalog requests and delegating to service
+│       │   │   ├── category_controller.go                      # HTTP REST controller handling catalog requests and delegating to service
+│       │   │   └── model_controller.go                         # HTTP REST controller handling catalog requests and delegating to service
+│       │   ├── dtos/
+│       │   │   └── catalog_dto.go                              # Request/response DTO contracts and payload validation for catalog
+│       │   ├── repositories/
+│       │   │   ├── brand_repo.go                               # PostgreSQL repository layer executing SQL queries for catalog
+│       │   │   ├── category_repo.go                            # PostgreSQL repository layer executing SQL queries for catalog
+│       │   │   └── model_repo.go                               # PostgreSQL repository layer executing SQL queries for catalog
+│       │   ├── routes/
+│       │   │   └── catalog_routes.go                           # Echo HTTP route bindings and RBAC protections for catalog
+│       │   └── services/
+│       │       ├── catalog_category_service.go                 # Business logic service managing transactions and domain rules for catalog
+│       │       ├── catalog_model_service.go                    # Business logic service managing transactions and domain rules for catalog
+│       │       └── catalog_service.go                          # Business logic service managing transactions and domain rules for catalog
+│       ├── companies/
+│       │   ├── controllers/
+│       │   │   └── company_controller.go                       # HTTP REST controller handling companies requests and delegating to service
+│       │   ├── dtos/
+│       │   │   └── company_dto.go                              # Request/response DTO contracts and payload validation for companies
+│       │   ├── repositories/
+│       │   │   └── company_repo.go                             # PostgreSQL repository layer executing SQL queries for companies
+│       │   ├── routes/
+│       │   │   └── company_routes.go                           # Echo HTTP route bindings and RBAC protections for companies
+│       │   └── services/
+│       │       └── company_service.go                          # Business logic service managing transactions and domain rules for companies
+│       ├── customers/
+│       │   ├── controllers/
+│       │   │   ├── customer_controller.go                      # HTTP REST controller handling customers requests and delegating to service
+│       │   │   ├── customer_document_controller.go             # HTTP REST controller handling customers requests and delegating to service
+│       │   │   └── customer_document_renew_controller.go       # HTTP REST controller handling customers requests and delegating to service
+│       │   ├── dtos/
+│       │   │   └── customer_dto.go                             # Request/response DTO contracts and payload validation for customers
+│       │   ├── repositories/
+│       │   │   ├── customer_document_renew_repo.go             # PostgreSQL repository layer executing SQL queries for customers
+│       │   │   ├── customer_document_repo.go                   # PostgreSQL repository layer executing SQL queries for customers
+│       │   │   ├── customer_lookup_repo.go                     # PostgreSQL repository layer executing SQL queries for customers
+│       │   │   └── customer_repo.go                            # PostgreSQL repository layer executing SQL queries for customers
+│       │   ├── routes/
+│       │   │   └── customer_routes.go                          # Echo HTTP route bindings and RBAC protections for customers
+│       │   └── services/
+│       │       ├── customer_document_expiry_test.go            # Go backend domain file for customers: customer_document_expiry_test.go
+│       │       ├── customer_document_expiry.go                 # Go backend domain file for customers: customer_document_expiry.go
+│       │       ├── customer_document_renew_service.go          # Business logic service managing transactions and domain rules for customers
+│       │       ├── customer_document_service.go                # Business logic service managing transactions and domain rules for customers
+│       │       ├── customer_service.go                         # Business logic service managing transactions and domain rules for customers
+│       │       └── customer_write_service.go                   # Business logic service managing transactions and domain rules for customers
+│       ├── externals/
+│       │   ├── controllers/
+│       │   │   └── external_controller.go                      # HTTP REST controller handling externals requests and delegating to service
+│       │   ├── dtos/
+│       │   │   └── external_dto.go                             # Request/response DTO contracts and payload validation for externals
+│       │   ├── repositories/
+│       │   │   └── external_repo.go                            # PostgreSQL repository layer executing SQL queries for externals
+│       │   ├── routes/
+│       │   │   └── external_routes.go                          # Echo HTTP route bindings and RBAC protections for externals
+│       │   └── services/
+│       │       └── external_service.go                         # Business logic service managing transactions and domain rules for externals
+│       ├── health/
+│       │   ├── controllers/
+│       │   │   └── health_controller.go                        # HTTP REST controller handling health requests and delegating to service
+│       │   ├── dtos/
+│       │   │   └── health_dto.go                               # Request/response DTO contracts and payload validation for health
+│       │   ├── routes/
+│       │   │   └── health_routes.go                            # Echo HTTP route bindings and RBAC protections for health
+│       │   └── services/
+│       │       └── health_service.go                           # Business logic service managing transactions and domain rules for health
+│       ├── inventory/
+│       │   ├── controllers/
+│       │   │   ├── count_controller.go                         # HTTP REST controller handling inventory requests and delegating to service
+│       │   │   ├── inventory_controller.go                     # HTTP REST controller handling inventory requests and delegating to service
+│       │   │   ├── movement_controller.go                      # HTTP REST controller handling inventory requests and delegating to service
+│       │   │   ├── stock_controller.go                         # HTTP REST controller handling inventory requests and delegating to service
+│       │   │   └── transfer_controller.go                      # HTTP REST controller handling inventory requests and delegating to service
+│       │   ├── dtos/
+│       │   │   └── inventory_dto.go                            # Request/response DTO contracts and payload validation for inventory
+│       │   ├── repositories/
+│       │   │   ├── inventory_count_repo.go                     # PostgreSQL repository layer executing SQL queries for inventory
+│       │   │   ├── inventory_movement_repo.go                  # PostgreSQL repository layer executing SQL queries for inventory
+│       │   │   ├── inventory_repo.go                           # PostgreSQL repository layer executing SQL queries for inventory
+│       │   │   └── inventory_transfer_repo.go                  # PostgreSQL repository layer executing SQL queries for inventory
+│       │   ├── routes/
+│       │   │   └── inventory_routes.go                         # Echo HTTP route bindings and RBAC protections for inventory
+│       │   └── services/
+│       │       ├── inventory_assign_service.go                 # Business logic service managing transactions and domain rules for services
+│       │       ├── inventory_count_service.go                  # Business logic service managing transactions and domain rules for inventory
+│       │       ├── inventory_service.go                        # Business logic service managing transactions and domain rules for inventory
+│       │       ├── inventory_transfer_flow_service.go          # Business logic service managing transactions and domain rules for inventory
+│       │       └── inventory_transfer_service.go               # Business logic service managing transactions and domain rules for inventory
+│       ├── notifications/
+│       │   ├── controllers/
+│       │   │   └── notification_controller.go                  # HTTP REST controller handling notifications requests and delegating to service
+│       │   ├── dtos/
+│       │   │   └── notification_dto.go                         # Request/response DTO contracts and payload validation for notifications
+│       │   ├── repositories/
+│       │   │   └── notification_repo.go                        # PostgreSQL repository layer executing SQL queries for notifications
+│       │   ├── routes/
+│       │   │   └── notification_routes.go                      # Echo HTTP route bindings and RBAC protections for notifications
+│       │   └── services/
+│       │       └── notification_service.go                     # Business logic service managing transactions and domain rules for notifications
+│       ├── payments/
+│       │   ├── controllers/
+│       │   │   └── payment_controller.go                       # HTTP REST controller handling payments requests and delegating to service
+│       │   ├── dtos/
+│       │   │   └── payment_dto.go                              # Request/response DTO contracts and payload validation for payments
+│       │   ├── repositories/
+│       │   │   ├── payment_flow_repo.go                        # PostgreSQL repository layer executing SQL queries for repositories
+│       │   │   └── payment_repo.go                             # PostgreSQL repository layer executing SQL queries for payments
+│       │   ├── routes/
+│       │   │   └── payment_routes.go                           # Echo HTTP route bindings and RBAC protections for payments
+│       │   └── services/
+│       │       ├── payment_flow_service.go                     # Business logic service managing transactions and domain rules for services
+│       │       └── payment_service.go                          # Business logic service managing transactions and domain rules for payments
+│       ├── products/
+│       │   ├── controllers/
+│       │   │   ├── product_code_controller.go                  # HTTP REST controller handling products requests and delegating to service
+│       │   │   ├── product_controller.go                       # HTTP REST controller handling products requests and delegating to service
+│       │   │   └── product_supplier_controller.go              # HTTP REST controller handling products requests and delegating to service
+│       │   ├── dtos/
+│       │   │   └── product_dto.go                              # Request/response DTO contracts and payload validation for products
+│       │   ├── repositories/
+│       │   │   ├── product_code_repo.go                        # PostgreSQL repository layer executing SQL queries for products
+│       │   │   ├── product_repo.go                             # PostgreSQL repository layer executing SQL queries for products
+│       │   │   └── product_supplier_repo.go                    # PostgreSQL repository layer executing SQL queries for products
+│       │   ├── routes/
+│       │   │   └── product_routes.go                           # Echo HTTP route bindings and RBAC protections for products
+│       │   └── services/
+│       │       ├── product_code_service.go                     # Business logic service managing transactions and domain rules for products
+│       │       ├── product_initial_stock_service.go            # Business logic service managing transactions and domain rules for products
+│       │       ├── product_mapper.go                           # Go backend domain file for products: product_mapper.go
+│       │       ├── product_service.go                          # Business logic service managing transactions and domain rules for products
+│       │       ├── product_supplier_service.go                 # Business logic service managing transactions and domain rules for products
+│       │       └── product_write_service.go                    # Business logic service managing transactions and domain rules for products
+│       ├── purchases/
+│       │   ├── controllers/
+│       │   │   └── purchase_controller.go                      # HTTP REST controller handling purchases requests and delegating to service
+│       │   ├── dtos/
+│       │   │   └── purchase_dto.go                             # Request/response DTO contracts and payload validation for purchases
+│       │   ├── repositories/
+│       │   │   └── purchase_repo.go                            # PostgreSQL repository layer executing SQL queries for purchases
+│       │   ├── routes/
+│       │   │   └── purchase_routes.go                          # Echo HTTP route bindings and RBAC protections for purchases
+│       │   └── services/
+│       │       ├── purchase_excel_service.go                   # Business logic service managing transactions and domain rules for purchases
+│       │       ├── purchase_receive_service.go                 # Business logic service managing transactions and domain rules for purchases
+│       │       └── purchase_service.go                         # Business logic service managing transactions and domain rules for purchases
+│       ├── quotations/
+│       │   ├── controllers/
+│       │   │   └── quotation_controller.go                     # HTTP REST controller handling quotations requests and delegating to service
+│       │   ├── dtos/
+│       │   │   └── quotation_dto.go                            # Request/response DTO contracts and payload validation for quotations
+│       │   ├── repositories/
+│       │   │   └── quotation_repo.go                           # PostgreSQL repository layer executing SQL queries for quotations
+│       │   ├── routes/
+│       │   │   └── quotation_routes.go                         # Echo HTTP route bindings and RBAC protections for quotations
+│       │   └── services/
+│       │       └── quotation_service.go                        # Business logic service managing transactions and domain rules for quotations
+│       ├── recyclebin/
+│       │   ├── controllers/
+│       │   │   └── recycle_bin_controller.go                   # HTTP REST controller handling recyclebin requests and delegating to service
+│       │   ├── dtos/
+│       │   │   └── recycle_bin_dto.go                          # Request/response DTO contracts and payload validation for recyclebin
+│       │   ├── repositories/
+│       │   │   └── recycle_bin_repo.go                         # PostgreSQL repository layer executing SQL queries for recyclebin
+│       │   ├── routes/
+│       │   │   └── recycle_bin_routes.go                       # Echo HTTP route bindings and RBAC protections for recyclebin
+│       │   └── services/
+│       │       └── recycle_bin_service.go                      # Business logic service managing transactions and domain rules for recyclebin
+│       ├── reports/
+│       │   ├── controllers/
+│       │   │   └── report_controller.go                        # HTTP REST controller handling reports requests and delegating to service
+│       │   ├── dtos/
+│       │   │   └── report_dto.go                               # Request/response DTO contracts and payload validation for reports
+│       │   ├── repositories/
+│       │   │   └── report_repo.go                              # PostgreSQL repository layer executing SQL queries for reports
+│       │   ├── routes/
+│       │   │   └── report_routes.go                            # Echo HTTP route bindings and RBAC protections for reports
+│       │   └── services/
+│       │       └── report_service.go                           # Business logic service managing transactions and domain rules for reports
+│       ├── returns/
+│       │   ├── controllers/
+│       │   │   └── return_controller.go                        # HTTP REST controller handling returns requests and delegating to service
+│       │   ├── dtos/
+│       │   │   └── return_dto.go                               # Request/response DTO contracts and payload validation for returns
+│       │   ├── repositories/
+│       │   │   └── return_repo.go                              # PostgreSQL repository layer executing SQL queries for returns
+│       │   ├── routes/
+│       │   │   └── return_routes.go                            # Echo HTTP route bindings and RBAC protections for returns
+│       │   └── services/
+│       │       └── return_service.go                           # Business logic service managing transactions and domain rules for returns
+│       ├── sales/
+│       │   ├── controllers/
+│       │   │   ├── invoice_controller.go                       # HTTP REST controller handling sales requests and delegating to service
+│       │   │   └── sale_controller.go                          # HTTP REST controller handling sales requests and delegating to service
+│       │   ├── dtos/
+│       │   │   └── sale_dto.go                                 # Request/response DTO contracts and payload validation for sales
+│       │   ├── repositories/
+│       │   │   ├── sale_invoice_repo.go                        # PostgreSQL repository layer executing SQL queries for sales
+│       │   │   ├── sale_item_repo.go                           # PostgreSQL repository layer executing SQL queries for sales
+│       │   │   ├── sale_repo.go                                # PostgreSQL repository layer executing SQL queries for sales
+│       │   │   ├── sale_stage_history_repo.go                  # PostgreSQL repository layer executing SQL queries for repositories
+│       │   │   └── sale_stock_repo.go                          # PostgreSQL repository layer executing SQL queries for sales
+│       │   ├── routes/
+│       │   │   └── sale_routes.go                              # Echo HTTP route bindings and RBAC protections for sales
+│       │   └── services/
+│       │       ├── sale_history_service.go                     # Business logic service managing transactions and domain rules for services
+│       │       ├── sale_invoice_service.go                     # Business logic service managing transactions and domain rules for sales
+│       │       ├── sale_query_service.go                       # Business logic service managing transactions and domain rules for sales
+│       │       ├── sale_service.go                             # Business logic service managing transactions and domain rules for sales
+│       │       └── sale_stage_service.go                       # Business logic service managing transactions and domain rules for sales
+│       ├── screensaver/
+│       │   ├── controllers/
+│       │   │   └── screensaver_controller.go                   # HTTP REST controller handling screensaver requests and delegating to service
+│       │   ├── dtos/
+│       │   │   └── screensaver_dto.go                          # Request/response DTO contracts and payload validation for screensaver
+│       │   ├── repositories/
+│       │   │   └── screensaver_repo.go                         # PostgreSQL repository layer executing SQL queries for screensaver
+│       │   ├── routes/
+│       │   │   └── screensaver_routes.go                       # Echo HTTP route bindings and RBAC protections for screensaver
+│       │   └── services/
+│       │       └── screensaver_service.go                      # Business logic service managing transactions and domain rules for screensaver
+│       ├── staff/
+│       │   ├── controllers/
+│       │   │   ├── admin_controller.go                         # HTTP REST controller handling staff requests and delegating to service
+│       │   │   ├── employee_controller.go                      # HTTP REST controller handling staff requests and delegating to service
+│       │   │   ├── permission_controller.go                    # HTTP REST controller handling staff requests and delegating to service
+│       │   │   ├── role_controller.go                          # HTTP REST controller handling staff requests and delegating to service
+│       │   │   └── staff_controller.go                         # HTTP REST controller handling staff requests and delegating to service
+│       │   ├── dtos/
+│       │   │   └── staff_dto.go                                # Request/response DTO contracts and payload validation for staff
+│       │   ├── repositories/
+│       │   │   ├── admin_repo.go                               # PostgreSQL repository layer executing SQL queries for staff
+│       │   │   ├── employee_access_repo.go                     # PostgreSQL repository layer executing SQL queries for staff
+│       │   │   ├── employee_repo.go                            # PostgreSQL repository layer executing SQL queries for staff
+│       │   │   ├── permission_repo.go                          # PostgreSQL repository layer executing SQL queries for staff
+│       │   │   └── role_repo.go                                # PostgreSQL repository layer executing SQL queries for staff
+│       │   ├── routes/
+│       │   │   └── staff_routes.go                             # Echo HTTP route bindings and RBAC protections for staff
+│       │   └── services/
+│       │       ├── staff_employee_access_service.go            # Business logic service managing transactions and domain rules for staff
+│       │       ├── staff_employee_service.go                   # Business logic service managing transactions and domain rules for staff
+│       │       ├── staff_role_service.go                       # Business logic service managing transactions and domain rules for staff
+│       │       └── staff_service.go                            # Business logic service managing transactions and domain rules for staff
+│       ├── wallet/
+│       │   ├── controllers/
+│       │   │   └── wallet_controller.go                        # HTTP REST controller handling wallet requests and delegating to service
+│       │   ├── dtos/
+│       │   │   └── wallet_dto.go                               # Request/response DTO contracts and payload validation for wallet
+│       │   ├── repositories/
+│       │   │   └── wallet_repo.go                              # PostgreSQL repository layer executing SQL queries for wallet
+│       │   ├── routes/
+│       │   │   └── wallet_routes.go                            # Echo HTTP route bindings and RBAC protections for wallet
+│       │   └── services/
+│       │       └── wallet_service.go                           # Business logic service managing transactions and domain rules for wallet
+│       └── warehouses/
+│           ├── controllers/
+│           │   ├── warehouse_controller.go                     # HTTP REST controller handling warehouses requests and delegating to service
+│           │   └── warehouse_location_controller.go            # HTTP REST controller handling warehouses requests and delegating to service
+│           ├── dtos/
+│           │   └── warehouse_dto.go                            # Request/response DTO contracts and payload validation for warehouses
+│           ├── repositories/
+│           │   ├── warehouse_facturation_repo.go               # PostgreSQL repository layer executing SQL queries for warehouses
+│           │   ├── warehouse_location_repo.go                  # PostgreSQL repository layer executing SQL queries for warehouses
+│           │   └── warehouse_repo.go                           # PostgreSQL repository layer executing SQL queries for warehouses
+│           ├── routes/
+│           │   └── warehouse_routes.go                         # Echo HTTP route bindings and RBAC protections for warehouses
+│           └── services/
+│               ├── warehouse_facturation_service.go            # Business logic service managing transactions and domain rules for warehouses
+│               ├── warehouse_location_service.go               # Business logic service managing transactions and domain rules for warehouses
+│               ├── warehouse_service.go                        # Business logic service managing transactions and domain rules for warehouses
+│               └── warehouse_write_service.go                  # Business logic service managing transactions and domain rules for warehouses
+├── uploads/
+├── .env                                                        # Project file: .env
+├── .gitignore                                                  # Project file: .gitignore
+├── go.mod                                                      # Go module manifest declaring dependencies (Echo v4, pgx/v5, pgcrypto, etc.)
+├── go.sum                                                      # Cryptographic checksums for verifying Go module dependencies
+└── main.go                                                     # Go backend entry point: loads config, database pool, global router and starts HTTP server
+
+=========================================================================================================
+2. importadoraInterfaz/ (FRONTEND: REACT 19 + TYPESCRIPT + VITE + REDUX TOOLKIT - 100% EXHAUSTIVE)
+=========================================================================================================
+
+importadoraInterfaz/ # React frontend root: React 19, Redux Toolkit, vertical slice architecture and design tokens
+├── docs/
+│   ├── primera v1/
+│   │   ├── indexreporteUno.html                                # Legacy HTML report template reference for warehouse inventory exports
+│   │   └── IP_Online_Documentacion_Completa.md                 # Comprehensive functional specification and system requirements document
+│   ├── CONVENTIONS.md                                          # Developer guidelines: coding conventions, naming rules and architecture standards
+│   ├── ESTRUCTURA.md                                           # Project architecture overview and high-level directory structure guide
+│   ├── INFORME-ESTRUCTURA.md                                   # Technical audit report verifying code organization and module boundaries
+│   ├── MATRIZ-ENDPOINTS.md                                     # Technical documentation and specification notes for MATRIZ-ENDPOINTS
+│   ├── PLAN-DISENO-MAQUETA.md                                  # UI design plan mapping target visual mockups to React components
+│   └── PLAN-ESPECIFICACION-TECNICA.md                          # Master technical specification, architecture rules and workflow roadmap
+├── public/
+│   ├── apple-touch-icon.png                                    # Static image asset: apple-touch-icon.png
+│   ├── favicon.ico                                             # Static image asset: favicon.ico
+│   ├── favicon.svg                                             # Vector SVG icon asset for favicon
+│   ├── icon-192.png                                            # Static image asset: icon-192.png
+│   ├── icon-512.png                                            # Static image asset: icon-512.png
+│   └── icons.svg                                               # Vector SVG icon asset for icons
+├── scripts/
+│   ├── check-endpoints.mjs                                     # Validation script verifying frontend endpoint URLs match Go routes
+│   ├── check-typography.mjs                                    # Linter script auditing CSS files for design token font family compliance
+│   └── sync-product-images.mjs                                 # Utility script synchronizing product catalog image assets
+├── src/
+│   ├── api/
+│   │   ├── endpoints/
+│   │   │   ├── admin.endpoints.ts                              # HTTP endpoint bindings and typed callers for admin
+│   │   │   ├── auth.endpoints.ts                               # HTTP endpoint bindings and typed callers for auth
+│   │   │   ├── catalog.endpoints.ts                            # HTTP endpoint bindings and typed callers for catalog
+│   │   │   ├── customers.endpoints.ts                          # HTTP endpoint bindings and typed callers for customers
+│   │   │   ├── employees.endpoints.ts                          # HTTP endpoint bindings and typed callers for employees
+│   │   │   ├── sales.endpoints.ts                              # HTTP endpoint bindings and typed callers for sales
+│   │   │   ├── stock.endpoints.ts                              # HTTP endpoint bindings and typed callers for stock
+│   │   │   └── suppliers.endpoints.ts                          # HTTP endpoint bindings and typed callers for suppliers
+│   │   ├── helpers/
+│   │   │   ├── pagination.test.ts                              # Automated unit tests validating pagination
+│   │   │   ├── pagination.ts                                   # Pagination utility functions: calculates offsets, total pages and slice boundaries
+│   │   │   ├── params.test.ts                                  # Automated unit tests validating params
+│   │   │   └── params.ts                                       # URL query parameter serializer and sanitization helper for API requests
+│   │   ├── http/
+│   │   │   ├── client.ts                                       # Axios HTTP client instance configured with interceptors, timeouts and bearer token injection
+│   │   │   ├── errors.ts                                       # Centralized API error normalizer mapping HTTP status codes to user-friendly error objects
+│   │   │   └── health.ts                                       # System health check probe validating backend connectivity and database availability
+│   │   ├── types/
+│   │   │   └── api.types.ts                                    # Base TypeScript interfaces: ApiResponse<T>, PaginatedResponse<T>, ApiError
+│   │   ├── config.ts                                           # Centralized API endpoints registry, base URLs and timeout configurations
+│   │   └── index.ts                                            # Barrel exports file aggregating and exposing modules from the current directory
+│   ├── app/
+│   │   ├── componentApp/
+│   │   │   ├── contentMain/
+│   │   │   │   ├── MainContent.css                             # Scroll container styles for the central viewport work area
+│   │   │   │   ├── MainContent.tsx                             # Dynamic content host rendering active screen component based on Redux route state
+│   │   │   │   ├── MainContentPlaceholder.css                  # Visual CSS styles and responsive layout rules for MainContentPlaceholder
+│   │   │   │   ├── MainContentPlaceholder.tsx                  # Placeholder screen displayed while a module view is loading
+│   │   │   │   ├── NotFoundScreen.css                          # Visual CSS styles and responsive layout rules for NotFoundScreen
+│   │   │   │   ├── NotFoundScreen.tsx                          # Primary page screen view component for  (NotFoundScreen)
+│   │   │   │   └── screenRegistry.ts                           # Dictionary mapping active ERP module and subitem to screen components
+│   │   │   ├── drawerRight/
+│   │   │   │   ├── entries/
+│   │   │   │   │   ├── formEntry.types.ts                      # TypeScript interfaces, types and API response models for
+│   │   │   │   │   ├── inventory.entries.ts                    # React component / TypeScript module for UI: inventory.entries.ts
+│   │   │   │   │   ├── operations.entries.ts                   # React component / TypeScript module for UI: operations.entries.ts
+│   │   │   │   │   └── people.entries.ts                       # React component / TypeScript module for UI: people.entries.ts
+│   │   │   │   ├── parts/
+│   │   │   │   │   ├── DrawerHeader.css                        # Visual CSS styles and responsive layout rules for DrawerHeader
+│   │   │   │   │   ├── DrawerHeader.tsx                        # Header component for right slide-over panel with title and close button
+│   │   │   │   │   ├── DrawerTab.css                           # Visual CSS styles and responsive layout rules for DrawerTab
+│   │   │   │   │   ├── DrawerTab.test.tsx                      # Automated unit tests validating DrawerTab
+│   │   │   │   │   ├── DrawerTab.tsx                           # Tab navigation bar for switching views inside right slide-over drawer
+│   │   │   │   │   └── FormDrawerBody.tsx                      # Container wrapper for scrollable form content within the right drawer
+│   │   │   │   ├── drawerRegistry.ts                           # Drawer view mapping registry connecting drawer modes to panels
+│   │   │   │   ├── DrawerRight.css                             # Slide-over animation and styling for the right sidebar drawer
+│   │   │   │   ├── DrawerRight.tsx                             # Right slide-over drawer host for quick forms, product details and cart
+│   │   │   │   ├── formRegistry.test.ts                        # Automated unit tests validating formRegistry
+│   │   │   │   ├── formRegistry.ts                             # Registry mapping DrawerFormKind keys to drawer form components
+│   │   │   │   └── useDrawerPresence.ts                        # Custom hook orchestrating smooth mount/unmount slide transitions
+│   │   │   ├── header/
+│   │   │   │   ├── company/
+│   │   │   │   │   └── CompanySelector.tsx                     # Interactive selector component for switching active company context
+│   │   │   │   ├── warehouse/
+│   │   │   │   │   ├── WarehouseMenu.css                       # Visual CSS styles and responsive layout rules for WarehouseMenu
+│   │   │   │   │   ├── WarehouseMenu.tsx                       # Dropdown menu allowing users to switch active working warehouse
+│   │   │   │   │   ├── WarehouseSelector.css                   # Visual CSS styles and responsive layout rules for WarehouseSelector
+│   │   │   │   │   └── WarehouseSelector.tsx                   # Interactive button displaying current active warehouse with dropdown trigger
+│   │   │   │   ├── AppHeader.css                               # Visual styles and layout structure for the top header bar
+│   │   │   │   └── AppHeader.tsx                               # Top application header: live clock, active warehouse dropdown and notifications
+│   │   │   └── sideMenu/
+│   │   │       ├── brand/
+│   │   │       │   ├── SideMenuBrand.css                       # Visual CSS styles and responsive layout rules for SideMenuBrand
+│   │   │       │   └── SideMenuBrand.tsx                       # Collapsible sidebar brand header displaying company logo and active workspace
+│   │   │       ├── footer/
+│   │   │       │   ├── ApiStatus.css                           # Visual CSS styles and responsive layout rules for ApiStatus
+│   │   │       │   ├── ApiStatus.tsx                           # Real-time API connectivity indicator badge (online, degraded, offline) in sidebar
+│   │   │       │   ├── SideMenuUser.css                        # Visual CSS styles and responsive layout rules for SideMenuUser
+│   │   │       │   └── SideMenuUser.tsx                        # Sidebar footer user profile card displaying avatar, full name, role and logout trigger
+│   │   │       ├── item/
+│   │   │       │   ├── SideMenuItem.css                        # Visual CSS styles and responsive layout rules for SideMenuItem
+│   │   │       │   ├── SideMenuItem.tsx                        # Navigation sidebar item component with route icon, active state and counter badge
+│   │   │       │   ├── SideMenuSubitems.css                    # Visual CSS styles and responsive layout rules for SideMenuSubitems
+│   │   │       │   └── SideMenuSubitems.tsx                    # Expandable accordion sub-menu list for grouped navigation categories
+│   │   │       ├── SideMenu.css                                # Sidebar layout and smooth transition animations (260px expanded / 64px collapsed)
+│   │   │       ├── SideMenu.tsx                                # Collapsible accordion sidebar with branded header, module list and status footer
+│   │   │       └── useSideMenuHover.ts                         # Custom hook managing hover state and delayed flyout previews for collapsed sidebar
+│   │   ├── layout/
+│   │   │   ├── AuthGate.tsx                                    # Authentication guard: verifies session validity and redirects unauthenticated users
+│   │   │   ├── ErpLayout.css                                   # Responsive layout grid styles supporting expandable/collapsible sidebar
+│   │   │   ├── ErpLayout.tsx                                   # Main ERP layout: SideMenu, AppHeader, dynamic MainContent and DrawerRight
+│   │   │   └── StoreApp.tsx                                    # Shop portal shell wrapper initializing catalog filters, theme context and header layout
+│   │   └── store/
+│   │       ├── rootReducer.ts                                  # Root Redux reducer combining all feature slices into unified state tree
+│   │       └── store.ts                                        # Redux Toolkit central store setup with typed useAppDispatch and useAppSelector
+│   ├── assets/
+│   │   ├── icons/
+│   │   │   ├── ban.svg                                         # Vector SVG icon asset for ban
+│   │   │   ├── building.svg                                    # Vector SVG icon asset for building
+│   │   │   ├── cart.svg                                        # Vector SVG icon asset for cart
+│   │   │   ├── check.svg                                       # Vector SVG icon asset for check
+│   │   │   ├── copy.svg                                        # Vector SVG graphic icon asset for user interface
+│   │   │   ├── database.svg                                    # Vector SVG icon asset for database
+│   │   │   ├── dollar.svg                                      # Vector SVG icon asset for dollar
+│   │   │   ├── edit.svg                                        # Vector SVG icon asset for edit
+│   │   │   ├── eye.svg                                         # Vector SVG icon asset for eye
+│   │   │   ├── file-text.svg                                   # Vector SVG icon asset for file-text
+│   │   │   ├── history.svg                                     # Vector SVG icon asset for history
+│   │   │   ├── list.svg                                        # Vector SVG icon asset for list
+│   │   │   ├── logout.svg                                      # Vector SVG icon asset for logout
+│   │   │   ├── map-pin.svg                                     # Vector SVG icon asset for map-pin
+│   │   │   ├── package-alt-2-svgrepo-com.svg                   # Vector SVG icon asset for package-alt-2-svgrepo-com
+│   │   │   ├── qr-code.svg                                     # Vector SVG icon asset for qr-code
+│   │   │   ├── receipt.svg                                     # Vector SVG icon asset for receipt
+│   │   │   ├── refresh.svg                                     # Vector SVG graphic icon asset for user interface
+│   │   │   ├── settings.svg                                    # Vector SVG icon asset for settings
+│   │   │   ├── shipping.svg                                    # Vector SVG icon asset for shipping
+│   │   │   ├── shopping-bag.svg                                # Vector SVG icon asset for shopping-bag
+│   │   │   ├── store.svg                                       # Vector SVG icon asset for store
+│   │   │   ├── trash.svg                                       # Vector SVG icon asset for trash
+│   │   │   ├── user.svg                                        # Vector SVG icon asset for user
+│   │   │   └── wallet.svg                                      # Vector SVG icon asset for wallet
+│   │   ├── images/
+│   │   │   ├── 404.jpg                                         # Static image asset: 404.jpg
+│   │   │   ├── login-fondo.webp                                # Static image asset: login-fondo.webp
+│   │   │   ├── login-ilustracion.svg                           # Vector SVG icon asset for login-ilustracion
+│   │   │   └── screensaver-logo.jpg                            # Static image asset: screensaver-logo.jpg
+│   │   └── logos/
+│   │       └── ip-logo.svg                                     # Vector SVG icon asset for ip-logo
+│   ├── features/
+│   │   ├── audit/
+│   │   │   ├── components/
+│   │   │   │   ├── AuditDetailPanel.tsx                        # Slide-over drawer panel component for audit (AuditDetailPanel)
+│   │   │   │   └── AuditTable.tsx                              # Interactive data table component with actions and filters for audit
+│   │   │   ├── constants/
+│   │   │   │   └── audit.constants.ts                          # Domain constants and immutable configuration values for audit
+│   │   │   ├── helpers/
+│   │   │   │   ├── audit.adapter.test.ts                       # Automated unit tests validating audit.adapter
+│   │   │   │   ├── audit.adapter.ts                            # Data adapter transforming API response schemas into client models for audit
+│   │   │   │   └── audit.format.ts                             # React component / TypeScript module for audit: audit.format.ts
+│   │   │   ├── hooks/
+│   │   │   │   ├── useAuditLog.ts                              # Custom React hook managing stateful logic for audit
+│   │   │   │   └── useOpenHistory.ts                           # Custom React hook managing stateful logic for audit
+│   │   │   ├── screens/
+│   │   │   │   ├── AuditScreen.css                             # Visual CSS styles and responsive layout rules for AuditScreen
+│   │   │   │   └── AuditScreen.tsx                             # Primary page screen view component for audit (AuditScreen)
+│   │   │   ├── selectors/
+│   │   │   │   └── audit.selectors.ts                          # Memoized Redux state selectors computing derived state for audit
+│   │   │   ├── services/
+│   │   │   │   ├── audit.service.test.ts                       # Automated unit tests validating audit.service
+│   │   │   │   └── audit.service.ts                            # Client HTTP service consuming backend endpoints for audit
+│   │   │   ├── slices/
+│   │   │   │   ├── audit.slice.test.ts                         # Automated unit tests validating audit.slice
+│   │   │   │   └── audit.slice.ts                              # Redux Toolkit slice managing state and reducers for audit
+│   │   │   ├── thunks/
+│   │   │   │   └── audit.thunks.ts                             # Async Redux thunks dispatching API calls for audit
+│   │   │   ├── types/
+│   │   │   │   ├── audit.api.types.ts                          # TypeScript interfaces, types and API response models for audit
+│   │   │   │   └── audit.types.ts                              # TypeScript interfaces, types and API response models for audit
+│   │   │   └── index.ts                                        # Barrel exports file aggregating and exposing modules from the current directory
+│   │   ├── auth/
+│   │   │   ├── components/
+│   │   │   │   ├── branding/
+│   │   │   │   │   ├── LoginBrand.css                          # Visual CSS styles and responsive layout rules for LoginBrand
+│   │   │   │   │   ├── LoginBrand.tsx                          # React component / TypeScript module for auth: LoginBrand.tsx
+│   │   │   │   │   ├── LoginHero.css                           # Visual CSS styles and responsive layout rules for LoginHero
+│   │   │   │   │   ├── LoginHero.tsx                           # React component / TypeScript module for auth: LoginHero.tsx
+│   │   │   │   │   ├── LoginWelcome.css                        # Visual CSS styles and responsive layout rules for LoginWelcome
+│   │   │   │   │   └── LoginWelcome.tsx                        # React component / TypeScript module for auth: LoginWelcome.tsx
+│   │   │   │   └── form/
+│   │   │   │       ├── LoginActions.css                        # Visual CSS styles and responsive layout rules for LoginActions
+│   │   │   │       ├── LoginActions.tsx                        # React component / TypeScript module for auth: LoginActions.tsx
+│   │   │   │       ├── LoginForm.css                           # Visual CSS styles and responsive layout rules for LoginForm
+│   │   │   │       ├── LoginForm.tsx                           # React component / TypeScript module for auth: LoginForm.tsx
+│   │   │   │       ├── LoginInput.css                          # Visual CSS styles and responsive layout rules for LoginInput
+│   │   │   │       ├── LoginInput.tsx                          # React component / TypeScript module for auth: LoginInput.tsx
+│   │   │   │       ├── LoginOptions.css                        # Visual CSS styles and responsive layout rules for LoginOptions
+│   │   │   │       └── LoginOptions.tsx                        # React component / TypeScript module for auth: LoginOptions.tsx
+│   │   │   ├── constants/
+│   │   │   │   ├── auth.constants.ts                           # Domain constants and immutable configuration values for auth
+│   │   │   │   └── auth.session.constants.ts                   # Domain constants and immutable configuration values for auth
+│   │   │   ├── helpers/
+│   │   │   │   ├── auth.adapter.test.ts                        # Automated unit tests validating auth.adapter
+│   │   │   │   ├── auth.adapter.ts                             # Data adapter transforming API response schemas into client models for auth
+│   │   │   │   ├── auth.helpers.ts                             # React component / TypeScript module for auth: auth.helpers.ts
+│   │   │   │   ├── auth.permissions.test.ts                    # Automated unit tests validating auth.permissions
+│   │   │   │   ├── auth.permissions.ts                         # React component / TypeScript module for auth: auth.permissions.ts
+│   │   │   │   ├── auth.session.ts                             # React component / TypeScript module for auth: auth.session.ts
+│   │   │   │   ├── auth.token.test.ts                          # Automated unit tests validating auth.token
+│   │   │   │   └── auth.token.ts                               # React component / TypeScript module for auth: auth.token.ts
+│   │   │   ├── hooks/
+│   │   │   │   ├── useLoginForm.ts                             # Custom React hook managing stateful logic for auth
+│   │   │   │   └── useSessionActivity.ts                       # Custom React hook managing stateful logic for auth
+│   │   │   ├── screens/
+│   │   │   │   ├── LoginScreen.css                             # Visual CSS styles and responsive layout rules for LoginScreen
+│   │   │   │   └── LoginScreen.tsx                             # Primary page screen view component for auth (LoginScreen)
+│   │   │   ├── selectors/
+│   │   │   │   ├── auth.selectors.test.ts                      # Automated unit tests validating auth.selectors
+│   │   │   │   └── auth.selectors.ts                           # Memoized Redux state selectors computing derived state for auth
+│   │   │   ├── services/
+│   │   │   │   └── auth.service.ts                             # Client HTTP service consuming backend endpoints for auth
+│   │   │   ├── slices/
+│   │   │   │   └── auth.slice.ts                               # Redux Toolkit slice managing state and reducers for auth
+│   │   │   ├── thunks/
+│   │   │   │   └── auth.thunks.ts                              # Async Redux thunks dispatching API calls for auth
+│   │   │   ├── types/
+│   │   │   │   ├── auth.api.types.ts                           # TypeScript interfaces, types and API response models for auth
+│   │   │   │   ├── auth.login.types.ts                         # TypeScript interfaces, types and API response models for auth
+│   │   │   │   └── auth.types.ts                               # TypeScript interfaces, types and API response models for auth
+│   │   │   └── index.ts                                        # Barrel exports file aggregating and exposing modules from the current directory
+│   │   ├── bank/
+│   │   │   ├── components/
+│   │   │   │   ├── drawer/
+│   │   │   │   │   ├── BankConfirmPanel.css                    # Visual CSS styles and responsive layout rules for BankConfirmPanel
+│   │   │   │   │   └── BankConfirmPanel.tsx                    # Slide-over drawer panel component for bank (BankConfirmPanel)
+│   │   │   │   ├── table/
+│   │   │   │   │   └── BankRecordsTable.tsx                    # Interactive data table component with actions and filters for bank
+│   │   │   │   └── upload/
+│   │   │   │       ├── BankKpis.tsx                            # React component / TypeScript module for bank: BankKpis.tsx
+│   │   │   │       └── BankUploadButton.tsx                    # botón de la barra de la conciliación para subir el PDF que entrega el banco: de ahí sale todo lo que se concilia
+│   │   │   ├── constants/
+│   │   │   │   └── bank.constants.ts                           # Domain constants and immutable configuration values for bank
+│   │   │   ├── helpers/
+│   │   │   │   ├── bank.adapter.test.ts                        # Automated unit tests validating bank.adapter
+│   │   │   │   └── bank.adapter.ts                             # Data adapter transforming API response schemas into client models for bank
+│   │   │   ├── hooks/
+│   │   │   │   ├── useBankActions.ts                           # Custom React hook managing stateful logic for bank
+│   │   │   │   ├── useBankRecords.ts                           # Custom React hook managing stateful logic for bank
+│   │   │   │   ├── useBankUpload.ts                            # Custom React hook managing stateful logic for bank
+│   │   │   │   └── usePendingPayments.ts                       # Custom React hook managing stateful logic for bank
+│   │   │   ├── screens/
+│   │   │   │   ├── BankReconciliationScreen.css                # Visual CSS styles and responsive layout rules for BankReconciliationScreen
+│   │   │   │   └── BankReconciliationScreen.tsx                # Primary page screen view component for bank (BankReconciliationScreen)
+│   │   │   ├── selectors/
+│   │   │   │   └── bank.selectors.ts                           # Memoized Redux state selectors computing derived state for bank
+│   │   │   ├── services/
+│   │   │   │   ├── bank.service.test.ts                        # Automated unit tests validating bank.service
+│   │   │   │   └── bank.service.ts                             # Client HTTP service consuming backend endpoints for bank
+│   │   │   ├── slices/
+│   │   │   │   ├── bank.slice.test.ts                          # Automated unit tests validating bank.slice
+│   │   │   │   └── bank.slice.ts                               # Redux Toolkit slice managing state and reducers for bank
+│   │   │   ├── thunks/
+│   │   │   │   └── bank.thunks.ts                              # Async Redux thunks dispatching API calls for bank
+│   │   │   ├── types/
+│   │   │   │   └── bank.types.ts                               # TypeScript interfaces, types and API response models for bank
+│   │   │   └── index.ts                                        # Barrel exports file aggregating and exposing modules from the current directory
+│   │   ├── billing/
+│   │   │   ├── components/
+│   │   │   │   ├── drawer/
+│   │   │   │   │   ├── BillingConfigPanel.tsx                  # formulario en el panel derecho de los datos fiscales de la bodega: quién factura, resolución de la DIAN, rango autorizado y retenciones
+│   │   │   │   │   └── DocSeriesPanel.tsx                      # formulario en el panel derecho de una serie de consecutivos: prefijo y próximo número, con la vista de cómo saldrá el siguiente
+│   │   │   │   └── table/
+│   │   │   │       ├── InvoicesTable.css                       # Visual CSS styles and responsive layout rules for InvoicesTable
+│   │   │   │       └── InvoicesTable.tsx                       # tarjeta de facturas con buscador, filtros y tabla global
+│   │   │   ├── constants/
+│   │   │   │   └── billing.constants.ts                        # textos de estados y tipos, y el estado inicial de facturación
+│   │   │   ├── helpers/
+│   │   │   │   ├── billing.adapter.ts                          # convierte lo que responde la API en Go (facturas, datos fiscales y series) a lo que usa la app, y filtra la tabla de facturas
+│   │   │   │   ├── billing.rules.test.ts                       # pruebas de las reglas de facturación y del adaptador de la API
+│   │   │   │   └── billing.rules.ts                            # reglas puras de facturación: cómo se ve el próximo número de una serie, qué falta en los datos fiscales y cuánto del rango autorizado queda
+│   │   │   ├── hooks/
+│   │   │   │   ├── useBillingConfigForm.ts                     # formulario de los datos fiscales de la bodega activa: quién factura, resolución, rango y retenciones
+│   │   │   │   ├── useBillingSettings.ts                       # pide los datos fiscales y las series de la bodega activa y abre sus paneles de edición
+│   │   │   │   ├── useDocSeriesForm.ts                         # formulario de una serie de consecutivos: el prefijo y el próximo número
+│   │   │   │   └── useInvoices.ts                              # pide las facturas generales o por bodega seleccionada y maneja la búsqueda y el filtro de estado
+│   │   │   ├── screens/
+│   │   │   │   ├── BillingSettingsScreen.css                   # Visual CSS styles and responsive layout rules for BillingSettingsScreen
+│   │   │   │   ├── BillingSettingsScreen.tsx                   # Configuración > Facturación: los datos fiscales de la bodega activa (con lo que queda del rango autorizado) y la tabla de series de consecutivos
+│   │   │   │   └── InvoicesScreen.tsx                          # Gestión Ventas > Facturas: las facturas emitidas de la bodega activa, con búsqueda y estado
+│   │   │   ├── selectors/
+│   │   │   │   └── billing.selectors.ts                        # lecturas del estado de facturación
+│   │   │   ├── services/
+│   │   │   │   └── billing.service.ts                          # llamadas al backend de facturación: facturas de la bodega, datos fiscales (GET y PUT) y series de consecutivos (GET y PUT)
+│   │   │   ├── slices/
+│   │   │   │   ├── billing.slice.test.ts                       # el estado de facturación: facturas, datos fiscales y series por bodega, y guardar una serie
+│   │   │   │   └── billing.slice.ts                            # facturas de la bodega, datos fiscales y series de consecutivos
+│   │   │   ├── thunks/
+│   │   │   │   └── billing.thunks.ts                           # cargas y cambios de facturación: facturas de la bodega, datos fiscales con sus series, guardar los datos fiscales y cambiar una serie
+│   │   │   ├── types/
+│   │   │   │   └── billing.types.ts                            # contratos de facturación: facturas emitidas, datos fiscales de la bodega, series de consecutivos y el estado del slice
+│   │   │   └── index.ts                                        # Barrel exports file aggregating and exposing modules from the current directory
+│   │   ├── cashRegister/
+│   │   │   ├── components/
+│   │   │   │   ├── drawer/
+│   │   │   │   │   ├── CashClosePanel.css                      # Visual CSS styles and responsive layout rules for CashClosePanel
+│   │   │   │   │   ├── CashClosePanel.tsx                      # panel lateral del arqueo y cierre del turno: ingresos del turno, gastos de caja, efectivo contado y la diferencia en vivo
+│   │   │   │   │   ├── CashCollectPanel.css                    # Visual CSS styles and responsive layout rules for CashCollectPanel
+│   │   │   │   │   ├── CashCollectPanel.tsx                    # panel lateral para cobrar un pedido con pagos mezclados: efectivo, transferencia (con referencia y foto) y crédito
+│   │   │   │   │   └── CashOpenPanel.tsx                       # panel lateral para abrir el turno de caja de la bodega activa con su fondo inicial de cambio
+│   │   │   │   ├── orders/
+│   │   │   │   │   └── CashOrdersPanel.tsx                     # los pedidos en Caja: la misma barra y tabla de Pedidos, en una tarjeta, con las acciones de caja (cobrar y cotejar la salida)
+│   │   │   │   ├── shift/
+│   │   │   │   │   ├── CashClosedBanner.css                    # Visual CSS styles and responsive layout rules for CashClosedBanner
+│   │   │   │   │   ├── CashClosedBanner.tsx                    # aviso fijo de «caja cerrada»: hay que abrir el turno antes de recibir pagos en efectivo
+│   │   │   │   │   ├── CashShiftSlider.css                     # Visual CSS styles and responsive layout rules for CashShiftSlider
+│   │   │   │   │   ├── CashShiftSlider.tsx                     # interruptor del turno de caja: izquierda = Abierta, derecha = Cerrada; se arrastra con mouse o dedo y se opera con el teclado
+│   │   │   │   │   ├── CashShiftSummary.css                    # Visual CSS styles and responsive layout rules for CashShiftSummary
+│   │   │   │   │   └── CashShiftSummary.tsx                    # resumen persistente del turno: estado, bodega, quién lo abrió, desde cuándo, fondo inicial y lo recaudado hasta ahora
+│   │   │   │   ├── VerifyInvoiceGoodsModal.css                 # Visual CSS styles and responsive layout rules for VerifyInvoiceGoodsModal
+│   │   │   │   └── VerifyInvoiceGoodsModal.tsx                 # Modal dialog window component for cashRegister (VerifyInvoiceGoodsModal)
+│   │   │   ├── helpers/
+│   │   │   │   ├── cash.collect.test.ts                        # pruebas de las reglas del cobro mixto: lo que falta, cuándo se ofrece cobrar, validación de líneas y lo que se envía
+│   │   │   │   ├── cash.collect.ts                             # reglas puras del cobro mixto de un pedido en Caja: cuánto falta por cubrir, cuándo una línea de pago es válida y cómo se arma lo que se envía
+│   │   │   │   ├── cash.helpers.test.ts                        # pruebas del arqueo (esperado y diferencia), de la limpieza de gastos y de la conversión del turno
+│   │   │   │   └── cash.helpers.ts                             # funciones puras de caja: convertir el turno del backend, calcular el arqueo en vivo y limpiar los gastos antes de enviarlos
+│   │   │   ├── hooks/
+│   │   │   │   ├── useCashClose.ts                             # estado y guardado del arqueo y cierre del turno: efectivo contado, gastos de caja, notas y el cálculo en vivo de lo esperado y la diferencia
+│   │   │   │   ├── useCashCollect.ts                           # formulario del cobro mixto de un pedido en Caja: líneas de pago (efectivo, transferencia, crédito), lo que falta por cubrir, validación y envío
+│   │   │   │   ├── useCashOpen.ts                              # estado y guardado de la apertura del turno: el fondo inicial de cambio (obligatorio)
+│   │   │   │   └── useCashSession.ts                           # pide el turno de caja de la bodega activa y entrega si está abierto, con acciones para abrir o cerrar (abren su panel lateral)
+│   │   │   ├── screens/
+│   │   │   │   ├── CashRegisterScreen.css                      # Visual CSS styles and responsive layout rules for CashRegisterScreen
+│   │   │   │   └── CashRegisterScreen.tsx                      # Primary page screen view component for cashRegister (CashRegisterScreen)
+│   │   │   ├── selectors/
+│   │   │   │   └── cash.selectors.ts                           # lecturas del turno de caja: el turno, su estado de carga y si hay un cambio en curso
+│   │   │   ├── services/
+│   │   │   │   └── cash.service.ts                             # llamadas a la API de turnos de caja: ver el turno abierto, abrirlo con un fondo y cerrarlo con el arqueo y los gastos
+│   │   │   ├── slices/
+│   │   │   │   └── cash.slice.ts                               # estado del turno de caja de la bodega activa: el turno abierto (o ninguno), si está cargando y si hay un cambio en curso
+│   │   │   ├── thunks/
+│   │   │   │   └── cash.thunks.ts                              # cargas y cambios del turno de caja: leer el de la bodega, abrirlo y cerrarlo
+│   │   │   ├── types/
+│   │   │   │   └── cash.types.ts                               # contratos de la caja: el turno (lo que usa la app y lo que responde el backend), los gastos del cierre y el estado del slice
+│   │   │   └── index.ts                                        # Barrel exports file aggregating and exposing modules from the current directory
+│   │   ├── catalogs/
+│   │   │   ├── components/
+│   │   │   │   └── drawer/
+│   │   │   │       ├── CatalogItemDetailPanel.css              # Visual CSS styles and responsive layout rules for CatalogItemDetailPanel
+│   │   │   │       ├── CatalogItemDetailPanel.tsx              # Slide-over drawer panel component for catalogs (CatalogItemDetailPanel)
+│   │   │   │       ├── CatalogItemFormPanel.css                # Visual CSS styles and responsive layout rules for CatalogItemFormPanel
+│   │   │   │       └── CatalogItemFormPanel.tsx                # Slide-over drawer panel component for catalogs (CatalogItemFormPanel)
+│   │   │   ├── constants/
+│   │   │   │   └── catalogs.constants.ts                       # Domain constants and immutable configuration values for catalogs
+│   │   │   ├── helpers/
+│   │   │   │   ├── catalogs.adapter.test.ts                    # Automated unit tests validating catalogs.adapter
+│   │   │   │   ├── catalogs.adapter.ts                         # Data adapter transforming API response schemas into client models for catalogs
+│   │   │   │   └── catalogs.labels.ts                          # React component / TypeScript module for catalogs: catalogs.labels.ts
+│   │   │   ├── hooks/
+│   │   │   │   ├── useCatalogItemForm.ts                       # Custom React hook managing stateful logic for catalogs
+│   │   │   │   ├── useDeleteCatalogItem.ts                     # Custom React hook managing stateful logic for catalogs
+│   │   │   │   └── useLoadCatalogs.ts                          # Custom React hook managing stateful logic for catalogs
+│   │   │   ├── selectors/
+│   │   │   │   ├── catalogs.selectors.test.ts                  # Automated unit tests validating catalogs.selectors
+│   │   │   │   └── catalogs.selectors.ts                       # Memoized Redux state selectors computing derived state for catalogs
+│   │   │   ├── services/
+│   │   │   │   ├── catalogs.service.test.ts                    # Automated unit tests validating catalogs.service
+│   │   │   │   └── catalogs.service.ts                         # Client HTTP service consuming backend endpoints for catalogs
+│   │   │   ├── slices/
+│   │   │   │   └── catalogs.slice.ts                           # Redux Toolkit slice managing state and reducers for catalogs
+│   │   │   ├── thunks/
+│   │   │   │   ├── catalogs.items.thunks.ts                    # Async Redux thunks dispatching API calls for catalogs
+│   │   │   │   ├── catalogs.thunks.test.ts                     # Automated unit tests validating catalogs.thunks
+│   │   │   │   └── catalogs.thunks.ts                          # Async Redux thunks dispatching API calls for catalogs
+│   │   │   ├── types/
+│   │   │   │   └── catalogs.types.ts                           # TypeScript interfaces, types and API response models for catalogs
+│   │   │   └── index.ts                                        # Barrel exports file aggregating and exposing modules from the current directory
+│   │   ├── checkout/
+│   │   │   ├── components/
+│   │   │   │   ├── CheckoutPanel.css                           # Visual CSS styles and responsive layout rules for CheckoutPanel
+│   │   │   │   ├── CheckoutPanel.tsx                           # Slide-over drawer panel component for checkout (CheckoutPanel)
+│   │   │   │   ├── CustomerStep.tsx                            # React component / TypeScript module for checkout: CustomerStep.tsx
+│   │   │   │   ├── PaymentStep.tsx                             # React component / TypeScript module for checkout: PaymentStep.tsx
+│   │   │   │   └── TransferPaymentSection.tsx                  # React component / TypeScript module for checkout: TransferPaymentSection.tsx
+│   │   │   ├── helpers/
+│   │   │   │   ├── checkout.adapter.test.ts                    # Automated unit tests validating checkout.adapter
+│   │   │   │   └── checkout.adapter.ts                         # Data adapter transforming API response schemas into client models for checkout
+│   │   │   ├── hooks/
+│   │   │   │   └── useCheckoutFlow.ts                          # Custom React hook managing stateful logic for checkout
+│   │   │   ├── services/
+│   │   │   │   └── checkout.service.ts                         # Client HTTP service consuming backend endpoints for checkout
+│   │   │   ├── thunks/
+│   │   │   │   └── checkout.thunks.ts                          # Async Redux thunks dispatching API calls for checkout
+│   │   │   ├── types/
+│   │   │   │   ├── checkout.api.types.ts                       # TypeScript interfaces, types and API response models for checkout
+│   │   │   │   └── checkout.types.ts                           # TypeScript interfaces, types and API response models for checkout
+│   │   │   └── index.ts                                        # Barrel exports file aggregating and exposing modules from the current directory
+│   │   ├── companies/
+│   │   │   ├── constants/
+│   │   │   │   └── companies.constants.ts                      # Domain constants and immutable configuration values for companies
+│   │   │   ├── helpers/
+│   │   │   │   └── companies.adapter.ts                        # Data adapter transforming API response schemas into client models for companies
+│   │   │   ├── hooks/
+│   │   │   │   └── useCompanies.ts                             # Custom React hook managing stateful logic for companies
+│   │   │   ├── screens/
+│   │   │   │   ├── CompaniesScreen.css                         # Visual CSS styles and responsive layout rules for CompaniesScreen
+│   │   │   │   └── CompaniesScreen.tsx                         # Primary page screen view component for companies (CompaniesScreen)
+│   │   │   ├── selectors/
+│   │   │   │   └── companies.selectors.ts                      # Memoized Redux state selectors computing derived state for companies
+│   │   │   ├── services/
+│   │   │   │   ├── companies.service.test.ts                   # Automated unit tests validating companies.service
+│   │   │   │   └── companies.service.ts                        # Client HTTP service consuming backend endpoints for companies
+│   │   │   ├── slices/
+│   │   │   │   └── companies.slice.ts                          # Redux Toolkit slice managing state and reducers for companies
+│   │   │   ├── thunks/
+│   │   │   │   └── companies.thunks.ts                         # Async Redux thunks dispatching API calls for companies
+│   │   │   ├── types/
+│   │   │   │   ├── companies.api.types.ts                      # TypeScript interfaces, types and API response models for companies
+│   │   │   │   └── companies.types.ts                          # TypeScript interfaces, types and API response models for companies
+│   │   │   └── index.ts                                        # Barrel exports file aggregating and exposing modules from the current directory
+│   │   ├── customers/
+│   │   │   ├── components/
+│   │   │   │   ├── drawer/
+│   │   │   │   │   ├── CustomerDirectionsSection.tsx           # React component / TypeScript module for customers: CustomerDirectionsSection.tsx
+│   │   │   │   │   ├── CustomerDiscountsSection.tsx            # React component / TypeScript module for customers: CustomerDiscountsSection.tsx
+│   │   │   │   │   ├── CustomerDocumentsSection.test.tsx       # Automated unit tests validating CustomerDocumentsSection
+│   │   │   │   │   ├── CustomerDocumentsSection.tsx            # React component / TypeScript module for customers: CustomerDocumentsSection.tsx
+│   │   │   │   │   ├── CustomerDrawer.css                      # Visual CSS styles and responsive layout rules for CustomerDrawer
+│   │   │   │   │   ├── CustomerDrawer.tsx                      # React component / TypeScript module for customers: CustomerDrawer.tsx
+│   │   │   │   │   └── CustomerInfoSection.tsx                 # React component / TypeScript module for customers: CustomerInfoSection.tsx
+│   │   │   │   ├── form/
+│   │   │   │   │   ├── CreateCustomerForm.css                  # Visual CSS styles and responsive layout rules for CreateCustomerForm
+│   │   │   │   │   ├── CreateCustomerForm.tsx                  # React component / TypeScript module for customers: CreateCustomerForm.tsx
+│   │   │   │   │   └── EditCustomerForm.tsx                    # React component / TypeScript module for customers: EditCustomerForm.tsx
+│   │   │   │   └── table/
+│   │   │   │       ├── CustomersTable.css                      # Visual CSS styles and responsive layout rules for CustomersTable
+│   │   │   │       └── CustomersTable.tsx                      # Interactive data table component with actions and filters for customers
+│   │   │   ├── constants/
+│   │   │   │   └── customers.constants.ts                      # Domain constants and immutable configuration values for customers
+│   │   │   ├── helpers/
+│   │   │   │   ├── customers.adapter.test.ts                   # Automated unit tests validating customers.adapter
+│   │   │   │   ├── customers.adapter.ts                        # Data adapter transforming API response schemas into client models for customers
+│   │   │   │   ├── customers.documents.adapter.test.ts         # Automated unit tests validating customers.documents.adapter
+│   │   │   │   └── customers.documents.adapter.ts              # Data adapter transforming API response schemas into client models for customers
+│   │   │   ├── hooks/
+│   │   │   │   ├── useCustomerDocuments.ts                     # Custom React hook managing stateful logic for customers
+│   │   │   │   ├── useCustomerExists.ts                        # Custom React hook managing stateful logic for customers
+│   │   │   │   ├── useCustomersLoader.ts                       # Custom React hook managing stateful logic for customers
+│   │   │   │   ├── useDocumentAlerts.ts                        # Custom React hook managing stateful logic for customers
+│   │   │   │   └── useSelectedCustomerData.ts                  # Custom React hook managing stateful logic for customers
+│   │   │   ├── screens/
+│   │   │   │   ├── CustomersScreen.css                         # Visual CSS styles and responsive layout rules for CustomersScreen
+│   │   │   │   └── CustomersScreen.tsx                         # Primary page screen view component for customers (CustomersScreen)
+│   │   │   ├── selectors/
+│   │   │   │   ├── customers.documents.selectors.ts            # Memoized Redux state selectors computing derived state for customers
+│   │   │   │   ├── customers.selectors.test.ts                 # Automated unit tests validating customers.selectors
+│   │   │   │   └── customers.selectors.ts                      # Memoized Redux state selectors computing derived state for customers
+│   │   │   ├── services/
+│   │   │   │   ├── customers.details.service.ts                # Client HTTP service consuming backend endpoints for customers
+│   │   │   │   ├── customers.documents.service.ts              # Client HTTP service consuming backend endpoints for customers
+│   │   │   │   ├── customers.manage.service.test.ts            # Automated unit tests validating customers.manage.service
+│   │   │   │   ├── customers.service.test.ts                   # Automated unit tests validating customers.service
+│   │   │   │   └── customers.service.ts                        # Client HTTP service consuming backend endpoints for customers
+│   │   │   ├── slices/
+│   │   │   │   ├── customers.documents.reducers.ts             # React component / TypeScript module for customers: customers.documents.reducers.ts
+│   │   │   │   └── customers.slice.ts                          # Redux Toolkit slice managing state and reducers for customers
+│   │   │   ├── thunks/
+│   │   │   │   ├── customers.details.thunks.ts                 # Async Redux thunks dispatching API calls for customers
+│   │   │   │   ├── customers.documents.thunks.ts               # Async Redux thunks dispatching API calls for customers
+│   │   │   │   ├── customers.manage.thunks.test.ts             # Automated unit tests validating customers.manage.thunks
+│   │   │   │   ├── customers.thunks.test.ts                    # Automated unit tests validating customers.thunks
+│   │   │   │   └── customers.thunks.ts                         # Async Redux thunks dispatching API calls for customers
+│   │   │   ├── types/
+│   │   │   │   ├── customers.api.types.ts                      # TypeScript interfaces, types and API response models for customers
+│   │   │   │   └── customers.types.ts                          # TypeScript interfaces, types and API response models for customers
+│   │   │   └── index.ts                                        # Barrel exports file aggregating and exposing modules from the current directory
+│   │   ├── employees/
+│   │   │   ├── components/
+│   │   │   │   ├── detail/
+│   │   │   │   │   ├── EmployeeDetailPanel.css                 # Visual CSS styles and responsive layout rules for EmployeeDetailPanel
+│   │   │   │   │   └── EmployeeDetailPanel.tsx                 # Slide-over drawer panel component for employees (EmployeeDetailPanel)
+│   │   │   │   ├── drawer/
+│   │   │   │   │   ├── CreateEmployeeDrawer.css                # Visual CSS styles and responsive layout rules for CreateEmployeeDrawer
+│   │   │   │   │   └── CreateEmployeeDrawer.tsx                # Slide-over drawer form for employee onboarding and registration
+│   │   │   │   ├── hub/
+│   │   │   │   │   ├── PermissionsHub.css                      # Visual CSS styles and responsive layout rules for PermissionsHub
+│   │   │   │   │   └── PermissionsHub.tsx                      # React component / TypeScript module for employees: PermissionsHub.tsx
+│   │   │   │   ├── permissions/
+│   │   │   │   │   ├── EmployeePermissionsPanel.css            # Visual CSS styles and responsive layout rules for EmployeePermissionsPanel
+│   │   │   │   │   ├── EmployeePermissionsPanel.tsx            # Slide-over drawer panel component for employees (EmployeePermissionsPanel)
+│   │   │   │   │   ├── PermissionModuleCard.tsx                # Card display component for employees (PermissionModuleCard)
+│   │   │   │   │   ├── PermissionsSelector.css                 # Visual CSS styles and responsive layout rules for PermissionsSelector
+│   │   │   │   │   ├── PermissionsSelector.tsx                 # React component / TypeScript module for employees: PermissionsSelector.tsx
+│   │   │   │   │   └── PermissionToggleCard.tsx                # Card display component for employees (PermissionToggleCard)
+│   │   │   │   ├── picker/
+│   │   │   │   │   ├── EmployeePicker.css                      # Visual CSS styles and responsive layout rules for EmployeePicker
+│   │   │   │   │   └── EmployeePicker.tsx                      # React component / TypeScript module for employees: EmployeePicker.tsx
+│   │   │   │   ├── roles/
+│   │   │   │   │   ├── RoleForm.tsx                            # React component / TypeScript module for employees: RoleForm.tsx
+│   │   │   │   │   ├── RolesView.css                           # Visual CSS styles and responsive layout rules for RolesView
+│   │   │   │   │   └── RolesView.tsx                           # React component / TypeScript module for employees: RolesView.tsx
+│   │   │   │   └── table/
+│   │   │   │       ├── EmployeesTable.css                      # Visual CSS styles and responsive layout rules for EmployeesTable
+│   │   │   │       └── EmployeesTable.tsx                      # Interactive data table component with actions and filters for employees
+│   │   │   ├── constants/
+│   │   │   │   ├── employees.assignable.constants.ts           # Domain constants and immutable configuration values for employees
+│   │   │   │   ├── employees.constants.ts                      # Domain constants and immutable configuration values for employees
+│   │   │   │   └── employees.permissions.constants.ts          # Domain constants and immutable configuration values for employees
+│   │   │   ├── helpers/
+│   │   │   │   ├── employees.adapter.test.ts                   # Automated unit tests validating employees.adapter
+│   │   │   │   ├── employees.adapter.ts                        # Data adapter transforming API response schemas into client models for employees
+│   │   │   │   ├── permissions.selection.test.ts               # Automated unit tests validating permissions.selection
+│   │   │   │   └── permissions.selection.ts                    # React component / TypeScript module for employees: permissions.selection.ts
+│   │   │   ├── hooks/
+│   │   │   │   ├── useEmployeePermissions.ts                   # Custom React hook managing stateful logic for employees
+│   │   │   │   ├── useEmployeesDirectory.ts                    # Custom React hook managing stateful logic for employees
+│   │   │   │   └── useRoles.ts                                 # Custom React hook managing stateful logic for employees
+│   │   │   ├── screens/
+│   │   │   │   ├── EmployeesScreen.css                         # Visual CSS styles and responsive layout rules for EmployeesScreen
+│   │   │   │   ├── EmployeesScreen.tsx                         # Primary page screen view component for employees (EmployeesScreen)
+│   │   │   │   ├── RolesPermissionsScreen.css                  # Visual CSS styles and responsive layout rules for RolesPermissionsScreen
+│   │   │   │   └── RolesPermissionsScreen.tsx                  # Primary page screen view component for employees (RolesPermissionsScreen)
+│   │   │   ├── selectors/
+│   │   │   │   └── employees.selectors.ts                      # Memoized Redux state selectors computing derived state for employees
+│   │   │   ├── services/
+│   │   │   │   ├── employees.service.test.ts                   # Automated unit tests validating employees.service
+│   │   │   │   └── employees.service.ts                        # Client HTTP service consuming backend endpoints for employees
+│   │   │   ├── slices/
+│   │   │   │   └── employees.slice.ts                          # Redux Toolkit slice managing state and reducers for employees
+│   │   │   ├── thunks/
+│   │   │   │   └── employees.thunks.ts                         # Async Redux thunks dispatching API calls for employees
+│   │   │   ├── types/
+│   │   │   │   ├── employees.api.types.ts                      # TypeScript interfaces, types and API response models for employees
+│   │   │   │   └── employees.types.ts                          # TypeScript interfaces, types and API response models for employees
+│   │   │   └── index.ts                                        # Barrel exports file aggregating and exposing modules from the current directory
+│   │   ├── externals/
+│   │   │   ├── components/
+│   │   │   │   ├── drawer/
+│   │   │   │   │   └── ExternalFormPanel.tsx                   # formulario en el panel derecho para registrar o editar un proveedor o una transportadora
+│   │   │   │   ├── ExternalsTable.css                          # Visual CSS styles and responsive layout rules for ExternalsTable
+│   │   │   │   └── ExternalsTable.tsx                          # Standardized interactive data table for suppliers and carriers
+│   │   │   ├── constants/
+│   │   │   │   └── externals.constants.ts                      # estado inicial, tamaño de carga, textos por tipo y opciones de filtro de proveedores y transportadoras
+│   │   │   ├── helpers/
+│   │   │   │   ├── externals.filters.test.ts                   # Automated unit tests validating externals.filters
+│   │   │   │   └── externals.filters.ts                        # filtra la tabla de proveedores y transportadoras por texto y por estado
+│   │   │   ├── hooks/
+│   │   │   │   ├── useExternalActions.ts                       # cambiar el estado y borrar un proveedor o transportadora con su aviso de éxito o error
+│   │   │   │   ├── useExternalForm.ts                          # estado y guardado del formulario de un proveedor o transportadora (crear o editar)
+│   │   │   │   └── useExternals.ts                             # pide los proveedores o transportadoras y maneja la búsqueda y el filtro de estado de la tabla
+│   │   │   ├── screens/
+│   │   │   │   ├── CarriersScreen.tsx                          # Primary page view component for carriers management
+│   │   │   │   └── SuppliersScreen.tsx                         # Primary page view component for suppliers management
+│   │   │   ├── selectors/
+│   │   │   │   └── externals.selectors.ts                      # lecturas de proveedores y transportadoras: lista, estado de carga y si hay un cambio en curso
+│   │   │   ├── services/
+│   │   │   │   └── externals.service.ts                        # Client HTTP service consuming /externals endpoints
+│   │   │   ├── slices/
+│   │   │   │   └── externals.slice.ts                          # estado de proveedores y transportadoras: la lista del tipo abierto y si hay un cambio en curso
+│   │   │   ├── thunks/
+│   │   │   │   └── externals.thunks.ts                         # cargas y acciones de proveedores y transportadoras: listar, guardar (crear o editar), cambiar el estado y borrar
+│   │   │   ├── types/
+│   │   │   │   └── externals.types.ts                          # TypeScript interfaces, types and models for external entities
+│   │   │   └── index.ts                                        # Barrel exports file aggregating and exposing modules from the current directory
+│   │   ├── inventory/
+│   │   │   ├── components/
+│   │   │   │   ├── drawer/
+│   │   │   │   │   ├── detail/
+│   │   │   │   │   │   ├── ProductDetailHero.tsx               # React component / TypeScript module for inventory: ProductDetailHero.tsx
+│   │   │   │   │   │   ├── ProductFactsSection.tsx             # React component / TypeScript module for inventory: ProductFactsSection.tsx
+│   │   │   │   │   │   ├── ProductPricesSection.tsx            # React component / TypeScript module for inventory: ProductPricesSection.tsx
+│   │   │   │   │   │   ├── ProductWarehousesSection.test.tsx   # Automated unit tests validating ProductWarehousesSection
+│   │   │   │   │   │   └── ProductWarehousesSection.tsx        # React component / TypeScript module for inventory: ProductWarehousesSection.tsx
+│   │   │   │   │   ├── AssignStockPanel.css                    # Visual CSS styles and responsive layout rules for AssignStockPanel
+│   │   │   │   │   ├── AssignStockPanel.tsx                    # formulario en el panel derecho para asignar un producto del catálogo a una ubicación de la bodega activa, con sus unidades
+│   │   │   │   │   ├── CreateProductForm.tsx                   # React component / TypeScript module for inventory: CreateProductForm.tsx
+│   │   │   │   │   ├── EditProductPanel.css                    # Visual CSS styles and responsive layout rules for EditProductPanel
+│   │   │   │   │   ├── EditProductPanel.tsx                    # Slide-over drawer panel component for inventory (EditProductPanel)
+│   │   │   │   │   ├── ProductDetailPanel.css                  # Visual CSS styles and responsive layout rules for ProductDetailPanel
+│   │   │   │   │   ├── ProductDetailPanel.tsx                  # Slide-over drawer panel component for inventory (ProductDetailPanel)
+│   │   │   │   │   ├── ProductLocationsPanel.css               # Visual CSS styles and responsive layout rules for ProductLocationsPanel
+│   │   │   │   │   └── ProductLocationsPanel.tsx               # Slide-over drawer panel component for inventory (ProductLocationsPanel)
+│   │   │   │   ├── table/
+│   │   │   │   │   ├── CatalogTable.tsx                        # Interactive data table component with actions and filters for inventory
+│   │   │   │   │   ├── CatalogTableRow.tsx                     # React component / TypeScript module for inventory: CatalogTableRow.tsx
+│   │   │   │   │   ├── ProductsTable.tsx                       # Interactive data table component with actions and filters for inventory
+│   │   │   │   │   └── StockTable.tsx                          # tabla de existencias de la bodega activa: una fila por producto y ubicación con físico, reservado, vendible y nivel
+│   │   │   │   └── InventoryTables.css                         # Visual CSS styles and responsive layout rules for InventoryTables
+│   │   │   ├── constants/
+│   │   │   │   └── inventory.constants.ts                      # Domain constants and immutable configuration values for inventory
+│   │   │   ├── helpers/
+│   │   │   │   ├── inventory.adapter.test.ts                   # Automated unit tests validating inventory.adapter
+│   │   │   │   ├── inventory.adapter.ts                        # Data adapter transforming API response schemas into client models for inventory
+│   │   │   │   ├── inventory.stock.test.ts                     # pruebas del filtro, los conteos por ubicación y los totales de la tabla de existencias
+│   │   │   │   └── inventory.stock.ts                          # funciones puras de la tabla de existencias: filtrar por categoría y marca, contar en cuántas ubicaciones está cada producto y sumar totales
+│   │   │   ├── hooks/
+│   │   │   │   ├── useAssignStockForm.ts                       # estado y guardado del formulario «Asignar producto a una ubicación»: buscar un producto del catálogo, elegir ubicación y unidades
+│   │   │   │   ├── useCreateProductForm.ts                     # Custom React hook managing stateful logic for inventory
+│   │   │   │   ├── useEditProductForm.ts                       # Custom React hook managing stateful logic for inventory
+│   │   │   │   ├── useInventoryTables.ts                       # Custom React hook managing stateful logic for inventory
+│   │   │   │   ├── useProductPriceEditor.ts                    # Custom React hook managing stateful logic for inventory
+│   │   │   │   ├── useProductStatus.ts                         # Custom React hook managing stateful logic for inventory
+│   │   │   │   ├── useProductStock.ts                          # Custom React hook managing stateful logic for inventory
+│   │   │   │   └── useStockTable.ts                            # pide las existencias de la bodega activa (una fila por producto y ubicación) y maneja la búsqueda, la ubicación, la categoría y la marca
+│   │   │   ├── screens/
+│   │   │   │   ├── CatalogScreens.tsx                          # React component / TypeScript module for inventory: CatalogScreens.tsx
+│   │   │   │   ├── ProductsScreen.tsx                          # Primary page screen view component for inventory (ProductsScreen)
+│   │   │   │   └── StockScreen.tsx                             # Inventario > Existencias: lo que hay en la bodega activa por producto y ubicación, con búsqueda, filtros y la acción de asignar un producto a una ubicación
+│   │   │   ├── selectors/
+│   │   │   │   └── inventory.selectors.ts                      # Memoized Redux state selectors computing derived state for inventory
+│   │   │   ├── services/
+│   │   │   │   ├── inventory.service.test.ts                   # Automated unit tests validating inventory.service
+│   │   │   │   └── inventory.service.ts                        # Client HTTP service consuming backend endpoints for inventory
+│   │   │   ├── slices/
+│   │   │   │   ├── inventory.productStock.test.ts              # Automated unit tests validating inventory.productStock
+│   │   │   │   ├── inventory.slice.test.ts                     # Automated unit tests validating inventory.slice
+│   │   │   │   └── inventory.slice.ts                          # Redux Toolkit slice managing state and reducers for inventory
+│   │   │   ├── thunks/
+│   │   │   │   └── inventory.thunks.ts                         # Async Redux thunks dispatching API calls for inventory
+│   │   │   ├── types/
+│   │   │   │   ├── inventory.api.types.ts                      # TypeScript interfaces, types and API response models for inventory
+│   │   │   │   └── inventory.types.ts                          # TypeScript interfaces, types and API response models for inventory
+│   │   │   └── index.ts                                        # Barrel exports file aggregating and exposing modules from the current directory
+│   │   ├── locations/
+│   │   │   ├── components/
+│   │   │   │   ├── drawer/
+│   │   │   │   │   ├── LocationDetailPanel.css                 # Visual CSS styles and responsive layout rules for LocationDetailPanel
+│   │   │   │   │   ├── LocationDetailPanel.tsx                 # Slide-over drawer panel component for locations (LocationDetailPanel)
+│   │   │   │   │   └── LocationFormPanel.tsx                   # Slide-over drawer panel component for locations (LocationFormPanel)
+│   │   │   │   └── table/
+│   │   │   │       └── LocationsTable.tsx                      # Interactive data table component with actions and filters for locations
+│   │   │   ├── constants/
+│   │   │   │   └── locations.constants.ts                      # Domain constants and immutable configuration values for locations
+│   │   │   ├── helpers/
+│   │   │   │   ├── locations.adapter.test.ts                   # Automated unit tests validating locations.adapter
+│   │   │   │   └── locations.adapter.ts                        # Data adapter transforming API response schemas into client models for locations
+│   │   │   ├── hooks/
+│   │   │   │   ├── useLocationActions.ts                       # Custom React hook managing stateful logic for locations
+│   │   │   │   ├── useLocationContent.ts                       # Custom React hook managing stateful logic for locations
+│   │   │   │   ├── useLocationForm.ts                          # Custom React hook managing stateful logic for locations
+│   │   │   │   └── useLocations.ts                             # Custom React hook managing stateful logic for locations
+│   │   │   ├── screens/
+│   │   │   │   ├── LocationsScreen.css                         # Visual CSS styles and responsive layout rules for LocationsScreen
+│   │   │   │   └── LocationsScreen.tsx                         # Primary page screen view component for locations (LocationsScreen)
+│   │   │   ├── selectors/
+│   │   │   │   └── locations.selectors.ts                      # Memoized Redux state selectors computing derived state for locations
+│   │   │   ├── services/
+│   │   │   │   └── locations.service.ts                        # Client HTTP service consuming backend endpoints for locations
+│   │   │   ├── slices/
+│   │   │   │   └── locations.slice.ts                          # Redux Toolkit slice managing state and reducers for locations
+│   │   │   ├── thunks/
+│   │   │   │   └── locations.thunks.ts                         # Async Redux thunks dispatching API calls for locations
+│   │   │   ├── types/
+│   │   │   │   └── locations.types.ts                          # TypeScript interfaces, types and API response models for locations
+│   │   │   └── index.ts                                        # Barrel exports file aggregating and exposing modules from the current directory
+│   │   ├── navigation/
+│   │   │   ├── constants/
+│   │   │   │   ├── menuItems.constants.ts                      # Domain constants and immutable configuration values for navigation
+│   │   │   │   └── navigation.constants.ts                     # Domain constants and immutable configuration values for navigation
+│   │   │   ├── helpers/
+│   │   │   │   ├── navigation.helpers.ts                       # React component / TypeScript module for navigation: navigation.helpers.ts
+│   │   │   │   └── navigation.route.test.ts                    # Automated unit tests validating navigation.route
+│   │   │   ├── hooks/
+│   │   │   │   └── useRouteSync.ts                             # Custom React hook managing stateful logic for navigation
+│   │   │   ├── slices/
+│   │   │   │   └── navigation.slice.ts                         # Redux Toolkit slice managing state and reducers for navigation
+│   │   │   ├── types/
+│   │   │   │   └── navigation.types.ts                         # TypeScript interfaces, types and API response models for navigation
+│   │   │   └── index.ts                                        # Barrel exports file aggregating and exposing modules from the current directory
+│   │   ├── orders/
+│   │   │   ├── components/
+│   │   │   │   ├── cancel/
+│   │   │   │   │   ├── OrderCancelDialog.css                   # Visual CSS styles and responsive layout rules for OrderCancelDialog
+│   │   │   │   │   └── OrderCancelDialog.tsx                   # Modal dialog window component for orders (OrderCancelDialog)
+│   │   │   │   ├── detail/
+│   │   │   │   │   ├── sections/
+│   │   │   │   │   │   ├── OrderHistorySection.tsx             # caja «Historial de etapas» del detalle de un pedido: por cada etapa, quién lo movió, cuándo entró y cuánto estuvo
+│   │   │   │   │   │   ├── OrderLinesSection.tsx               # React component / TypeScript module for orders: OrderLinesSection.tsx
+│   │   │   │   │   │   ├── OrderPaymentsSection.tsx            # React component / TypeScript module for orders: OrderPaymentsSection.tsx
+│   │   │   │   │   │   ├── OrderPeopleSection.tsx              # React component / TypeScript module for orders: OrderPeopleSection.tsx
+│   │   │   │   │   │   ├── OrderSectionParts.tsx               # React component / TypeScript module for orders: OrderSectionParts.tsx
+│   │   │   │   │   │   ├── OrderSections.css                   # Visual CSS styles and responsive layout rules for OrderSections
+│   │   │   │   │   │   ├── OrderSummarySection.tsx             # React component / TypeScript module for orders: OrderSummarySection.tsx
+│   │   │   │   │   │   ├── OrderTransferProof.css              # Visual CSS styles and responsive layout rules for OrderTransferProof
+│   │   │   │   │   │   └── OrderTransferProof.tsx              # React component / TypeScript module for orders: OrderTransferProof.tsx
+│   │   │   │   │   ├── OrderDrawer.css                         # Visual CSS styles and responsive layout rules for OrderDrawer
+│   │   │   │   │   └── OrderDrawer.tsx                         # React component / TypeScript module for orders: OrderDrawer.tsx
+│   │   │   │   ├── table/
+│   │   │   │   │   ├── OrderRowActions.css                     # Visual CSS styles and responsive layout rules for OrderRowActions
+│   │   │   │   │   ├── OrderRowActions.tsx                     # React component / TypeScript module for orders: OrderRowActions.tsx
+│   │   │   │   │   ├── OrdersTable.css                         # Visual CSS styles and responsive layout rules for OrdersTable
+│   │   │   │   │   └── OrdersTable.tsx                         # Interactive data table component with actions and filters for orders
+│   │   │   │   └── toolbar/
+│   │   │   │       ├── OrdersToolbar.css                       # Visual CSS styles and responsive layout rules for OrdersToolbar
+│   │   │   │       └── OrdersToolbar.tsx                       # Toolbar component with search and filter controls for orders
+│   │   │   ├── constants/
+│   │   │   │   └── orders.constants.ts                         # Domain constants and immutable configuration values for orders
+│   │   │   ├── helpers/
+│   │   │   │   ├── orders.actions.ts                           # Action handlers and helper triggers for orders
+│   │   │   │   ├── orders.adapter.test.ts                      # Automated unit tests validating orders.adapter
+│   │   │   │   ├── orders.adapter.ts                           # Data adapter transforming API response schemas into client models for orders
+│   │   │   │   ├── orders.clipboard.ts                         # React component / TypeScript module for orders: orders.clipboard.ts
+│   │   │   │   └── orders.labels.ts                            # React component / TypeScript module for orders: orders.labels.ts
+│   │   │   ├── hooks/
+│   │   │   │   ├── useOpenOrderDetail.ts                       # Custom React hook managing stateful logic for orders
+│   │   │   │   └── useOrdersLoader.ts                          # Custom React hook managing stateful logic for orders
+│   │   │   ├── screens/
+│   │   │   │   ├── OrdersScreen.css                            # Visual CSS styles and responsive layout rules for OrdersScreen
+│   │   │   │   └── OrdersScreen.tsx                            # Primary page screen view component for orders (OrdersScreen)
+│   │   │   ├── selectors/
+│   │   │   │   └── orders.selectors.ts                         # Memoized Redux state selectors computing derived state for orders
+│   │   │   ├── services/
+│   │   │   │   ├── orders.service.ts                           # Client HTTP service consuming backend endpoints for orders
+│   │   │   │   └── orders.verify.test.ts                       # Automated unit tests validating orders.verify
+│   │   │   ├── slices/
+│   │   │   │   └── orders.slice.ts                             # Redux Toolkit slice managing state and reducers for orders
+│   │   │   ├── thunks/
+│   │   │   │   └── orders.thunks.ts                            # Async Redux thunks dispatching API calls for orders
+│   │   │   ├── types/
+│   │   │   │   ├── orders.api.types.ts                         # TypeScript interfaces, types and API response models for orders
+│   │   │   │   └── orders.types.ts                             # TypeScript interfaces, types and API response models for orders
+│   │   │   └── index.ts                                        # Barrel exports file aggregating and exposing modules from the current directory
+│   │   ├── purchases/
+│   │   │   ├── components/
+│   │   │   │   ├── drawer/
+│   │   │   │   │   ├── PurchaseDetailPanel.tsx                 # detalle de una orden de compra en el panel derecho: datos de la orden, renglones con lo pedido y lo recibido, y las acciones (recibir, Excel, anular)
+│   │   │   │   │   ├── PurchaseFormPanel.tsx                   # formulario en el panel derecho para crear una orden de compra: proveedor, referencia, fecha esperada, notas y los productos con cantidad, costo e IVA
+│   │   │   │   │   ├── PurchasePanels.css                      # Visual CSS styles and responsive layout rules for PurchasePanels
+│   │   │   │   │   └── PurchaseReceivePanel.tsx                # recepción en bodega: por cada producto pendiente, cuánto llega y en qué ubicación de la bodega queda
+│   │   │   │   └── table/
+│   │   │   │       ├── PurchasesTable.css                      # Visual CSS styles and responsive layout rules for PurchasesTable
+│   │   │   │       └── PurchasesTable.tsx                      # tarjeta de órdenes de compra con buscador, filtros de bodega y estado, y tabla global
+│   │   │   ├── constants/
+│   │   │   │   └── purchases.constants.ts                      # estados de la orden con su texto y color, tamaño de carga y estado inicial
+│   │   │   ├── helpers/
+│   │   │   │   ├── purchases.adapter.ts                        # convierte lo que responde la API en Go (órdenes de compra y sus renglones) a lo que usa la app, y filtra la tabla por texto y estado
+│   │   │   │   ├── purchases.rules.test.ts                     # pruebas de las reglas de compras: pendiente, recibir, anular, validación y totales; y del adaptador de la API
+│   │   │   │   └── purchases.rules.ts                          # reglas puras de compras: qué falta recibir, cuándo se puede recibir o anular, validar lo que se recibe y calcular los totales de una orden nueva
+│   │   │   ├── hooks/
+│   │   │   │   ├── usePurchaseActions.ts                       # anular una orden de compra y bajar su Excel, con su aviso de éxito o error
+│   │   │   │   ├── usePurchaseDetail.ts                        # pide el detalle de una orden de compra (con sus renglones) al abrir el panel
+│   │   │   │   ├── usePurchaseForm.ts                          # formulario de una orden de compra nueva: proveedor, referencia, fecha esperada, notas y los productos con su cantidad, costo e IVA
+│   │   │   │   ├── usePurchaseReceive.ts                       # formulario de la recepción en bodega: cuánto entra de cada renglón y en qué ubicación queda
+│   │   │   │   └── usePurchases.ts                             # pide las órdenes de compra (globales o por bodega) y maneja la búsqueda y filtros
+│   │   │   ├── screens/
+│   │   │   │   ├── PurchaseOrdersScreen.tsx                    # Gestión Compras > Órdenes de Compra: todas las órdenes de la bodega activa, con búsqueda, estado, crear, ver, recibir, bajar el Excel y anular
+│   │   │   │   └── ReceivingScreen.tsx                         # Gestión Compras > Recepción en Bodega: solo las órdenes que esperan mercancía, con la acción de recibir por producto y ubicación
+│   │   │   ├── selectors/
+│   │   │   │   └── purchases.selectors.ts                      # lecturas del estado de compras
+│   │   │   ├── services/
+│   │   │   │   └── purchases.service.ts                        # llamadas al backend de compras: lista, detalle, crear, recibir, anular y el Excel de la orden
+│   │   │   ├── slices/
+│   │   │   │   ├── purchases.slice.test.ts                     # el estado de compras: carga de la lista, descarte de respuestas viejas y cambios que actualizan la lista y el detalle
+│   │   │   │   └── purchases.slice.ts                          # órdenes de compra: lista de la bodega o global, detalle y guardados
+│   │   │   ├── thunks/
+│   │   │   │   └── purchases.thunks.ts                         # cargas y cambios de compras: lista de la bodega, detalle, proveedores, crear, recibir, anular y bajar el Excel
+│   │   │   ├── types/
+│   │   │   │   └── purchases.types.ts                          # contratos de compras: la orden y sus renglones (lo que usa la app y lo que responde el backend), lo que se envía y el estado del slice
+│   │   │   └── index.ts                                        # Barrel exports file aggregating and exposing modules from the current directory
+│   │   ├── quotations/
+│   │   │   ├── components/
+│   │   │   │   ├── detail/
+│   │   │   │   │   ├── QuotationDetailPanel.css                # Visual CSS styles and responsive layout rules for QuotationDetailPanel
+│   │   │   │   │   └── QuotationDetailPanel.tsx                # Slide-over drawer panel component for quotations (QuotationDetailPanel)
+│   │   │   │   ├── table/
+│   │   │   │   │   ├── QuotationsTable.css                     # Visual CSS styles and responsive layout rules for QuotationsTable
+│   │   │   │   │   └── QuotationsTable.tsx                     # Interactive data table component with actions and filters for quotations
+│   │   │   │   ├── toolbar/
+│   │   │   │   │   ├── QuotationsToolbar.css                   # Visual CSS styles and responsive layout rules for QuotationsToolbar
+│   │   │   │   │   └── QuotationsToolbar.tsx                   # Toolbar component with search and filter controls for quotations
+│   │   │   │   ├── CreateQuotationDrawer.css                   # Visual CSS styles and responsive layout rules for CreateQuotationDrawer
+│   │   │   │   └── CreateQuotationDrawer.tsx                   # Slide-over drawer panel providing interactive workflow for CreateQuotationDrawer
+│   │   │   ├── constants/
+│   │   │   │   └── quotations.constants.ts                     # Domain constants and immutable configuration values for quotations
+│   │   │   ├── helpers/
+│   │   │   │   ├── quotations.adapter.test.ts                  # Automated unit tests validating quotations.adapter
+│   │   │   │   └── quotations.adapter.ts                       # Data adapter transforming API response schemas into client models for quotations
+│   │   │   ├── hooks/
+│   │   │   │   └── useQuotationsLoader.ts                      # Custom React hook managing stateful logic for quotations
+│   │   │   ├── screens/
+│   │   │   │   ├── QuotationsScreen.css                        # Visual CSS styles and responsive layout rules for QuotationsScreen
+│   │   │   │   └── QuotationsScreen.tsx                        # Primary page screen view component for quotations (QuotationsScreen)
+│   │   │   ├── selectors/
+│   │   │   │   └── quotations.selectors.ts                     # Memoized Redux state selectors computing derived state for quotations
+│   │   │   ├── services/
+│   │   │   │   ├── quotations.service.test.ts                  # Automated unit tests validating quotations.service
+│   │   │   │   └── quotations.service.ts                       # Client HTTP service consuming backend endpoints for quotations
+│   │   │   ├── slices/
+│   │   │   │   └── quotations.slice.ts                         # Redux Toolkit slice managing state and reducers for quotations
+│   │   │   ├── thunks/
+│   │   │   │   └── quotations.thunks.ts                        # Async Redux thunks dispatching API calls for quotations
+│   │   │   ├── types/
+│   │   │   │   ├── quotations.api.types.ts                     # TypeScript interfaces, types and API response models for quotations
+│   │   │   │   └── quotations.types.ts                         # TypeScript interfaces, types and API response models for quotations
+│   │   │   └── index.ts                                        # Barrel exports file aggregating and exposing modules from the current directory
+│   │   ├── realtime/
+│   │   │   ├── constants/
+│   │   │   │   └── realtime.constants.ts                       # Domain constants and immutable configuration values for realtime
+│   │   │   ├── helpers/
+│   │   │   │   ├── realtime.adapter.ts                         # Data adapter transforming API response schemas into client models for realtime
+│   │   │   │   ├── realtime.backoff.ts                         # React component / TypeScript module for realtime: realtime.backoff.ts
+│   │   │   │   ├── realtime.handlers.ts                        # React component / TypeScript module for realtime: realtime.handlers.ts
+│   │   │   │   └── realtime.url.ts                             # React component / TypeScript module for realtime: realtime.url.ts
+│   │   │   ├── hooks/
+│   │   │   │   └── useRealtime.ts                              # Custom React hook managing stateful logic for realtime
+│   │   │   ├── selectors/
+│   │   │   │   └── realtime.selectors.ts                       # Memoized Redux state selectors computing derived state for realtime
+│   │   │   ├── services/
+│   │   │   │   └── realtime.service.ts                         # Client HTTP service consuming backend endpoints for realtime
+│   │   │   ├── slices/
+│   │   │   │   └── realtime.slice.ts                           # Redux Toolkit slice managing state and reducers for realtime
+│   │   │   ├── thunks/
+│   │   │   │   └── realtime.thunks.ts                          # Async Redux thunks dispatching API calls for realtime
+│   │   │   ├── types/
+│   │   │   │   └── realtime.types.ts                           # TypeScript interfaces, types and API response models for realtime
+│   │   │   └── index.ts                                        # Barrel exports file aggregating and exposing modules from the current directory
+│   │   ├── reports/
+│   │   │   ├── hooks/
+│   │   │   │   └── useGeneralReport.ts                         # pide el reporte general al abrir la pantalla y entrega los datos, si está cargando y cómo volver a pedirlo
+│   │   │   ├── screens/
+│   │   │   │   ├── DashboardScreen.css                         # Visual CSS styles and clean card layout for executive DashboardScreen
+│   │   │   │   ├── DashboardScreen.tsx                         # Executive overview and operational dashboard placeholder screen view
+│   │   │   │   ├── GeneralReportScreen.css                     # Visual CSS styles and responsive layout rules for GeneralReportScreen
+│   │   │   │   └── GeneralReportScreen.tsx                     # Daily operations, sales, transfers, low stock and rotation report view
+│   │   │   ├── selectors/
+│   │   │   │   └── reports.selectors.ts                        # lecturas del reporte general
+│   │   │   ├── services/
+│   │   │   │   └── reports.service.ts                          # Client HTTP service consuming backend /reports endpoints
+│   │   │   ├── slices/
+│   │   │   │   ├── reports.slice.test.ts                       # el reporte general: carga, error y descarte de respuestas viejas
+│   │   │   │   └── reports.slice.ts                            # estado del reporte general: los datos, si está cargando y el último error
+│   │   │   ├── thunks/
+│   │   │   │   └── reports.thunks.ts                           # carga del reporte general
+│   │   │   ├── types/
+│   │   │   │   └── reports.types.ts                            # TypeScript interfaces and models for reports and metrics
+│   │   │   └── index.ts                                        # Barrel exports file aggregating and exposing modules from the current directory
+│   │   ├── returns/
+│   │   │   ├── components/
+│   │   │   │   ├── CreateReturnDrawer.css                      # Visual CSS styles and responsive layout rules for CreateReturnDrawer
+│   │   │   │   └── CreateReturnDrawer.tsx                      # React component / TypeScript module for returns: CreateReturnDrawer.tsx
+│   │   │   ├── screens/
+│   │   │   │   ├── ReturnsScreen.css                           # Visual CSS styles and responsive layout rules for ReturnsScreen
+│   │   │   │   └── ReturnsScreen.tsx                           # Primary page screen view component for returns (ReturnsScreen)
+│   │   │   ├── services/
+│   │   │   │   └── returns.service.ts                          # Client HTTP service consuming backend endpoints for returns
+│   │   │   ├── types/
+│   │   │   │   └── returns.types.ts                            # TypeScript interfaces, types and API response models for returns
+│   │   │   └── index.ts                                        # Barrel exports file aggregating and exposing modules from the current directory
+│   │   ├── screensaver/
+│   │   │   ├── components/
+│   │   │   │   ├── IdleScreensaver.css                         # Visual CSS styles and responsive layout rules for IdleScreensaver
+│   │   │   │   ├── IdleScreensaver.test.tsx                    # Automated unit tests validating IdleScreensaver
+│   │   │   │   └── IdleScreensaver.tsx                         # React component / TypeScript module for screensaver: IdleScreensaver.tsx
+│   │   │   ├── constants/
+│   │   │   │   └── screensaver.constants.ts                    # Domain constants and immutable configuration values for screensaver
+│   │   │   ├── helpers/
+│   │   │   │   ├── screensaver.helpers.test.ts                 # Automated unit tests validating screensaver.helpers
+│   │   │   │   ├── screensaver.image.ts                        # React component / TypeScript module for screensaver: screensaver.image.ts
+│   │   │   │   ├── screensaver.input.test.ts                   # Automated unit tests validating screensaver.input
+│   │   │   │   ├── screensaver.input.ts                        # React component / TypeScript module for screensaver: screensaver.input.ts
+│   │   │   │   ├── screensaver.physics.ts                      # React component / TypeScript module for screensaver: screensaver.physics.ts
+│   │   │   │   ├── screensaver.sampling.ts                     # React component / TypeScript module for screensaver: screensaver.sampling.ts
+│   │   │   │   ├── screensaver.view.test.ts                    # Automated unit tests validating screensaver.view
+│   │   │   │   └── screensaver.view.ts                         # React component / TypeScript module for screensaver: screensaver.view.ts
+│   │   │   ├── hooks/
+│   │   │   │   ├── useIdle.test.ts                             # Automated unit tests validating useIdle
+│   │   │   │   ├── useIdle.ts                                  # Custom React hook managing stateful logic for screensaver
+│   │   │   │   └── useParticleAnimation.ts                     # Custom React hook managing stateful logic for screensaver
+│   │   │   ├── types/
+│   │   │   │   └── screensaver.types.ts                        # TypeScript interfaces, types and API response models for screensaver
+│   │   │   └── index.ts                                        # Barrel exports file aggregating and exposing modules from the current directory
+│   │   ├── settings/
+│   │   │   ├── screens/
+│   │   │   │   ├── CompanyTab.css                              # Visual CSS styles and responsive layout rules for CompanyTab
+│   │   │   │   ├── CompanyTab.tsx                              # React component / TypeScript module for settings: CompanyTab.tsx
+│   │   │   │   ├── ScreensaverTab.css                          # Visual CSS styles and responsive layout rules for ScreensaverTab
+│   │   │   │   ├── ScreensaverTab.tsx                          # React component / TypeScript module for settings: ScreensaverTab.tsx
+│   │   │   │   ├── SecurityTab.css                             # Visual CSS styles and responsive layout rules for SecurityTab
+│   │   │   │   ├── SecurityTab.tsx                             # React component / TypeScript module for settings: SecurityTab.tsx
+│   │   │   │   ├── SettingsScreen.css                          # Visual CSS styles and responsive layout rules for SettingsScreen
+│   │   │   │   ├── SettingsScreen.tsx                          # Primary page screen view component for settings (SettingsScreen)
+│   │   │   │   └── SitesScreen.tsx                             # Primary page screen view component for settings (SitesScreen)
+│   │   │   └── index.ts                                        # Barrel exports file aggregating and exposing modules from the current directory
+│   │   ├── shop/
+│   │   │   ├── components/
+│   │   │   │   ├── brand/
+│   │   │   │   │   ├── ProductBrand.css                        # Visual CSS styles and responsive layout rules for ProductBrand
+│   │   │   │   │   └── ProductBrand.tsx                        # React component / TypeScript module for shop: ProductBrand.tsx
+│   │   │   │   ├── cart/
+│   │   │   │   │   ├── customer/
+│   │   │   │   │   │   ├── ShopCartCustomer.css                # Visual CSS styles and responsive layout rules for ShopCartCustomer
+│   │   │   │   │   │   └── ShopCartCustomer.tsx                # React component / TypeScript module for shop: ShopCartCustomer.tsx
+│   │   │   │   │   ├── search/
+│   │   │   │   │   │   ├── ShopCartSearch.css                  # Visual CSS styles and responsive layout rules for ShopCartSearch
+│   │   │   │   │   │   └── ShopCartSearch.tsx                  # React component / TypeScript module for shop: ShopCartSearch.tsx
+│   │   │   │   │   ├── ShopCartDrawer.css                      # Visual CSS styles and responsive layout rules for ShopCartDrawer
+│   │   │   │   │   ├── ShopCartDrawer.tsx                      # React component / TypeScript module for shop: ShopCartDrawer.tsx
+│   │   │   │   │   ├── ShopCartEmpty.css                       # Visual CSS styles and responsive layout rules for ShopCartEmpty
+│   │   │   │   │   ├── ShopCartEmpty.tsx                       # React component / TypeScript module for shop: ShopCartEmpty.tsx
+│   │   │   │   │   ├── ShopCartFooter.css                      # Visual CSS styles and responsive layout rules for ShopCartFooter
+│   │   │   │   │   ├── ShopCartFooter.tsx                      # React component / TypeScript module for shop: ShopCartFooter.tsx
+│   │   │   │   │   ├── ShopCartItem.css                        # Visual CSS styles and responsive layout rules for ShopCartItem
+│   │   │   │   │   └── ShopCartItem.tsx                        # React component / TypeScript module for shop: ShopCartItem.tsx
+│   │   │   │   ├── catalog/
+│   │   │   │   │   ├── ShopCatalogEmpty.css                    # Visual CSS styles and responsive layout rules for ShopCatalogEmpty
+│   │   │   │   │   ├── ShopCatalogEmpty.tsx                    # React component / TypeScript module for shop: ShopCatalogEmpty.tsx
+│   │   │   │   │   ├── ShopCatalogFilters.css                  # Visual CSS styles and responsive layout rules for ShopCatalogFilters
+│   │   │   │   │   ├── ShopCatalogFilters.tsx                  # React component / TypeScript module for shop: ShopCatalogFilters.tsx
+│   │   │   │   │   ├── ShopCatalogToolbar.css                  # Visual CSS styles and responsive layout rules for ShopCatalogToolbar
+│   │   │   │   │   └── ShopCatalogToolbar.tsx                  # Toolbar component with search and filter controls for shop
+│   │   │   │   ├── expense/
+│   │   │   │   │   ├── RegisterExpenseDrawer.css               # Visual CSS styles and responsive layout rules for RegisterExpenseDrawer
+│   │   │   │   │   └── RegisterExpenseDrawer.tsx               # Cash register expense entry drawer form for petty cash disbursements
+│   │   │   │   ├── icons/
+│   │   │   │   │   └── ShopIcons.tsx                           # React component / TypeScript module for shop: ShopIcons.tsx
+│   │   │   │   ├── productCard/
+│   │   │   │   │   ├── actions/
+│   │   │   │   │   │   ├── ProductCardActions.css              # Visual CSS styles and responsive layout rules for ProductCardActions
+│   │   │   │   │   │   ├── ProductCardActions.test.tsx         # Automated unit tests validating ProductCardActions
+│   │   │   │   │   │   └── ProductCardActions.tsx              # React component / TypeScript module for shop: ProductCardActions.tsx
+│   │   │   │   │   ├── icons/
+│   │   │   │   │   │   └── ProductCardIcons.tsx                # React component / TypeScript module for shop: ProductCardIcons.tsx
+│   │   │   │   │   ├── info/
+│   │   │   │   │   │   ├── ProductCardInfo.css                 # Visual CSS styles and responsive layout rules for ProductCardInfo
+│   │   │   │   │   │   └── ProductCardInfo.tsx                 # React component / TypeScript module for shop: ProductCardInfo.tsx
+│   │   │   │   │   ├── media/
+│   │   │   │   │   │   ├── ProductCardMedia.css                # Visual CSS styles and responsive layout rules for ProductCardMedia
+│   │   │   │   │   │   └── ProductCardMedia.tsx                # React component / TypeScript module for shop: ProductCardMedia.tsx
+│   │   │   │   │   ├── pricing/
+│   │   │   │   │   │   ├── ProductCardPricing.css              # Visual CSS styles and responsive layout rules for ProductCardPricing
+│   │   │   │   │   │   └── ProductCardPricing.tsx              # React component / TypeScript module for shop: ProductCardPricing.tsx
+│   │   │   │   │   ├── stock/
+│   │   │   │   │   │   ├── ProductCardStock.css                # Visual CSS styles and responsive layout rules for ProductCardStock
+│   │   │   │   │   │   ├── ProductCardStock.test.tsx           # Automated unit tests validating ProductCardStock
+│   │   │   │   │   │   ├── ProductCardStock.tsx                # React component / TypeScript module for shop: ProductCardStock.tsx
+│   │   │   │   │   │   ├── ProductCardWarehouseStock.css       # Visual CSS styles and responsive layout rules for ProductCardWarehouseStock
+│   │   │   │   │   │   └── ProductCardWarehouseStock.tsx       # React component / TypeScript module for shop: ProductCardWarehouseStock.tsx
+│   │   │   │   │   ├── tier/
+│   │   │   │   │   │   ├── ProductCardTierMenu.css             # Visual CSS styles and responsive layout rules for ProductCardTierMenu
+│   │   │   │   │   │   ├── ProductCardTierMenu.test.tsx        # Automated unit tests validating ProductCardTierMenu
+│   │   │   │   │   │   └── ProductCardTierMenu.tsx             # React component / TypeScript module for shop: ProductCardTierMenu.tsx
+│   │   │   │   │   ├── ProductCard.css                         # Visual CSS styles and responsive layout rules for ProductCard
+│   │   │   │   │   └── ProductCard.tsx                         # Card display component for shop (ProductCard)
+│   │   │   │   └── results/
+│   │   │   │       ├── ShopCatalogStatus.css                   # Visual CSS styles and responsive layout rules for ShopCatalogStatus
+│   │   │   │       └── ShopCatalogStatus.tsx                   # React component / TypeScript module for shop: ShopCatalogStatus.tsx
+│   │   │   ├── constants/
+│   │   │   │   ├── legacyProductImages.ts                      # React component / TypeScript module for shop: legacyProductImages.ts
+│   │   │   │   └── shop.constants.ts                           # Domain constants and immutable configuration values for shop
+│   │   │   ├── helpers/
+│   │   │   │   ├── shop.adapter.test.ts                        # Automated unit tests validating shop.adapter
+│   │   │   │   ├── shop.adapter.ts                             # Data adapter transforming API response schemas into client models for shop
+│   │   │   │   ├── shop.helpers.test.ts                        # Automated unit tests validating shop.helpers
+│   │   │   │   └── shop.helpers.ts                             # React component / TypeScript module for shop: shop.helpers.ts
+│   │   │   ├── hooks/
+│   │   │   │   ├── useCartMenuActions.ts                       # Custom React hook managing stateful logic for shop
+│   │   │   │   ├── useCartQuantity.ts                          # Custom React hook managing stateful logic for shop
+│   │   │   │   ├── useCartSync.ts                              # Custom React hook managing stateful logic for shop
+│   │   │   │   ├── useProductsLoader.ts                        # Custom React hook managing stateful logic for shop
+│   │   │   │   ├── useQuantityInput.test.ts                    # Automated unit tests validating useQuantityInput
+│   │   │   │   └── useQuantityInput.ts                         # Custom React hook managing stateful logic for shop
+│   │   │   ├── screens/
+│   │   │   │   ├── ShopCatalogScreen.css                       # Visual CSS styles and responsive layout rules for ShopCatalogScreen
+│   │   │   │   └── ShopCatalogScreen.tsx                       # Primary page screen view component for shop (ShopCatalogScreen)
+│   │   │   ├── selectors/
+│   │   │   │   ├── shop.products.selectors.test.ts             # Automated unit tests validating shop.products.selectors
+│   │   │   │   ├── shop.products.selectors.ts                  # Memoized Redux state selectors computing derived state for shop
+│   │   │   │   ├── shop.selectors.test.ts                      # Automated unit tests validating shop.selectors
+│   │   │   │   └── shop.selectors.ts                           # Memoized Redux state selectors computing derived state for shop
+│   │   │   ├── services/
+│   │   │   │   ├── shop.cart.service.test.ts                   # Automated unit tests validating shop.cart.service
+│   │   │   │   ├── shop.cart.service.ts                        # Client HTTP service consuming backend endpoints for shop
+│   │   │   │   ├── shop.products.service.test.ts               # Automated unit tests validating shop.products.service
+│   │   │   │   ├── shop.products.service.ts                    # Client HTTP service consuming backend endpoints for shop
+│   │   │   │   ├── shop.sales.service.test.ts                  # Automated unit tests validating shop.sales.service
+│   │   │   │   ├── shop.sales.service.ts                       # Client HTTP service consuming backend endpoints for shop
+│   │   │   │   └── shop.stock.service.ts                       # Client HTTP service consuming backend endpoints for shop
+│   │   │   ├── slices/
+│   │   │   │   ├── shop.cart.slice.test.ts                     # Automated unit tests validating shop.cart.slice
+│   │   │   │   ├── shop.cart.slice.ts                          # Redux Toolkit slice managing state and reducers for shop
+│   │   │   │   ├── shop.products.slice.test.ts                 # Automated unit tests validating shop.products.slice
+│   │   │   │   ├── shop.products.slice.ts                      # Redux Toolkit slice managing state and reducers for shop
+│   │   │   │   ├── shop.slice.test.ts                          # Automated unit tests validating shop.slice
+│   │   │   │   └── shop.slice.ts                               # Redux Toolkit slice managing state and reducers for shop
+│   │   │   ├── thunks/
+│   │   │   │   ├── shop.cart.customer.thunks.test.ts           # Automated unit tests validating shop.cart.customer.thunks
+│   │   │   │   ├── shop.cart.customer.thunks.ts                # Async Redux thunks dispatching API calls for shop
+│   │   │   │   ├── shop.cart.thunks.test.ts                    # Automated unit tests validating shop.cart.thunks
+│   │   │   │   ├── shop.cart.thunks.ts                         # Async Redux thunks dispatching API calls for shop
+│   │   │   │   ├── shop.cart.update.thunks.ts                  # Async Redux thunks dispatching API calls for shop
+│   │   │   │   ├── shop.products.thunks.test.ts                # Automated unit tests validating shop.products.thunks
+│   │   │   │   └── shop.products.thunks.ts                     # Async Redux thunks dispatching API calls for shop
+│   │   │   ├── types/
+│   │   │   │   ├── shop.api.types.ts                           # TypeScript interfaces, types and API response models for shop
+│   │   │   │   ├── shop.card.types.ts                          # TypeScript interfaces, types and API response models for shop
+│   │   │   │   ├── shop.cart.api.types.ts                      # TypeScript interfaces, types and API response models for shop
+│   │   │   │   ├── shop.cart.types.ts                          # TypeScript interfaces, types and API response models for shop
+│   │   │   │   ├── shop.catalog.types.ts                       # TypeScript interfaces, types and API response models for shop
+│   │   │   │   └── shop.types.ts                               # TypeScript interfaces, types and API response models for shop
+│   │   │   └── index.ts                                        # Barrel exports file aggregating and exposing modules from the current directory
+│   │   ├── superadmin/
+│   │   │   ├── components/
+│   │   │   │   ├── AdminFormDrawer.css                         # Visual CSS styles and responsive layout rules for AdminFormDrawer
+│   │   │   │   └── AdminFormDrawer.tsx                         # Drawer form component for creating and editing company admins
+│   │   │   ├── screens/
+│   │   │   │   ├── SuperadminAdminsScreen.css                  # Visual CSS styles and responsive layout rules for SuperadminAdminsScreen
+│   │   │   │   └── SuperadminAdminsScreen.tsx                  # Main management screen listing company administrators with search and status actions
+│   │   │   ├── services/
+│   │   │   │   └── superadmin.service.ts                       # Client HTTP service for superadmin company and admin user operations
+│   │   │   └── index.ts                                        # Barrel exports file aggregating and exposing modules from the current directory
+│   │   ├── transfers/
+│   │   │   ├── components/
+│   │   │   │   ├── detail/
+│   │   │   │   │   ├── TransferDetailPanel.css                 # Visual CSS styles and responsive layout rules for TransferDetailPanel
+│   │   │   │   │   └── TransferDetailPanel.tsx                 # Slide-over drawer panel component for transfers (TransferDetailPanel)
+│   │   │   │   ├── form/
+│   │   │   │   │   ├── CreateTransferForm.tsx                  # React component / TypeScript module for transfers: CreateTransferForm.tsx
+│   │   │   │   │   ├── ReceiveTransferForm.css                 # Visual CSS styles and responsive layout rules for ReceiveTransferForm
+│   │   │   │   │   ├── ReceiveTransferForm.tsx                 # React component / TypeScript module for transfers: ReceiveTransferForm.tsx
+│   │   │   │   │   ├── TransferFormShell.css                   # Visual CSS styles and responsive layout rules for TransferFormShell
+│   │   │   │   │   ├── TransferProductPicker.tsx               # React component / TypeScript module for transfers: TransferProductPicker.tsx
+│   │   │   │   │   ├── TransferRequest.css                     # Visual CSS styles and responsive layout rules for TransferRequest
+│   │   │   │   │   ├── TransferRequestLines.tsx                # React component / TypeScript module for transfers: TransferRequestLines.tsx
+│   │   │   │   │   └── TransferRequestResults.tsx              # React component / TypeScript module for transfers: TransferRequestResults.tsx
+│   │   │   │   ├── relocate/
+│   │   │   │   │   ├── RelocateStockPanel.css                  # Visual CSS styles and responsive layout rules for RelocateStockPanel
+│   │   │   │   │   └── RelocateStockPanel.tsx                  # Slide-over drawer panel component for transfers (RelocateStockPanel)
+│   │   │   │   └── table/
+│   │   │   │       ├── TransferItemsTable.css                  # Visual CSS styles and responsive layout rules for TransferItemsTable
+│   │   │   │       ├── TransferItemsTable.tsx                  # Interactive data table component with actions and filters for transfers
+│   │   │   │       ├── WarehouseProductsTable.css              # Visual CSS styles and responsive layout rules for WarehouseProductsTable
+│   │   │   │       ├── WarehouseProductsTable.tsx              # Interactive data table component with actions and filters for transfers
+│   │   │   │       └── WarehouseStockRow.tsx                   # React component / TypeScript module for transfers: WarehouseStockRow.tsx
+│   │   │   ├── constants/
+│   │   │   │   └── transfers.constants.ts                      # Domain constants and immutable configuration values for transfers
+│   │   │   ├── helpers/
+│   │   │   │   ├── transfers.adapter.ts                        # Data adapter transforming API response schemas into client models for transfers
+│   │   │   │   ├── transfers.filters.test.ts                   # Automated unit tests validating transfers.filters
+│   │   │   │   ├── transfers.filters.ts                        # React component / TypeScript module for transfers: transfers.filters.ts
+│   │   │   │   ├── transfers.request.test.ts                   # Automated unit tests validating transfers.request
+│   │   │   │   └── transfers.request.ts                        # React component / TypeScript module for transfers: transfers.request.ts
+│   │   │   ├── hooks/
+│   │   │   │   ├── useTransferProductSearch.ts                 # Custom React hook managing stateful logic for transfers
+│   │   │   │   ├── useTransferRequest.ts                       # Custom React hook managing stateful logic for transfers
+│   │   │   │   ├── useTransfersLoader.ts                       # Custom React hook managing stateful logic for transfers
+│   │   │   │   └── useWarehouseStock.ts                        # Custom React hook managing stateful logic for transfers
+│   │   │   ├── screens/
+│   │   │   │   ├── TransfersScreen.css                         # Visual CSS styles and responsive layout rules for TransfersScreen
+│   │   │   │   └── TransfersScreen.tsx                         # Primary page screen view component for transfers (TransfersScreen)
+│   │   │   ├── selectors/
+│   │   │   │   └── transfers.selectors.ts                      # Memoized Redux state selectors computing derived state for transfers
+│   │   │   ├── services/
+│   │   │   │   ├── transfers.service.test.ts                   # Automated unit tests validating transfers.service
+│   │   │   │   └── transfers.service.ts                        # Client HTTP service consuming backend endpoints for transfers
+│   │   │   ├── slices/
+│   │   │   │   ├── transfers.slice.test.ts                     # Automated unit tests validating transfers.slice
+│   │   │   │   └── transfers.slice.ts                          # Redux Toolkit slice managing state and reducers for transfers
+│   │   │   ├── thunks/
+│   │   │   │   └── transfers.thunks.ts                         # Async Redux thunks dispatching API calls for transfers
+│   │   │   ├── types/
+│   │   │   │   ├── transfers.api.types.ts                      # TypeScript interfaces, types and API response models for transfers
+│   │   │   │   └── transfers.types.ts                          # TypeScript interfaces, types and API response models for transfers
+│   │   │   └── index.ts                                        # Barrel exports file aggregating and exposing modules from the current directory
+│   │   ├── wallet/
+│   │   │   ├── components/
+│   │   │   │   ├── account/
+│   │   │   │   │   ├── CreditAccountDetail.css                 # Visual CSS styles and responsive layout rules for CreditAccountDetail
+│   │   │   │   │   ├── CreditAccountDetail.tsx                 # React component / TypeScript module for wallet: CreditAccountDetail.tsx
+│   │   │   │   │   ├── CreditAccountDrawer.tsx                 # React component / TypeScript module for wallet: CreditAccountDrawer.tsx
+│   │   │   │   │   ├── CreditAccountEmpty.css                  # Visual CSS styles and responsive layout rules for CreditAccountEmpty
+│   │   │   │   │   ├── CreditAccountEmpty.tsx                  # React component / TypeScript module for wallet: CreditAccountEmpty.tsx
+│   │   │   │   │   ├── CreditAccountMetrics.css                # Visual CSS styles and responsive layout rules for CreditAccountMetrics
+│   │   │   │   │   └── CreditAccountMetrics.tsx                # React component / TypeScript module for wallet: CreditAccountMetrics.tsx
+│   │   │   │   ├── billing/
+│   │   │   │   │   ├── enable/
+│   │   │   │   │   │   ├── CreditCustomerPicker.tsx            # React component / TypeScript module for wallet: CreditCustomerPicker.tsx
+│   │   │   │   │   │   ├── EnableCreditPanel.css               # Visual CSS styles and responsive layout rules for EnableCreditPanel
+│   │   │   │   │   │   ├── EnableCreditPanel.test.tsx          # Automated unit tests validating EnableCreditPanel
+│   │   │   │   │   │   └── EnableCreditPanel.tsx               # Slide-over drawer panel component for wallet (EnableCreditPanel)
+│   │   │   │   │   ├── forms/
+│   │   │   │   │   │   ├── CreditLimitForm.css                 # Visual CSS styles and responsive layout rules for CreditLimitForm
+│   │   │   │   │   │   ├── CreditLimitForm.tsx                 # React component / TypeScript module for wallet: CreditLimitForm.tsx
+│   │   │   │   │   │   ├── CreditPaymentForm.css               # Visual CSS styles and responsive layout rules for CreditPaymentForm
+│   │   │   │   │   │   └── CreditPaymentForm.tsx               # React component / TypeScript module for wallet: CreditPaymentForm.tsx
+│   │   │   │   │   └── invoices/
+│   │   │   │   │       ├── CreditInvoiceCard.css               # Visual CSS styles and responsive layout rules for CreditInvoiceCard
+│   │   │   │   │       ├── CreditInvoiceCard.tsx               # Card display component for wallet (CreditInvoiceCard)
+│   │   │   │   │       ├── CreditInvoiceList.css               # Visual CSS styles and responsive layout rules for CreditInvoiceList
+│   │   │   │   │       └── CreditInvoiceList.tsx               # React component / TypeScript module for wallet: CreditInvoiceList.tsx
+│   │   │   │   ├── clientRow/
+│   │   │   │   │   ├── CreditClientRow.css                     # Visual CSS styles and responsive layout rules for CreditClientRow
+│   │   │   │   │   ├── CreditClientRow.tsx                     # React component / TypeScript module for wallet: CreditClientRow.tsx
+│   │   │   │   │   ├── CreditStatusBadge.css                   # Visual CSS styles and responsive layout rules for CreditStatusBadge
+│   │   │   │   │   └── CreditStatusBadge.tsx                   # React component / TypeScript module for wallet: CreditStatusBadge.tsx
+│   │   │   │   ├── clientsTable/
+│   │   │   │   │   ├── CreditClientsTable.css                  # Visual CSS styles and responsive layout rules for CreditClientsTable
+│   │   │   │   │   ├── CreditClientsTable.tsx                  # Interactive data table component with actions and filters for wallet
+│   │   │   │   │   ├── CreditClientsToolbar.css                # Visual CSS styles and responsive layout rules for CreditClientsToolbar
+│   │   │   │   │   └── CreditClientsToolbar.tsx                # Toolbar component with search and filter controls for wallet
+│   │   │   │   ├── drawer/
+│   │   │   │   │   ├── AbonoDetailPanel.css                    # Visual CSS styles and responsive layout rules for AbonoDetailPanel
+│   │   │   │   │   ├── AbonoDetailPanel.tsx                    # detalle de un abono o recaudo en el panel derecho: recibo, cliente, bodega, venta, método, quién lo registró y verificó, y el comprobante
+│   │   │   │   │   ├── CreateAbonoPanel.css                    # Visual CSS styles and responsive layout rules for CreateAbonoPanel
+│   │   │   │   │   └── CreateAbonoPanel.tsx                    # formulario en el panel derecho para registrar un abono a cartera: cliente con crédito, factura, monto, método y comprobante
+│   │   │   │   ├── kpis/
+│   │   │   │   │   ├── WalletKpiHeader.css                     # Visual CSS styles and responsive layout rules for WalletKpiHeader
+│   │   │   │   │   └── WalletKpiHeader.tsx                     # React component / TypeScript module for wallet: WalletKpiHeader.tsx
+│   │   │   │   └── paymentsTable/
+│   │   │   │       ├── AbonosTable.css                         # Visual CSS styles and responsive layout rules for AbonosTable
+│   │   │   │       └── AbonosTable.tsx                         # Interactive data table component with actions and filters for wallet
+│   │   │   ├── constants/
+│   │   │   │   └── wallet.constants.ts                         # Domain constants and immutable configuration values for wallet
+│   │   │   ├── helpers/
+│   │   │   │   ├── wallet.abonos.pending.test.ts               # pruebas de las facturas con saldo y de lo que debe un cliente (lo que usa el formulario de abono)
+│   │   │   │   ├── wallet.abonos.test.ts                       # Automated unit tests validating wallet.abonos
+│   │   │   │   ├── wallet.abonos.ts                            # React component / TypeScript module for wallet: wallet.abonos.ts
+│   │   │   │   ├── wallet.adapter.test.ts                      # Automated unit tests validating wallet.adapter
+│   │   │   │   ├── wallet.adapter.ts                           # Data adapter transforming API response schemas into client models for wallet
+│   │   │   │   ├── wallet.helpers.test.ts                      # Automated unit tests validating wallet.helpers
+│   │   │   │   └── wallet.helpers.ts                           # React component / TypeScript module for wallet: wallet.helpers.ts
+│   │   │   ├── hooks/
+│   │   │   │   ├── useAccountData.ts                           # Custom React hook managing stateful logic for wallet
+│   │   │   │   ├── useCreateAbono.ts                           # estado y guardado del abono a cartera: buscar un cliente CON crédito, ver sus facturas pendientes, monto, método y comprobante
+│   │   │   │   ├── useCreditCustomerSearch.ts                  # Custom React hook managing stateful logic for wallet
+│   │   │   │   ├── useCreditPayment.ts                         # Custom React hook managing stateful logic for wallet
+│   │   │   │   ├── useEnableCreditForm.ts                      # Custom React hook managing stateful logic for wallet
+│   │   │   │   ├── usePaymentsHistory.ts                       # Custom React hook managing stateful logic for wallet
+│   │   │   │   └── useWalletLoader.ts                          # Custom React hook managing stateful logic for wallet
+│   │   │   ├── screens/
+│   │   │   │   ├── WalletScreen.css                            # Visual CSS styles and responsive layout rules for WalletScreen
+│   │   │   │   └── WalletScreen.tsx                            # Primary page screen view component for wallet (WalletScreen)
+│   │   │   ├── selectors/
+│   │   │   │   ├── wallet.selectors.test.ts                    # Automated unit tests validating wallet.selectors
+│   │   │   │   └── wallet.selectors.ts                         # Memoized Redux state selectors computing derived state for wallet
+│   │   │   ├── services/
+│   │   │   │   ├── wallet.payments.service.ts                  # Client HTTP service consuming backend endpoints for wallet
+│   │   │   │   ├── wallet.service.test.ts                      # Automated unit tests validating wallet.service
+│   │   │   │   └── wallet.service.ts                           # Client HTTP service consuming backend endpoints for wallet
+│   │   │   ├── slices/
+│   │   │   │   └── wallet.slice.ts                             # Redux Toolkit slice managing state and reducers for wallet
+│   │   │   ├── thunks/
+│   │   │   │   ├── wallet.history.thunks.ts                    # Async Redux thunks dispatching API calls for wallet
+│   │   │   │   ├── wallet.payments.thunks.ts                   # Async Redux thunks dispatching API calls for wallet
+│   │   │   │   ├── wallet.thunks.test.ts                       # Automated unit tests validating wallet.thunks
+│   │   │   │   └── wallet.thunks.ts                            # Async Redux thunks dispatching API calls for wallet
+│   │   │   ├── types/
+│   │   │   │   ├── wallet.account.types.ts                     # TypeScript interfaces, types and API response models for wallet
+│   │   │   │   ├── wallet.api.types.ts                         # TypeScript interfaces, types and API response models for wallet
+│   │   │   │   ├── wallet.table.types.ts                       # TypeScript interfaces, types and API response models for wallet
+│   │   │   │   └── wallet.types.ts                             # TypeScript interfaces, types and API response models for wallet
+│   │   │   └── index.ts                                        # Barrel exports file aggregating and exposing modules from the current directory
+│   │   └── warehouses/
+│   │       ├── components/
+│   │       │   ├── drawer/
+│   │       │   │   ├── WarehouseDetailPanel.tsx                # Slide-over drawer panel providing interactive workflow for WarehouseDetailPanel
+│   │       │   │   └── WarehouseFormPanel.tsx                  # Slide-over drawer panel providing interactive workflow for WarehouseFormPanel
+│   │       │   ├── CompanyWarehousesPanel.css                  # Visual CSS styles and responsive layout rules for CompanyWarehousesPanel
+│   │       │   ├── CompanyWarehousesPanel.tsx                  # Slide-over drawer panel component for warehouses (CompanyWarehousesPanel)
+│   │       │   ├── WarehouseLocationsManagement.tsx            # React component for WarehouseLocationsManagement
+│   │       │   ├── WarehousesTable.css                         # Visual CSS styles and responsive layout rules for WarehousesTable
+│   │       │   └── WarehousesTable.tsx                         # Interactive responsive data table rendering paginated rows and actions for Warehouses
+│   │       ├── constants/
+│   │       │   └── warehouses.constants.ts                     # Domain constants and immutable configuration values for warehouses
+│   │       ├── helpers/
+│   │       │   ├── warehouses.helpers.test.ts                  # Automated unit tests validating warehouses.helpers
+│   │       │   ├── warehouses.helpers.ts                       # React component / TypeScript module for warehouses: warehouses.helpers.ts
+│   │       │   ├── warehouses.manage.test.ts                   # pruebas del filtro de la tabla de bodegas y del código sugerido
+│   │       │   └── warehouses.manage.ts                        # funciones puras de la pantalla de gestión de bodegas: filtrar la tabla y sugerir el código de una bodega nueva
+│   │       ├── hooks/
+│   │       │   ├── useManagedWarehouses.ts                     # TypeScript helper utility module for useManagedWarehouses
+│   │       │   ├── useWarehouseActions.ts                      # activar o desactivar una bodega y abrir sus ubicaciones, con su aviso de éxito o error
+│   │       │   ├── useWarehouseForm.ts                         # TypeScript helper utility module for useWarehouseForm
+│   │       │   └── useWarehouses.ts                            # Custom React hook managing stateful logic for warehouses
+│   │       ├── screens/
+│   │       │   ├── WarehousesScreen.css                        # Visual CSS styles and responsive layout rules for WarehousesScreen
+│   │       │   └── WarehousesScreen.tsx                        # Primary page screen view component for warehouses (WarehousesScreen)
+│   │       ├── selectors/
+│   │       │   └── warehouses.selectors.ts                     # Memoized Redux state selectors computing derived state for warehouses
+│   │       ├── services/
+│   │       │   ├── warehouses.service.test.ts                  # Automated unit tests validating warehouses.service
+│   │       │   └── warehouses.service.ts                       # Client HTTP service consuming backend endpoints for warehouses
+│   │       ├── slices/
+│   │       │   └── warehouses.slice.ts                         # Redux Toolkit slice managing state and reducers for warehouses
+│   │       ├── thunks/
+│   │       │   ├── warehouses.thunks.test.ts                   # Automated unit tests validating warehouses.thunks
+│   │       │   └── warehouses.thunks.ts                        # Async Redux thunks dispatching API calls for warehouses
+│   │       ├── types/
+│   │       │   └── warehouse.types.ts                          # TypeScript interfaces, types and API response models for warehouses
+│   │       └── index.ts                                        # Barrel exports file aggregating and exposing modules from the current directory
+│   ├── global/
+│   │   ├── components/
+│   │   │   └── UI/
+│   │   │       ├── atoms/
+│   │   │       │   ├── AppToaster.tsx                          # Global toast notification container rendering success, error and info alerts with auto-dismiss
+│   │   │       │   ├── Button.css                              # Visual CSS styles and responsive layout rules for Button
+│   │   │       │   ├── Button.tsx                              # Polymorphic design-system button supporting variants (primary, secondary, danger, ghost, outline)
+│   │   │       │   ├── Pill.css                                # Visual CSS styles and responsive layout rules for Pill
+│   │   │       │   └── Pill.tsx                                # Compact status badge pill component with semantic color coding (success, warning, error, neutral)
+│   │   │       └── molecules/
+│   │   │           ├── chips/
+│   │   │           │   ├── ChipSelect.css                      # Visual CSS styles and responsive layout rules for ChipSelect
+│   │   │           │   └── ChipSelect.tsx                      # Multi-tag chip selection component for filtering categories, brands and statuses
+│   │   │           ├── dialogs/
+│   │   │           │   ├── ConfirmDialog.css                   # Visual CSS styles and responsive layout rules for ConfirmDialog
+│   │   │           │   └── ConfirmDialog.tsx                   # Modal dialog window component for  (ConfirmDialog)
+│   │   │           ├── filters/
+│   │   │           │   ├── FilterSelect.css                    # Visual CSS styles and responsive layout rules for FilterSelect
+│   │   │           │   ├── FilterSelect.tsx                    # Custom styled dropdown select component for filtering data grids by category or status
+│   │   │           │   ├── SearchBar.css                       # Visual CSS styles and responsive layout rules for SearchBar
+│   │   │           │   └── SearchBar.tsx                       # Debounced search input field with clear button and loading indicator spinner
+│   │   │           ├── form/
+│   │   │           │   ├── DrawerFormShell.css                 # Visual CSS styles and responsive layout rules for DrawerFormShell
+│   │   │           │   ├── FormInputs.css                      # Visual CSS styles and responsive layout rules for FormInputs
+│   │   │           │   ├── index.ts                            # Barrel exports file aggregating and exposing modules from the current directory
+│   │   │           │   ├── MoneyInput.test.tsx                 # Automated unit tests validating MoneyInput
+│   │   │           │   ├── MoneyInput.tsx                      # Currency-formatted number input enforcing monetary decimal constraints and currency symbols
+│   │   │           │   ├── ValidatedInput.tsx                  # Text input component with integrated real-time validation error messaging and icon cues
+│   │   │           │   └── ValidatedNumberInput.tsx            # Numeric input component enforcing min, max, step restrictions and numeric validation
+│   │   │           ├── qr/
+│   │   │           │   ├── QrLabelSheet.css                    # Visual CSS styles and responsive layout rules for QrLabelSheet
+│   │   │           │   └── QrLabelSheet.tsx                    # React component / TypeScript module for UI: QrLabelSheet.tsx
+│   │   │           ├── stats/
+│   │   │           │   ├── StatCard.css                        # Visual CSS styles and responsive layout rules for StatCard
+│   │   │           │   └── StatCard.tsx                        # Card display component for  (StatCard)
+│   │   │           └── table/
+│   │   │               ├── Pagination.css                      # Visual CSS styles and responsive layout rules for Pagination
+│   │   │               ├── Pagination.test.tsx                 # Automated unit tests validating Pagination
+│   │   │               ├── Pagination.tsx                      # Accessible pagination toolbar with page numbers, items-per-page selector and navigation buttons
+│   │   │               ├── RowActions.css                      # Visual CSS styles and responsive layout rules for RowActions
+│   │   │               └── RowActions.tsx                      # Contextual row action menu or button group (edit, view, delete, print) for data tables
+│   │   ├── helpers/
+│   │   │   ├── access/
+│   │   │   │   ├── accessLevels.test.ts                        # Automated unit tests validating accessLevels
+│   │   │   │   └── accessLevels.ts                             # Role-based access level definitions and permission matrix for UI feature gates
+│   │   │   ├── feedback/
+│   │   │   │   └── toast.ts                                    # Imperative toast dispatcher triggering notify.success, notify.error and notify.info across app
+│   │   │   ├── files/
+│   │   │   │   ├── saveBlob.test.ts                            # el nombre del archivo que manda el backend
+│   │   │   │   └── saveBlob.ts                                 # guarda en el equipo del usuario un archivo que llegó del backend (por ejemplo, el Excel de una orden de compra)
+│   │   │   ├── formatting/
+│   │   │   │   └── format.ts                                   # Formatting helpers: currency formatting, standard date-time representations and number separators
+│   │   │   ├── images/
+│   │   │   │   ├── imageOptimizer.test.ts                      # Automated unit tests validating imageOptimizer
+│   │   │   │   └── imageOptimizer.ts                           # React component / TypeScript module for UI: imageOptimizer.ts
+│   │   │   ├── pricing/
+│   │   │   │   ├── priceTier.test.ts                           # Automated unit tests validating priceTier
+│   │   │   │   └── priceTier.ts                                # Customer wholesale price tier resolver calculating tiered discounts (P1 to P4)
+│   │   │   ├── qr/
+│   │   │   │   ├── qr.test.ts                                  # Automated unit tests validating qr
+│   │   │   │   └── qr.ts                                       # React component / TypeScript module for UI: qr.ts
+│   │   │   ├── storage/
+│   │   │   │   ├── session.storage.ts                          # Type-safe wrapper for browser sessionStorage operations with automatic JSON serialization
+│   │   │   │   ├── storage.ts                                  # Type-safe wrapper for browser localStorage handling persistence of auth tokens and preferences
+│   │   │   │   └── storageUrl.ts                               # Media asset URL builder resolving relative backend image paths to absolute public URLs
+│   │   │   ├── validation/
+│   │   │   │   └── validation.helpers.ts                       # Reusable validator helpers: email regex, phone formatting, tax ID (NIT/RUT) and empty checks
+│   │   │   ├── warehouse/
+│   │   │   │   └── warehouse.ts                                # Warehouse helper utilities: resolves warehouse badges, short codes (B-01) and stock distribution
+│   │   │   ├── format.ts                                       # Formatting helpers: currency formatting, standard date-time representations and number separators
+│   │   │   └── toast.ts                                        # Imperative toast dispatcher triggering notify.success, notify.error and notify.info across app
+│   │   ├── hooks/
+│   │   │   ├── access/
+│   │   │   │   ├── usePermissions.test.ts                      # Automated unit tests validating usePermissions
+│   │   │   │   └── usePermissions.ts                           # React hook evaluating active user permissions against requested feature or action gates
+│   │   │   ├── data/
+│   │   │   │   ├── useApiHealth.ts                             # React hook periodically probing API health endpoint and tracking connection latency
+│   │   │   │   ├── useAsyncValidation.test.ts                  # Automated unit tests validating useAsyncValidation
+│   │   │   │   ├── useAsyncValidation.ts                       # React hook executing asynchronous form field validations (e.g. duplicate SKU or email)
+│   │   │   │   ├── useDebouncedValue.test.ts                   # Automated unit tests validating useDebouncedValue
+│   │   │   │   ├── useDebouncedValue.ts                        # Custom hook delaying state updates by a given debounce duration to throttle searches
+│   │   │   │   ├── usePagedList.test.ts                        # Automated unit tests validating usePagedList
+│   │   │   │   ├── usePagedList.ts                             # Custom React hook managing stateful logic for
+│   │   │   │   └── useQrImages.ts                              # Custom React hook managing stateful logic for
+│   │   │   ├── store/
+│   │   │   │   └── useRedux.ts                                 # Typed Redux hooks (useAppDispatch, useAppSelector) for safe access to the global store
+│   │   │   └── ui/
+│   │   │       ├── useClickOutside.ts                          # Custom hook detecting pointer clicks outside of a target ref element (for dropdowns/menus)
+│   │   │       ├── useEscapeKey.ts                             # Custom hook listening for the Escape key to close active modals, drawers or overlays
+│   │   │       └── useVerticalDrag.ts                          # Custom hook providing smooth touch and mouse vertical drag handling for bottom sheets/drawers
+│   │   └── types/
+│   │       └── drawerMenu.types.ts                             # TypeScript types and interfaces defining sidebar and drawer menu navigation structures
+│   ├── styles/
+│   │   ├── table-scroll.css                                    # Visual CSS styles and responsive layout rules for table-scroll
+│   │   └── tokens.css                                          # Visual CSS styles and responsive layout rules for tokens
+│   ├── App.css                                                 # Global CSS resets, layout CSS custom properties and responsive typography
+│   ├── App.tsx                                                 # Root component: mounts AuthGate, ErpLayout, IdleScreensaver and global AppToaster
+│   └── main.tsx                                                # React application entry point: mounts Redux Store Provider into DOM root element
+├── .env                                                        # Project file: .env
+├── .gitignore                                                  # Project file: .gitignore
+├── eslint.config.js                                            # ESLint modern flat configuration enforcing code quality and TypeScript standards
+├── index.html                                                  # Main HTML shell document: viewport configuration and typography preloading
+├── package-lock.json                                           # NPM deterministic dependency lockfile guaranteeing reproducible builds
+├── package.json                                                # NPM package manifest: React 19, Redux Toolkit, Axios, Vitest, Lucide
+├── README.md                                                   # Project overview documentation, onboarding instructions and technical roadmap
+├── tsconfig.app.json                                           # Strict TypeScript compiler configuration for client web application
+├── tsconfig.json                                               # Root TypeScript workspace compiler configuration
+├── tsconfig.node.json                                          # TypeScript configuration tailored for Node.js build scripts and tooling
+└── vite.config.ts                                              # Vite bundler configuration with React SWC plugin and @/ path alias

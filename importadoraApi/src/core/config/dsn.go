@@ -1,5 +1,8 @@
 package config
 
+// dsn.go · arma la cadena de conexión (DSN) a la base de datos desde la configuración
+// conecta con: core/db (la usa para conectar)
+
 import (
 	"fmt"
 	"net/url"

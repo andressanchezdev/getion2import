@@ -3,7 +3,7 @@
 // ojo: solo se mueve en vertical y siempre queda pegada al borde derecho; un clic sin arrastre abre el carrito
 import React from 'react'
 import './DrawerTab.css'
-import { useVerticalDrag } from '@/global/hooks/useVerticalDrag'
+import { useVerticalDrag } from '@/global/hooks/ui/useVerticalDrag'
 
 interface DrawerTabProps {
   icon: string

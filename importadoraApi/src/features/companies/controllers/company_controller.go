@@ -1,5 +1,8 @@
 package controllers
 
+// company_controller.go · controlador HTTP de compañías: recibe la petición, valida la entrada y llama al servicio; no tiene lógica de negocio
+// conecta con: los services y dtos de compañías y core/utils (respuestas y errores); los registra routes
+
 import (
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/utils"
@@ -13,6 +16,7 @@ type CompanyController struct {
 	service *services.CompanyService
 }
 
+// NewCompanyController crea el controlador con las piezas que necesita para funcionar.
 func NewCompanyController(service *services.CompanyService) *CompanyController {
 	return &CompanyController{service: service}
 }

@@ -1,5 +1,8 @@
 package controllers
 
+// warehouse_location_controller.go · controlador HTTP de bodegas: recibe la petición, valida la entrada y llama al servicio; no tiene lógica de negocio
+// conecta con: los services y dtos de bodegas y core/utils (respuestas y errores); los registra routes
+
 import (
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/utils"
@@ -100,4 +103,3 @@ func (c *WarehouseController) DeleteLocation(ctx echo.Context) error {
 
 	return utils.RespondNoContent(ctx)
 }
-

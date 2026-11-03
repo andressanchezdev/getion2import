@@ -1,5 +1,8 @@
 package routes
 
+// auth_routes.go · rutas HTTP de autenticación y sesiones y los roles o permisos que exige cada una
+// conecta con: los controllers de autenticación y sesiones y core/middlewares (autenticación y permisos); los arma core/bootstrap
+
 import (
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/features/auth/controllers"
@@ -23,4 +26,3 @@ func RegisterRoutes(e *echo.Echo, authMiddleware *middlewares.AuthMiddleware, ct
 		}
 	}
 }
-

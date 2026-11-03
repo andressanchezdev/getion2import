@@ -1,0 +1,41 @@
+/* AssignStockPanel.css · asignar un producto a una ubicación: lista de resultados de la búsqueda · solo usa tokens de styles/tokens.css */
+.assign-stock-search {
+  position: relative;
+}
+
+.assign-stock-results {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-rest);
+  overflow: hidden;
+}
+
+.assign-stock-option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.assign-stock-option span {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.assign-stock-option:hover,
+.assign-stock-option:focus-visible {
+  background: var(--c-slate-50);
+}

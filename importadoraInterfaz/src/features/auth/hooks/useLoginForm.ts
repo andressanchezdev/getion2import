@@ -2,8 +2,8 @@
 // conecta con: auth.helpers (validación), auth.thunks (login), auth.selectors (¿ingresando?), global toast; lo usa LoginForm
 // ojo: igual que importadora-online, pero sin mostrar tokens en consola y con alertas de sonner en vez de texto en rojo
 import { useState, type FormEvent } from 'react'
-import { toast } from '@/global/helpers/toast'
-import { useAppDispatch, useAppSelector } from '@/global/hooks/useRedux'
+import { toast } from '@/global/helpers/feedback/toast'
+import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { LOGIN_MESSAGES } from '../constants/auth.constants'
 import { getDisplayName, hasLoginFields } from '../helpers/auth.helpers'
 import { selectIsAuthenticating } from '../selectors/auth.selectors'

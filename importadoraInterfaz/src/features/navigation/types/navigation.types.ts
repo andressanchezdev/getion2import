@@ -1,4 +1,4 @@
-// navigation.types · contratos del menú y del estado de navegación (ui)
+// navigation.types — contratos del menú y del estado de navegación (ui)
 // conecta con: menuItems.constants, navigation.slice, SideMenu, MainContent, DrawerRight
 export type ERPModule =
   | 'shop'
@@ -11,8 +11,8 @@ export type ERPModule =
   | 'thirdParties'
   | 'reports'
   | 'settings'
+  | 'superadmin'
 
-// ojo: antes subitems era string[] y la lógica comparaba el texto visible; ahora id (código) + label (cliente)
 export interface NavSubitem {
   id: string
   label: string
@@ -26,16 +26,75 @@ export interface NavItem {
   badgeCount?: number
 }
 
-// ojo: el usuario y la empresa ya no se guardan aquí; salen de la sesión (features/auth)
+export interface HistoryTarget {
+  entity: string
+  entityId?: number
+  label?: string
+  entityType?: string
+}
+
+export type DrawerFormKind =
+  | 'createCustomer'
+  | 'createTransfer'
+  | 'receiveTransfer'
+  | 'auditDetail'
+  | 'employeePermissions'
+  | 'editCustomer'
+  | 'quotationDetail'
+  | 'roleForm'
+  | 'companyWarehouses'
+  | 'checkout'
+  | 'employeeDetail'
+  | 'productDetail'
+  | 'editProduct'
+  | 'productLocations'
+  | 'relocateStock'
+  | 'catalogItem'
+  | 'catalogDetail'
+  | 'enableCredit'
+  | 'transferDetail'
+  | 'bankConfirm'
+  | 'createProduct'
+  | 'qrLabels'
+  | 'locationForm'
+  | 'locationDetail'
+  | 'externalForm'
+  | 'warehouseForm'
+  | 'warehouseDetail'
+  | 'assignStock'
+  | 'createAbono'
+  | 'abonoDetail'
+  | 'cashOpen'
+  | 'cashClose'
+  | 'cashCollect'
+  | 'purchaseDetail'
+  | 'purchaseReceive'
+  | 'purchaseForm'
+  | 'billingConfig'
+  | 'docSeriesForm'
+  | 'adminForm'
+  | 'registerExpense'
+
+export interface DrawerForm {
+  kind: DrawerFormKind
+  payload?: unknown
+}
+
 export interface UIState {
   activeModule: ERPModule
   activeSubitem: string
   sidebarOpen: boolean
   rightDrawerOpen: boolean
+  drawerForm: DrawerForm | null
   activeWarehouseId: string
   activeWarehouseName: string
+  activeCompanyId?: number
+  activeCompanyName?: string
+  historyTarget: HistoryTarget | null
   cashRegisterStatus: 'open' | 'closed'
+  isMenuOpen?: boolean
+  isSideMenuHovered?: boolean
+  isPinned?: boolean
 }
 
-// Alias semántico para Navigation
 export type NavigationState = UIState

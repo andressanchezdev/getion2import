@@ -1,5 +1,8 @@
 package repositories
 
+// brand_repo.go · acceso a la base de catálogo (marcas, categorías y modelos): aquí vive el SQL; cada método recibe la conexión o la transacción
+// conecta con: core/db (DBExecutor) y los dtos de catálogo (marcas, categorías y modelos); los usan los services de catálogo (marcas, categorías y modelos)
+
 import (
 	"context"
 	"errors"
@@ -21,10 +24,12 @@ type BrandEntity struct {
 
 type BrandRepository struct{}
 
+// NewBrandRepository crea el repositorio; no guarda estado, cada método recibe la conexión o transacción.
 func NewBrandRepository() *BrandRepository {
 	return &BrandRepository{}
 }
 
+// FindByID busca la marca por su id (nil si no existe).
 func (r *BrandRepository) FindByID(ctx context.Context, q db.DBExecutor, id int64) (*BrandEntity, error) {
 	const sql = `SELECT id, company_id, name, image_url, is_active, created_at FROM brands WHERE id = $1`
 	var b BrandEntity
@@ -38,6 +43,7 @@ func (r *BrandRepository) FindByID(ctx context.Context, q db.DBExecutor, id int6
 	return &b, nil
 }
 
+// FindByCompanyAndName busca la marca por compañía y nombre (nil si no existe).
 func (r *BrandRepository) FindByCompanyAndName(ctx context.Context, q db.DBExecutor, companyID int64, name string) (*BrandEntity, error) {
 	const sql = `SELECT id, company_id, name, image_url, is_active, created_at FROM brands WHERE company_id = $1 AND LOWER(name) = LOWER($2)`
 	var b BrandEntity
@@ -51,6 +57,7 @@ func (r *BrandRepository) FindByCompanyAndName(ctx context.Context, q db.DBExecu
 	return &b, nil
 }
 
+// ListByCompany lista las marcas de una compañía.
 func (r *BrandRepository) ListByCompany(ctx context.Context, q db.DBExecutor, companyID int64, activeOnly bool) ([]BrandEntity, error) {
 	sql := `SELECT id, company_id, name, image_url, is_active, created_at FROM brands WHERE company_id = $1`
 	if activeOnly {
@@ -75,6 +82,7 @@ func (r *BrandRepository) ListByCompany(ctx context.Context, q db.DBExecutor, co
 	return list, rows.Err()
 }
 
+// Create inserta la marca y devuelve el registro guardado.
 func (r *BrandRepository) Create(ctx context.Context, q db.DBExecutor, b *BrandEntity) (*BrandEntity, error) {
 	const sql = `
 		INSERT INTO brands (company_id, name, image_url, is_active)
@@ -88,6 +96,7 @@ func (r *BrandRepository) Create(ctx context.Context, q db.DBExecutor, b *BrandE
 	return b, nil
 }
 
+// Update actualiza los datos de la marca.
 func (r *BrandRepository) Update(ctx context.Context, q db.DBExecutor, b *BrandEntity) (*BrandEntity, error) {
 	const sql = `UPDATE brands SET name = $1, image_url = $2, is_active = $3 WHERE id = $4`
 	cmdTag, err := q.Exec(ctx, sql, b.Name, b.ImageURL, b.IsActive, b.ID)
@@ -100,6 +109,7 @@ func (r *BrandRepository) Update(ctx context.Context, q db.DBExecutor, b *BrandE
 	return b, nil
 }
 
+// SoftDelete marca la marca como eliminada (borrado lógico: no se pierde el registro).
 func (r *BrandRepository) SoftDelete(ctx context.Context, q db.DBExecutor, id int64) error {
 	const sql = `UPDATE brands SET is_active = FALSE WHERE id = $1`
 	cmdTag, err := q.Exec(ctx, sql, id)

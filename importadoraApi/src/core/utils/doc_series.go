@@ -1,5 +1,8 @@
 package utils
 
+// doc_series.go · numeración de documentos: calcula el siguiente consecutivo de una serie (pedidos, facturas, recibos)
+// conecta con: sales, payments, purchases y otros módulos que numeran documentos
+
 import (
 	"context"
 	"errors"

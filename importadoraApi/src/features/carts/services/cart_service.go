@@ -1,5 +1,8 @@
 package services
 
+// cart_service.go · reglas de negocio de carritos: valida permisos, compañía y datos, coordina las transacciones y arma las respuestas
+// conecta con: los repositories y dtos de carritos; los llama el controller y la conexión llega del contenedor
+
 import (
 	"context"
 
@@ -27,6 +30,7 @@ type CartService struct {
 	auditRepo     *authRepos.AuditRepository
 }
 
+// NewCartService crea el servicio con las piezas que necesita para funcionar.
 func NewCartService(
 	cfg *config.Config,
 	pool *pgxpool.Pool,
@@ -47,6 +51,7 @@ func NewCartService(
 	}
 }
 
+// GetActiveCart devuelve el carrito activo del empleado, con sus renglones y totales.
 func (s *CartService) GetActiveCart(ctx context.Context, actor *middlewares.ActorContext) (*dtos.CartResponse, error) {
 	if actor == nil {
 		return nil, utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
@@ -85,6 +90,7 @@ func (s *CartService) GetActiveCart(ctx context.Context, actor *middlewares.Acto
 	return s.buildResponse(cart, items), nil
 }
 
+// GetByID devuelve el carrito por su id, validando que sea de la compañía del usuario.
 func (s *CartService) GetByID(ctx context.Context, actor *middlewares.ActorContext, id int64) (*dtos.CartResponse, error) {
 	if actor == nil {
 		return nil, utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
@@ -112,6 +118,7 @@ func (s *CartService) GetByID(ctx context.Context, actor *middlewares.ActorConte
 	return s.buildResponse(cart, items), nil
 }
 
+// Create crea el carrito con las validaciones del negocio (compañía, duplicados y permisos).
 func (s *CartService) Create(ctx context.Context, actor *middlewares.ActorContext, req dtos.CreateCartRequest) (*dtos.CartResponse, error) {
 	if actor == nil {
 		return nil, utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
@@ -160,6 +167,7 @@ func (s *CartService) Create(ctx context.Context, actor *middlewares.ActorContex
 	return s.buildResponse(created, []dtos.CartItemResponse{}), nil
 }
 
+// ClearCart vacía el carrito del empleado.
 func (s *CartService) ClearCart(ctx context.Context, actor *middlewares.ActorContext, cartID int64) error {
 	if actor == nil {
 		return utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
@@ -183,6 +191,7 @@ func (s *CartService) ClearCart(ctx context.Context, actor *middlewares.ActorCon
 	return s.cartRepo.SetStatus(ctx, s.pool, cartID, types.CartAbandoned)
 }
 
+// buildResponse arma la respuesta del carrito con sus renglones y totales.
 func (s *CartService) buildResponse(c *repositories.CartEntity, items []dtos.CartItemResponse) *dtos.CartResponse {
 	subtotal := 0.0
 	discountTotal := 0.0

@@ -6,8 +6,8 @@ import React, { useEffect, useRef, useState } from 'react'
 import { pickActiveWarehouse, useWarehouses } from '@/features/warehouses'
 import { setActiveWarehouse } from '@/features/navigation'
 import { selectCurrentUser } from '@/features/auth'
-import { useAppDispatch, useAppSelector } from '@/global/hooks/useRedux'
-import { useClickOutside } from '@/global/hooks/useClickOutside'
+import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
+import { useClickOutside } from '@/global/hooks/ui/useClickOutside'
 import buildingIcon from '@/assets/icons/building.svg'
 import { WarehouseMenu } from './WarehouseMenu'
 import './WarehouseSelector.css'
@@ -23,7 +23,7 @@ export const WarehouseSelector: React.FC = () => {
     // ojo: antes el clic fuera y Escape estaban escritos aquí a mano; ahora es el hook compartido
     useClickOutside(wrapperRef, () => setIsOpen(false), isOpen)
 
-    const isAdmin = user?.userType === 'admin'
+    const isAdmin = user?.userType === 'admin' || user?.userType === 'superadmin'
     const canChangeWarehouse = isAdmin || !user?.warehouseId
 
     // cuando llegan las bodegas se corrige la activa si la guardada ya no existe (por ejemplo 'WH-01' de versiones anteriores) o cambió de nombre

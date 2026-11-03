@@ -1,5 +1,8 @@
 package services
 
+// audit_service.go · reglas de negocio de auditoría: valida permisos, compañía y datos, coordina las transacciones y arma las respuestas
+// conecta con: los repositories y dtos de auditoría; los llama el controller y la conexión llega del contenedor
+
 import (
 	"context"
 	"encoding/json"
@@ -18,6 +21,7 @@ type AuditService struct {
 	auditRepo *repositories.AuditLogQueryRepository
 }
 
+// NewAuditService crea el servicio con las piezas que necesita para funcionar.
 func NewAuditService(pool *pgxpool.Pool, auditRepo *repositories.AuditLogQueryRepository) *AuditService {
 	return &AuditService{
 		pool:      pool,
@@ -25,6 +29,7 @@ func NewAuditService(pool *pgxpool.Pool, auditRepo *repositories.AuditLogQueryRe
 	}
 }
 
+// List devuelve los movimientos de auditoría paginados según los filtros, limitados a lo que el usuario puede ver.
 func (s *AuditService) List(ctx context.Context, actor *middlewares.ActorContext, f dtos.AuditLogFilterQuery) ([]dtos.AuditLogResponse, *utils.PaginatorMetadata, error) {
 	if actor == nil {
 		return nil, nil, utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")

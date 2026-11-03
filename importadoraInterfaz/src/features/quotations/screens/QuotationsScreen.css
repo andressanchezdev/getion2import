@@ -1,0 +1,23 @@
+/* QuotationsScreen.css · pantalla de cotizaciones: tarjeta con la barra de filtros y la tabla · solo usa tokens de styles/tokens.css */
+.quotations-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.quotations-screen-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-rest);
+}
+
+@media (max-width: 380px) {
+  .quotations-screen {
+    gap: 0.75rem;
+    padding: 0.5rem;
+  }
+}

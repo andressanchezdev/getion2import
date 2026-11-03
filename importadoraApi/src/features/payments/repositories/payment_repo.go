@@ -1,5 +1,8 @@
 package repositories
 
+// payment_repo.go · acceso a la base de pagos: aquí vive el SQL; cada método recibe la conexión o la transacción
+// conecta con: core/db (DBExecutor) y los dtos de pagos; los usan los services de pagos
+
 import (
 	"context"
 	"errors"
@@ -35,21 +38,28 @@ type PaymentEntity struct {
 	VoidReason           *string
 	VerifiedAt           *time.Time
 	CreatedAt            time.Time
+	WarehouseID          int64  // bodega de la venta a la que se abona
+	WarehouseCode        string
+	WarehouseName        string
 }
 
 type PaymentRepository struct{}
 
+// NewPaymentRepository crea el repositorio; no guarda estado, cada método recibe la conexión o transacción.
 func NewPaymentRepository() *PaymentRepository {
 	return &PaymentRepository{}
 }
 
+// Create inserta el pago y devuelve el registro guardado.
 func (r *PaymentRepository) Create(ctx context.Context, q db.DBExecutor, p *PaymentEntity) (*PaymentEntity, error) {
 	const sql = `
 		INSERT INTO payments (
 			company_id, serial_code, sale_id, customer_id, employee_id,
-			method, amount, status, proof_url, reference, issue_note
+			method, amount, status, proof_url, reference, issue_note, cash_session_id
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
+			-- el pago queda ligado al turno de caja abierto en la bodega de la venta (sin turno abierto queda vacío)
+			(SELECT cs.id FROM cash_sessions cs JOIN sales s ON s.id = $3 WHERE cs.warehouse_id = s.warehouse_id AND cs.status = 'open' LIMIT 1)
 		)
 		RETURNING id, created_at
 	`
@@ -63,6 +73,7 @@ func (r *PaymentRepository) Create(ctx context.Context, q db.DBExecutor, p *Paym
 	return p, nil
 }
 
+// FindByID busca el pago por su id (nil si no existe).
 func (r *PaymentRepository) FindByID(ctx context.Context, q db.DBExecutor, id int64) (*PaymentEntity, error) {
 	const sql = `
 		SELECT
@@ -71,9 +82,11 @@ func (r *PaymentRepository) FindByID(ctx context.Context, q db.DBExecutor, id in
 			p.employee_id, e.full_name,
 			p.verified_by_employee_id, ve.full_name,
 			p.method, p.amount, p.status, p.proof_url, p.reference,
-			p.issue_note, p.void_reason, p.verified_at, p.created_at
+			p.issue_note, p.void_reason, p.verified_at, p.created_at,
+			s.warehouse_id, w.code, w.name
 		FROM payments p
 		JOIN sales s ON s.id = p.sale_id
+		JOIN warehouses w ON w.id = s.warehouse_id
 		JOIN customers c ON c.id = p.customer_id
 		JOIN employees e ON e.id = p.employee_id
 		LEFT JOIN employees ve ON ve.id = p.verified_by_employee_id
@@ -87,6 +100,7 @@ func (r *PaymentRepository) FindByID(ctx context.Context, q db.DBExecutor, id in
 		&entity.VerifiedByEmployeeID, &entity.VerifiedByName,
 		&entity.Method, &entity.Amount, &entity.Status, &entity.ProofURL, &entity.Reference,
 		&entity.IssueNote, &entity.VoidReason, &entity.VerifiedAt, &entity.CreatedAt,
+			&entity.WarehouseID, &entity.WarehouseCode, &entity.WarehouseName,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -97,6 +111,7 @@ func (r *PaymentRepository) FindByID(ctx context.Context, q db.DBExecutor, id in
 	return &entity, nil
 }
 
+// List lista los pagos según los filtros, con su total para paginar.
 func (r *PaymentRepository) List(ctx context.Context, q db.DBExecutor, f dtos.PaymentFilterQuery) ([]PaymentEntity, int, error) {
 	where := make([]string, 0)
 	args := make([]interface{}, 0)
@@ -105,6 +120,12 @@ func (r *PaymentRepository) List(ctx context.Context, q db.DBExecutor, f dtos.Pa
 	if f.CompanyID != nil {
 		where = append(where, fmt.Sprintf("p.company_id = $%d", argIdx))
 		args = append(args, *f.CompanyID)
+		argIdx++
+	}
+
+	if f.WarehouseID != nil && *f.WarehouseID > 0 {
+		where = append(where, fmt.Sprintf("s.warehouse_id = $%d", argIdx))
+		args = append(args, *f.WarehouseID)
 		argIdx++
 	}
 
@@ -147,6 +168,7 @@ func (r *PaymentRepository) List(ctx context.Context, q db.DBExecutor, f dtos.Pa
 	countSQL := fmt.Sprintf(`
 		SELECT COUNT(*)
 		FROM payments p
+		JOIN sales s ON s.id = p.sale_id
 		JOIN customers c ON c.id = p.customer_id
 		%s
 	`, whereClause)
@@ -173,9 +195,11 @@ func (r *PaymentRepository) List(ctx context.Context, q db.DBExecutor, f dtos.Pa
 			p.employee_id, e.full_name,
 			p.verified_by_employee_id, ve.full_name,
 			p.method, p.amount, p.status, p.proof_url, p.reference,
-			p.issue_note, p.void_reason, p.verified_at, p.created_at
+			p.issue_note, p.void_reason, p.verified_at, p.created_at,
+			s.warehouse_id, w.code, w.name
 		FROM payments p
 		JOIN sales s ON s.id = p.sale_id
+		JOIN warehouses w ON w.id = s.warehouse_id
 		JOIN customers c ON c.id = p.customer_id
 		JOIN employees e ON e.id = p.employee_id
 		LEFT JOIN employees ve ON ve.id = p.verified_by_employee_id
@@ -202,6 +226,7 @@ func (r *PaymentRepository) List(ctx context.Context, q db.DBExecutor, f dtos.Pa
 			&entity.VerifiedByEmployeeID, &entity.VerifiedByName,
 			&entity.Method, &entity.Amount, &entity.Status, &entity.ProofURL, &entity.Reference,
 			&entity.IssueNote, &entity.VoidReason, &entity.VerifiedAt, &entity.CreatedAt,
+			&entity.WarehouseID, &entity.WarehouseCode, &entity.WarehouseName,
 		); err != nil {
 			return nil, 0, err
 		}
@@ -211,6 +236,7 @@ func (r *PaymentRepository) List(ctx context.Context, q db.DBExecutor, f dtos.Pa
 	return list, total, rows.Err()
 }
 
+// Verify pasa el pago de «en revisión» a «verificado» y guarda quién lo verificó; falla si ya no estaba en revisión.
 func (r *PaymentRepository) Verify(ctx context.Context, q db.DBExecutor, paymentID, verifierEmployeeID int64, issueNote *string) error {
 	const sql = `
 		UPDATE payments SET
@@ -230,6 +256,7 @@ func (r *PaymentRepository) Verify(ctx context.Context, q db.DBExecutor, payment
 	return nil
 }
 
+// Void anula el pago con su motivo.
 func (r *PaymentRepository) Void(ctx context.Context, q db.DBExecutor, paymentID, employeeID int64, voidReason string) error {
 	const sql = `
 		UPDATE payments SET
@@ -249,3 +276,22 @@ func (r *PaymentRepository) Void(ctx context.Context, q db.DBExecutor, paymentID
 	return nil
 }
 
+// AddPaidToSale suma al abonado de la venta lo que acaba de verificarse
+func (r *PaymentRepository) AddPaidToSale(ctx context.Context, q db.DBExecutor, saleID int64, amount float64) error {
+	const sql = `UPDATE sales SET paid_total = paid_total + $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`
+	_, err := q.Exec(ctx, sql, amount, saleID)
+	return err
+}
+
+// InsertCreditEntry asienta el abono positivo en el libro de crédito del cliente
+func (r *PaymentRepository) InsertCreditEntry(ctx context.Context, q db.DBExecutor, companyID, customerID, employeeID int64, amount float64, saleID, paymentID int64, reason string) error {
+	const sql = `
+		INSERT INTO credit_entries (
+			company_id, customer_id, employee_id, entry_type, amount, sale_id, payment_id, reason
+		) VALUES (
+			$1, $2, $3, 'payment', $4, $5, $6, $7
+		)
+	`
+	_, err := q.Exec(ctx, sql, companyID, customerID, employeeID, amount, saleID, paymentID, reason)
+	return err
+}

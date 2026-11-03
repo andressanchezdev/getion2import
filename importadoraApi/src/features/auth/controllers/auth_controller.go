@@ -1,5 +1,8 @@
 package controllers
 
+// auth_controller.go · controlador HTTP de autenticación y sesiones: recibe la petición, valida la entrada y llama al servicio; no tiene lógica de negocio
+// conecta con: los services y dtos de autenticación y sesiones y core/utils (respuestas y errores); los registra routes
+
 import (
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
@@ -14,6 +17,7 @@ type AuthController struct {
 	authService *services.AuthService
 }
 
+// NewAuthController crea el controlador con las piezas que necesita para funcionar.
 func NewAuthController(authService *services.AuthService) *AuthController {
 	return &AuthController{authService: authService}
 }

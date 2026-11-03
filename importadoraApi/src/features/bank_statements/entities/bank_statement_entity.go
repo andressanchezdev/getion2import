@@ -1,5 +1,8 @@
 package entities
 
+// bank_statement_entity.go · forma de los registros de extractos bancarios en la base
+// conecta con: los repositories y services de extractos bancarios
+
 import (
 	"time"
 )

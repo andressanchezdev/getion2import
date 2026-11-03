@@ -1,0 +1,147 @@
+/* SuperadminAdminsScreen.css */
+.superadmin-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.superadmin-table-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-rest);
+}
+
+.superadmin-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+}
+
+.superadmin-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 1 1 540px;
+  flex-wrap: wrap;
+}
+
+.superadmin-search-bar {
+  flex: 0 1 360px;
+  min-width: 260px;
+}
+
+.superadmin-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.superadmin-table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.superadmin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+  text-align: left;
+}
+
+.superadmin-table th {
+  padding: 12px 16px;
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-muted);
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.superadmin-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  vertical-align: middle;
+}
+
+.superadmin-table tr:hover td {
+  background-color: var(--color-bg-muted);
+}
+
+.superadmin-id-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: var(--color-bg-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: monospace;
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--text-xs);
+}
+
+.superadmin-user-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.superadmin-user-cell strong {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.superadmin-user-cell small {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.superadmin-company-tag {
+  display: inline-block;
+  padding: 3px 8px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.superadmin-status-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.superadmin-status-pill.is-active {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.superadmin-status-pill.is-inactive {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.superadmin-actions-header {
+  text-align: right;
+  padding-right: 24px;
+}
+
+.superadmin-empty {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+

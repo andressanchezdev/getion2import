@@ -1,5 +1,8 @@
 package dtos
 
+// notification_dto.go · formas de lo que entra y sale por la API en notificaciones (peticiones y respuestas)
+// conecta con: los controllers y services de notificaciones
+
 import "time"
 
 type NotificationResponse struct {

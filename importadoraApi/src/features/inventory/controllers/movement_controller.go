@@ -1,5 +1,8 @@
 package controllers
 
+// movement_controller.go · controlador HTTP de inventario: recibe la petición, valida la entrada y llama al servicio; no tiene lógica de negocio
+// conecta con: los services y dtos de inventario y core/utils (respuestas y errores); los registra routes
+
 import (
 	"strconv"
 

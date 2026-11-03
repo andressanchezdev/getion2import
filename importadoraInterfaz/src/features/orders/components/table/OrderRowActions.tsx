@@ -2,7 +2,7 @@
 // conecta con: OrdersTable (le pasa el pedido y recibe la acción elegida), orders.actions (qué acciones hay), global useClickOutside (cierra el menú con clic fuera o Escape)
 // ojo: el menú es el .pop de la maqueta; anular solo se ofrece a quien tiene el permiso
 import React, { useRef, useState } from 'react'
-import { useClickOutside } from '@/global/hooks/useClickOutside'
+import { useClickOutside } from '@/global/hooks/ui/useClickOutside'
 import { getOrderActions, type OrderActionKey } from '../../helpers/orders.actions'
 import type { OrderRow } from '../../types/orders.types'
 import './OrderRowActions.css'

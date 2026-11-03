@@ -1,5 +1,8 @@
 package middlewares
 
+// auth_middleware.go · autenticación y autorización: valida el token y exige tipo de actor o permiso por ruta
+// conecta con: core/utils (JWT y errores), repositories de autenticación y los routes de cada módulo
+
 import (
 	"context"
 	"strings"
@@ -32,6 +35,7 @@ type AuthMiddleware struct {
 	validator SessionValidator
 }
 
+// NewAuthMiddleware crea el middleware de autenticación con lo que necesita para validar tokens y permisos.
 func NewAuthMiddleware(cfg *config.Config, db db.DBExecutor, validator SessionValidator) *AuthMiddleware {
 	return &AuthMiddleware{
 		cfg:       cfg,
@@ -40,14 +44,17 @@ func NewAuthMiddleware(cfg *config.Config, db db.DBExecutor, validator SessionVa
 	}
 }
 
+// Authenticate valida el token de la petición y deja al actor (quién es y de qué compañía) en el contexto.
 func (m *AuthMiddleware) Authenticate() echo.MiddlewareFunc {
 	return Authenticate(m.cfg.JWTSecret, m.validator, m.db)
 }
 
+// RequireActors deja pasar solo a los tipos de actor indicados (superadmin, administrador o empleado).
 func (m *AuthMiddleware) RequireActors(allowed ...types.ActorType) echo.MiddlewareFunc {
 	return RequireActors(allowed...)
 }
 
+// RequirePermission deja pasar solo a quien tiene el permiso del módulo y la acción indicados.
 func (m *AuthMiddleware) RequirePermission(module, action string) echo.MiddlewareFunc {
 	return RequirePermission(module, action)
 }

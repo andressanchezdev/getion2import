@@ -1,5 +1,8 @@
 package dtos
 
+// purchase_dto.go · formas de lo que entra y sale por la API en compras (peticiones y respuestas)
+// conecta con: los controllers y services de compras
+
 import (
 	"time"
 
@@ -61,8 +64,9 @@ type CreatePurchaseRequest struct {
 }
 
 type ReceivePurchaseItemRequest struct {
-	PurchaseItemID int64 `json:"purchaseItemId" validate:"required"`
-	Quantity       int   `json:"quantity" validate:"required,min=1"`
+	PurchaseItemID int64  `json:"purchaseItemId" validate:"required"`
+	Quantity       int    `json:"quantity" validate:"required,min=1"`
+	Location       string `json:"location"` // ubicación de la bodega donde queda la mercancía (activa y de esa bodega); vacío = sin ubicación
 }
 
 type ReceivePurchaseRequest struct {

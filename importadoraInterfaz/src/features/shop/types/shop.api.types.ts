@@ -1,70 +1,52 @@
-// shop.api.types · lo que responde el backend en productos (POST /products y POST /inventory/search) y los filtros que se le envían
-// conecta con: shop.adapter (convierte estos tipos a Product), shop.products.service (los usa) y shop.products.slice
-// ojo: son los nombres del backend tal cual (Swagger: models.ProductResponse, InventoryControlResponse); la app solo usa Product (shop.types)
+// shop.api.types · lo que responde la API en Go en productos y stock (GET /products, GET /products/search y GET /stock) y los filtros que se le envían
+// conecta con: shop.adapter (convierte estos tipos a Product), shop.products.service y shop.stock.service (los usan) y shop.products.slice
+// ojo: son los nombres del backend tal cual (ProductResponse y WarehouseStockResponse); la app solo usa Product (shop.types)
 import type { LoadStatus, PaginatorMetadata } from '@/api'
-import type { Product } from './shop.types'
 
-// ---- POST /products ----
-export interface ProductImageDto {
-    url?: string
-    imageUrl?: string
-    path?: string
-    isMain?: boolean | number
-}
-
-export interface ProductPriceDto {
-    type: string // 'P0'..'P3'
-    price: number
-}
-
-export interface ProductLocationDto {
-    warehouseId: number
-    locationCode?: string
-    stock: number
-    reservedStock?: number
-}
+// ---- GET /products y GET /products/search ----
+// precios por nivel: { p1, p2, p3, p4 }; la app los llama P0..P3 (p1 = P0, p2 = P1, p3 = P2, p4 = P3)
+export type ProductApiPrices = Partial<Record<'p1' | 'p2' | 'p3' | 'p4', number>>
 
 export interface ProductDto {
-    productId: number
+    id: number
     code: string
-    description?: string
-    brandName?: string
-    brandImage?: string
-    categoryName?: string
-    modelName?: string
-    models?: string[]
-    images?: Array<ProductImageDto | string> | null
-    productImage?: string
-    image?: string
-    photo?: string
-    prices?: ProductPriceDto[] | null
-    promotions?: ProductPriceDto[] | null
-    locations?: ProductLocationDto[] | null
-    isActive?: boolean
+    name?: string
+    description?: string | null
+    brandId?: number | null
+    brandName?: string | null
+    categoryId?: number | null
+    categoryName?: string | null
+    modelId?: number | null
+    modelName?: string | null
+    images?: string[] | null // la primera es la principal
+    prices?: ProductApiPrices | null
     isPromotion?: boolean
-    created_at?: string
+    isNew?: boolean
+    status?: string // 'active' | 'inactive' | ...
+    createdAt?: string
 }
 
-// ---- POST /inventory/search (búsqueda por texto) ----
-export interface ControlLocationDto {
+// ---- GET /stock: una fila por producto, bodega y ubicación ----
+// ojo: lo vendible de la fila es sellable (físico menos lo reservado por pedidos); un producto puede tener varias filas en la misma bodega
+export interface StockRowDto {
+    stockId: number
     warehouseId: number
-    locationCode?: string
-    physicalStock: number
+    warehouseName?: string
+    productId: number
+    location?: string | null
+    available: number
+    reserved: number
+    sellable: number
+    minStock?: number // alerta de stock bajo de esa existencia
 }
 
-export interface ControlProductDto {
-    productId: number
-    code: string
-    productInformation?: {
-        description?: string
-        brandName?: string
-        brandImage?: string
-        categoryName?: string
-        modelName?: string
-        productImage?: string
-    }
-    prices?: { price: number }[] | null
-    locations?: ControlLocationDto[] | null
+// stock de un producto en la bodega elegida, ya sumado: lo que arma el adaptador a partir de las filas de GET /stock
+export interface ProductStock {
+    sellable: number
+    minStock?: number // la alerta de stock bajo más alta de las ubicaciones de la bodega
+    location?: string // la ubicación con más vendible
+    locations?: string[] // todas las ubicaciones del producto en la bodega, la de más vendible primero
+    byWarehouse?: Record<string, number>
 }
 
 // ---- filtros que la pantalla pide al servicio ----
@@ -75,17 +57,19 @@ export interface ProductsQuery {
     brandId?: number | null
     categoryId?: number | null
     onlyInStock?: boolean
+    includeInactive?: boolean // la tienda solo vende productos activos; la administración de inventario necesita ver también los inactivos
 }
 
 // ---- estado del slice de productos (no se guarda en el navegador) ----
 export type ProductsMode = 'list' | 'search'
 
 export interface ProductsState {
-    items: Product[]
+    items: import('./shop.types').Product[]
+    meta: PaginatorMetadata | null
     status: LoadStatus
     error: string | null
-    meta: PaginatorMetadata | null // solo en modo "list"; la búsqueda por texto no trae paginación
     mode: ProductsMode
+    requestId: string | null
     page: number
-    requestId: string | null // la última petición lanzada: una respuesta de otra anterior se descarta
+    summary?: { shown: number; total: number }
 }

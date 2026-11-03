@@ -1,5 +1,8 @@
 package repositories
 
+// return_repo.go · acceso a la base de devoluciones: aquí vive el SQL; cada método recibe la conexión o la transacción
+// conecta con: core/db (DBExecutor) y los dtos de devoluciones; los usan los services de devoluciones
+
 import (
 	"context"
 	"errors"
@@ -19,6 +22,8 @@ type ReturnEntity struct {
 	CompanyID              int64
 	SaleID                 int64
 	SaleSerial             string
+	WarehouseID             int64
+	WarehouseName           string
 	CustomerID             int64
 	CustomerName           string
 	EmployeeID             int64
@@ -56,10 +61,12 @@ type ReturnItemEntity struct {
 
 type ReturnRepository struct{}
 
+// NewReturnRepository crea el repositorio; no guarda estado, cada método recibe la conexión o transacción.
 func NewReturnRepository() *ReturnRepository {
 	return &ReturnRepository{}
 }
 
+// Create inserta la devolución y devuelve el registro guardado.
 func (r *ReturnRepository) Create(ctx context.Context, q db.DBExecutor, ret *ReturnEntity) (*ReturnEntity, error) {
 	const sql = `
 		INSERT INTO returns (
@@ -80,6 +87,7 @@ func (r *ReturnRepository) Create(ctx context.Context, q db.DBExecutor, ret *Ret
 	return ret, nil
 }
 
+// CreateItem inserta un renglón.
 func (r *ReturnRepository) CreateItem(ctx context.Context, q db.DBExecutor, item *ReturnItemEntity) error {
 	const sql = `
 		INSERT INTO return_items (
@@ -92,10 +100,12 @@ func (r *ReturnRepository) CreateItem(ctx context.Context, q db.DBExecutor, item
 	return q.QueryRow(ctx, sql, item.ReturnID, item.SaleItemID, item.Quantity, item.Restock).Scan(&item.ID)
 }
 
+// FindByID busca la devolución por su id (nil si no existe).
 func (r *ReturnRepository) FindByID(ctx context.Context, q db.DBExecutor, id int64) (*ReturnEntity, error) {
 	const sql = `
 		SELECT
 			ret.id, ret.company_id, ret.sale_id, s.serial_code,
+			s.warehouse_id, COALESCE(w.name, ''),
 			ret.customer_id, cust.name,
 			ret.employee_id, emp.full_name,
 			ret.approved_by_employee_id, aemp.full_name,
@@ -105,6 +115,7 @@ func (r *ReturnRepository) FindByID(ctx context.Context, q db.DBExecutor, id int
 			ret.status, ret.total, ret.approved_at, ret.created_at
 		FROM returns ret
 		JOIN sales s ON s.id = ret.sale_id
+		LEFT JOIN warehouses w ON w.id = s.warehouse_id
 		JOIN customers cust ON cust.id = ret.customer_id
 		JOIN employees emp ON emp.id = ret.employee_id
 		LEFT JOIN employees aemp ON aemp.id = ret.approved_by_employee_id
@@ -114,6 +125,7 @@ func (r *ReturnRepository) FindByID(ctx context.Context, q db.DBExecutor, id int
 	var entity ReturnEntity
 	err := q.QueryRow(ctx, sql, id).Scan(
 		&entity.ID, &entity.CompanyID, &entity.SaleID, &entity.SaleSerial,
+		&entity.WarehouseID, &entity.WarehouseName,
 		&entity.CustomerID, &entity.CustomerName,
 		&entity.EmployeeID, &entity.EmployeeName,
 		&entity.ApprovedByEmployeeID, &entity.ApprovedByName,
@@ -131,6 +143,7 @@ func (r *ReturnRepository) FindByID(ctx context.Context, q db.DBExecutor, id int
 	return &entity, nil
 }
 
+// ListItems lista los renglones.
 func (r *ReturnRepository) ListItems(ctx context.Context, q db.DBExecutor, returnID int64) ([]ReturnItemEntity, error) {
 	const sql = `
 		SELECT
@@ -164,6 +177,7 @@ func (r *ReturnRepository) ListItems(ctx context.Context, q db.DBExecutor, retur
 	return items, rows.Err()
 }
 
+// List lista las devoluciones según los filtros, con su total para paginar.
 func (r *ReturnRepository) List(ctx context.Context, q db.DBExecutor, f dtos.ReturnFilterQuery) ([]ReturnEntity, int, error) {
 	where := make([]string, 0)
 	args := make([]interface{}, 0)
@@ -172,6 +186,12 @@ func (r *ReturnRepository) List(ctx context.Context, q db.DBExecutor, f dtos.Ret
 	if f.CompanyID != nil {
 		where = append(where, fmt.Sprintf("ret.company_id = $%d", argIdx))
 		args = append(args, *f.CompanyID)
+		argIdx++
+	}
+
+	if f.WarehouseID != nil {
+		where = append(where, fmt.Sprintf("s.warehouse_id = $%d", argIdx))
+		args = append(args, *f.WarehouseID)
 		argIdx++
 	}
 
@@ -198,7 +218,7 @@ func (r *ReturnRepository) List(ctx context.Context, q db.DBExecutor, f dtos.Ret
 		whereClause = "WHERE " + strings.Join(where, " AND ")
 	}
 
-	countSQL := fmt.Sprintf(`SELECT COUNT(*) FROM returns ret %s`, whereClause)
+	countSQL := fmt.Sprintf(`SELECT COUNT(*) FROM returns ret JOIN sales s ON s.id = ret.sale_id %s`, whereClause)
 	var total int
 	if err := q.QueryRow(ctx, countSQL, args...).Scan(&total); err != nil {
 		return nil, 0, err
@@ -217,6 +237,7 @@ func (r *ReturnRepository) List(ctx context.Context, q db.DBExecutor, f dtos.Ret
 	selectSQL := fmt.Sprintf(`
 		SELECT
 			ret.id, ret.company_id, ret.sale_id, s.serial_code,
+			s.warehouse_id, COALESCE(w.name, ''),
 			ret.customer_id, cust.name,
 			ret.employee_id, emp.full_name,
 			ret.approved_by_employee_id, aemp.full_name,
@@ -226,6 +247,7 @@ func (r *ReturnRepository) List(ctx context.Context, q db.DBExecutor, f dtos.Ret
 			ret.status, ret.total, ret.approved_at, ret.created_at
 		FROM returns ret
 		JOIN sales s ON s.id = ret.sale_id
+		LEFT JOIN warehouses w ON w.id = s.warehouse_id
 		JOIN customers cust ON cust.id = ret.customer_id
 		JOIN employees emp ON emp.id = ret.employee_id
 		LEFT JOIN employees aemp ON aemp.id = ret.approved_by_employee_id
@@ -248,6 +270,7 @@ func (r *ReturnRepository) List(ctx context.Context, q db.DBExecutor, f dtos.Ret
 		var entity ReturnEntity
 		if err := rows.Scan(
 			&entity.ID, &entity.CompanyID, &entity.SaleID, &entity.SaleSerial,
+			&entity.WarehouseID, &entity.WarehouseName,
 			&entity.CustomerID, &entity.CustomerName,
 			&entity.EmployeeID, &entity.EmployeeName,
 			&entity.ApprovedByEmployeeID, &entity.ApprovedByName,
@@ -264,6 +287,7 @@ func (r *ReturnRepository) List(ctx context.Context, q db.DBExecutor, f dtos.Ret
 	return list, total, rows.Err()
 }
 
+// Approve pasa la devolución de «pendiente» a «aprobada» y guarda quién la aprobó.
 func (r *ReturnRepository) Approve(ctx context.Context, q db.DBExecutor, id, approverEmployeeID int64) error {
 	const sql = `
 		UPDATE returns SET
@@ -282,6 +306,7 @@ func (r *ReturnRepository) Approve(ctx context.Context, q db.DBExecutor, id, app
 	return nil
 }
 
+// Reject pasa la devolución de «pendiente» a «rechazada» y guarda quién la rechazó.
 func (r *ReturnRepository) Reject(ctx context.Context, q db.DBExecutor, id, approverEmployeeID int64) error {
 	const sql = `
 		UPDATE returns SET
@@ -298,4 +323,72 @@ func (r *ReturnRepository) Reject(ctx context.Context, q db.DBExecutor, id, appr
 		return errors.New("la devolución no existe o ya no está en estado pendiente")
 	}
 	return nil
+}
+
+// ReplacementStock es el stock de reemplazo de un cambio, con lo que hay disponible y reservado
+type ReplacementStock struct {
+	ProductID   int64
+	Available   int
+	Reserved    int
+	ProductCode string
+}
+
+// FindReplacementStock busca el stock de reemplazo dentro de la compañía de la venta
+func (r *ReturnRepository) FindReplacementStock(ctx context.Context, q db.DBExecutor, stockID, companyID int64) (*ReplacementStock, error) {
+	const sql = `
+		SELECT s.product_id, s.available, s.reserved, p.code
+		FROM stock s
+		JOIN products p ON p.id = s.product_id
+		WHERE s.id = $1 AND s.company_id = $2
+	`
+	var st ReplacementStock
+	if err := q.QueryRow(ctx, sql, stockID, companyID).Scan(&st.ProductID, &st.Available, &st.Reserved, &st.ProductCode); err != nil {
+		return nil, err
+	}
+	return &st, nil
+}
+
+// LockedReplacementStock es la ubicación del stock de reemplazo, ya bloqueada para entregarlo
+type LockedReplacementStock struct {
+	WarehouseID int64
+	ProductID   int64
+	ProductCode string
+}
+
+// LockReplacementStock bloquea la fila del stock de reemplazo (FOR UPDATE) y devuelve su bodega y producto
+func (r *ReturnRepository) LockReplacementStock(ctx context.Context, q db.DBExecutor, stockID int64) (*LockedReplacementStock, error) {
+	const sql = `
+		SELECT s.warehouse_id, s.product_id, p.code
+		FROM stock s
+		JOIN products p ON p.id = s.product_id
+		WHERE s.id = $1
+		FOR UPDATE
+	`
+	var st LockedReplacementStock
+	if err := q.QueryRow(ctx, sql, stockID).Scan(&st.WarehouseID, &st.ProductID, &st.ProductCode); err != nil {
+		return nil, err
+	}
+	return &st, nil
+}
+
+// DecrementStock descuenta una unidad del stock y devuelve cuántas filas cambió (0 si no había disponible)
+func (r *ReturnRepository) DecrementStock(ctx context.Context, q db.DBExecutor, stockID int64) (int64, error) {
+	tag, err := q.Exec(ctx, `UPDATE stock SET available = available - 1 WHERE id = $1 AND available >= 1`, stockID)
+	if err != nil {
+		return 0, err
+	}
+	return tag.RowsAffected(), nil
+}
+
+// InsertReturnCreditEntry asienta el saldo a favor del cliente por una devolución aprobada
+func (r *ReturnRepository) InsertReturnCreditEntry(ctx context.Context, q db.DBExecutor, companyID, customerID, employeeID int64, amount float64, returnID int64, reason string) error {
+	const sql = `
+		INSERT INTO credit_entries (
+			company_id, customer_id, employee_id, entry_type, amount, return_id, reason
+		) VALUES (
+			$1, $2, $3, 'return', $4, $5, $6
+		)
+	`
+	_, err := q.Exec(ctx, sql, companyID, customerID, employeeID, amount, returnID, reason)
+	return err
 }

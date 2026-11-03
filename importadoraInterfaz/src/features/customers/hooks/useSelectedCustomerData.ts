@@ -1,7 +1,7 @@
 // useSelectedCustomerData · cuando se abre un cliente pide su detalle, sus direcciones y sus descuentos
 // conecta con: CustomerDrawer (lo usa al montarse); despacha customers.thunks y customers.details.thunks
 import { useEffect } from 'react'
-import { useAppDispatch, useAppSelector } from '@/global/hooks/useRedux'
+import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { selectOpenCustomerId } from '../selectors/customers.selectors'
 import { loadCustomerDetailThunk } from '../thunks/customers.thunks'
 import { loadDirectionsThunk, loadDiscountsThunk } from '../thunks/customers.details.thunks'

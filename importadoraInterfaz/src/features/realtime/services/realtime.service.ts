@@ -19,6 +19,9 @@ export const createRealtimeConnection = ({ url, onEvent, onStatus }: RealtimeCon
       attempt = 0
       onStatus('open')
     }
+    socket.onerror = () => {
+      // Evita advertencias no capturadas durante reconexión o cierre
+    }
     socket.onmessage = (message) => {
       const event = parseRealtimeMessage(message.data)
       if (event) onEvent(event)
@@ -37,7 +40,23 @@ export const createRealtimeConnection = ({ url, onEvent, onStatus }: RealtimeCon
     close: () => {
       isClosedByUser = true
       if (timer) clearTimeout(timer)
-      socket?.close()
+      if (socket) {
+        if (socket.readyState === WebSocket.CONNECTING) {
+          socket.onopen = () => {
+            try {
+              socket?.close()
+            } catch {
+              // noop
+            }
+          }
+        } else {
+          try {
+            socket.close()
+          } catch {
+            // noop
+          }
+        }
+      }
     },
     send: (message) => {
       if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message))

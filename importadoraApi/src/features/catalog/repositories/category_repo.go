@@ -1,5 +1,8 @@
 package repositories
 
+// category_repo.go · acceso a la base de catálogo (marcas, categorías y modelos): aquí vive el SQL; cada método recibe la conexión o la transacción
+// conecta con: core/db (DBExecutor) y los dtos de catálogo (marcas, categorías y modelos); los usan los services de catálogo (marcas, categorías y modelos)
+
 import (
 	"context"
 	"errors"
@@ -23,10 +26,12 @@ type CategoryEntity struct {
 
 type CategoryRepository struct{}
 
+// NewCategoryRepository crea el repositorio; no guarda estado, cada método recibe la conexión o transacción.
 func NewCategoryRepository() *CategoryRepository {
 	return &CategoryRepository{}
 }
 
+// FindByID busca la categoría por su id (nil si no existe).
 func (r *CategoryRepository) FindByID(ctx context.Context, q db.DBExecutor, id int64) (*CategoryEntity, error) {
 	const sql = `
 		SELECT
@@ -50,6 +55,7 @@ func (r *CategoryRepository) FindByID(ctx context.Context, q db.DBExecutor, id i
 	return &cat, nil
 }
 
+// FindByCompanyParentAndName busca la categoría por compañía, padre y nombre (nil si no existe).
 func (r *CategoryRepository) FindByCompanyParentAndName(ctx context.Context, q db.DBExecutor, companyID int64, parentID *int64, name string) (*CategoryEntity, error) {
 	var sql string
 	var err error
@@ -86,6 +92,7 @@ func (r *CategoryRepository) FindByCompanyParentAndName(ctx context.Context, q d
 	return &cat, nil
 }
 
+// ListByCompany lista las categorías de una compañía.
 func (r *CategoryRepository) ListByCompany(ctx context.Context, q db.DBExecutor, companyID int64, activeOnly bool) ([]CategoryEntity, error) {
 	sql := `
 		SELECT
@@ -120,6 +127,7 @@ func (r *CategoryRepository) ListByCompany(ctx context.Context, q db.DBExecutor,
 	return list, rows.Err()
 }
 
+// Create inserta la categoría y devuelve el registro guardado.
 func (r *CategoryRepository) Create(ctx context.Context, q db.DBExecutor, cat *CategoryEntity) (*CategoryEntity, error) {
 	const sql = `
 		INSERT INTO categories (company_id, parent_id, name, description, is_active)
@@ -135,6 +143,7 @@ func (r *CategoryRepository) Create(ctx context.Context, q db.DBExecutor, cat *C
 	return cat, nil
 }
 
+// Update actualiza los datos de la categoría.
 func (r *CategoryRepository) Update(ctx context.Context, q db.DBExecutor, cat *CategoryEntity) (*CategoryEntity, error) {
 	const sql = `
 		UPDATE categories SET
@@ -154,6 +163,7 @@ func (r *CategoryRepository) Update(ctx context.Context, q db.DBExecutor, cat *C
 	return cat, nil
 }
 
+// SoftDelete marca la categoría como eliminada (borrado lógico: no se pierde el registro).
 func (r *CategoryRepository) SoftDelete(ctx context.Context, q db.DBExecutor, id int64) error {
 	const sql = `UPDATE categories SET is_active = FALSE WHERE id = $1`
 	cmdTag, err := q.Exec(ctx, sql, id)

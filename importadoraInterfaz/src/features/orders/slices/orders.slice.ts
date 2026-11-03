@@ -1,6 +1,5 @@
-// orders.slice · estado de la vista de pedidos (clave 'orders'): etapa, canal y búsqueda elegidos, conteos, tabla y pedido abierto con su detalle
+// orders.slice · estado de la vista de pedidos (clave 'orders'): etapa, canal, bodega y búsqueda elegidos, conteos, tabla y pedido abierto con su detalle
 // conecta con: orders.thunks (la llenan), orders.selectors (lecturas), navigation (al cambiar de bodega se limpia) y rootReducer (clave 'orders'; NO se guarda en el navegador)
-// ojo: cambiar de etapa o de canal cierra el pedido abierto, porque la tabla cambia
 import { createSlice, isAnyOf, type PayloadAction } from '@reduxjs/toolkit'
 import { setActiveWarehouse } from '@/features/navigation'
 import { logoutThunk } from '@/features/auth'
@@ -22,6 +21,10 @@ export const ordersSlice = createSlice({
     },
     setOrderQuery: (state, action: PayloadAction<string>) => {
       state.query = action.payload
+    },
+    setOrderWarehouse: (state, action: PayloadAction<number | null>) => {
+      state.selectedWarehouseId = action.payload
+      state.openId = null
     },
     openOrder: (state, action: PayloadAction<number>) => {
       if (state.openId === action.payload) return // ojo: ya está abierto; si se limpiara el detalle no se volvería a pedir
@@ -80,6 +83,6 @@ export const ordersSlice = createSlice({
   },
 })
 
-export const { setOrderStage, setOrderChannel, setOrderQuery, openOrder, closeOrder } = ordersSlice.actions
+export const { setOrderStage, setOrderChannel, setOrderQuery, setOrderWarehouse, openOrder, closeOrder } = ordersSlice.actions
 export const ordersReducer = ordersSlice.reducer
 export default ordersSlice.reducer

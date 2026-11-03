@@ -1,5 +1,8 @@
 package repositories
 
+// cart_repo.go · acceso a la base de carritos: aquí vive el SQL; cada método recibe la conexión o la transacción
+// conecta con: core/db (DBExecutor) y los dtos de carritos; los usan los services de carritos
+
 import (
 	"context"
 	"errors"
@@ -43,10 +46,12 @@ type CartItemEntity struct {
 
 type CartRepository struct{}
 
+// NewCartRepository crea el repositorio; no guarda estado, cada método recibe la conexión o transacción.
 func NewCartRepository() *CartRepository {
 	return &CartRepository{}
 }
 
+// FindByID busca el carrito por su id (nil si no existe).
 func (r *CartRepository) FindByID(ctx context.Context, q db.DBExecutor, id int64) (*CartEntity, error) {
 	const sql = `
 		SELECT
@@ -78,6 +83,7 @@ func (r *CartRepository) FindByID(ctx context.Context, q db.DBExecutor, id int64
 	return &c, nil
 }
 
+// FindActiveByEmployee busca el carrito activo de un empleado (nil si no tiene).
 func (r *CartRepository) FindActiveByEmployee(ctx context.Context, q db.DBExecutor, companyID, employeeID int64) (*CartEntity, error) {
 	const sql = `
 		SELECT
@@ -111,6 +117,7 @@ func (r *CartRepository) FindActiveByEmployee(ctx context.Context, q db.DBExecut
 	return &c, nil
 }
 
+// Create inserta el carrito y devuelve el registro guardado.
 func (r *CartRepository) Create(ctx context.Context, q db.DBExecutor, c *CartEntity) (*CartEntity, error) {
 	const sql = `
 		INSERT INTO carts (company_id, employee_id, customer_id, warehouse_id, price_tier, status)
@@ -126,6 +133,7 @@ func (r *CartRepository) Create(ctx context.Context, q db.DBExecutor, c *CartEnt
 	return c, nil
 }
 
+// Update actualiza los datos de el carrito.
 func (r *CartRepository) Update(ctx context.Context, q db.DBExecutor, c *CartEntity) error {
 	const sql = `
 		UPDATE carts SET
@@ -141,12 +149,14 @@ func (r *CartRepository) Update(ctx context.Context, q db.DBExecutor, c *CartEnt
 	return err
 }
 
+// SetStatus cambia el estado del carrito.
 func (r *CartRepository) SetStatus(ctx context.Context, q db.DBExecutor, id int64, status types.CartStatus) error {
 	const sql = `UPDATE carts SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`
 	_, err := q.Exec(ctx, sql, status, id)
 	return err
 }
 
+// Touch renueva la actividad del carrito para que no venza.
 func (r *CartRepository) Touch(ctx context.Context, q db.DBExecutor, cartID int64) error {
 	const sql = `UPDATE carts SET expires_at = CURRENT_TIMESTAMP + INTERVAL '1 hour', updated_at = CURRENT_TIMESTAMP WHERE id = $1`
 	_, err := q.Exec(ctx, sql, cartID)

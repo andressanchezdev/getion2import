@@ -1,29 +1,22 @@
-// EmployeesScreen · directorio de personal interno, sedes asignadas y cargos laborales
-// conecta con: employees.service, Redux (user, warehouses, navigation) y tokens.css
-import React, { useState, useEffect } from 'react'
-import { useAppDispatch, useAppSelector } from '@/global/hooks/useRedux'
-import { setActiveSubitem } from '@/features/navigation'
-import { fetchEmployeesList } from '../services/employees.service'
-import type { SimpleEmployee } from '../types/employees.types'
+// EmployeesScreen · directorio de empleados (la gestión de sedes es otra pantalla, solo para el administrador); el ojo abre el detalle (datos y lista de permisos) y editar permisos abre la matriz; ambos en el panel derecho
+// conecta con: employees.service, EmployeesTable, global SearchBar (con su botón de limpiar integrado) y FilterSelect, Redux (user, warehouses, navigation) y tokens.css
+import React, { useState } from 'react'
+import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
+import { openDrawerForm } from '@/features/navigation'
+import { SearchBar } from '@/global/components/UI/molecules/filters/SearchBar'
+import { FilterSelect } from '@/global/components/UI/molecules/filters/FilterSelect'
+import { EmployeesTable } from '../components/table/EmployeesTable'
+import { useEmployeesDirectory } from '../hooks/useEmployeesDirectory'
+import { CreateEmployeeDrawer } from '../components/drawer/CreateEmployeeDrawer'
 import './EmployeesScreen.css'
 
 export const EmployeesScreen: React.FC = () => {
   const dispatch = useAppDispatch()
-  const { user } = useAppSelector((state) => state.auth)
   const warehouses = useAppSelector((state) => state.warehouses.items)
-  const [employees, setEmployees] = useState<SimpleEmployee[]>([])
   const [selectedWhId, setSelectedWhId] = useState<number>(0)
-  const [isLoading, setIsLoading] = useState(false)
   const [search, setSearch] = useState('')
-
-  useEffect(() => {
-    if (!user?.companyId) return
-    setIsLoading(true)
-    fetchEmployeesList(user.companyId, selectedWhId || undefined)
-      .then((data) => setEmployees(data))
-      .catch(() => setEmployees([]))
-      .finally(() => setIsLoading(false))
-  }, [user?.companyId, selectedWhId])
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const { employees, loading: isLoading } = useEmployeesDirectory(selectedWhId || undefined)
 
   const filtered = employees.filter((emp) => {
     if (!search.trim()) return true
@@ -38,85 +31,46 @@ export const EmployeesScreen: React.FC = () => {
 
   return (
     <div className="employees-screen">
-      <div className="employees-toolbar">
-        <div className="employees-search-box">
-          <input
-            type="text"
-            className="employees-input"
-            placeholder="Buscar por nombre, cédula o correo..."
+      <div className="employees-card">
+        <div className="employees-toolbar">
+          <SearchBar
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={setSearch}
+            hasActiveFilters={search !== '' || selectedWhId !== 0}
+            onClear={() => {
+              setSearch('')
+              setSelectedWhId(0)
+            }}
+            placeholder="Buscar por nombre, cédula o correo..."
+            className="employees-search"
           />
+          <FilterSelect
+            label="Filtrar por sede"
+            emptyValue="0"
+            value={String(selectedWhId)}
+            options={warehouses.map((w) => ({ value: String(w.id), label: w.name }))}
+            onChange={(value) => setSelectedWhId(Number(value))}
+          />
+          <div className="employees-toolbar-actions">
+            <button
+              type="button"
+              className="employees-btn-create"
+              onClick={() => setIsCreateOpen(true)}
+            >
+              <span>+</span> Registrar Empleado
+            </button>
+          </div>
         </div>
 
-        <div className="employees-filter-wh">
-          <select
-            className="employees-select"
-            value={selectedWhId}
-            onChange={(e) => setSelectedWhId(Number(e.target.value))}
-          >
-            <option value={0}>Todas las Sedes / Bodegas</option>
-            {warehouses.map((w) => (
-              <option key={w.id} value={w.id}>
-                {w.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <EmployeesTable
+          employees={filtered}
+          loading={isLoading}
+          onViewPermissions={(employee) => dispatch(openDrawerForm({ kind: 'employeeDetail', payload: employee }))}
+          onEditPermissions={(employee) => dispatch(openDrawerForm({ kind: 'employeePermissions', payload: { employee, mode: 'edit' } }))}
+        />
       </div>
 
-      <div className="employees-table-card">
-        {isLoading ? (
-          <div className="permissions-empty">Cargando directorio de empleados...</div>
-        ) : filtered.length === 0 ? (
-          <div className="permissions-empty">No se encontraron empleados registrados.</div>
-        ) : (
-          <table className="permissions-table">
-            <thead>
-              <tr>
-                <th>Empleado / Documento</th>
-                <th>Cargo / Rol</th>
-                <th>Sede Asignada</th>
-                <th>Modalidad</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((emp) => (
-                <tr key={emp.employeeId}>
-                  <td>
-                    <strong>{emp.name} {emp.lastName || ''}</strong>
-                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)' }}>
-                      CC: {emp.identification} · {emp.email}
-                    </div>
-                  </td>
-                  <td>
-                    <span className="transfers-code-chip">{emp.roleName || 'Empleado'}</span>
-                  </td>
-                  <td>{emp.warehouseName || `Sede #${emp.primaryWarehouseId || 'General'}`}</td>
-                  <td>{emp.workModality || 'Presencial'}</td>
-                  <td>
-                    <span className={`transfers-badge transfers-badge-${emp.isActive ? 'approved' : 'rejected'}`}>
-                      {emp.isActive ? 'Activo' : 'Inactivo'}
-                    </span>
-                  </td>
-                  <td>
-                    <button
-                      type="button"
-                      className="btn-secondary"
-                      onClick={() => dispatch(setActiveSubitem('rolesPermissions'))}
-                      title="Gestionar matriz de permisos"
-                    >
-                      Permisos
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      <CreateEmployeeDrawer isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} />
     </div>
   )
 }

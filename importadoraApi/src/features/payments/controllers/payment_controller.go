@@ -1,5 +1,8 @@
 package controllers
 
+// payment_controller.go · controlador HTTP de pagos: recibe la petición, valida la entrada y llama al servicio; no tiene lógica de negocio
+// conecta con: los services y dtos de pagos y core/utils (respuestas y errores); los registra routes
+
 import (
 	"strconv"
 
@@ -16,6 +19,7 @@ type PaymentController struct {
 	service *services.PaymentService
 }
 
+// NewPaymentController crea el controlador con las piezas que necesita para funcionar.
 func NewPaymentController(service *services.PaymentService) *PaymentController {
 	return &PaymentController{service: service}
 }
@@ -37,6 +41,22 @@ func (ctrl *PaymentController) Create(c echo.Context) error {
 	}
 
 	return utils.RespondCreated(c, "Pago registrado correctamente (en espera de verificación)", resp)
+}
+
+// CreateBatch POST /payments/batch
+func (ctrl *PaymentController) CreateBatch(c echo.Context) error {
+	var req dtos.CreatePaymentsRequest
+	if err := utils.BindJSON(c, &req); err != nil {
+		return err
+	}
+
+	actor := middlewares.GetActor(c)
+	resp, err := ctrl.service.CreateBatch(c.Request().Context(), actor, req, c.RealIP(), c.Request().UserAgent())
+	if err != nil {
+		return err
+	}
+
+	return utils.RespondCreated(c, "Cobro registrado", resp)
 }
 
 // FindByID GET /payments/:id

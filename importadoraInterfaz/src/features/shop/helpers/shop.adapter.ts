@@ -1,40 +1,47 @@
-// shop.adapter · convierte los productos del backend (ProductDto y ControlProductDto) al Product que usa la app
+// shop.adapter · convierte los productos de la API en Go (ProductDto + filas de stock) al Product que usa la app
 // conecta con: shop.products.service (lo aplica a cada respuesta); es el único lugar que conoce los nombres de campos del backend en productos
-// ojo: SUPUESTOS a confirmar con datos reales: (1) prices[].type viene como 'P0'..'P3'; (2) el stock disponible de una bodega es stock - reservedStock;
-// (3) en la búsqueda por texto los precios no traen tipo, se toman por orden (primero P0, luego P1, P2 y P3)
-import { getStorageUrl } from '@/global/helpers/storageUrl'
-import type { CartItem, PriceLevelKey, Product, ProductPrices } from '../types/shop.types'
-import type { CartDto } from '../types/shop.cart.api.types'
-import type { ControlProductDto, ProductDto, ProductImageDto, ProductPriceDto } from '../types/shop.api.types'
+import { getStorageUrl } from '@/global/helpers/storage/storageUrl'
+import { LEGACY_PRODUCT_IMAGES } from '../constants/legacyProductImages'
+import type { CartItem, Product, ProductPrices } from '../types/shop.types'
+import type { CartDto, CartItemDto, CartSnapshot } from '../types/shop.cart.api.types'
+import type { ProductApiPrices, ProductDto, ProductStock, StockRowDto } from '../types/shop.api.types'
 
-const LEVELS: PriceLevelKey[] = ['P0', 'P1', 'P2', 'P3']
 const EMPTY_PRICES: ProductPrices = { p0: 0, p1: 0, p2: 0, p3: 0 }
 
-// arma los 4 precios a partir de la lista con tipo; lo que falta queda en 0
-const pricesByType = (rows: ProductPriceDto[] | null | undefined): ProductPrices => {
+// la API llama p1..p4 a lo que la app llama P0..P3
+const API_PRICE_KEY: Record<keyof ProductPrices, keyof ProductApiPrices> = { p0: 'p1', p1: 'p2', p2: 'p3', p3: 'p4' }
+
+// arma los 4 precios de la app a partir de { p1, p2, p3, p4 }; lo que falta queda en 0
+export const toProductPrices = (prices: ProductApiPrices | null | undefined): ProductPrices => {
     const result = { ...EMPTY_PRICES }
-    for (const row of rows ?? []) {
-        const level = String(row.type).toUpperCase() as PriceLevelKey
-        if (LEVELS.includes(level)) result[level.toLowerCase() as keyof ProductPrices] = row.price
+    for (const level of Object.keys(API_PRICE_KEY) as (keyof ProductPrices)[]) {
+        result[level] = Number(prices?.[API_PRICE_KEY[level]] ?? 0) || 0
     }
     return result
 }
 
-// en la búsqueda por texto los precios no traen tipo: se asignan en orden
-const pricesByOrder = (rows: { price: number }[] | null | undefined): ProductPrices => {
-    const result = { ...EMPTY_PRICES }
-    ;(rows ?? []).slice(0, 4).forEach((row, index) => {
-        result[LEVELS[index].toLowerCase() as keyof ProductPrices] = row.price
-    })
-    return result
-}
-
-// suma el stock de cada bodega (un producto puede tener varias ubicaciones en la misma bodega)
-const stockByWarehouse = (rows: { warehouseId: number; available: number }[]): Record<string, number> => {
-    const result: Record<string, number> = {}
+// suma lo vendible de cada producto en la bodega activa
+export const indexStock = (rows: StockRowDto[], activeWarehouseId?: number): Map<number, ProductStock> => {
+    const result = new Map<number, ProductStock>()
+    const best = new Map<number, number>()
+    const places = new Map<number, Array<{ code: string; sellable: number }>>()
     for (const row of rows) {
-        const key = String(row.warehouseId)
-        result[key] = (result[key] ?? 0) + Math.max(0, row.available)
+        if (activeWarehouseId !== undefined && row.warehouseId !== activeWarehouseId) continue
+        const sellable = Math.max(0, row.sellable)
+        const current = result.get(row.productId) ?? { sellable: 0 }
+        current.sellable += sellable
+        if (row.minStock && row.minStock > (current.minStock ?? 0)) current.minStock = row.minStock
+        if (row.location) places.set(row.productId, [...(places.get(row.productId) ?? []), { code: row.location, sellable }])
+        if (row.location && sellable >= (best.get(row.productId) ?? -1)) {
+            current.location = row.location
+            best.set(row.productId, sellable)
+        }
+        result.set(row.productId, current)
+    }
+    // un producto puede estar en varias ubicaciones de la bodega: se guardan todas, la de más vendible primero
+    for (const [productId, list] of places) {
+        const stock = result.get(productId)
+        if (stock) stock.locations = list.sort((a, b) => b.sellable - a.sellable).map((place) => place.code)
     }
     return result
 }
@@ -46,121 +53,61 @@ export const sanitizeImageUrl = (value: unknown): string | undefined => {
     return trimmed.length > 0 && trimmed !== 'null' && trimmed !== 'undefined' ? trimmed : undefined
 }
 
-// extractor resiliente de la imagen del producto
-// soporta: (1) images con objetos { url, isMain }, (2) images con strings, (3) campos planos productImage, image, photo
-export const resolveProductImageUrl = (dto: ProductDto): string | undefined => {
-    const images = dto.images
-    if (Array.isArray(images) && images.length > 0) {
-        let mainCandidate: ProductImageDto | string | undefined
-        for (const item of images) {
-            if (typeof item === 'object' && item !== null && Boolean(item.isMain)) {
-                mainCandidate = item
-                break
-            }
-        }
-        const candidate = mainCandidate ?? images[0]
-        if (typeof candidate === 'string') {
-            const url = sanitizeImageUrl(candidate)
-            if (url) return url
-        } else if (candidate && typeof candidate === 'object') {
-            const url = sanitizeImageUrl(candidate.url || candidate.imageUrl || candidate.path)
-            if (url) return url
-        }
+// el nombre del repuesto: su name; si falta se usa la descripción y, al final, el código
+const nameOf = (dto: ProductDto): string => dto.name?.trim() || dto.description?.trim() || dto.code
 
-        for (const item of images) {
-            const url =
-                typeof item === 'string'
-                    ? sanitizeImageUrl(item)
-                    : sanitizeImageUrl(item?.url || item?.imageUrl || item?.path)
-            if (url) return url
-        }
-    }
-
-    return sanitizeImageUrl(dto.productImage) || sanitizeImageUrl(dto.image) || sanitizeImageUrl(dto.photo)
-}
-
-// el nombre del repuesto es su descripción (el backend no tiene un campo "name"); si falta se usa el código
-const nameOf = (description: string | undefined, code: string): string => description?.trim() || code
-
-// productos de POST /products; warehouseId (opcional) elige de qué bodega se muestra la ubicación en estantería
-export const toProduct = (dto: ProductDto, warehouseId?: number): Product => {
-    const locations = dto.locations ?? []
-    const location = locations.find((row) => row.warehouseId === warehouseId) ?? locations[0]
-    const rawImage = resolveProductImageUrl(dto)
-    const isNew = Boolean(
-        dto.created_at && Date.now() - new Date(dto.created_at).getTime() <= 604800000
-    )
+// producto de GET /products o GET /products/search; stock (opcional) trae lo vendible y la ubicación en la bodega elegida
+export const toProduct = (dto: ProductDto, warehouseId?: number, stock?: ProductStock): Product => {
+    // la imagen de la API manda; si el producto no trae, se usa la que tenía en el bucket del sistema anterior (por código; la ruta se codifica porque lleva espacios y paréntesis)
+    const legacy = LEGACY_PRODUCT_IMAGES[dto.code]
+    const rawImage = sanitizeImageUrl(dto.images?.[0]) ?? (legacy ? encodeURI(legacy) : undefined)
+    const isNew = Boolean(dto.isNew)
 
     return {
-        id: String(dto.productId),
+        id: String(dto.id),
         code: dto.code,
-        name: nameOf(dto.description, dto.code),
+        name: nameOf(dto),
         description: dto.description || undefined,
         brand: dto.brandName ?? '',
-        brandImage: dto.brandImage ? getStorageUrl(dto.brandImage) : undefined,
         category: dto.categoryName ?? '',
-        modelCompatible: dto.modelName || dto.models?.join(' / ') || undefined,
+        categoryId: dto.categoryId ? Number(dto.categoryId) : undefined,
+        modelCompatible: dto.modelName || undefined,
         imageUrl: rawImage ? getStorageUrl(rawImage) : undefined,
-        location: location?.locationCode || undefined,
-        prices: pricesByType(dto.prices),
-        stockByWarehouse: stockByWarehouse(
-            locations.map((row) => ({ warehouseId: row.warehouseId, available: row.stock - (row.reservedStock ?? 0) }))
-        ),
+        location: stock?.location,
+        locations: stock?.locations,
+        prices: toProductPrices(dto.prices),
+        stockByWarehouse: stock?.byWarehouse ?? (warehouseId !== undefined && stock ? { [String(warehouseId)]: stock.sellable } : {}),
+        minStockAlert: stock?.minStock,
         isNew,
-        createdAt: dto.created_at || undefined,
+        createdAt: dto.createdAt || undefined,
+        status: (dto.status as Product['status']) ?? 'active',
     }
 }
 
-// productos de POST /inventory/search (búsqueda por texto)
-export const toProductFromControl = (dto: ControlProductDto, warehouseId?: number): Product => {
-    const info = dto.productInformation
-    const locations = dto.locations ?? []
-    const location = locations.find((row) => row.warehouseId === warehouseId) ?? locations[0]
-    const rawProductImage = sanitizeImageUrl(info?.productImage) || sanitizeImageUrl((info as any)?.url)
-    const rawBrandImage = sanitizeImageUrl(info?.brandImage)
-
-    return {
+// renglón del carrito de la API → CartItem; known (opcional) es el producto completo si se agregó en esta sesión (la API solo trae código y nombre)
+export const toCartItem = (dto: CartItemDto, known?: Product): CartItem => ({
+    cartId: dto.id, // id del renglón: es con el que se cambia la cantidad o se quita
+    stockId: dto.stockId,
+    productId: String(dto.productId),
+    product: known ?? {
         id: String(dto.productId),
-        code: dto.code,
-        name: nameOf(info?.description, dto.code),
-        description: info?.description || undefined,
-        brand: info?.brandName ?? '',
-        brandImage: rawBrandImage ? getStorageUrl(rawBrandImage) : undefined,
-        category: info?.categoryName ?? '',
-        modelCompatible: info?.modelName || undefined,
-        imageUrl: rawProductImage ? getStorageUrl(rawProductImage) : undefined,
-        location: location?.locationCode || undefined,
-        prices: pricesByOrder(dto.prices),
-        stockByWarehouse: stockByWarehouse(locations.map((row) => ({ warehouseId: row.warehouseId, available: row.physicalStock }))),
-    }
-}
+        code: dto.productCode,
+        name: dto.productName?.trim() || dto.productCode,
+        brand: '',
+        category: '',
+        location: dto.location || undefined,
+        prices: { ...EMPTY_PRICES },
+        stockByWarehouse: {},
+    },
+    quantity: dto.quantity,
+    selectedPrice: dto.unitPrice,
+    priceLevel: null,
+    subtotal: dto.lineTotal,
+})
 
-// línea del carrito (POST /carts) → CartItem; el producto se arma con productInformation (sin precios por nivel ni stock: eso solo lo trae el catálogo)
-// ojo: el nivel de precio no viene del backend (priceLevel null); el subtotal es precio por cantidad (el campo discount no se aplica todavía)
-export const toCartItem = (dto: CartDto): CartItem => {
-    const info = dto.productInformation
-    const code = info?.code ?? ''
-    const rawProductImage = sanitizeImageUrl(info?.url) || sanitizeImageUrl((info as any)?.productImage)
-    const rawBrandImage = sanitizeImageUrl(info?.brandImage)
-
-    return {
-        cartId: dto.cartId,
-        productId: String(dto.productId),
-        product: {
-            id: String(dto.productId),
-            code,
-            name: nameOf(info?.description, code),
-            brand: info?.brandName ?? '',
-            brandImage: rawBrandImage ? getStorageUrl(rawBrandImage) : undefined,
-            category: info?.categoryName ?? '',
-            modelCompatible: info?.modelName || undefined,
-            imageUrl: rawProductImage ? getStorageUrl(rawProductImage) : undefined,
-            prices: { ...EMPTY_PRICES },
-            stockByWarehouse: {},
-        },
-        quantity: dto.quantity,
-        selectedPrice: dto.price,
-        priceLevel: null,
-        subtotal: dto.price * dto.quantity,
-    }
-}
+// carrito de GET /carts/active → su id, su uuid y sus renglones; known es el producto completo por id (si se conoce)
+export const toCartSnapshot = (dto: CartDto, known: Record<string, Product> = {}): CartSnapshot => ({
+    cartId: dto.id,
+    uuid: dto.uuid,
+    items: (dto.items ?? []).map((item) => toCartItem(item, known[String(item.productId)])),
+})

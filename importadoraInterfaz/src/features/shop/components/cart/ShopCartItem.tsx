@@ -2,11 +2,11 @@
 // conecta con: shop.cart.thunks (cambiar cantidad y quitar en el backend), shop.helpers (título y «marca - modelo»), brand/ProductBrand (marca), useCartQuantity (cantidad editable); la pinta ShopCartDrawer por cada item
 // ojo: antes la cantidad se cambiaba con - y +; ahora es un campo numérico como el de la maqueta. El nivel de precio (si se conoce) va al final de la línea de marca y modelo
 import React from 'react'
-import { formatPesos } from '@/global/helpers/format'
-import { useAppDispatch, useAppSelector } from '@/global/hooks/useRedux'
+import { formatPesos } from '@/global/helpers/formatting/format'
+import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { removeCartItemThunk } from '../../thunks/shop.cart.update.thunks'
 import { selectCartMutating } from '../../selectors/shop.selectors'
-import { getBrandModelLabel, getProductTitle } from '../../helpers/shop.helpers'
+import { getBrandModelLabel, getFullTitle, getWarehouseStock } from '../../helpers/shop.helpers'
 import { useCartQuantity } from '../../hooks/useCartQuantity'
 import type { ShopCartItemProps } from '../../types/shop.cart.types'
 import { ProductBrand } from '../brand/ProductBrand'
@@ -17,9 +17,13 @@ export const ShopCartItem: React.FC<ShopCartItemProps> = ({ item }) => {
   const dispatch = useAppDispatch()
   // mientras el backend procesa un cambio se bloquean los controles (evita dobles clics)
   const isBusy = useAppSelector(selectCartMutating)
-  const quantity = useCartQuantity(item.cartId, item.quantity)
   const { product } = item
-  const title = getProductTitle(product)
+  const activeWarehouseId = useAppSelector((state) => state.ui.activeWarehouseId)
+  // tope: lo vendible de la bodega activa según el catálogo cargado (si el producto no está en la página cargada no se limita aquí)
+  const catalogProduct = useAppSelector((state) => state.products.items.find((candidate) => candidate.id === item.productId))
+  const maxQuantity = catalogProduct ? getWarehouseStock(catalogProduct, activeWarehouseId) : undefined
+  const quantity = useCartQuantity(item.cartId, item.quantity, maxQuantity)
+  const title = getFullTitle(product)
 
   return (
     <li className="shop-cart-item">
@@ -30,7 +34,6 @@ export const ShopCartItem: React.FC<ShopCartItemProps> = ({ item }) => {
       <div className="shop-cart-item-main">
         <div className="shop-cart-item-top">
           <div className="shop-cart-item-title">
-            {product.category && <span className="shop-cart-item-category">{product.category}</span>}
             <strong className="shop-cart-item-name" title={title}>
               {title.toUpperCase()}
             </strong>
@@ -49,6 +52,7 @@ export const ShopCartItem: React.FC<ShopCartItemProps> = ({ item }) => {
             type="number"
             inputMode="numeric"
             min={1}
+            max={maxQuantity && maxQuantity > 0 ? maxQuantity : undefined}
             className="shop-cart-item-qty"
             value={quantity.text}
             disabled={isBusy}

@@ -2,103 +2,73 @@
 // conecta con: shop.cart.service; el cliente HTTP está simulado (no hay red)
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { apiClient } from '@/api'
-import { addCartItem, deleteCart, deleteCartItem, fetchCartItems, reassignCart, updateCartItemQuantity } from './shop.cart.service'
+import { addCartItem, clearCart, deleteCartItem, fetchActiveCart, updateCartItemQuantity } from './shop.cart.service'
+import type { Product } from '../types/shop.types'
 
 vi.mock('@/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/api')>()),
-  apiClient: { post: vi.fn(), put: vi.fn(), delete: vi.fn() },
+  apiClient: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() },
 }))
-
-const ctx = { companyId: 3, userId: 7 }
 
 beforeEach(() => {
   vi.clearAllMocks()
 })
 
-describe('fetchCartItems', () => {
-  it('POST /carts con empresa, usuario, vendedor, uuid y bodega, y convierte las líneas', async () => {
-    vi.mocked(apiClient.post).mockResolvedValue({
+describe('fetchActiveCart', () => {
+  it('GET /carts/active y convierte el carrito: id, uuid y renglones', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
       data: {
         success: true,
-        data: [{ cartId: 11, productId: 5, quantity: 2, price: 1000, productInformation: { code: 'A-1', description: 'Pieza' } }],
+        data: {
+          id: 9,
+          uuid: 'u-9',
+          items: [{ id: 11, cartId: 9, productId: 5, productCode: 'A-1', productName: 'Pieza', stockId: 3, quantity: 2, unitPrice: 1000, lineTotal: 2000 }],
+        },
       },
     })
-    const items = await fetchCartItems(ctx, { uuid: 'u-1', warehouseId: 4 })
-    expect(apiClient.post).toHaveBeenCalledWith('/carts', { companyId: 3, userId: 7, sellerId: 7, uuid: 'u-1', warehouseId: 4 })
-    expect(items[0]).toMatchObject({ cartId: 11, productId: '5', quantity: 2, subtotal: 2000 })
-    expect(items[0].product).toMatchObject({ code: 'A-1', name: 'Pieza' })
+    const cart = await fetchActiveCart()
+    expect(apiClient.get).toHaveBeenCalledWith('/carts/active')
+    expect(cart).toMatchObject({ cartId: 9, uuid: 'u-9' })
+    expect(cart.items[0]).toMatchObject({ cartId: 11, productId: '5', quantity: 2, selectedPrice: 1000, subtotal: 2000 })
+    expect(cart.items[0].product).toMatchObject({ code: 'A-1', name: 'Pieza' })
   })
 
-  it('sin bodega no manda warehouseId', async () => {
-    vi.mocked(apiClient.post).mockResolvedValue({ data: { success: true, data: null } })
-    expect(await fetchCartItems(ctx, { uuid: 'u-1' })).toEqual([])
-    expect(apiClient.post).toHaveBeenCalledWith('/carts', expect.not.objectContaining({ warehouseId: expect.anything() }))
+  it('un carrito sin renglones queda vacío', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({ data: { success: true, data: { id: 9, uuid: 'u-9', items: null } } })
+    expect((await fetchActiveCart()).items).toEqual([])
   })
-})
 
-describe('addCartItem', () => {
-  it('POST /carts/register con todos los datos de la línea y tipo "sale"', async () => {
-    vi.mocked(apiClient.post).mockResolvedValue({ data: { success: true } })
-    await addCartItem(ctx, { uuid: 'u-1', warehouseId: 4, productId: 5, quantity: 3, price: 1500 })
-    expect(apiClient.post).toHaveBeenCalledWith('/carts/register', {
-      companyId: 3,
-      userId: 7,
-      sellerId: 7,
-      typeCart: 'sale',
-      discount: 0,
-      uuid: 'u-1',
-      warehouseId: 4,
-      productId: 5,
-      quantity: 3,
-      price: 1500,
+  it('los productos conocidos conservan su marca e imagen', async () => {
+    const known: Product = { id: '5', code: 'A-1', name: 'Pieza', brand: 'Bajaj', category: 'Motor', imageUrl: 'https://x/p.png', prices: { p0: 1, p1: 1, p2: 1, p3: 1 }, stockByWarehouse: {} }
+    vi.mocked(apiClient.get).mockResolvedValue({
+      data: { success: true, data: { id: 9, uuid: 'u', items: [{ id: 1, cartId: 9, productId: 5, productCode: 'A-1', productName: 'Pieza', stockId: 3, quantity: 1, unitPrice: 10, lineTotal: 10 }] } },
     })
+    expect((await fetchActiveCart({ '5': known })).items[0].product).toBe(known)
   })
 })
 
-describe('cambios de una línea', () => {
-  it('updateCartItemQuantity: PUT /carts/update con { cartId, quantity }', async () => {
-    vi.mocked(apiClient.put).mockResolvedValue({ data: {} })
-    await updateCartItemQuantity(11, 6)
-    expect(apiClient.put).toHaveBeenCalledWith('/carts/update', { cartId: 11, quantity: 6 })
-  })
-
-  it('deleteCartItem: DELETE /carts/delete con el cartId en el cuerpo', async () => {
-    vi.mocked(apiClient.delete).mockResolvedValue({ data: {} })
-    await deleteCartItem(11)
-    expect(apiClient.delete).toHaveBeenCalledWith('/carts/delete', { data: { cartId: 11 } })
-  })
-
-  it('deleteCart: DELETE /carts/deleteall con usuario y uuid en el cuerpo', async () => {
-    vi.mocked(apiClient.delete).mockResolvedValue({ data: {} })
-    await deleteCart(ctx, 'u-1')
-    expect(apiClient.delete).toHaveBeenCalledWith('/carts/deleteall', { data: { userId: 7, uuid: 'u-1' } })
-  })
-})
-
-describe('cliente de la venta', () => {
-  it('fetchCartItems con cliente: el userId es el cliente y el vendedor sigue siendo el usuario de la sesión', async () => {
-    vi.mocked(apiClient.post).mockResolvedValue({ data: { success: true, data: [] } })
-    await fetchCartItems(ctx, { uuid: 'u-1', warehouseId: 4, customerId: 21 })
-    expect(apiClient.post).toHaveBeenCalledWith('/carts', { companyId: 3, userId: 21, sellerId: 7, uuid: 'u-1', warehouseId: 4 })
-  })
-
-  it('addCartItem con cliente: la línea queda a nombre del cliente y customerId no viaja como campo suelto', async () => {
+describe('cambios del carrito', () => {
+  it('addCartItem: POST /carts/:id/items con { stockId, quantity, unitPrice }', async () => {
     vi.mocked(apiClient.post).mockResolvedValue({ data: { success: true } })
-    await addCartItem(ctx, { customerId: 21, uuid: 'u-1', warehouseId: 4, productId: 5, quantity: 1, price: 100 })
-    const body = vi.mocked(apiClient.post).mock.calls[0][1] as Record<string, unknown>
-    expect(body).toMatchObject({ userId: 21, sellerId: 7 })
-    expect(body).not.toHaveProperty('customerId')
+    await addCartItem({ cartId: 9, stockId: 3, quantity: 3, price: 1500 })
+    expect(apiClient.post).toHaveBeenCalledWith('/carts/9/items', { stockId: 3, quantity: 3, unitPrice: 1500 })
   })
 
-  it('deleteCart con cliente borra el carrito de ese cliente', async () => {
-    vi.mocked(apiClient.delete).mockResolvedValue({ data: {} })
-    await deleteCart(ctx, 'u-1', 21)
-    expect(apiClient.delete).toHaveBeenCalledWith('/carts/deleteall', { data: { userId: 21, uuid: 'u-1' } })
-  })
-
-  it('reassignCart: PUT /carts/reassignuser con el usuario anterior, el nuevo y el uuid', async () => {
+  it('updateCartItemQuantity: PUT /carts/:id/items/:itemId con { quantity }', async () => {
     vi.mocked(apiClient.put).mockResolvedValue({ data: {} })
-    await reassignCart(7, 21, 'u-1')
-    expect(apiClient.put).toHaveBeenCalledWith('/carts/reassignuser', { oldUserId: 7, newUserId: 21, uuid: 'u-1' })
+    await updateCartItemQuantity(9, 11, 6)
+    expect(apiClient.put).toHaveBeenCalledWith('/carts/9/items/11', { quantity: 6 })
+  })
+
+  it('deleteCartItem: DELETE /carts/:id/items/:itemId', async () => {
+    vi.mocked(apiClient.delete).mockResolvedValue({ data: {} })
+    await deleteCartItem(9, 11)
+    expect(apiClient.delete).toHaveBeenCalledWith('/carts/9/items/11')
+  })
+
+  it('clearCart: DELETE /carts/:id', async () => {
+    vi.mocked(apiClient.delete).mockResolvedValue({ data: {} })
+    await clearCart(9)
+    expect(apiClient.delete).toHaveBeenCalledWith('/carts/9')
   })
 })

@@ -1,0 +1,240 @@
+/* VerifyInvoiceGoodsModal.css · Drawer lateral derecho para cotejo físico de salida */
+
+.vig-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(3px);
+  z-index: 9999;
+  display: flex;
+  justify-content: flex-end;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.vig-modal-content {
+  background: #ffffff;
+  width: 100%;
+  max-width: 640px;
+  height: 100%;
+  box-shadow: -8px 0 25px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: slideInRight 0.25s ease-out;
+}
+
+.vig-modal-header {
+  padding: 18px 24px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.vig-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.vig-badge-immediate {
+  background: #fef3c7;
+  color: #92400e;
+  font-size: var(--text-11px);
+  font-weight: var(--font-weight-bold);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.vig-modal-title {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-bold);
+  color: #0f172a;
+}
+
+.vig-modal-subtitle {
+  margin: 4px 0 0;
+  font-size: var(--text-xs);
+  color: #64748b;
+  line-height: var(--leading-normal);
+}
+
+.vig-modal-close {
+  background: transparent;
+  border: none;
+  font-size: var(--text-lg);
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.vig-modal-close:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.vig-modal-body {
+  padding: 20px 24px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.vig-instruction-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  gap: 12px;
+}
+
+.vig-instruction-card p {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: #1e3a8a;
+  line-height: var(--leading-normal);
+}
+
+.vig-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+  text-align: left;
+}
+
+.vig-table th {
+  background: #f8fafc;
+  padding: 10px 14px;
+  font-size: var(--text-11px);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: #64748b;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.vig-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #1e293b;
+}
+
+.vig-row {
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.vig-row:hover {
+  background: #f8fafc;
+}
+
+.vig-row.is-checked {
+  background: #f0fdf4;
+}
+
+.vig-td-check {
+  width: 36px;
+  text-align: center;
+}
+
+.vig-td-check input {
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+}
+
+.vig-td-qty {
+  text-align: center;
+}
+
+.vig-qty-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  background: #e0f2fe;
+  color: #0369a1;
+  border-radius: 4px;
+  font-weight: var(--font-weight-bold);
+  font-size: var(--text-xs);
+}
+
+.vig-td-price,
+.vig-td-total {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.vig-summary-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  font-size: var(--text-sm);
+}
+
+.vig-summary-bar strong {
+  color: #0f172a;
+}
+
+.vig-modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  background: #f8fafc;
+}
+
+.vig-btn-cancel {
+  padding: 9px 18px;
+  background: transparent;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  color: #475569;
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.vig-btn-cancel:hover {
+  background: #f1f5f9;
+}
+
+.vig-btn-confirm {
+  padding: 9px 22px;
+  background: #059669;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-weight: var(--font-weight-bold);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.vig-btn-confirm:hover:not(:disabled) {
+  background: #047857;
+}
+
+.vig-btn-confirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #94a3b8;
+}
+
+.vig-table-message {
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--c-slate-400);
+}

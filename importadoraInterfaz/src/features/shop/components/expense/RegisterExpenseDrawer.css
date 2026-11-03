@@ -1,0 +1,13 @@
+/* RegisterExpenseDrawer.css */
+.expense-context-box {
+  background: var(--color-bg-muted);
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.expense-context-box strong {
+  color: var(--color-text-primary);
+}
+

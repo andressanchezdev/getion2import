@@ -1,16 +1,43 @@
-/* ShopCatalogToolbar.css · estilos de la fila de herramientas del catálogo (buscador, chips de filtro y limpiar) · solo usa tokens de styles/tokens.css */
-/* ojo: antes estas reglas estaban en ShopCatalogScreen.css (se separó para que cada archivo haga una sola cosa) */
-/* ojo: los chips (categoría, marca y con stock) ahora son componentes globales (global/UI/molecules/chips) y sus estilos ya no se repiten aquí */
+/* ShopCatalogToolbar.css · estilos de la fila de herramientas del catálogo (buscador, chips de filtro, checkbox de stock y limpiar) · solo usa tokens de styles/tokens.css */
 .shop-catalog-search-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: row;
   align-items: center;
   gap: var(--space-2);
 }
 
 .shop-catalog-search-bar {
   flex: 1;
-  min-width: min(240px, 100%); /* ojo: con el panel abierto la columna es angosta y 240px la desbordaba */
+  min-width: min(240px, 100%);
+  /* ojo: con el panel abierto la columna es angosta y 240px la desbordaba */
+}
+
+.shop-catalog-stock-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background-color: var(--bg-card);
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  user-select: none;
+  transition: border-color var(--motion-fast), background-color var(--motion-fast);
+}
+
+.shop-catalog-stock-check:hover {
+  border-color: var(--c-yellow-400);
+}
+
+.shop-catalog-stock-check input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: var(--c-yellow-600);
+  width: 14px;
+  height: 14px;
+  margin: 0;
 }
 
 .shop-catalog-reset-btn {

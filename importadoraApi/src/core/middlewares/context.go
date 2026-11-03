@@ -1,5 +1,8 @@
 package middlewares
 
+// context.go · ActorContext: quién hace la petición (tipo, id y compañía), guardado en el contexto de Echo, y la compañía efectiva para consultar
+// conecta con: auth_middleware.go (lo llena) y los controllers y services (lo leen)
+
 import (
 	"strconv"
 	"strings"

@@ -1,7 +1,7 @@
 // auth.thunks · acciones asíncronas de la sesión: iniciar, renovar y cerrar sesión
 // conecta con: auth.service (login, refresh, logout), auth.session (guardar/borrar) y auth.slice (reacciona a los resultados); useSessionActivity y SideMenuUser los despachan
 import { createAsyncThunk } from '@reduxjs/toolkit'
-import { toast } from '@/global/helpers/toast'
+import { toast } from '@/global/helpers/feedback/toast'
 import { loginRequest, logoutRequest, refreshRequest } from '../services/auth.service'
 import { getLoginErrorMessage } from '../helpers/auth.helpers'
 import {

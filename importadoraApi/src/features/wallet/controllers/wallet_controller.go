@@ -1,5 +1,8 @@
 package controllers
 
+// wallet_controller.go · controlador HTTP de cartera: recibe la petición, valida la entrada y llama al servicio; no tiene lógica de negocio
+// conecta con: los services y dtos de cartera y core/utils (respuestas y errores); los registra routes
+
 import (
 	"strconv"
 
@@ -16,6 +19,7 @@ type WalletController struct {
 	service *services.WalletService
 }
 
+// NewWalletController crea el controlador con las piezas que necesita para funcionar.
 func NewWalletController(service *services.WalletService) *WalletController {
 	return &WalletController{service: service}
 }

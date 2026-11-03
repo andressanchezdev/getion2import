@@ -2,7 +2,7 @@
 // conecta con: WalletScreen (lo usa al montarse); despacha wallet.thunks y lee wallet.selectors, la sesión de auth y la bodega activa (navigation) y su estado (warehouses)
 // ojo: igual que el catálogo, espera a que haya bodega activa (la cartera se lee por bodega), salvo que las bodegas hayan fallado; los totales no dependen de la página
 import { useEffect } from 'react'
-import { useAppDispatch, useAppSelector } from '@/global/hooks/useRedux'
+import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { selectCurrentUser } from '@/features/auth'
 import { selectWarehousesStatus } from '@/features/warehouses'
 import { selectWalletPage } from '../selectors/wallet.selectors'

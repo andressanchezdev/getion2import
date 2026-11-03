@@ -3,15 +3,14 @@
 // ojo: después de cambiar algo se vuelven a leer facturas, lista y totales (el backend calcula los saldos, no se suman a mano); los errores se avisan con una alerta; un solo cambio a la vez (condition)
 import { createAsyncThunk } from '@reduxjs/toolkit'
 import { getErrorMessage } from '@/api'
-import { formatCOP } from '@/global/helpers/format'
-import { toast } from '@/global/helpers/toast'
-import { toWarehouseNumber } from '@/global/helpers/warehouse'
+import { formatCOP } from '@/global/helpers/formatting/format'
+import { toast } from '@/global/helpers/feedback/toast'
 import { selectRequestContext } from '@/features/auth'
 import { splitPayment } from '../helpers/wallet.helpers'
 import { fetchCustomerInvoices } from '../services/wallet.service'
 import { registerPayment, updateCredit } from '../services/wallet.payments.service'
 import { loadWalletSummaryThunk, loadWalletThunk, NO_SESSION, type WalletThunkConfig } from './wallet.thunks'
-import type { CreditUpdateInput, PaymentInput } from '../types/wallet.api.types'
+import type { CreditUpdateInput, PaymentDetails, PaymentInput } from '../types/wallet.api.types'
 import type { CreditInvoice } from '../types/wallet.types'
 
 const noOtherChangeRunning = (_: unknown, { getState }: { getState: () => { wallet: { invoices: { saving: boolean } } } }) =>
@@ -28,15 +27,15 @@ export interface PayInput {
   customerId: number
   amount: number
   saleId?: number // con saleId se abona a esa factura; sin él se reparte entre las más antiguas
+  details?: PaymentDetails // cómo se recibió (por defecto efectivo)
 }
 
 export const payThunk = createAsyncThunk<CreditInvoice[], PayInput, WalletThunkConfig>(
   'wallet/pay',
-  async ({ customerId, amount, saleId }, { getState, dispatch, rejectWithValue }) => {
+  async ({ customerId, amount, saleId, details }, { getState, dispatch, rejectWithValue }) => {
     const state = getState()
     const ctx = selectRequestContext(state)
     if (!ctx) return rejectWithValue(NO_SESSION)
-    const warehouseId = toWarehouseNumber(state.ui.activeWarehouseId)
 
     const invoices = state.wallet.invoices.items
     const payments: PaymentInput[] =
@@ -49,7 +48,7 @@ export const payThunk = createAsyncThunk<CreditInvoice[], PayInput, WalletThunkC
     let failure: string | null = null
     for (const payment of payments) {
       try {
-        await registerPayment(ctx, customerId, payment, warehouseId)
+        await registerPayment(ctx, customerId, payment, details)
       } catch (error) {
         failure = failWith(error, 'No se pudo registrar el abono.')
         break
@@ -57,7 +56,7 @@ export const payThunk = createAsyncThunk<CreditInvoice[], PayInput, WalletThunkC
     }
 
     try {
-      const refreshed = await fetchCustomerInvoices(ctx, customerId, warehouseId)
+      const refreshed = await fetchCustomerInvoices(ctx, customerId)
       dispatch(loadWalletThunk())
       dispatch(loadWalletSummaryThunk())
       if (failure) return rejectWithValue(failure)

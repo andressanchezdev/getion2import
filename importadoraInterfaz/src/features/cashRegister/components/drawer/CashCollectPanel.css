@@ -1,0 +1,39 @@
+/* CashCollectPanel.css · cobro mixto de un pedido: totales, líneas de pago y avisos · solo usa tokens de styles/tokens.css */
+.cash-collect-totals {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+
+.cash-collect-totals div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-1) 0;
+  font-size: var(--text-sm);
+}
+
+.cash-collect-totals dt {
+  color: var(--color-text-secondary);
+}
+
+.cash-collect-totals dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.cash-collect-line-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.cash-collect-problem {
+  font-size: var(--text-xs);
+  color: var(--color-danger);
+}
+
+.cash-collect-add {
+  align-self: flex-start;
+}

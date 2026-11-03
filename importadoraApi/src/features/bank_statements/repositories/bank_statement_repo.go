@@ -1,5 +1,8 @@
 package repositories
 
+// bank_statement_repo.go · acceso a la base de extractos bancarios: aquí vive el SQL; cada método recibe la conexión o la transacción
+// conecta con: core/db (DBExecutor) y los dtos de extractos bancarios; los usan los services de extractos bancarios
+
 import (
 	"context"
 	"errors"
@@ -16,10 +19,12 @@ import (
 
 type BankStatementRepository struct{}
 
+// NewBankStatementRepository crea el repositorio; no guarda estado, cada método recibe la conexión o transacción.
 func NewBankStatementRepository() *BankStatementRepository {
 	return &BankStatementRepository{}
 }
 
+// InsertBatch inserta de una vez los movimientos leídos de un extracto bancario.
 func (r *BankStatementRepository) InsertBatch(ctx context.Context, q db.DBExecutor, records []entities.BankStatementRecordEntity) (int, error) {
 	if len(records) == 0 {
 		return 0, nil
@@ -46,6 +51,7 @@ func (r *BankStatementRepository) InsertBatch(ctx context.Context, q db.DBExecut
 	return inserted, nil
 }
 
+// FindFiltered lista los registros bancarios según los filtros, con su total para paginar.
 func (r *BankStatementRepository) FindFiltered(ctx context.Context, q db.DBExecutor, filter dtos.BankStatementFilterQuery) ([]entities.BankStatementRecordEntity, int, error) {
 	var conditions []string
 	var args []any
@@ -142,6 +148,7 @@ func (r *BankStatementRepository) FindFiltered(ctx context.Context, q db.DBExecu
 	return list, total, rows.Err()
 }
 
+// FindByID busca el registro bancario por su id (nil si no existe).
 func (r *BankStatementRepository) FindByID(ctx context.Context, q db.DBExecutor, companyID int64, id int64) (*entities.BankStatementRecordEntity, error) {
 	const sql = `
 		SELECT
@@ -171,6 +178,7 @@ func (r *BankStatementRepository) FindByID(ctx context.Context, q db.DBExecutor,
 	return &it, nil
 }
 
+// UpdateStatus cambia el estado de un registro bancario (confirmado o ignorado) y guarda quién lo hizo y la nota.
 func (r *BankStatementRepository) UpdateStatus(ctx context.Context, q db.DBExecutor, companyID int64, id int64, status string, confirmedByID *int64, notes *string) error {
 	now := time.Now()
 	var confirmedAt *time.Time
@@ -189,4 +197,3 @@ func (r *BankStatementRepository) UpdateStatus(ctx context.Context, q db.DBExecu
 	_, err := q.Exec(ctx, sql, status, confirmedByID, confirmedAt, notes, companyID, id)
 	return err
 }
-

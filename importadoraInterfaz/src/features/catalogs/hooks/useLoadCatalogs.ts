@@ -2,7 +2,7 @@
 // conecta con: ShopCatalogScreen (la usa al montarse); despacha catalogs.thunks y lee el estado de catalogs.selectors
 // ojo: solo pide los que están en "idle"; si uno falla NO se reintenta solo (así no se repite en bucle con el servidor caído); recargar la página lo vuelve a intentar
 import { useEffect } from 'react'
-import { useAppDispatch, useAppSelector } from '@/global/hooks/useRedux'
+import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { selectBrandsStatus, selectCategoriesStatus, selectMotoModelsStatus } from '../selectors/catalogs.selectors'
 import { fetchBrandsThunk, fetchCategoriesThunk, fetchMotoModelsThunk } from '../thunks/catalogs.thunks'
 

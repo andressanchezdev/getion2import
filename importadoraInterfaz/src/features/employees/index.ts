@@ -2,6 +2,12 @@
 // conecta con: screenRegistry, usePermissions, auth.types y UI
 export * from './types/employees.types'
 export * from './services/employees.service'
+export * from './slices/employees.slice'
+export * from './selectors/employees.selectors'
+export * from './thunks/employees.thunks'
+export * from './hooks/useEmployeesDirectory'
 export * from './screens/EmployeesScreen'
 export * from './screens/RolesPermissionsScreen'
-export * from './screens/ModulePermissionRow'
+export * from './components/permissions/EmployeePermissionsPanel'
+export * from './components/detail/EmployeeDetailPanel'
+export * from './components/roles/RoleForm'

@@ -35,13 +35,6 @@
     flex-direction: column;
 }
 
-/* ojo: .product-card-out-of-stock (atenuar imagen y datos al agotarse) ya no se aplica: en la maqueta el agotado se ve en el botón gris «Agotado»
-.product-card-out-of-stock .product-card-media,
-.product-card-out-of-stock .product-card-info {
-    opacity: 0.55;
-}
-*/
-
 @media (prefers-reduced-motion: reduce) {
     .product-card {
         transition: none;

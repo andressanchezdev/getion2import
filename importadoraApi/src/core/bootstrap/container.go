@@ -1,5 +1,8 @@
 package bootstrap
 
+// container.go · armado de dependencias de la API: crea los repositorios, servicios y controladores y los conecta entre sí
+// conecta con: core/db, core/config y los repositories, services y controllers de cada módulo; lo usa router.go
+
 import (
 	"importadoraApi/src/core/config"
 	"importadoraApi/src/core/db"
@@ -91,6 +94,16 @@ import (
 	bankStatementControllers "importadoraApi/src/features/bank_statements/controllers"
 	bankStatementRepos "importadoraApi/src/features/bank_statements/repositories"
 	bankStatementServices "importadoraApi/src/features/bank_statements/services"
+
+	cashSessionControllers "importadoraApi/src/features/cash_sessions/controllers"
+	cashSessionRepos "importadoraApi/src/features/cash_sessions/repositories"
+	cashSessionServices "importadoraApi/src/features/cash_sessions/services"
+
+	screensaverControllers "importadoraApi/src/features/screensaver/controllers"
+	screensaverRepos "importadoraApi/src/features/screensaver/repositories"
+	screensaverServices "importadoraApi/src/features/screensaver/services"
+
+	swaggerControllers "importadoraApi/src/features/swagger/controllers"
 )
 
 // AppContainer orquesta la inyección de dependencias de todos los módulos del sistema
@@ -120,8 +133,12 @@ type AppContainer struct {
 	ReportCtrl        *reportControllers.ReportController
 	RecycleBinCtrl    *recycleBinControllers.RecycleBinController
 	BankStatementCtrl *bankStatementControllers.BankStatementController
+	CashSessionCtrl   *cashSessionControllers.CashSessionController
+	ScreensaverCtrl   *screensaverControllers.ScreensaverController
+	SwaggerCtrl       *swaggerControllers.SwaggerController
 }
 
+// NewContainer arma todas las dependencias de la API (repositorios, servicios y controladores) ya conectadas entre sí.
 func NewContainer(cfg *config.Config, database *db.Database) *AppContainer {
 	// Repositorios base
 	authRepo := authRepos.NewAuthRepository()
@@ -154,7 +171,8 @@ func NewContainer(cfg *config.Config, database *db.Database) *AppContainer {
 
 	// Customers & Externals
 	customerRepo := customerRepos.NewCustomerRepository()
-	customerService := customerServices.NewCustomerService(cfg, database.Pool, customerRepo, auditRepo)
+	recycleBinRepo := recycleBinRepos.NewRecycleBinRepository()
+	customerService := customerServices.NewCustomerService(cfg, database.Pool, customerRepo, recycleBinRepo, auditRepo)
 	customerCtrl := customerControllers.NewCustomerController(customerService)
 
 	externalRepo := externalRepos.NewExternalRepository()
@@ -169,11 +187,11 @@ func NewContainer(cfg *config.Config, database *db.Database) *AppContainer {
 	catalogCtrl := catalogControllers.NewCatalogController(catalogService)
 
 	productRepo := productRepos.NewProductRepository()
-	productService := productServices.NewProductService(cfg, database.Pool, productRepo, categoryRepo, brandRepo, modelRepo, auditRepo)
+	inventoryRepo := inventoryRepos.NewInventoryRepository()
+	productService := productServices.NewProductService(cfg, database.Pool, productRepo, recycleBinRepo, categoryRepo, brandRepo, modelRepo, auditRepo, warehouseRepo, inventoryRepo)
 	productCtrl := productControllers.NewProductController(productService)
 
 	// Inventory
-	inventoryRepo := inventoryRepos.NewInventoryRepository()
 	inventoryService := inventoryServices.NewInventoryService(cfg, database.Pool, inventoryRepo, productRepo, warehouseRepo, auditRepo)
 	inventoryCtrl := inventoryControllers.NewInventoryController(inventoryService)
 
@@ -220,13 +238,22 @@ func NewContainer(cfg *config.Config, database *db.Database) *AppContainer {
 	reportService := reportServices.NewReportService(database.Pool, reportRepo)
 	reportCtrl := reportControllers.NewReportController(reportService)
 
-	recycleBinRepo := recycleBinRepos.NewRecycleBinRepository()
 	recycleBinService := recycleBinServices.NewRecycleBinService(database.Pool, recycleBinRepo, auditRepo)
 	recycleBinCtrl := recycleBinControllers.NewRecycleBinController(recycleBinService)
 
 	bankStatementRepo := bankStatementRepos.NewBankStatementRepository()
-	bankStatementService := bankStatementServices.NewBankStatementService(database.Pool, bankStatementRepo, paymentRepo)
+	bankStatementService := bankStatementServices.NewBankStatementService(database.Pool, bankStatementRepo, paymentRepo, paymentService)
 	bankStatementCtrl := bankStatementControllers.NewBankStatementController(bankStatementService)
+
+	cashSessionRepo := cashSessionRepos.NewCashSessionRepository()
+	cashSessionService := cashSessionServices.NewCashSessionService(database.Pool, cashSessionRepo)
+	cashSessionCtrl := cashSessionControllers.NewCashSessionController(cashSessionService)
+
+	screensaverRepo := screensaverRepos.NewScreensaverRepository(database.Pool)
+	screensaverService := screensaverServices.NewScreensaverService(screensaverRepo)
+	screensaverCtrl := screensaverControllers.NewScreensaverController(screensaverService)
+
+	swaggerCtrl := swaggerControllers.NewSwaggerController()
 
 	return &AppContainer{
 		Cfg:               cfg,
@@ -253,5 +280,8 @@ func NewContainer(cfg *config.Config, database *db.Database) *AppContainer {
 		ReportCtrl:        reportCtrl,
 		RecycleBinCtrl:    recycleBinCtrl,
 		BankStatementCtrl: bankStatementCtrl,
+		CashSessionCtrl:   cashSessionCtrl,
+		ScreensaverCtrl:   screensaverCtrl,
+		SwaggerCtrl:       swaggerCtrl,
 	}
 }

@@ -6,6 +6,16 @@
   width: 100%;
 }
 
+.orders-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-rest);
+  overflow: hidden;
+}
+
 .orders-screen-note {
   margin: 0;
   color: var(--color-text-secondary);

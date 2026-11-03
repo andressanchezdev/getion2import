@@ -1,5 +1,8 @@
 package services
 
+// wallet_service.go · reglas de negocio de cartera: valida permisos, compañía y datos, coordina las transacciones y arma las respuestas
+// conecta con: los repositories y dtos de cartera; los llama el controller y la conexión llega del contenedor
+
 import (
 	"context"
 	"fmt"
@@ -22,6 +25,7 @@ type WalletService struct {
 	auditRepo    *authRepos.AuditRepository
 }
 
+// NewWalletService crea el servicio con las piezas que necesita para funcionar.
 func NewWalletService(
 	pool *pgxpool.Pool,
 	walletRepo *repositories.WalletRepository,
@@ -36,6 +40,7 @@ func NewWalletService(
 	}
 }
 
+// GetCustomerSummary devuelve el resumen de crédito de un cliente, validando que sea de la compañía del usuario.
 func (s *WalletService) GetCustomerSummary(ctx context.Context, actor *middlewares.ActorContext, customerID int64) (*dtos.CustomerCreditSummaryResponse, error) {
 	if actor == nil {
 		return nil, utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
@@ -77,6 +82,7 @@ func (s *WalletService) GetCustomerSummary(ctx context.Context, actor *middlewar
 	}, nil
 }
 
+// ListEntries lista los movimientos del libro de crédito de un cliente.
 func (s *WalletService) ListEntries(ctx context.Context, actor *middlewares.ActorContext, f dtos.CreditEntryFilterQuery) ([]dtos.CreditEntryResponse, *utils.PaginatorMetadata, error) {
 	if actor == nil {
 		return nil, nil, utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
@@ -116,6 +122,7 @@ func (s *WalletService) ListEntries(ctx context.Context, actor *middlewares.Acto
 	return resp, &meta, nil
 }
 
+// CreateAdjustment registra un ajuste manual en el crédito del cliente y deja el cambio en auditoría.
 func (s *WalletService) CreateAdjustment(ctx context.Context, actor *middlewares.ActorContext, req dtos.CreateCreditAdjustmentRequest, ip, ua string) (*dtos.CustomerCreditSummaryResponse, error) {
 	if actor == nil {
 		return nil, utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")

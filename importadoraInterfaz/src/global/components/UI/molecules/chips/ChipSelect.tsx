@@ -1,6 +1,4 @@
-// ChipSelect · lista desplegable con aspecto de chip de filtro (como «Marca ▾» de la maqueta): la opción vacía lleva el nombre del filtro
-// conecta con: ChipSelect.css; lo usan el catálogo (categoría y marca) y la tabla de pedidos (canal)
-// ojo: el chip se pinta amarillo cuando hay una opción elegida; el nombre del filtro también es su etiqueta para lectores de pantalla
+// ChipSelect · lista desplegable con aspecto de chip de filtro: solo opciones por defecto y permitidas, sin placeholder seleccionable
 import React from 'react'
 import './ChipSelect.css'
 
@@ -14,10 +12,13 @@ interface ChipSelectProps {
   value: string | number | null
   options: ChipSelectOption[]
   onChange: (value: string | null) => void
+  allowEmpty?: boolean
 }
 
-export const ChipSelect: React.FC<ChipSelectProps> = ({ label, value, options, onChange }) => {
-  const isActive = value !== null && value !== ''
+export const ChipSelect: React.FC<ChipSelectProps> = ({ label, value, options, onChange, allowEmpty = true }) => {
+  const isActive = value !== null && value !== '' && value !== 'all'
+  const hasEmptyInOptions = options.some((opt) => opt.value === '' || opt.value === 'all')
+
   return (
     <select
       aria-label={label}
@@ -25,7 +26,11 @@ export const ChipSelect: React.FC<ChipSelectProps> = ({ label, value, options, o
       value={value ?? ''}
       onChange={(e) => onChange(e.target.value === '' ? null : e.target.value)}
     >
-      <option value="">{label}</option>
+      {allowEmpty && !hasEmptyInOptions && (
+        <option value="" disabled hidden>
+          {label}
+        </option>
+      )}
       {options.map((option) => (
         <option key={option.value} value={option.value}>
           {option.label}

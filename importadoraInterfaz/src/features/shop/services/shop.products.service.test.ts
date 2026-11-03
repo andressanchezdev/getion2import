@@ -1,74 +1,97 @@
-// shop.products.service.test · pruebas de las llamadas de productos: ruta, cuerpo (solo con los filtros aplicados) y conversión de la respuesta
-// conecta con: shop.products.service; el cliente HTTP está simulado (no hay red)
+// shop.products.service.test · pruebas de las llamadas de productos: ruta, parámetros (solo con los filtros aplicados), unión con el stock y conversión
+// conecta con: shop.products.service y shop.stock.service; el cliente HTTP está simulado (no hay red)
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { apiClient } from '@/api'
-import { buildProductsBody, fetchProductsPage, searchProducts } from './shop.products.service'
+import { buildProductsParams, fetchProductsPage, searchProducts } from './shop.products.service'
 
 vi.mock('@/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/api')>()),
-  apiClient: { post: vi.fn() },
+  apiClient: { get: vi.fn() },
 }))
 
 const ctx = { companyId: 3, userId: 7 }
 const meta = { currentPage: 2, pageSize: 30, totalRecords: 75, totalPages: 3, hasNextPage: true, hasPrevPage: true }
+const lastPage = { currentPage: 1, pageSize: 200, totalRecords: 2, totalPages: 1, hasNextPage: false, hasPrevPage: false }
+const stockRows = [
+  { stockId: 1, warehouseId: 4, productId: 1, location: 'A-700', available: 6, reserved: 1, sellable: 5 },
+  { stockId: 2, warehouseId: 4, productId: 2, location: 'B-1', available: 0, reserved: 0, sellable: 0 },
+]
+
+// responde según la ruta: /products, /products/search o /stock
+const mockApi = (products: unknown[], productsMeta = meta) =>
+  vi.mocked(apiClient.get).mockImplementation(async (url: string) => {
+    if (url === '/stock') return { data: { success: true, data: stockRows, meta: lastPage } }
+    return { data: { success: true, data: products, meta: productsMeta } }
+  })
 
 beforeEach(() => {
   vi.clearAllMocks()
 })
 
-describe('buildProductsBody', () => {
-  it('sin filtros solo lleva empresa, página, tamaño y activos', () => {
-    expect(buildProductsBody(ctx, { page: 1, pageSize: 30 })).toEqual({ companyId: 3, page: 1, pageSize: 30, isActive: true })
+describe('buildProductsParams', () => {
+  it('sin filtros solo lleva compañía, página, tamaño y activos', () => {
+    expect(buildProductsParams(ctx, { page: 1, pageSize: 30 })).toEqual({ companyId: 3, page: 1, pageSize: 30, status: 'active' })
   })
 
-  it('agrega bodega, marca y categoría como listas de ids', () => {
-    expect(buildProductsBody(ctx, { page: 2, pageSize: 30, warehouseId: 4, brandId: 5, categoryId: 6 })).toEqual({
-      companyId: 3,
-      page: 2,
-      pageSize: 30,
-      isActive: true,
-      warehouseId: 4,
-      brandIds: [5],
-      categoryIds: [6],
-    })
+  it('agrega marca y categoría; una en null no se envía', () => {
+    expect(buildProductsParams(ctx, { page: 2, pageSize: 30, brandId: 5, categoryId: 6 })).toMatchObject({ brandId: 5, categoryId: 6 })
+    const params = buildProductsParams(ctx, { page: 1, pageSize: 30, brandId: null, categoryId: null })
+    expect(params).not.toHaveProperty('brandId')
+    expect(params).not.toHaveProperty('categoryId')
   })
 
-  it('hasStock solo se envía cuando se quiere "con stock" (false significaría "sin stock")', () => {
-    expect(buildProductsBody(ctx, { page: 1, pageSize: 30, onlyInStock: true })).toHaveProperty('hasStock', true)
-    expect(buildProductsBody(ctx, { page: 1, pageSize: 30, onlyInStock: false })).not.toHaveProperty('hasStock')
-  })
-
-  it('una marca o categoría en null no se envía', () => {
-    const body = buildProductsBody(ctx, { page: 1, pageSize: 30, brandId: null, categoryId: null })
-    expect(body).not.toHaveProperty('brandIds')
-    expect(body).not.toHaveProperty('categoryIds')
+  it('el superadmin (sin compañía) no manda companyId', () => {
+    expect(buildProductsParams({ companyId: 0, userId: 1 }, { page: 1, pageSize: 30 })).not.toHaveProperty('companyId')
   })
 })
 
 describe('fetchProductsPage', () => {
-  it('llama a POST /products y devuelve productos convertidos con su meta', async () => {
-    vi.mocked(apiClient.post).mockResolvedValue({
-      data: { success: true, data: [{ productId: 1, code: 'A', description: 'Pieza A' }], meta },
-    })
-    const page = await fetchProductsPage(ctx, { page: 2, pageSize: 30 })
-    expect(apiClient.post).toHaveBeenCalledWith('/products', expect.objectContaining({ companyId: 3, page: 2 }))
-    expect(page.items[0]).toMatchObject({ id: '1', name: 'Pieza A' })
+  it('llama a GET /products, une el stock de la bodega y devuelve la meta', async () => {
+    mockApi([
+      { id: 1, code: 'A', name: 'Pieza A' },
+      { id: 2, code: 'B', name: 'Pieza B' },
+    ])
+    const page = await fetchProductsPage(ctx, { page: 2, pageSize: 30, warehouseId: 4 })
+    expect(apiClient.get).toHaveBeenCalledWith('/products', { params: { companyId: 3, page: 2, pageSize: 30, status: 'active' } })
+    expect(apiClient.get).toHaveBeenCalledWith('/stock', { params: { companyId: 3, warehouseId: 4, page: 1, pageSize: 200 } })
+    expect(page.items[0]).toMatchObject({ id: '1', name: 'Pieza A', stockByWarehouse: { '4': 5 }, location: 'A-700' })
     expect(page.meta).toEqual(meta)
   })
 
+  it('sin bodega no pide el stock', async () => {
+    mockApi([{ id: 1, code: 'A' }])
+    await fetchProductsPage(ctx, { page: 1, pageSize: 30 })
+    expect(apiClient.get).not.toHaveBeenCalledWith('/stock', expect.anything())
+  })
+
+  it('"solo con stock" deja los productos con stock vendible y pagina en memoria', async () => {
+    mockApi(
+      [
+        { id: 1, code: 'A' },
+        { id: 2, code: 'B' },
+      ],
+      lastPage
+    )
+    const page = await fetchProductsPage(ctx, { page: 1, pageSize: 30, warehouseId: 4, onlyInStock: true })
+    expect(page.items.map((p) => p.id)).toEqual(['1'])
+    expect(page.meta).toMatchObject({ totalRecords: 1, totalPages: 1 })
+  })
+
   it('con data nulo devuelve una página vacía', async () => {
-    vi.mocked(apiClient.post).mockResolvedValue({ data: { success: true, data: null } })
+    vi.mocked(apiClient.get).mockResolvedValue({ data: { success: true, data: null } })
     expect((await fetchProductsPage(ctx, { page: 1, pageSize: 30 })).items).toEqual([])
   })
 })
 
 describe('searchProducts', () => {
-  it('llama a POST /inventory/search con el texto y el límite', async () => {
-    vi.mocked(apiClient.post).mockResolvedValue({
-      data: { success: true, data: [{ productId: 9, code: 'Z', productInformation: { description: 'Zeta' } }] },
-    })
-    const result = await searchProducts(ctx, 'zeta', 50, 2)
-    expect(apiClient.post).toHaveBeenCalledWith('/inventory/search', { companyId: 3, limit: 50, query: 'zeta' })
-    expect(result[0]).toMatchObject({ id: '9', name: 'Zeta' })
+  it('llama a GET /products/search con el texto y el límite, y deja solo los activos', async () => {
+    mockApi([
+      { id: 1, code: 'Z', name: 'Zeta', status: 'active' },
+      { id: 3, code: 'Y', status: 'inactive' },
+    ])
+    const result = await searchProducts(ctx, 'zeta', 50, 4)
+    expect(apiClient.get).toHaveBeenCalledWith('/products/search', { params: { q: 'zeta', page: 1, pageSize: 50 } })
+    expect(result).toHaveLength(1)
+    expect(result[0]).toMatchObject({ id: '1', name: 'Zeta', stockByWarehouse: { '4': 5 } })
   })
 })

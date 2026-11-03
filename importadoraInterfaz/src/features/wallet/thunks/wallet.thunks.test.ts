@@ -4,7 +4,7 @@ import { configureStore, type ThunkDispatch, type UnknownAction } from '@reduxjs
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AuthState } from '@/features/auth'
 import { navigationReducer, setActiveWarehouse, type NavigationState } from '@/features/navigation'
-import { toast } from '@/global/helpers/toast'
+import { toast } from '@/global/helpers/feedback/toast'
 import { setAccountDrawerOpen, setSelectedCustomer, setWalletPage, walletReducer } from '../slices/wallet.slice'
 import { loadInvoicesThunk, loadWalletSummaryThunk, loadWalletThunk } from './wallet.thunks'
 import { payThunk, updateCreditThunk } from './wallet.payments.thunks'
@@ -18,13 +18,13 @@ vi.mock('../services/wallet.service', () => ({
   fetchCustomerInvoices: vi.fn(),
 }))
 vi.mock('../services/wallet.payments.service', () => ({ registerPayment: vi.fn(), updateCredit: vi.fn() }))
-vi.mock('@/global/helpers/toast', () => ({ toast: { error: vi.fn(), success: vi.fn() } }))
+vi.mock('@/global/helpers/feedback/toast', () => ({ toast: { error: vi.fn(), success: vi.fn() } }))
 vi.mock('@/features/auth', () => ({
   selectRequestContext: (state: { auth: { ctx: unknown } }) => state.auth.ctx,
 }))
 
 const ctx = { companyId: 3, userId: 7 }
-const meta = { currentPage: 1, pageSize: 30, totalRecords: 1, totalPages: 1, hasNextPage: false, hasPrevPage: false }
+const meta = { currentPage: 1, pageSize: 20, totalRecords: 1, totalPages: 1, hasNextPage: false, hasPrevPage: false }
 
 // ojo: el dispatch se tipa a mano para aceptar thunks que leen varios slices (el store de prueba solo tiene los que se prueban)
 const makeStore = (sessionCtx: unknown = ctx) => {
@@ -58,11 +58,11 @@ beforeEach(() => {
 })
 
 describe('carga de cartera', () => {
-  it('pide la página actual con la bodega activa y guarda clientes y meta', async () => {
+  it('pide la página actual y guarda clientes y meta', async () => {
     const { store, dispatch } = makeStore()
     store.dispatch(setWalletPage(2))
     await dispatch(loadWalletThunk())
-    expect(fetchWalletPage).toHaveBeenCalledWith(ctx, 2, 30, 4)
+    expect(fetchWalletPage).toHaveBeenCalledWith(ctx, 2, 20)
     expect(store.getState().wallet.list).toMatchObject({ status: 'succeeded', meta })
     expect(store.getState().wallet.list.items).toHaveLength(1)
   })
@@ -95,8 +95,8 @@ describe('carga de cartera', () => {
     const { store, dispatch } = makeStore()
     await dispatch(loadWalletSummaryThunk())
     await dispatch(loadInvoicesThunk(5))
-    expect(fetchWalletSummary).toHaveBeenCalledWith(ctx, 4)
-    expect(fetchCustomerInvoices).toHaveBeenCalledWith(ctx, 5, 4)
+    expect(fetchWalletSummary).toHaveBeenCalledWith(ctx)
+    expect(fetchCustomerInvoices).toHaveBeenCalledWith(ctx, 5)
     expect(store.getState().wallet.summary.data).toEqual(summary)
     expect(store.getState().wallet.invoices.items).toHaveLength(2)
   })
@@ -136,7 +136,7 @@ describe('abonos', () => {
     const { store, dispatch } = await withInvoices()
     await dispatch(payThunk({ customerId: 5, amount: 200, saleId: 1 }))
     expect(registerPayment).toHaveBeenCalledTimes(1)
-    expect(registerPayment).toHaveBeenCalledWith(ctx, 5, { saleId: 1, amount: 200, remainingAmount: 300 }, 4)
+    expect(registerPayment).toHaveBeenCalledWith(ctx, 5, { saleId: 1, amount: 200, remainingAmount: 300 }, undefined)
     expect(fetchCustomerInvoices).toHaveBeenCalled()
     expect(fetchWalletPage).toHaveBeenCalled()
     expect(fetchWalletSummary).toHaveBeenCalled()
@@ -148,8 +148,8 @@ describe('abonos', () => {
     const { dispatch } = await withInvoices()
     await dispatch(payThunk({ customerId: 5, amount: 600 }))
     expect(registerPayment).toHaveBeenCalledTimes(2)
-    expect(registerPayment).toHaveBeenNthCalledWith(1, ctx, 5, { saleId: 1, amount: 500, remainingAmount: 0 }, 4)
-    expect(registerPayment).toHaveBeenNthCalledWith(2, ctx, 5, { saleId: 2, amount: 100, remainingAmount: 200 }, 4)
+    expect(registerPayment).toHaveBeenNthCalledWith(1, ctx, 5, { saleId: 1, amount: 500, remainingAmount: 0 }, undefined)
+    expect(registerPayment).toHaveBeenNthCalledWith(2, ctx, 5, { saleId: 2, amount: 100, remainingAmount: 200 }, undefined)
   })
 
   it('si un pago falla avisa, no sigue con los demás y aun así relee lo ya abonado', async () => {

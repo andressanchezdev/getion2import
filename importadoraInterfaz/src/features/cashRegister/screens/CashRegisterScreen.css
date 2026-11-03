@@ -1,0 +1,27 @@
+/* CashRegisterScreen.css · Tienda > Caja: barra del turno, aviso de error y contenedor de la pantalla · solo usa tokens de styles/tokens.css */
+/* ojo: los pedidos usan la tarjeta única de Pedidos (.orders-card); aquí solo va lo propio de la caja */
+.cash-mgmt-screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+}
+
+.cash-shift-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-rest);
+}
+
+.cash-shift-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}

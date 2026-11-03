@@ -1,5 +1,8 @@
 package controllers
 
+// customer_controller.go · controlador HTTP de clientes: recibe la petición, valida la entrada y llama al servicio; no tiene lógica de negocio
+// conecta con: los services y dtos de clientes y core/utils (respuestas y errores); los registra routes
+
 import (
 	"strconv"
 
@@ -16,6 +19,7 @@ type CustomerController struct {
 	service *services.CustomerService
 }
 
+// NewCustomerController crea el controlador con las piezas que necesita para funcionar.
 func NewCustomerController(service *services.CustomerService) *CustomerController {
 	return &CustomerController{service: service}
 }

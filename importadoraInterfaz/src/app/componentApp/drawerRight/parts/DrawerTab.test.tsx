@@ -2,7 +2,7 @@
 // conecta con: DrawerTab y global useVerticalDrag (clampTop); se corre con npm test
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { clampTop } from '@/global/hooks/useVerticalDrag'
+import { clampTop } from '@/global/hooks/ui/useVerticalDrag'
 import { DrawerTab } from './DrawerTab'
 
 describe('clampTop', () => {

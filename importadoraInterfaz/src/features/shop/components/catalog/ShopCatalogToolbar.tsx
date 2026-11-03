@@ -1,11 +1,8 @@
-// ShopCatalogToolbar · fila de herramientas: búsqueda, filtros de categoría y marca como chips, «con stock» y limpiar filtros
-// conecta con: shop.slice (filtros), shop.selectors (hay filtros activos), catalogs (marcas y categorías del backend), global SearchBar, ChipSelect y FilterChip
-// ojo: como los chips de la maqueta (Marca ▾, Categoría ▾): sin etiqueta aparte, el nombre del filtro es la opción vacía y el chip se pinta amarillo cuando hay uno elegido; los chips son los de global/UI/molecules/chips
+// ShopCatalogToolbar · fila de herramientas: búsqueda, filtros de categoría y marca como chips, checkbox «con stock» y limpiar filtros
 import React from 'react'
-import { useAppDispatch, useAppSelector } from '@/global/hooks/useRedux'
-import { SearchBar } from '@/global/components/UI/molecules/SearchBar'
+import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
+import { SearchBar } from '@/global/components/UI/molecules/filters/SearchBar'
 import { ChipSelect } from '@/global/components/UI/molecules/chips/ChipSelect'
-import { FilterChip } from '@/global/components/UI/molecules/chips/FilterChip'
 import {
   setSearchQuery,
   setSelectedCategory,
@@ -29,7 +26,6 @@ export const ShopCatalogToolbar: React.FC = () => {
   const categories = useAppSelector(selectCategories)
 
   return (
-    /* Fila de herramientas: buscador, chips de categoría y marca, toggle de stock y limpiar */
     <div className="shop-catalog-search-row">
       <SearchBar
         value={filters.searchQuery}
@@ -38,7 +34,6 @@ export const ShopCatalogToolbar: React.FC = () => {
         className="shop-catalog-search-bar"
       />
 
-      {/* ojo: el valor de cada opción es el id (el backend filtra por id); la opción vacía lleva el nombre del filtro */}
       <ChipSelect
         label={CATEGORY_FILTER_LABEL}
         value={filters.selectedCategoryId}
@@ -52,8 +47,15 @@ export const ShopCatalogToolbar: React.FC = () => {
         onChange={(value) => dispatch(setSelectedBrand(toId(value)))}
       />
 
-      {/* Toggle de stock (chip) y limpiar filtros */}
-      <FilterChip label="Con stock en bodega" active={filters.onlyInStock} onClick={() => dispatch(setOnlyInStock(!filters.onlyInStock))} />
+      {/* Checkbox de stock */}
+      <label className="shop-catalog-stock-check">
+        <input
+          type="checkbox"
+          checked={filters.onlyInStock}
+          onChange={(e) => dispatch(setOnlyInStock(e.target.checked))}
+        />
+        <span>Con stock en bodega</span>
+      </label>
 
       {hasActiveFilters && (
         <button

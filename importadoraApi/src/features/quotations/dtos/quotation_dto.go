@@ -1,5 +1,8 @@
 package dtos
 
+// quotation_dto.go · formas de lo que entra y sale por la API en cotizaciones (peticiones y respuestas)
+// conecta con: los controllers y services de cotizaciones
+
 import (
 	"time"
 

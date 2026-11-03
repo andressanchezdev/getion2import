@@ -1,5 +1,8 @@
 package controllers
 
+// return_controller.go · controlador HTTP de devoluciones: recibe la petición, valida la entrada y llama al servicio; no tiene lógica de negocio
+// conecta con: los services y dtos de devoluciones y core/utils (respuestas y errores); los registra routes
+
 import (
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
@@ -14,6 +17,7 @@ type ReturnController struct {
 	returnService *services.ReturnService
 }
 
+// NewReturnController crea el controlador con las piezas que necesita para funcionar.
 func NewReturnController(returnService *services.ReturnService) *ReturnController {
 	return &ReturnController{returnService: returnService}
 }
@@ -73,6 +77,12 @@ func (ctrl *ReturnController) List(c echo.Context) error {
 	if cid := c.QueryParam("customerId"); cid != "" {
 		if id, err := utils.ParamInt64(c, "customerId"); err == nil {
 			f.CustomerID = &id
+		}
+	}
+
+	if wid := c.QueryParam("warehouseId"); wid != "" {
+		if id, err := utils.ParamInt64(c, "warehouseId"); err == nil {
+			f.WarehouseID = &id
 		}
 	}
 

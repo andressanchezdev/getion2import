@@ -1,5 +1,8 @@
 package repositories
 
+// admin_repo.go · acceso a la base de personal (administradores, empleados, roles y permisos): aquí vive el SQL; cada método recibe la conexión o la transacción
+// conecta con: core/db (DBExecutor) y los dtos de personal (administradores, empleados, roles y permisos); los usan los services de personal (administradores, empleados, roles y permisos)
+
 import (
 	"context"
 	"errors"
@@ -36,10 +39,12 @@ type AdminEntity struct {
 
 type AdminRepository struct{}
 
+// NewAdminRepository crea el repositorio; no guarda estado, cada método recibe la conexión o transacción.
 func NewAdminRepository() *AdminRepository {
 	return &AdminRepository{}
 }
 
+// FindByID busca el administrador por su id (nil si no existe).
 func (r *AdminRepository) FindByID(ctx context.Context, q db.DBExecutor, id int64) (*AdminEntity, error) {
 	const sql = `
 		SELECT
@@ -67,6 +72,7 @@ func (r *AdminRepository) FindByID(ctx context.Context, q db.DBExecutor, id int6
 	return &a, nil
 }
 
+// FindByEmail busca el administrador por su correo (nil si no existe).
 func (r *AdminRepository) FindByEmail(ctx context.Context, q db.DBExecutor, email string) (*AdminEntity, error) {
 	const sql = `
 		SELECT
@@ -94,6 +100,7 @@ func (r *AdminRepository) FindByEmail(ctx context.Context, q db.DBExecutor, emai
 	return &a, nil
 }
 
+// List lista los administradores según los filtros, con su total para paginar.
 func (r *AdminRepository) List(ctx context.Context, q db.DBExecutor, f dtos.AdminFilterQuery) ([]AdminEntity, int, error) {
 	where := make([]string, 0)
 	args := make([]interface{}, 0)
@@ -176,6 +183,7 @@ func (r *AdminRepository) List(ctx context.Context, q db.DBExecutor, f dtos.Admi
 	return admins, total, rows.Err()
 }
 
+// Create inserta el administrador y devuelve el registro guardado.
 func (r *AdminRepository) Create(ctx context.Context, q db.DBExecutor, a *AdminEntity) (*AdminEntity, error) {
 	const sql = `
 		INSERT INTO admins (
@@ -196,6 +204,7 @@ func (r *AdminRepository) Create(ctx context.Context, q db.DBExecutor, a *AdminE
 	return a, nil
 }
 
+// Update actualiza los datos de el administrador.
 func (r *AdminRepository) Update(ctx context.Context, q db.DBExecutor, a *AdminEntity) (*AdminEntity, error) {
 	const sql = `
 		UPDATE admins SET
@@ -219,6 +228,7 @@ func (r *AdminRepository) Update(ctx context.Context, q db.DBExecutor, a *AdminE
 	return a, nil
 }
 
+// SoftDelete marca el administrador como eliminado (borrado lógico: no se pierde el registro).
 func (r *AdminRepository) SoftDelete(ctx context.Context, q db.DBExecutor, id int64) error {
 	const sql = `UPDATE admins SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP WHERE id = $1`
 	cmdTag, err := q.Exec(ctx, sql, id)

@@ -1,31 +1,13 @@
-// orders.adapter · convierte lo que responde el backend en pedidos (conteos, filas de la tabla y detalle) a lo que usa la app, y filtra la tabla por texto
+// orders.adapter · convierte lo que responde la API en Go en pedidos (filas de la tabla y detalle) a lo que usa la app, y filtra la tabla por texto
 // conecta con: orders.service (lo aplica a cada respuesta), orders.selectors (filterOrders); es el único lugar que conoce los nombres del backend en pedidos
-// ojo: un contador que falta o no es número queda en 0; el backend manda 0001-01-01T00:00:00Z cuando no hay fecha
+// ojo: lo que la API no trae queda en un valor neutro: sin pausa, sin costo de envío y sin documento ni correo del cliente
 import { ORDER_STAGES } from '../constants/orders.constants'
-import type {
-  OrderCountsDto,
-  OrderDetailDto,
-  OrderItemDto,
-  OrderListItemDto,
-  OrderPaymentDto,
-  OrderPersonDto,
-} from '../types/orders.api.types'
-import type {
-  OrderChannelKey,
-  OrderDetail,
-  OrderLine,
-  OrderPayment,
-  OrderPerson,
-  OrderRow,
-  OrderStageKey,
-  StageCounts,
-} from '../types/orders.types'
+import type { SaleDto, SaleItemDto, SalePaymentDto, StageHistoryDto } from '../types/orders.api.types'
+import type { OrderChannelKey, OrderDetail, OrderLine, OrderPayment, OrderRow, OrderStageEntry, OrderStageKey, StageCounts } from '../types/orders.types'
 
 const text = (value: string | null | undefined): string => (value ?? '').trim()
+// devuelve el número, o 0 si falta o no es válido
 const money = (value: number | undefined): number => (typeof value === 'number' && Number.isFinite(value) ? value : 0)
-
-const personName = (person: OrderPersonDto | null | undefined, fallback: string): string =>
-  `${text(person?.name)} ${text(person?.lastName)}`.trim() || fallback
 
 // AAAA-MM-DD, o '' si no hay fecha válida
 const dayOf = (value: string | undefined): string => {
@@ -41,88 +23,106 @@ const dateTimeOf = (value: string | undefined): string => {
   return Number.isNaN(date.getTime()) || date.getUTCFullYear() < 2000 ? '' : value
 }
 
-// PD-1234, o «Venta 9» cuando el backend no manda consecutivo
-export const orderSerial = (serialCode: number | undefined | null, id: number): string =>
-  serialCode ? `PD-${serialCode}` : `Venta ${id}`
+// PD-1234, o «Venta 9» cuando el backend no manda el consecutivo
+export const orderSerial = (serialCode: string | undefined | null, id: number): string => text(serialCode) || `Venta ${id}`
 
-export const toStageCounts = (dto: OrderCountsDto): StageCounts => {
+// la API solo distingue el picking inmediato
+export const orderChannel = (sale: Pick<SaleDto, 'immediatePicking'>): OrderChannelKey => (sale.immediatePicking ? 'immediate' : 'standard')
+
+// la etapa de la tabla: una de las cinco con lista; las demás (enviado, anulado) no tienen pestaña
+export const toStageKey = (stage: string | undefined): OrderStageKey | null => ORDER_STAGES.find((item) => item.key === stage)?.key ?? null
+
+// los totales de cada etapa (meta.totalRecords de GET /sales con ese filtro) como contadores
+export const toStageCounts = (totals: Partial<Record<OrderStageKey, number>>): StageCounts => {
   const counts = {} as StageCounts
-  for (const stage of ORDER_STAGES) counts[stage.key] = money((dto as Record<string, number | undefined>)[stage.field])
+  for (const stage of ORDER_STAGES) counts[stage.key] = money(totals[stage.key])
   return counts
 }
 
-export const toOrderRow = (dto: OrderListItemDto, stage: OrderStageKey, channel: OrderChannelKey): OrderRow => ({
-  id: dto.saleId,
-  serial: orderSerial(dto.serialCode, dto.saleId),
+// el pago está cubierto cuando lo verificado más lo dejado a crédito alcanza el total; la ubicación, cuando ya pasó el alistamiento
+const isPaid = (sale: SaleDto): boolean => money(sale.total) > 0 && money(sale.paidTotal) + money(sale.creditAmount) >= money(sale.total)
+const PAST_PICKING = ['packing', 'invoicing', 'dispatch', 'sent']
+
+// convierte un pedido de la API en una fila de la tabla
+export const toOrderRow = (dto: SaleDto, stage: OrderStageKey): OrderRow => ({
+  id: dto.id,
+  serial: orderSerial(dto.serialCode, dto.id),
   stage,
-  channel,
-  customerName: personName(dto.customerInformation, 'Sin cliente'),
-  sellerName: personName(dto.sellerInformation, '—'),
+  channel: orderChannel(dto),
+  customerName: text(dto.customerName) || 'Sin cliente',
+  sellerName: text(dto.employeeName) || '—',
   paymentMethod: text(dto.paymentMethod),
-  totalAmount: money(dto.totalAmount),
+  totalAmount: money(dto.total),
   createdAt: dayOf(dto.createdAt),
-  paused: dto.isPause === 1,
-  paymentVerified: dto.verifiedTransaction === 1,
-  locationVerified: dto.verifiedLocation === 1,
+  paused: false,
+  paymentVerified: isPaid(dto),
+  locationVerified: PAST_PICKING.includes(text(dto.currentStage)),
+  paidAmount: money(dto.paidTotal),
+  creditAmount: money(dto.creditAmount),
+  confirmed: text(dto.currentStage) === 'verification_ok',
 })
 
-const toPerson = (dto: OrderPersonDto | null | undefined): OrderPerson => ({
-  name: personName(dto, '—'),
-  document: text(dto?.identification),
-  email: text(dto?.email),
-  priceType: text(dto?.priceType),
+// convierte un renglón de pedido de la API en el que usa la app
+const toLine = (dto: SaleItemDto): OrderLine => ({
+  id: dto.id,
+  productId: dto.productId,
+  code: text(dto.productCode),
+  title: text(dto.productName) || text(dto.productCode) || `Producto ${dto.productId}`,
+  brand: '',
+  quantity: money(dto.quantity),
+  price: money(dto.unitPrice),
+  discount: money(dto.discount),
 })
 
-const toLine = (dto: OrderItemDto): OrderLine => {
-  const info = dto.itemInformation
-  const code = text(info?.code)
-  return {
-    id: dto.itemId ?? dto.productId,
-    productId: dto.productId,
-    code,
-    title: text(info?.description) || [text(info?.categoryName), text(info?.modelName)].filter(Boolean).join(' ') || code || `Producto ${dto.productId}`,
-    brand: text(info?.brandName),
-    quantity: money(dto.quantity),
-    price: money(dto.price),
-    discount: money(dto.discount),
-  }
-}
-
-const toPayment = (dto: OrderPaymentDto, index: number): OrderPayment => ({
-  id: dto.paymentId ?? index,
-  method: text(dto.paymentMethod),
+// convierte un pago de la API en el que usa la app
+const toPayment = (dto: SalePaymentDto): OrderPayment => ({
+  id: dto.id,
+  method: text(dto.method),
   amount: money(dto.amount),
   status: text(dto.status),
-  createdAt: dateTimeOf(dto.created_at),
+  ...(dto.proofUrl !== undefined ? { proofUrl: dto.proofUrl } : {}),
+  ...(dto.reference !== undefined ? { reference: dto.reference } : {}),
+  createdAt: dateTimeOf(dto.createdAt),
 })
 
-export const toOrderDetail = (dto: OrderDetailDto): OrderDetail => {
-  const sale = dto.sale
-  return {
-    id: sale.saleId,
-    serial: orderSerial(sale.serialCode, sale.saleId),
-    status: text(sale.status),
-    stage: text(sale.invoiceStatus).toLowerCase(),
-    channel: text(sale.saleChannel),
-    paymentMethod: text(sale.paymentMethod),
-    totalAmount: money(sale.totalAmount),
-    shippingCost: money(sale.shippingCost),
-    createdAt: dateTimeOf(sale.createdAt),
-    updatedAt: dateTimeOf(sale.updateAt),
-    paused: sale.isPause === 1,
-    cancelled: sale.isCancelled === 1,
-    paymentVerified: sale.verifiedTransaction === 1,
-    locationVerified: sale.verifiedLocation === 1,
-    customer: toPerson(sale.customerInformation),
-    seller: toPerson(sale.sellerInformation),
-    lines: (sale.saleItems ?? []).map(toLine),
-    payments: (dto.payments ?? []).map(toPayment),
-  }
-}
+// una etapa del historial del pedido
+export const toStageEntry = (dto: StageHistoryDto): OrderStageEntry => ({
+  stage: text(dto.stage),
+  employeeName: text(dto.employeeName) || '—',
+  enteredAt: dateTimeOf(dto.enteredAt),
+  leftAt: dateTimeOf(dto.leftAt ?? undefined),
+  minutes: money(dto.minutes),
+})
+
+// el detalle de un pedido: la venta con sus renglones y, aparte, sus pagos y el historial de etapas
+export const toOrderDetail = (sale: SaleDto, payments: SalePaymentDto[], history: StageHistoryDto[] = []): OrderDetail => ({
+  id: sale.id,
+  serial: orderSerial(sale.serialCode, sale.id),
+  status: text(sale.status),
+  stage: text(sale.currentStage).toLowerCase(),
+  channel: orderChannel(sale),
+  paymentMethod: text(sale.paymentMethod),
+  paymentProofUrl: sale.paymentProofUrl ?? null,
+  paymentReference: sale.paymentReference ?? null,
+  totalAmount: money(sale.total),
+  shippingCost: 0,
+  createdAt: dateTimeOf(sale.createdAt),
+  updatedAt: dateTimeOf(sale.updatedAt),
+  paused: false,
+  cancelled: text(sale.status) === 'cancelled',
+  paymentVerified: isPaid(sale),
+  locationVerified: PAST_PICKING.includes(text(sale.currentStage)),
+  customer: { name: text(sale.customerName) || 'Sin cliente', document: '', email: '', priceType: text(sale.priceTier) },
+  seller: { name: text(sale.employeeName) || '—', document: '', email: '', priceType: '' },
+  lines: (sale.items ?? []).map(toLine),
+  payments: payments.map(toPayment),
+  history: history.map(toStageEntry),
+})
 
 // la búsqueda de la tabla: serie, cliente, vendedor o método de pago (sin tildes ni mayúsculas)
 const plain = (value: string): string => value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
+// filtra los pedidos por texto (serie, cliente, vendedor...)
 export const filterOrders = (items: OrderRow[], query: string): OrderRow[] => {
   const needle = plain(query.trim())
   if (!needle) return items

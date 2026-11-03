@@ -19,21 +19,6 @@
   gap: var(--space-2);
 }
 
-/* ojo: el selector con etiqueta (wrapper, etiqueta y select) ya no existe: ahora son chips y viven en components/catalog/ShopCatalogToolbar.css; se deja como referencia
-.shop-catalog-filter-select-wrapper {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.shop-catalog-filter-group-label {
-  font-size: var(--text-sm);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-secondary, var(--c-slate-500));
-  white-space: nowrap;
-}
-*/
-
 /* ==========================================================================
    2. GRID DE PRODUCTOS
    ========================================================================== */

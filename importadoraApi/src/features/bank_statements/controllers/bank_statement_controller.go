@@ -1,5 +1,8 @@
 package controllers
 
+// bank_statement_controller.go · controlador HTTP de extractos bancarios: recibe la petición, valida la entrada y llama al servicio; no tiene lógica de negocio
+// conecta con: los services y dtos de extractos bancarios y core/utils (respuestas y errores); los registra routes
+
 import (
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/utils"
@@ -13,6 +16,7 @@ type BankStatementController struct {
 	service *services.BankStatementService
 }
 
+// NewBankStatementController crea el controlador con las piezas que necesita para funcionar.
 func NewBankStatementController(service *services.BankStatementService) *BankStatementController {
 	return &BankStatementController{service: service}
 }
@@ -79,7 +83,7 @@ func (c *BankStatementController) ConfirmRecord(ctx echo.Context) error {
 	var req dtos.ConfirmBankRecordRequest
 	_ = ctx.Bind(&req)
 
-	res, err := c.service.ConfirmRecord(ctx.Request().Context(), actor, id, req)
+	res, err := c.service.ConfirmRecord(ctx.Request().Context(), actor, id, req, ctx.RealIP(), ctx.Request().UserAgent())
 	if err != nil {
 		return err
 	}

@@ -1,5 +1,8 @@
 package repositories
 
+// audit_repo.go · acceso a la base de auditoría: aquí vive el SQL; cada método recibe la conexión o la transacción
+// conecta con: core/db (DBExecutor) y los dtos de auditoría; los usan los services de auditoría
+
 import (
 	"context"
 	"fmt"
@@ -28,10 +31,12 @@ type AuditLogQueryEntity struct {
 
 type AuditLogQueryRepository struct{}
 
+// NewAuditLogQueryRepository crea el repositorio; no guarda estado, cada método recibe la conexión o transacción.
 func NewAuditLogQueryRepository() *AuditLogQueryRepository {
 	return &AuditLogQueryRepository{}
 }
 
+// List lista los movimientos de auditoría según los filtros, con su total para paginar.
 func (r *AuditLogQueryRepository) List(ctx context.Context, q db.DBExecutor, f dtos.AuditLogFilterQuery) ([]AuditLogQueryEntity, int, error) {
 	where := make([]string, 0)
 	args := make([]interface{}, 0)

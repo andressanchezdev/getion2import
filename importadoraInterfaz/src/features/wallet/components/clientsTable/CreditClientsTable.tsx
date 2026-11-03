@@ -2,9 +2,8 @@
 // conecta con: wallet.slice, wallet.selectors, wallet.thunks (reintentar), global Pagination; las partes son CreditClientsToolbar y CreditClientRow; al hacer clic abre CreditAccountDrawer
 import React from 'react'
 import './CreditClientsTable.css'
-import { useAppDispatch, useAppSelector } from '@/global/hooks/useRedux'
-// ojo: el filtrado ahora sale de wallet.selectors y la fila vive en CreditClientRow (antes estaba todo aquí dentro)
-import { Pagination } from '@/global/components/UI/molecules/Pagination'
+import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
+import { Pagination } from '@/global/components/UI/molecules/table/Pagination'
 import {
   selectFilteredCustomers,
   selectWalletListError,
@@ -28,17 +27,16 @@ export const CreditClientsTable: React.FC = () => {
   const filteredCustomers = useAppSelector(selectFilteredCustomers)
 
   return (
-    <div className="credit-table-clients-card">
-      {/* 1. Métricas KPI en una sola línea integrada en la tarjeta */}
-      <div className="credit-table-kpis-wrapper">
-        <WalletKpiHeader />
-      </div>
+    <div className="credit-screen-container">
+      {/* 1. Métricas KPI con diseño idéntico a conciliación bancaria */}
+      <WalletKpiHeader />
 
-      {/* 2. Barra de Filtros y Búsqueda */}
-      <CreditClientsToolbar />
+      {/* 2. Tarjeta con barra de filtros y tabla */}
+      <div className="credit-table-clients-card">
+        <CreditClientsToolbar />
 
       {/* Tabla de Clientes */}
-      <div className="credit-table-responsive">
+      <div className="credit-table-responsive table-scroll">
         <table className="credit-table">
           <thead>
             <tr>
@@ -47,14 +45,13 @@ export const CreditClientsTable: React.FC = () => {
               <th>Cupo Total</th>
               <th>Saldo Adeudado</th>
               <th>Disponible</th>
-              <th>Estado</th>
-              <th className="credit-table-align-right">Acciones</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
             {status === 'failed' ? (
               <tr>
-                <td colSpan={7} className="credit-table-empty-td">
+                <td colSpan={6} className="credit-table-empty-td">
                   <p className="credit-table-empty-text">{error}</p>
                   <button type="button" onClick={() => dispatch(loadWalletThunk())} className="credit-table-reset-link">
                     Reintentar
@@ -63,7 +60,7 @@ export const CreditClientsTable: React.FC = () => {
               </tr>
             ) : filteredCustomers.length === 0 && (status === 'idle' || status === 'loading') ? (
               <tr>
-                <td colSpan={7} className="credit-table-empty-td">
+                <td colSpan={6} className="credit-table-empty-td">
                   <p className="credit-table-empty-text">Cargando cartera…</p>
                 </td>
               </tr>
@@ -73,7 +70,7 @@ export const CreditClientsTable: React.FC = () => {
               ))
             ) : (
               <tr>
-                <td colSpan={7} className="credit-table-empty-td">
+                <td colSpan={6} className="credit-table-empty-td">
                   <div className="credit-table-empty-content">
                     <p className="credit-table-empty-text">No se encontraron clientes con los filtros seleccionados.</p>
                     <button
@@ -81,7 +78,7 @@ export const CreditClientsTable: React.FC = () => {
                       onClick={() => dispatch(resetFilters())}
                       className="credit-table-reset-link"
                     >
-                      Restablecer filtros
+                      Limpiar filtros
                     </button>
                   </div>
                 </td>
@@ -91,15 +88,11 @@ export const CreditClientsTable: React.FC = () => {
         </table>
       </div>
 
-      {/* Paginador de la lista (la lista viene paginada del backend) */}
+      {/* Paginación */}
       {meta && (
-        <Pagination
-          meta={meta}
-          disabled={status === 'loading'}
-          label="Paginación de cartera"
-          onPageChange={(page) => dispatch(setWalletPage(page))}
-        />
+        <Pagination meta={meta} onPageChange={(page) => dispatch(setWalletPage(page))} />
       )}
+      </div>
     </div>
   )
 }

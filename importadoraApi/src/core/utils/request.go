@@ -1,5 +1,8 @@
 package utils
 
+// request.go · lectura de la petición: cuerpo JSON, parámetros de la ruta e IP del cliente
+// conecta con: todos los controllers
+
 import (
 	"errors"
 	"io"

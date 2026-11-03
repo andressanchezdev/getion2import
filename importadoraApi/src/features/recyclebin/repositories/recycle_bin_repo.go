@@ -1,5 +1,8 @@
 package repositories
 
+// recycle_bin_repo.go · acceso a la base de papelera de reciclaje: aquí vive el SQL; cada método recibe la conexión o la transacción
+// conecta con: core/db (DBExecutor) y los dtos de papelera de reciclaje; los usan los services de papelera de reciclaje
+
 import (
 	"context"
 	"errors"
@@ -32,10 +35,12 @@ type RecycleBinEntity struct {
 
 type RecycleBinRepository struct{}
 
+// NewRecycleBinRepository crea el repositorio; no guarda estado, cada método recibe la conexión o transacción.
 func NewRecycleBinRepository() *RecycleBinRepository {
 	return &RecycleBinRepository{}
 }
 
+// Insert guarda en la papelera una copia del registro eliminado, con quién lo eliminó, y devuelve el id de la papelera.
 func (r *RecycleBinRepository) Insert(ctx context.Context, q db.DBExecutor, companyID *int64, table string, entityID int64, label string, data []byte, actorType string, actorID int64) (int64, error) {
 	const sql = `
 		INSERT INTO recycle_bin (
@@ -49,6 +54,7 @@ func (r *RecycleBinRepository) Insert(ctx context.Context, q db.DBExecutor, comp
 	return id, err
 }
 
+// FindByID busca el elemento de la papelera por su id (nil si no existe).
 func (r *RecycleBinRepository) FindByID(ctx context.Context, q db.DBExecutor, id int64) (*RecycleBinEntity, error) {
 	const sql = `
 		SELECT
@@ -85,6 +91,7 @@ func (r *RecycleBinRepository) FindByID(ctx context.Context, q db.DBExecutor, id
 	return &e, nil
 }
 
+// List lista los elementos de la papelera según los filtros, con su total para paginar.
 func (r *RecycleBinRepository) List(ctx context.Context, q db.DBExecutor, f dtos.RecycleBinFilterQuery) ([]RecycleBinEntity, int, error) {
 	where := make([]string, 0)
 	args := make([]interface{}, 0)
@@ -182,11 +189,12 @@ func (r *RecycleBinRepository) List(ctx context.Context, q db.DBExecutor, f dtos
 	return list, total, rows.Err()
 }
 
+// Restore restaura un registro desde la papelera: lo reactiva en su tabla de origen y marca la papelera como restaurada.
 func (r *RecycleBinRepository) Restore(ctx context.Context, q db.DBExecutor, item *RecycleBinEntity, restoredByActorID int64) error {
 	var restoreSQL string
 	switch item.EntityTable {
 	case "products":
-		restoreSQL = `UPDATE products SET is_active = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = $1`
+		restoreSQL = `UPDATE products SET status = 'active', deleted_at = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $1`
 	case "customers":
 		restoreSQL = `UPDATE customers SET deleted_at = NULL, status = 'active', updated_at = CURRENT_TIMESTAMP WHERE id = $1`
 	case "employees":
@@ -195,10 +203,10 @@ func (r *RecycleBinRepository) Restore(ctx context.Context, q db.DBExecutor, ite
 		restoreSQL = `UPDATE admins SET is_active = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = $1`
 	case "roles":
 		restoreSQL = `UPDATE roles SET is_active = TRUE WHERE id = $1`
-	case "vehicle_brands":
-		restoreSQL = `UPDATE vehicle_brands SET is_active = TRUE WHERE id = $1`
-	case "vehicle_models":
-		restoreSQL = `UPDATE vehicle_models SET is_active = TRUE WHERE id = $1`
+	case "brands", "vehicle_brands":
+		restoreSQL = `UPDATE brands SET is_active = TRUE WHERE id = $1`
+	case "models", "vehicle_models":
+		restoreSQL = `UPDATE models SET is_active = TRUE WHERE id = $1`
 	case "categories":
 		restoreSQL = `UPDATE categories SET is_active = TRUE WHERE id = $1`
 	case "warehouses":

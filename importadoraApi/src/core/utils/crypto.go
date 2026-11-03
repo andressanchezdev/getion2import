@@ -1,5 +1,8 @@
 package utils
 
+// crypto.go · contraseñas y tokens: hash y verificación de contraseñas, tokens opacos y huella SHA-256
+// conecta con: auth (login y sesiones) y staff (credenciales de empleados)
+
 import (
 	"crypto/rand"
 	"crypto/sha256"

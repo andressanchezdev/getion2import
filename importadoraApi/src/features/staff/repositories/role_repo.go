@@ -1,5 +1,8 @@
 package repositories
 
+// role_repo.go · acceso a la base de personal (administradores, empleados, roles y permisos): aquí vive el SQL; cada método recibe la conexión o la transacción
+// conecta con: core/db (DBExecutor) y los dtos de personal (administradores, empleados, roles y permisos); los usan los services de personal (administradores, empleados, roles y permisos)
+
 import (
 	"context"
 	"errors"
@@ -22,10 +25,12 @@ type RoleEntity struct {
 
 type RoleRepository struct{}
 
+// NewRoleRepository crea el repositorio; no guarda estado, cada método recibe la conexión o transacción.
 func NewRoleRepository() *RoleRepository {
 	return &RoleRepository{}
 }
 
+// FindByID busca el rol por su id (nil si no existe).
 func (r *RoleRepository) FindByID(ctx context.Context, q db.DBExecutor, id int64) (*RoleEntity, error) {
 	const sql = `
 		SELECT id, company_id, code, name, description, is_active, created_at
@@ -45,6 +50,7 @@ func (r *RoleRepository) FindByID(ctx context.Context, q db.DBExecutor, id int64
 	return &role, nil
 }
 
+// FindByCompanyAndCode busca el rol por compañía y código (nil si no existe).
 func (r *RoleRepository) FindByCompanyAndCode(ctx context.Context, q db.DBExecutor, companyID int64, code string) (*RoleEntity, error) {
 	const sql = `
 		SELECT id, company_id, code, name, description, is_active, created_at
@@ -64,6 +70,7 @@ func (r *RoleRepository) FindByCompanyAndCode(ctx context.Context, q db.DBExecut
 	return &role, nil
 }
 
+// ListByCompany lista los roles de una compañía.
 func (r *RoleRepository) ListByCompany(ctx context.Context, q db.DBExecutor, companyID int64, activeOnly bool) ([]RoleEntity, error) {
 	sql := `
 		SELECT id, company_id, code, name, description, is_active, created_at
@@ -95,6 +102,7 @@ func (r *RoleRepository) ListByCompany(ctx context.Context, q db.DBExecutor, com
 	return roles, rows.Err()
 }
 
+// Create inserta el rol y devuelve el registro guardado.
 func (r *RoleRepository) Create(ctx context.Context, q db.DBExecutor, role *RoleEntity) (*RoleEntity, error) {
 	const sql = `
 		INSERT INTO roles (company_id, code, name, description, is_active)
@@ -110,6 +118,7 @@ func (r *RoleRepository) Create(ctx context.Context, q db.DBExecutor, role *Role
 	return role, nil
 }
 
+// Update actualiza los datos de el rol.
 func (r *RoleRepository) Update(ctx context.Context, q db.DBExecutor, role *RoleEntity) (*RoleEntity, error) {
 	const sql = `
 		UPDATE roles SET
@@ -128,6 +137,7 @@ func (r *RoleRepository) Update(ctx context.Context, q db.DBExecutor, role *Role
 	return role, nil
 }
 
+// SoftDelete marca el rol como eliminado (borrado lógico: no se pierde el registro).
 func (r *RoleRepository) SoftDelete(ctx context.Context, q db.DBExecutor, id int64) error {
 	const sql = `UPDATE roles SET is_active = FALSE WHERE id = $1`
 	cmdTag, err := q.Exec(ctx, sql, id)

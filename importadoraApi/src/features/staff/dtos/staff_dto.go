@@ -1,5 +1,8 @@
 package dtos
 
+// staff_dto.go · formas de lo que entra y sale por la API en personal (administradores, empleados, roles y permisos) (peticiones y respuestas)
+// conecta con: los controllers y services de personal (administradores, empleados, roles y permisos)
+
 import (
 	"time"
 

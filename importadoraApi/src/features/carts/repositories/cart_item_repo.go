@@ -1,5 +1,8 @@
 package repositories
 
+// cart_item_repo.go · acceso a la base de carritos: aquí vive el SQL; cada método recibe la conexión o la transacción
+// conecta con: core/db (DBExecutor) y los dtos de carritos; los usan los services de carritos
+
 import (
 	"context"
 	"errors"
@@ -10,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+// ListItems lista los renglones.
 func (r *CartRepository) ListItems(ctx context.Context, q db.DBExecutor, cartID int64) ([]dtos.CartItemResponse, error) {
 	const sql = `
 		SELECT
@@ -44,6 +48,7 @@ func (r *CartRepository) ListItems(ctx context.Context, q db.DBExecutor, cartID 
 	return items, rows.Err()
 }
 
+// FindItemByID busca un renglón del carrito por su id.
 func (r *CartRepository) FindItemByID(ctx context.Context, q db.DBExecutor, itemID int64) (*CartItemEntity, error) {
 	const sql = `
 		SELECT
@@ -68,6 +73,7 @@ func (r *CartRepository) FindItemByID(ctx context.Context, q db.DBExecutor, item
 	return &item, nil
 }
 
+// UpsertItem agrega un producto al carrito o actualiza su renglón si ya estaba.
 func (r *CartRepository) UpsertItem(ctx context.Context, q db.DBExecutor, cartID, productID, stockID int64, quantity int, unitPrice, discount float64) error {
 	const sql = `
 		INSERT INTO cart_items (cart_id, product_id, stock_id, quantity, unit_price, discount)
@@ -82,6 +88,7 @@ func (r *CartRepository) UpsertItem(ctx context.Context, q db.DBExecutor, cartID
 	return err
 }
 
+// UpdateItem cambia los datos de un renglón del carrito (cantidad o precio).
 func (r *CartRepository) UpdateItem(ctx context.Context, q db.DBExecutor, itemID int64, quantity int, unitPrice, discount float64) error {
 	const sql = `
 		UPDATE cart_items SET
@@ -100,6 +107,7 @@ func (r *CartRepository) UpdateItem(ctx context.Context, q db.DBExecutor, itemID
 	return nil
 }
 
+// DeleteItem quita un renglón del carrito.
 func (r *CartRepository) DeleteItem(ctx context.Context, q db.DBExecutor, itemID int64) error {
 	const sql = `DELETE FROM cart_items WHERE id = $1`
 	cmdTag, err := q.Exec(ctx, sql, itemID)
@@ -112,6 +120,7 @@ func (r *CartRepository) DeleteItem(ctx context.Context, q db.DBExecutor, itemID
 	return nil
 }
 
+// ClearItems vacía todos los renglones de un carrito.
 func (r *CartRepository) ClearItems(ctx context.Context, q db.DBExecutor, cartID int64) error {
 	const sql = `DELETE FROM cart_items WHERE cart_id = $1`
 	_, err := q.Exec(ctx, sql, cartID)

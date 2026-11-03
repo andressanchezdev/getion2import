@@ -1,5 +1,8 @@
 package repositories
 
+// product_repo.go · acceso a la base de productos: aquí vive el SQL; cada método recibe la conexión o la transacción
+// conecta con: core/db (DBExecutor) y los dtos de productos; los usan los services de productos
+
 import (
 	"context"
 	"errors"
@@ -32,6 +35,7 @@ type ProductEntity struct {
 	Prices       []byte
 	LastCost     float64
 	IsPromotion  bool
+	IsNew        bool
 	Images       []string
 	Easysearch   *string
 	Status       types.ProductStatus
@@ -40,28 +44,14 @@ type ProductEntity struct {
 	DeletedAt    *time.Time
 }
 
-type ProductCodeEntity struct {
-	ID        int64
-	CompanyID int64
-	ProductID int64
-	CodeType  types.ProductCodeType
-	Code      string
-}
-
-type ProductSupplierEntity struct {
-	ProductID    int64
-	SupplierID   int64
-	SupplierName string
-	Cost         float64
-	SupplierCode *string
-}
-
 type ProductRepository struct{}
 
+// NewProductRepository crea el repositorio; no guarda estado, cada método recibe la conexión o transacción.
 func NewProductRepository() *ProductRepository {
 	return &ProductRepository{}
 }
 
+// FindByID busca el producto por su id (nil si no existe).
 func (r *ProductRepository) FindByID(ctx context.Context, q db.DBExecutor, id int64) (*ProductEntity, error) {
 	const sql = `
 		SELECT
@@ -71,7 +61,7 @@ func (r *ProductRepository) FindByID(ctx context.Context, q db.DBExecutor, id in
 			p.model_id, m.name,
 			p.code, p.name, p.description, p.unit, p.iva,
 			COALESCE((SELECT jsonb_object_agg(pp.price_tier, pp.price) FROM product_prices pp WHERE pp.product_id = p.id), '{}'::jsonb) AS prices,
-			p.last_cost, p.is_promotion, p.images,
+			p.last_cost, p.is_promotion, p.is_new, p.images,
 			p.easysearch, p.status, p.created_at, p.updated_at, p.deleted_at
 		FROM products p
 		LEFT JOIN categories cat ON cat.id = p.category_id
@@ -86,7 +76,7 @@ func (r *ProductRepository) FindByID(ctx context.Context, q db.DBExecutor, id in
 		&p.BrandID, &p.BrandName,
 		&p.ModelID, &p.ModelName,
 		&p.Code, &p.Name, &p.Description, &p.Unit, &p.IVA,
-		&p.Prices, &p.LastCost, &p.IsPromotion, &p.Images,
+		&p.Prices, &p.LastCost, &p.IsPromotion, &p.IsNew, &p.Images,
 		&p.Easysearch, &p.Status, &p.CreatedAt, &p.UpdatedAt, &p.DeletedAt,
 	)
 	if err != nil {
@@ -98,6 +88,7 @@ func (r *ProductRepository) FindByID(ctx context.Context, q db.DBExecutor, id in
 	return &p, nil
 }
 
+// FindByCompanyAndCode busca el producto por compañía y código (nil si no existe).
 func (r *ProductRepository) FindByCompanyAndCode(ctx context.Context, q db.DBExecutor, companyID int64, code string) (*ProductEntity, error) {
 	const sql = `
 		SELECT
@@ -107,7 +98,7 @@ func (r *ProductRepository) FindByCompanyAndCode(ctx context.Context, q db.DBExe
 			p.model_id, m.name,
 			p.code, p.name, p.description, p.unit, p.iva,
 			COALESCE((SELECT jsonb_object_agg(pp.price_tier, pp.price) FROM product_prices pp WHERE pp.product_id = p.id), '{}'::jsonb) AS prices,
-			p.last_cost, p.is_promotion, p.images,
+			p.last_cost, p.is_promotion, p.is_new, p.images,
 			p.easysearch, p.status, p.created_at, p.updated_at, p.deleted_at
 		FROM products p
 		LEFT JOIN categories cat ON cat.id = p.category_id
@@ -122,7 +113,7 @@ func (r *ProductRepository) FindByCompanyAndCode(ctx context.Context, q db.DBExe
 		&p.BrandID, &p.BrandName,
 		&p.ModelID, &p.ModelName,
 		&p.Code, &p.Name, &p.Description, &p.Unit, &p.IVA,
-		&p.Prices, &p.LastCost, &p.IsPromotion, &p.Images,
+		&p.Prices, &p.LastCost, &p.IsPromotion, &p.IsNew, &p.Images,
 		&p.Easysearch, &p.Status, &p.CreatedAt, &p.UpdatedAt, &p.DeletedAt,
 	)
 	if err != nil {
@@ -134,6 +125,7 @@ func (r *ProductRepository) FindByCompanyAndCode(ctx context.Context, q db.DBExe
 	return &p, nil
 }
 
+// List lista los productos según los filtros, con su total para paginar.
 func (r *ProductRepository) List(ctx context.Context, q db.DBExecutor, f dtos.ProductFilterQuery) ([]ProductEntity, int, error) {
 	where := []string{"p.deleted_at IS NULL"}
 	args := make([]interface{}, 0)
@@ -208,7 +200,7 @@ func (r *ProductRepository) List(ctx context.Context, q db.DBExecutor, f dtos.Pr
 			p.model_id, m.name,
 			p.code, p.name, p.description, p.unit, p.iva,
 			COALESCE((SELECT jsonb_object_agg(pp.price_tier, pp.price) FROM product_prices pp WHERE pp.product_id = p.id), '{}'::jsonb) AS prices,
-			p.last_cost, p.is_promotion, p.images,
+			p.last_cost, p.is_promotion, p.is_new, p.images,
 			p.easysearch, p.status, p.created_at, p.updated_at, p.deleted_at
 		FROM products p
 		LEFT JOIN categories cat ON cat.id = p.category_id
@@ -236,7 +228,7 @@ func (r *ProductRepository) List(ctx context.Context, q db.DBExecutor, f dtos.Pr
 			&p.BrandID, &p.BrandName,
 			&p.ModelID, &p.ModelName,
 			&p.Code, &p.Name, &p.Description, &p.Unit, &p.IVA,
-			&p.Prices, &p.LastCost, &p.IsPromotion, &p.Images,
+			&p.Prices, &p.LastCost, &p.IsPromotion, &p.IsNew, &p.Images,
 			&p.Easysearch, &p.Status, &p.CreatedAt, &p.UpdatedAt, &p.DeletedAt,
 		); err != nil {
 			return nil, 0, err
@@ -247,6 +239,7 @@ func (r *ProductRepository) List(ctx context.Context, q db.DBExecutor, f dtos.Pr
 	return list, total, rows.Err()
 }
 
+// Create inserta el producto y devuelve el registro guardado.
 func (r *ProductRepository) Create(ctx context.Context, q db.DBExecutor, p *ProductEntity) (*ProductEntity, error) {
 	if p.Images == nil {
 		p.Images = []string{}
@@ -256,18 +249,18 @@ func (r *ProductRepository) Create(ctx context.Context, q db.DBExecutor, p *Prod
 		INSERT INTO products (
 			company_id, category_id, brand_id, model_id,
 			code, name, description, unit, iva,
-			last_cost, is_promotion, images, easysearch, status
+			last_cost, is_promotion, is_new, images, easysearch, status
 		) VALUES (
 			$1, $2, $3, $4,
 			$5, $6, $7, $8, $9,
-			$10, $11, $12, $13, $14
+			$10, $11, $12, $13, $14, $15
 		)
 		RETURNING id, uuid::text, easysearch, created_at, updated_at
 	`
 	err := q.QueryRow(ctx, sql,
 		p.CompanyID, p.CategoryID, p.BrandID, p.ModelID,
 		p.Code, p.Name, p.Description, p.Unit, p.IVA,
-		p.LastCost, p.IsPromotion, p.Images, p.Easysearch, p.Status,
+		p.LastCost, p.IsPromotion, p.IsNew, p.Images, p.Easysearch, p.Status,
 	).Scan(&p.ID, &p.UUID, &p.Easysearch, &p.CreatedAt, &p.UpdatedAt)
 	if err != nil {
 		return nil, err
@@ -275,6 +268,7 @@ func (r *ProductRepository) Create(ctx context.Context, q db.DBExecutor, p *Prod
 	return p, nil
 }
 
+// Update actualiza los datos de el producto.
 func (r *ProductRepository) Update(ctx context.Context, q db.DBExecutor, p *ProductEntity) (*ProductEntity, error) {
 	const sql = `
 		UPDATE products SET
@@ -288,17 +282,18 @@ func (r *ProductRepository) Update(ctx context.Context, q db.DBExecutor, p *Prod
 			iva = $8,
 			last_cost = $9,
 			is_promotion = $10,
-			images = $11,
-			easysearch = $12,
-			status = $13,
+			is_new = $11,
+			images = $12,
+			easysearch = $13,
+			status = $14,
 			updated_at = CURRENT_TIMESTAMP
-		WHERE id = $14 AND deleted_at IS NULL
+		WHERE id = $15 AND deleted_at IS NULL
 		RETURNING easysearch, updated_at
 	`
 	err := q.QueryRow(ctx, sql,
 		p.CategoryID, p.BrandID, p.ModelID,
 		p.Code, p.Name, p.Description, p.Unit, p.IVA,
-		p.LastCost, p.IsPromotion, p.Images, p.Easysearch, p.Status, p.ID,
+		p.LastCost, p.IsPromotion, p.IsNew, p.Images, p.Easysearch, p.Status, p.ID,
 	).Scan(&p.Easysearch, &p.UpdatedAt)
 	if err != nil {
 		return nil, err
@@ -306,6 +301,7 @@ func (r *ProductRepository) Update(ctx context.Context, q db.DBExecutor, p *Prod
 	return p, nil
 }
 
+// UpsertPrices guarda las tarifas del producto (p1 a p4): crea las que faltan y actualiza las que ya existen.
 func (r *ProductRepository) UpsertPrices(ctx context.Context, q db.DBExecutor, companyID, productID int64, prices map[string]float64) error {
 	for tier, price := range prices {
 		const sql = `
@@ -321,127 +317,14 @@ func (r *ProductRepository) UpsertPrices(ctx context.Context, q db.DBExecutor, c
 	return nil
 }
 
+// SoftDelete marca el producto como eliminado (borrado lógico: no se pierde el registro).
 func (r *ProductRepository) SoftDelete(ctx context.Context, q db.DBExecutor, id int64) error {
 	const sql = `
 		UPDATE products SET
 			deleted_at = CURRENT_TIMESTAMP,
-			status = 'inactive',
 			updated_at = CURRENT_TIMESTAMP
 		WHERE id = $1 AND deleted_at IS NULL
 	`
-	cmdTag, err := q.Exec(ctx, sql, id)
-	if err != nil {
-		return err
-	}
-	if cmdTag.RowsAffected() == 0 {
-		return errors.New("producto no encontrado o ya eliminado")
-	}
-	return nil
-}
-
-// ==========================================
-// MÉTODOS PARA CÓDIGOS DE PRODUCTO
-// ==========================================
-
-func (r *ProductRepository) ListCodes(ctx context.Context, q db.DBExecutor, productID int64) ([]ProductCodeEntity, error) {
-	const sql = `SELECT id, company_id, product_id, code_type, code FROM product_codes WHERE product_id = $1 ORDER BY id ASC`
-	rows, err := q.Query(ctx, sql, productID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	codes := make([]ProductCodeEntity, 0)
-	for rows.Next() {
-		var c ProductCodeEntity
-		if err := rows.Scan(&c.ID, &c.CompanyID, &c.ProductID, &c.CodeType, &c.Code); err != nil {
-			return nil, err
-		}
-		codes = append(codes, c)
-	}
-	return codes, rows.Err()
-}
-
-func (r *ProductRepository) CreateCode(ctx context.Context, q db.DBExecutor, companyID, productID int64, codeType types.ProductCodeType, code string) (*ProductCodeEntity, error) {
-	const sql = `
-		INSERT INTO product_codes (company_id, product_id, code_type, code)
-		VALUES ($1, $2, $3, $4)
-		RETURNING id
-	`
-	var id int64
-	err := q.QueryRow(ctx, sql, companyID, productID, codeType, code).Scan(&id)
-	if err != nil {
-		return nil, err
-	}
-	return &ProductCodeEntity{
-		ID:        id,
-		CompanyID: companyID,
-		ProductID: productID,
-		CodeType:  codeType,
-		Code:      code,
-	}, nil
-}
-
-func (r *ProductRepository) DeleteCode(ctx context.Context, q db.DBExecutor, codeID int64) error {
-	const sql = `DELETE FROM product_codes WHERE id = $1`
-	cmdTag, err := q.Exec(ctx, sql, codeID)
-	if err != nil {
-		return err
-	}
-	if cmdTag.RowsAffected() == 0 {
-		return errors.New("código de producto no encontrado")
-	}
-	return nil
-}
-
-// ==========================================
-// MÉTODOS PARA PROVEEDORES DEL PRODUCTO
-// ==========================================
-
-func (r *ProductRepository) ListSuppliers(ctx context.Context, q db.DBExecutor, productID int64) ([]ProductSupplierEntity, error) {
-	const sql = `
-		SELECT ps.product_id, ps.supplier_id, COALESCE(ext.name, ''), ps.cost, ps.supplier_code
-		FROM product_suppliers ps
-		LEFT JOIN externals ext ON ext.id = ps.supplier_id
-		WHERE ps.product_id = $1
-		ORDER BY ext.name ASC
-	`
-	rows, err := q.Query(ctx, sql, productID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	suppliers := make([]ProductSupplierEntity, 0)
-	for rows.Next() {
-		var s ProductSupplierEntity
-		if err := rows.Scan(&s.ProductID, &s.SupplierID, &s.SupplierName, &s.Cost, &s.SupplierCode); err != nil {
-			return nil, err
-		}
-		suppliers = append(suppliers, s)
-	}
-	return suppliers, rows.Err()
-}
-
-func (r *ProductRepository) AssignSupplier(ctx context.Context, q db.DBExecutor, productID, supplierID int64, cost float64, supplierCode *string) error {
-	const sql = `
-		INSERT INTO product_suppliers (product_id, supplier_id, cost, supplier_code)
-		VALUES ($1, $2, $3, $4)
-		ON CONFLICT (product_id, supplier_id)
-		DO UPDATE SET cost = EXCLUDED.cost, supplier_code = EXCLUDED.supplier_code
-	`
-	_, err := q.Exec(ctx, sql, productID, supplierID, cost, supplierCode)
+	_, err := q.Exec(ctx, sql, id)
 	return err
-}
-
-func (r *ProductRepository) RemoveSupplier(ctx context.Context, q db.DBExecutor, productID, supplierID int64) error {
-	const sql = `DELETE FROM product_suppliers WHERE product_id = $1 AND supplier_id = $2`
-	cmdTag, err := q.Exec(ctx, sql, productID, supplierID)
-	if err != nil {
-		return err
-	}
-	if cmdTag.RowsAffected() == 0 {
-		return errors.New("proveedor no asignado al producto")
-	}
-	return nil
 }

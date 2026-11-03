@@ -1,0 +1,112 @@
+/* QrLabelSheet.css · hoja de etiquetas QR en el panel derecho y su versión para impresión · solo usa tokens de styles/tokens.css */
+/* ojo: como el panel ocupa todo el alto sin scroll propio, el cuerpo es el que se desplaza y el pie con los botones queda fijo */
+.qr-panel {
+  display: flex;
+  flex: 1 1 0%;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.qr-panel-body {
+  display: flex;
+  flex: 1 1 0%;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 0;
+  padding: var(--space-4);
+  overflow-y: auto;
+}
+
+.qr-panel-note {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.qr-panel-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--color-border);
+  background-color: var(--color-bg-muted);
+}
+
+.qr-sheet {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--space-3);
+}
+
+.qr-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--c-white);
+  text-align: center;
+  break-inside: avoid;
+}
+
+.qr-label-img {
+  width: 100%;
+  max-width: 150px;
+  aspect-ratio: 1;
+  image-rendering: pixelated;
+}
+
+.qr-label-img-empty {
+  background: var(--color-bg-muted);
+}
+
+.qr-label-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  color: var(--c-black);
+}
+
+.qr-label-title {
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-bold);
+  overflow-wrap: anywhere;
+}
+
+.qr-label-subtitle {
+  font-size: var(--text-xs);
+}
+
+.qr-label-caption {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+/* al imprimir solo sale la hoja de etiquetas: lo demás se oculta y la hoja ocupa la página */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .qr-sheet,
+  .qr-sheet * {
+    visibility: visible;
+  }
+
+  .qr-sheet {
+    position: fixed;
+    inset: 0;
+    grid-template-columns: repeat(3, 1fr);
+    align-content: start;
+    padding: var(--space-4);
+    background: var(--c-white);
+  }
+
+  .qr-label {
+    border-color: var(--c-black);
+  }
+}

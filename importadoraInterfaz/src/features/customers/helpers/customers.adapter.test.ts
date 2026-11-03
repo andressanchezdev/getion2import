@@ -1,63 +1,79 @@
-// customers.adapter.test · pruebas de la conversión de usuarios, direcciones y descuentos del backend y del filtro por texto
+// customers.adapter.test · pruebas de la conversión de clientes y direcciones de la API y del filtro por texto
 // conecta con: customers.adapter; se corre con npm test
 import { describe, expect, it } from 'vitest'
-import { filterCustomers, toCustomer, toCustomerDetail, toDirection, toDiscount } from './customers.adapter'
+import { filterCustomers, toAddressList, toCustomer, toCustomerDetail, toDirections, withNewDirection } from './customers.adapter'
 import type { Customer } from '../types/customers.types'
 
 describe('toCustomer', () => {
-  it('convierte userId a id y arma el nombre completo', () => {
-    const customer = toCustomer({ userId: 7, name: ' Ana ', lastName: ' Pérez ', identification: '123', email: 'ana@x.co', userType: 'CLIENT', priceType: 'P1' })
-    expect(customer).toMatchObject({ id: 7, fullName: 'Ana Pérez', identification: '123', email: 'ana@x.co', userType: 'CLIENT', priceType: 'P1' })
+  it('arma el nombre completo y convierte documento y nivel de precio (p2 es P1)', () => {
+    const customer = toCustomer({ id: 7, name: ' Ana ', lastName: ' Pérez ', document: '123', email: 'ana@x.co', personType: 'natural', priceTier: 'p2' })
+    expect(customer).toMatchObject({ id: 7, fullName: 'Ana Pérez', identification: '123', email: 'ana@x.co', userType: 'natural', priceType: 'P1', photo: '' })
   })
 
-  it('la razón social sale de businessName o, si falta, del nombre comercial', () => {
-    expect(toCustomer({ userId: 1, companyInformation: { businessName: 'Motos SAS' } }).businessName).toBe('Motos SAS')
-    expect(toCustomer({ userId: 1, companyInformation: { tradeName: 'Motos' } }).businessName).toBe('Motos')
-    expect(toCustomer({ userId: 1, companyInformation: null }).businessName).toBe('')
+  it('la razón social sale del nombre comercial', () => {
+    expect(toCustomer({ id: 1, tradeName: 'Motos SAS' }).businessName).toBe('Motos SAS')
+    expect(toCustomer({ id: 1, tradeName: null }).businessName).toBe('')
   })
 
-  it('sin nombre usa el correo y, si tampoco hay, el número de usuario', () => {
-    expect(toCustomer({ userId: 3, email: 'sin@nombre.co' }).fullName).toBe('sin@nombre.co')
-    expect(toCustomer({ userId: 3 }).fullName).toBe('Usuario 3')
+  it('sin nombre usa el correo y, si tampoco hay, el número de cliente', () => {
+    expect(toCustomer({ id: 3, email: 'sin@nombre.co' }).fullName).toBe('sin@nombre.co')
+    expect(toCustomer({ id: 3 }).fullName).toBe('Cliente 3')
   })
 
-  it('un nivel de precio vacío queda sin nivel', () => {
-    expect(toCustomer({ userId: 1, priceType: '' }).priceType).toBeUndefined()
+  it('un nivel de precio vacío o desconocido queda sin nivel', () => {
+    expect(toCustomer({ id: 1, priceTier: '' }).priceType).toBeUndefined()
+    expect(toCustomer({ id: 1, priceTier: 'p9' }).priceType).toBeUndefined()
   })
 })
 
 describe('toCustomerDetail', () => {
-  it('agrega la comisión y los datos de la empresa', () => {
+  it('arma los datos de la empresa con los campos planos del cliente', () => {
     const detail = toCustomerDetail({
-      userId: 7,
-      name: 'Ana',
-      comissionRate: 5,
-      companyInformation: { nit: '900', cityAndDepartment: 'Cali, Valle', phone: 555, cellPhone: 0 },
+      id: 7,
+      name: 'Motos del Sur SAS',
+      documentType: 'NIT',
+      document: '900123456',
+      tradeName: 'Motos del Sur',
+      city: 'Cali',
+      address: 'Cra 1 # 2-3',
+      phone: '(602) 555-1234',
+      mobile: '',
+      legalRepresentative: 'Luis Gómez',
     })
-    expect(detail.commissionRate).toBe(5)
-    expect(detail.company).toMatchObject({ nit: '900', cityAndDepartment: 'Cali, Valle', phone: 555 })
+    expect(detail.company).toMatchObject({ nit: '900123456', tradeName: 'Motos del Sur', corporateName: 'Motos del Sur SAS', cityAndDepartment: 'Cali', phone: 6025551234, legalRepresentative: 'Luis Gómez' })
     expect(detail.company.cellPhone).toBeUndefined()
   })
 
-  it('sin información de empresa no se rompe', () => {
-    expect(toCustomerDetail({ userId: 1 }).company.nit).toBe('')
+  it('un cliente con cédula no tiene NIT y sin datos de empresa no se rompe', () => {
+    expect(toCustomerDetail({ id: 1, documentType: 'CC', document: '123' }).company.nit).toBe('')
+    expect(toCustomerDetail({ id: 1 }).company.address).toBe('')
   })
 })
 
-describe('toDirection y toDiscount', () => {
-  it('toDirection convierte directionId a id y limpia espacios', () => {
-    expect(toDirection({ directionId: 4, address: ' Calle 1 ', city: 'Cali' })).toMatchObject({ id: 4, address: 'Calle 1', city: 'Cali', neighborhood: '' })
+describe('direcciones del cliente', () => {
+  it('toDirections convierte la lista; sin id se usa la posición', () => {
+    const list = toDirections({ id: 1, addresses: [{ id: 4, address: ' Calle 1 ', city: 'Cali' }, { address: 'Calle 2' }] })
+    expect(list[0]).toMatchObject({ id: 4, address: 'Calle 1', city: 'Cali', neighborhood: '' })
+    expect(list[1]).toMatchObject({ id: 2, address: 'Calle 2' })
   })
 
-  it('toDiscount convierte discountId a id y deja sin definir los ids en 0', () => {
-    const discount = toDiscount({ discountId: 9, brandId: 2, categoryId: 0, productId: 0, rate: 10, quantity: 5 })
-    expect(discount).toMatchObject({ id: 9, brandId: 2, rate: 10, quantity: 5, isActive: true })
-    expect(discount.categoryId).toBeUndefined()
-    expect(discount.productId).toBeUndefined()
+  it('sin direcciones la lista queda vacía', () => {
+    expect(toDirections({ id: 1, addresses: null })).toEqual([])
+    expect(toDirections({ id: 1 })).toEqual([])
   })
 
-  it('un descuento marcado inactivo se conserva como inactivo', () => {
-    expect(toDiscount({ discountId: 1, isActive: false }).isActive).toBe(false)
+  it('withNewDirection agrega la dirección con el siguiente id libre', () => {
+    const input = { address: 'Calle 9', neighborhood: '', city: 'Cali', department: 'Valle', country: 'Colombia', additionalInfo: '' }
+    const current = toDirections({ id: 1, addresses: [{ id: 4, address: 'A' }, { id: 7, address: 'B' }] })
+    const next = withNewDirection(current, input)
+    expect(next).toHaveLength(3)
+    expect(next[2]).toMatchObject({ id: 8, address: 'Calle 9' })
+    expect(withNewDirection([], input)[0].id).toBe(1)
+  })
+
+  it('toAddressList devuelve las direcciones tal como se guardan en la API', () => {
+    const list = toDirections({ id: 1, addresses: [{ id: 4, address: 'A' }] })
+    expect(toAddressList(list)[0]).toMatchObject({ id: 4, address: 'A' })
   })
 })
 

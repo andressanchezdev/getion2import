@@ -1,10 +1,19 @@
-/* TransfersScreen.css · pantalla de traslados y reubicación multibodega */
-/* ojo: se quitaron los valores de respaldo escritos a mano (colores, sombras y tamaños): los tokens que usaban ya existen en tokens.css */
+/* TransfersScreen.css · pantalla de traslados: tarjeta con barra de filtros integrada y tabla · solo usa tokens de styles/tokens.css */
 .transfers-container {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  padding: 1.25rem;
+}
+
+/* tarjeta contenedora única con la barra de herramientas y la tabla integrada */
+.transfers-table-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-rest);
 }
 
 .transfers-toolbar {
@@ -12,109 +21,63 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: var(--space-3);
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--bg-surface, var(--color-bg-surface));
+}
+
+.transfers-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 1 1 520px;
+  flex-wrap: wrap;
+}
+
+.transfers-search-bar {
+  flex: 0 1 360px;
+  min-width: 260px;
 }
 
 .transfers-tabs {
   display: flex;
-  gap: 0.5rem;
-  background-color: var(--color-bg-muted);
-  padding: 0.25rem;
-  border-radius: var(--radius-md);
+  gap: var(--space-1);
+  padding: 3px;
+  background: var(--color-bg-muted);
   border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
 }
 
 .transfers-tab-btn {
-  padding: 0.5rem 1rem;
-  font-size: var(--text-sm);
+  padding: 6px 14px;
+  font-size: var(--text-xs);
   font-weight: var(--font-weight-semibold);
-  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
   background: transparent;
   border: none;
-  color: var(--color-text-secondary);
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all var(--duration-fast) var(--ease-default);
+  white-space: nowrap;
+  transition: background-color var(--motion-fast), color var(--motion-fast);
 }
 
 .transfers-tab-btn-active {
-  background-color: var(--color-bg-surface);
-  color: var(--color-primary);
-  box-shadow: var(--shadow-sm);
-}
-
-.transfers-table-card {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  box-shadow: var(--shadow-sm);
-}
-
-.transfers-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-  font-size: var(--text-sm);
-}
-
-.transfers-table th {
-  background-color: var(--color-bg-muted);
-  color: var(--color-text-secondary);
-  font-weight: var(--font-weight-semibold);
-  padding: 0.875rem 1rem;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.transfers-table td {
-  padding: 0.875rem 1rem;
-  border-bottom: 1px solid var(--color-border);
   color: var(--color-text-primary);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-rest);
 }
 
-.transfers-badge {
-  display: inline-block;
-  padding: 0.25rem 0.625rem;
-  border-radius: var(--radius-full);
-  font-size: var(--text-xs);
-  font-weight: var(--font-weight-semibold);
-  text-transform: capitalize;
-}
-
-.transfers-badge-pendiente {
-  background-color: var(--color-warning-bg);
-  color: var(--color-warning);
-}
-
-.transfers-badge-picking {
-  background-color: var(--color-info-bg);
-  color: var(--color-info);
-}
-
-.transfers-badge-packing {
-  background-color: var(--color-accent-bg);
-  color: var(--color-accent);
-}
-
-.transfers-badge-approved {
-  background-color: var(--color-success-bg);
-  color: var(--color-success);
-}
-
-.transfers-badge-rejected {
-  background-color: var(--color-danger-bg);
-  color: var(--color-danger);
-}
-
-.transfers-code-chip {
-  font-family: var(--font-family-mono);
-  font-weight: var(--font-weight-bold);
-  padding: 0.2rem 0.4rem;
-  background-color: var(--color-bg-muted);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border);
+.transfers-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
 }
 
 .transfers-empty {
-  padding: 3rem;
+  padding: 3rem var(--space-4);
   text-align: center;
+  font-size: var(--text-sm);
   color: var(--color-text-muted);
 }

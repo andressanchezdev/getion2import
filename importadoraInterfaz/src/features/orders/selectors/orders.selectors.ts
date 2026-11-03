@@ -9,9 +9,13 @@ import type { OrdersState } from '../types/orders.types'
 type OrdersRoot = { orders: OrdersState }
 
 export const selectOrders = (state: OrdersRoot) => state.orders
+// lee la tabla de pedidos (filas, estado de carga y error)
 export const selectOrdersList = (state: OrdersRoot) => state.orders.list
+// lee el id del pedido abierto en el panel (null si no hay)
 export const selectOpenOrderId = (state: OrdersRoot) => state.orders.openId
+// dice si hay un pedido abierto en el panel
 export const selectHasOpenOrder = (state: OrdersRoot) => state.orders.openId !== null
+// lee el detalle del pedido abierto
 export const selectOrderDetail = (state: OrdersRoot) => state.orders.detail
 
 // la tabla con la búsqueda aplicada (la búsqueda es sobre lo ya cargado)

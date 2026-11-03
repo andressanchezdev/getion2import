@@ -3,7 +3,7 @@
 // ojo: solo aparece si hay un cliente elegido (se elige en Terceros > Clientes, "Usar en la venta"); sin cliente la venta va a nombre del usuario de la sesión
 import React from 'react'
 import './ShopCartCustomer.css'
-import { useAppDispatch, useAppSelector } from '@/global/hooks/useRedux'
+import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { setCartCustomerThunk } from '../../../thunks/shop.cart.customer.thunks'
 import { selectCartCustomer, selectCartMutating } from '../../../selectors/shop.selectors'
 

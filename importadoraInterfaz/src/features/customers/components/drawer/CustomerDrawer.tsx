@@ -1,10 +1,10 @@
-// CustomerDrawer · contenido del panel derecho al abrir un cliente: sus datos, "usar en la venta", direcciones y descuentos
+// CustomerDrawer · contenido del panel derecho al abrir un cliente: sus datos, "usar en la venta", direcciones, documentos y descuentos
 // conecta con: useSelectedCustomerData (pide detalle, direcciones y descuentos), customers.selectors y customers.details.thunks, features/shop (cliente de la venta) y global ConfirmDialog (confirmar borrados); lo muestra DrawerRight (drawerRegistry, modo "customer")
 // ojo: los borrados (dirección o descuento) piden confirmación; el encabezado del panel lo pinta DrawerHeader con selectCustomerDrawerMeta
 import React, { useState } from 'react'
 import './CustomerDrawer.css'
-import { useAppDispatch, useAppSelector } from '@/global/hooks/useRedux'
-import { ConfirmDialog } from '@/global/components/UI/molecules/ConfirmDialog'
+import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
+import { ConfirmDialog } from '@/global/components/UI/molecules/dialogs/ConfirmDialog'
 import { selectCartCustomer, setCartCustomerThunk } from '@/features/shop'
 import { useLoadCatalogs } from '@/features/catalogs'
 import { useSelectedCustomerData } from '../../hooks/useSelectedCustomerData'
@@ -12,6 +12,7 @@ import { selectCustomerDetail, selectOpenCustomerId } from '../../selectors/cust
 import { deleteDirectionThunk, deleteDiscountThunk } from '../../thunks/customers.details.thunks'
 import { CustomerInfoSection } from './CustomerInfoSection'
 import { CustomerDirectionsSection } from './CustomerDirectionsSection'
+import { CustomerDocumentsSection } from './CustomerDocumentsSection'
 import { CustomerDiscountsSection } from './CustomerDiscountsSection'
 
 // qué se está por borrar (null = nada); se confirma con el diálogo
@@ -55,6 +56,7 @@ export const CustomerDrawer: React.FC = () => {
 
       <CustomerInfoSection detail={detail} />
       <CustomerDirectionsSection customerId={customerId} onRequestDelete={(id) => setPending({ kind: 'direction', id })} />
+      <CustomerDocumentsSection customerId={customerId} />
       <CustomerDiscountsSection onRequestDelete={(id) => setPending({ kind: 'discount', id })} />
 
       <ConfirmDialog

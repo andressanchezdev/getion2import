@@ -1,19 +1,20 @@
 // ShopCatalogScreen · catálogo de repuestos: arma la barra, los filtros, el grid de tarjetas, el paginador o el aviso de carga, error o estado vacío
 // conecta con: shop.slice (filtros y carrito), shop.products.slice/selectors (productos del backend), catalogs (useLoadCatalogs), useProductsLoader y las partes ShopCatalog*; la monta MainContent
-// ojo: la lista de productos ya no es un dato fijo: llega de POST /products (o de la búsqueda por texto) y se pide en useProductsLoader
-import React from 'react'
+// atajo de teclado: Ctrl + Shift abre el carrito de compras
+import React, { useEffect } from 'react'
 import './ShopCatalogScreen.css'
-import { useAppDispatch, useAppSelector } from '@/global/hooks/useRedux'
+import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { useLoadCatalogs } from '@/features/catalogs'
+import { useWarehouses } from '@/features/warehouses'
 import { ProductCard } from '../components/productCard/ProductCard'
 import { ShopCatalogToolbar } from '../components/catalog/ShopCatalogToolbar'
 import { ShopCatalogFilters } from '../components/catalog/ShopCatalogFilters'
 import { ShopCatalogEmpty } from '../components/catalog/ShopCatalogEmpty'
 import { ShopCatalogStatus } from '../components/results/ShopCatalogStatus'
-import { Pagination } from '@/global/components/UI/molecules/Pagination'
+import { Pagination } from '@/global/components/UI/molecules/table/Pagination'
 import { useProductsLoader } from '../hooks/useProductsLoader'
 import type { PriceLevelKey, Product } from '../types/shop.types'
-import { resetFilters } from '../slices/shop.slice'
+import { resetFilters, setCartDrawerOpen } from '../slices/shop.slice'
 import { setProductsPage } from '../slices/shop.products.slice'
 import { loadProductsThunk } from '../thunks/shop.products.thunks'
 import { addToCartThunk } from '../thunks/shop.cart.thunks'
@@ -31,6 +32,8 @@ export const ShopCatalogScreen: React.FC = () => {
   const dispatch = useAppDispatch()
   // ojo: marcas, categorías y modelos se piden al backend la primera vez que se abre el catálogo
   useLoadCatalogs()
+  // bodegas activas para indicadores de stock por sede
+  useWarehouses()
   // los productos se piden cuando cambian los filtros, el texto, la página o la bodega
   useProductsLoader()
 
@@ -48,12 +51,22 @@ export const ShopCatalogScreen: React.FC = () => {
   const mode = useAppSelector(selectProductsMode)
   const hasActiveFilters = useAppSelector(selectHasActiveFilters)
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey) {
+        e.preventDefault()
+        dispatch(setCartDrawerOpen(true))
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [dispatch])
+
   const handleAddToCart = (
     product: Product,
     quantity: number,
     priceLevel: PriceLevelKey
   ) => {
-    // ojo: antes se agregaba a un carrito local; ahora es una llamada al backend (POST /carts/register, o PUT /carts/update si el producto ya estaba)
     dispatch(addToCartThunk({ product, quantity, priceLevel }))
   }
 
@@ -70,7 +83,7 @@ export const ShopCatalogScreen: React.FC = () => {
       </section>
 
       {/* Grid de Productos, aviso de carga o error, o Estado Vacío */}
-      <section className="shop-catalog-grid-section">
+      <section className="shop-catalog-grid-section screen-scroll">
         {showStatus ? (
           <ShopCatalogStatus status={status} error={error} onRetry={() => dispatch(loadProductsThunk())} />
         ) : products.length > 0 ? (

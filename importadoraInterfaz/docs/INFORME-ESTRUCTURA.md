@@ -60,12 +60,11 @@ Reglas: cada feature tiene `types/` e `index.ts`, solo las carpetas que necesita
 ## 5. Archivos largos y hallazgos por archivo
 
 - `assets/images/login-ilustracion.svg` · supera 150 líneas (2811)
-- `features/wallet/components/clientRow/CreditUsageBar.tsx` · 1 estilo(s) en línea
 - `global/helpers/storage.ts` · console.* en el código
 
 ## 6. Archivos no alcanzables desde main.tsx
 
-28 archivos: 27 íconos SVG de reserva en `assets/icons` y `assets/logos/icon.ico`. No son código; se conservan como biblioteca de íconos.
+Ninguno. Los 28 archivos que antes no se alcanzaban (27 íconos SVG de reserva y `assets/logos/icon.ico`), más `CreditUsageBar`, `FilterChip` y `permissions.types.ts`, se retiraron para dejar la estructura limpia (ver `src/plan.txt`, sección 13, punto 4).
 
 ## 7. Exportaciones que nadie más usa (informativo)
 

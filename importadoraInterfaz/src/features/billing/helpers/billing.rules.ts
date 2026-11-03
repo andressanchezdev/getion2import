@@ -1,0 +1,28 @@
+// billing.rules · reglas puras de facturación: cómo se ve el próximo número de una serie, qué falta en los datos fiscales y cuánto del rango autorizado queda
+// conecta con: useBillingConfigForm, useDocSeriesForm y BillingSettingsScreen; no toca el store
+// ojo: el API arma el número como prefijo + 6 dígitos (FE-000002); la API es la que manda y valida otra vez
+import type { BillingConfig, BillingConfigInput } from '../types/billing.types'
+
+// el próximo número tal como lo armará el API
+export const nextNumberLabel = (prefix: string, nextNumber: number): string => `${prefix}${String(nextNumber).padStart(6, '0')}`
+
+// por qué una serie no se puede guardar (null si está bien)
+export const seriesProblem = (prefix: string, nextNumber: number): string | null => {
+  if (prefix.trim() === '') return 'El prefijo es obligatorio'
+  if (!Number.isInteger(nextNumber) || nextNumber < 1) return 'El próximo número debe ser un entero desde 1'
+  return null
+}
+
+// por qué los datos fiscales no se pueden guardar (null si está bien)
+export const billingProblem = (input: Pick<BillingConfigInput, 'nit' | 'legalName'> & { rangeFrom?: number; rangeTo?: number }): string | null => {
+  if (!input.nit || input.nit.trim() === '') return 'El NIT o documento es obligatorio'
+  if (!input.legalName || input.legalName.trim() === '') return 'La razón social es obligatoria'
+  if (input.rangeFrom !== undefined && input.rangeTo !== undefined && input.rangeTo < input.rangeFrom) return 'El rango final no puede ser menor al inicial'
+  return null
+}
+
+// cuántos números de la resolución quedan por usar según el próximo número de la serie de facturas (null si no hay rango)
+export const rangeRemaining = (config: Pick<BillingConfig, 'rangeFrom' | 'rangeTo'>, nextInvoiceNumber: number): number | null => {
+  if (config.rangeTo === null) return null
+  return Math.max(config.rangeTo - nextInvoiceNumber + 1, 0)
+}

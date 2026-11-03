@@ -1,30 +1,32 @@
-// shop.cart.thunks.test · pruebas del carrito contra el backend: leer, agregar (línea nueva o existente), cambiar cantidad, quitar, vaciar y errores
+// shop.cart.thunks.test · pruebas del carrito contra el backend: leer, agregar (renglón nuevo o existente), cambiar cantidad, quitar, vaciar y errores
 // conecta con: shop.cart.thunks, shop.cart.slice y shop.slice; los services, la sesión y las alertas están simulados (no hay red)
 import { configureStore, type ThunkDispatch, type UnknownAction } from '@reduxjs/toolkit'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AuthState } from '@/features/auth'
 import { navigationReducer, setActiveWarehouse, type NavigationState } from '@/features/navigation'
-import { toast } from '@/global/helpers/toast'
+import { toast } from '@/global/helpers/feedback/toast'
 import { cartReducer } from '../slices/shop.cart.slice'
 import { productsReducer } from '../slices/shop.products.slice'
 import { shopReducer } from '../slices/shop.slice'
 import { addToCartThunk, fetchCartThunk } from './shop.cart.thunks'
 import { clearCartThunk, removeCartItemThunk, updateCartQuantityThunk } from './shop.cart.update.thunks'
-import { addCartItem, deleteCart, deleteCartItem, fetchCartItems, updateCartItemQuantity } from '../services/shop.cart.service'
+import { addCartItem, clearCart, deleteCartItem, fetchActiveCart, updateCartItemQuantity } from '../services/shop.cart.service'
 import { fetchProductsPage } from '../services/shop.products.service'
-import type { CartState } from '../types/shop.cart.api.types'
+import { findStockId } from '../services/shop.stock.service'
+import type { CartSnapshot, CartState } from '../types/shop.cart.api.types'
 import type { ProductsState } from '../types/shop.api.types'
 import type { CartItem, Product, ShopState } from '../types/shop.types'
 
 vi.mock('../services/shop.cart.service', () => ({
-  fetchCartItems: vi.fn(),
+  fetchActiveCart: vi.fn(),
   addCartItem: vi.fn(),
   updateCartItemQuantity: vi.fn(),
   deleteCartItem: vi.fn(),
-  deleteCart: vi.fn(),
+  clearCart: vi.fn(),
 }))
+vi.mock('../services/shop.stock.service', () => ({ findStockId: vi.fn(), fetchWarehouseStock: vi.fn() }))
 vi.mock('../services/shop.products.service', () => ({ fetchProductsPage: vi.fn(), searchProducts: vi.fn() }))
-vi.mock('@/global/helpers/toast', () => ({ toast: { error: vi.fn(), success: vi.fn() } }))
+vi.mock('@/global/helpers/feedback/toast', () => ({ toast: { error: vi.fn(), success: vi.fn() } }))
 vi.mock('@/features/auth', () => ({
   selectRequestContext: (state: { auth: { ctx: unknown } }) => state.auth.ctx,
 }))
@@ -59,8 +61,9 @@ const product: Product = {
   stockByWarehouse: { '4': 10 },
 }
 
-const line = (cartId: number, quantity: number): CartItem => ({
-  cartId,
+// renglón del carrito: el id del renglón es 11
+const line = (quantity: number): CartItem => ({
+  cartId: 11,
   productId: '5',
   product,
   quantity,
@@ -68,14 +71,16 @@ const line = (cartId: number, quantity: number): CartItem => ({
   priceLevel: null,
   subtotal: 900 * quantity,
 })
+const snapshot = (...items: CartItem[]): CartSnapshot => ({ cartId: 9, uuid: 'u-9', items })
 
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.mocked(fetchCartItems).mockResolvedValue([line(11, 2)])
+  vi.mocked(fetchActiveCart).mockResolvedValue(snapshot(line(2)))
+  vi.mocked(findStockId).mockResolvedValue(21)
   vi.mocked(addCartItem).mockResolvedValue(undefined)
   vi.mocked(updateCartItemQuantity).mockResolvedValue(undefined)
   vi.mocked(deleteCartItem).mockResolvedValue(undefined)
-  vi.mocked(deleteCart).mockResolvedValue(undefined)
+  vi.mocked(clearCart).mockResolvedValue(undefined)
   vi.mocked(fetchProductsPage).mockResolvedValue({
     items: [],
     meta: { currentPage: 1, pageSize: 30, totalRecords: 0, totalPages: 0, hasNextPage: false, hasPrevPage: false },
@@ -83,41 +88,45 @@ beforeEach(() => {
 })
 
 describe('fetchCartThunk', () => {
-  it('sin uuid (nadie ha agregado nada) no llama al backend y deja el carrito vacío', async () => {
+  it('lee el carrito activo y guarda su id, su uuid y sus renglones', async () => {
     const { store, dispatch } = makeStore()
     await dispatch(fetchCartThunk())
-    expect(fetchCartItems).not.toHaveBeenCalled()
-    expect(store.getState().cart).toMatchObject({ items: [], status: 'succeeded' })
+    expect(store.getState().cart).toMatchObject({ cartId: 9, status: 'succeeded' })
+    expect(store.getState().cart.items).toHaveLength(1)
+    expect(store.getState().shop.cartUuid).toBe('u-9')
   })
 
-  it('con uuid lee el carrito de esa bodega', async () => {
-    const { store, dispatch } = makeStore()
-    await dispatch(addToCartThunk({ product, quantity: 2, priceLevel: 'P1' })) // crea el uuid
-    vi.mocked(fetchCartItems).mockClear()
+  it('sin sesión no llama al backend', async () => {
+    const { dispatch } = makeStore(null)
     await dispatch(fetchCartThunk())
-    expect(fetchCartItems).toHaveBeenCalledWith(ctx, { uuid: store.getState().shop.cartUuid, warehouseId: 4 })
+    expect(fetchActiveCart).not.toHaveBeenCalled()
   })
 
   it('si falla deja el mensaje y el estado "failed"', async () => {
+    vi.mocked(fetchActiveCart).mockRejectedValue({ userFriendlyMessage: 'Servidor caído' })
     const { store, dispatch } = makeStore()
-    await dispatch(addToCartThunk({ product, quantity: 1, priceLevel: 'P0' }))
-    vi.mocked(fetchCartItems).mockRejectedValue({ userFriendlyMessage: 'Servidor caído' })
     await dispatch(fetchCartThunk())
     expect(store.getState().cart).toMatchObject({ status: 'failed', error: 'Servidor caído' })
   })
 })
 
 describe('addToCartThunk', () => {
-  it('línea nueva: crea el uuid, registra con el precio del nivel y relee el carrito', async () => {
+  it('renglón nuevo: busca la ubicación con stock, agrega con el precio del nivel y relee el carrito', async () => {
     const { store, dispatch } = makeStore()
     await dispatch(addToCartThunk({ product, quantity: 3, priceLevel: 'P1' }))
-    const uuid = store.getState().shop.cartUuid
-    expect(uuid).not.toBe('')
-    expect(addCartItem).toHaveBeenCalledWith(ctx, { uuid, warehouseId: 4, productId: 5, quantity: 3, price: 900 })
+    expect(findStockId).toHaveBeenCalledWith(ctx, 4, 5, 3)
+    expect(addCartItem).toHaveBeenCalledWith({ cartId: 9, stockId: 21, quantity: 3, price: 900 })
     expect(updateCartItemQuantity).not.toHaveBeenCalled()
-    expect(fetchCartItems).toHaveBeenCalledWith(ctx, { uuid, warehouseId: 4 })
     expect(store.getState().cart.items).toHaveLength(1)
     expect(store.getState().shop.cartLevels).toEqual({ '5': 'P1' })
+    expect(store.getState().shop.cartUuid).toBe('u-9')
+  })
+
+  it('el carrito conserva el producto completo (marca e imagen) que la API no trae', async () => {
+    const { store, dispatch } = makeStore()
+    await dispatch(addToCartThunk({ product, quantity: 1, priceLevel: 'P0' }))
+    expect(vi.mocked(fetchActiveCart).mock.calls.at(-1)?.[0]).toMatchObject({ '5': product })
+    expect(store.getState().cart.products['5']).toEqual(product)
   })
 
   it('refresca el catálogo porque el backend descuenta stock', async () => {
@@ -126,20 +135,12 @@ describe('addToCartThunk', () => {
     expect(fetchProductsPage).toHaveBeenCalled()
   })
 
-  it('un segundo producto reutiliza el mismo uuid', async () => {
-    const { store, dispatch } = makeStore()
-    await dispatch(addToCartThunk({ product, quantity: 1, priceLevel: 'P0' }))
-    const first = store.getState().shop.cartUuid
-    await dispatch(addToCartThunk({ product: { ...product, id: '6' }, quantity: 1, priceLevel: 'P0' }))
-    expect(store.getState().shop.cartUuid).toBe(first)
-  })
-
-  it('si el producto ya está en el carrito suma a su línea en vez de crear otra', async () => {
+  it('si el producto ya está en el carrito suma a su renglón en vez de crear otro', async () => {
     const { dispatch } = makeStore()
-    await dispatch(addToCartThunk({ product, quantity: 2, priceLevel: 'P0' })) // el carrito queda con la línea 11 (cantidad 2)
+    await dispatch(addToCartThunk({ product, quantity: 2, priceLevel: 'P0' })) // el carrito queda con el renglón 11 (cantidad 2)
     vi.mocked(addCartItem).mockClear()
     await dispatch(addToCartThunk({ product, quantity: 3, priceLevel: 'P0' }))
-    expect(updateCartItemQuantity).toHaveBeenCalledWith(11, 5)
+    expect(updateCartItemQuantity).toHaveBeenCalledWith(9, 11, 5)
     expect(addCartItem).not.toHaveBeenCalled()
   })
 
@@ -151,11 +152,20 @@ describe('addToCartThunk', () => {
     expect(result.type).toContain('rejected')
   })
 
-  it('si el backend falla avisa con una alerta y deja libre el carrito para reintentar', async () => {
-    vi.mocked(addCartItem).mockRejectedValue({ userFriendlyMessage: 'Sin stock suficiente' })
+  it('si ninguna ubicación tiene stock suficiente avisa y no agrega', async () => {
+    vi.mocked(findStockId).mockRejectedValue({ userFriendlyMessage: 'No hay stock suficiente de este producto en la bodega elegida.' })
     const { store, dispatch } = makeStore()
     await dispatch(addToCartThunk({ product, quantity: 99, priceLevel: 'P0' }))
-    expect(toast.error).toHaveBeenCalledWith('Sin stock suficiente')
+    expect(addCartItem).not.toHaveBeenCalled()
+    expect(toast.error).toHaveBeenCalledWith('No hay stock suficiente de este producto en la bodega elegida.')
+    expect(store.getState().cart.mutating).toBe(false)
+  })
+
+  it('si el backend falla avisa con una alerta y deja libre el carrito para reintentar', async () => {
+    vi.mocked(addCartItem).mockRejectedValue({ userFriendlyMessage: 'Stock insuficiente' })
+    const { store, dispatch } = makeStore()
+    await dispatch(addToCartThunk({ product, quantity: 3, priceLevel: 'P0' }))
+    expect(toast.error).toHaveBeenCalledWith('Stock insuficiente')
     expect(store.getState().cart.mutating).toBe(false)
     expect(store.getState().cart.items).toEqual([])
   })
@@ -179,7 +189,7 @@ describe('cambiar, quitar y vaciar', () => {
     const made = makeStore()
     await made.dispatch(addToCartThunk({ product, quantity: 2, priceLevel: 'P1' }))
     vi.clearAllMocks()
-    vi.mocked(fetchCartItems).mockResolvedValue([line(11, 4)])
+    vi.mocked(fetchActiveCart).mockResolvedValue(snapshot(line(4)))
     vi.mocked(fetchProductsPage).mockResolvedValue({
       items: [],
       meta: { currentPage: 1, pageSize: 30, totalRecords: 0, totalPages: 0, hasNextPage: false, hasPrevPage: false },
@@ -190,31 +200,30 @@ describe('cambiar, quitar y vaciar', () => {
   it('cambia la cantidad con PUT y relee el carrito', async () => {
     const { store, dispatch } = await withCart()
     await dispatch(updateCartQuantityThunk({ cartId: 11, quantity: 4 }))
-    expect(updateCartItemQuantity).toHaveBeenCalledWith(11, 4)
+    expect(updateCartItemQuantity).toHaveBeenCalledWith(9, 11, 4)
     expect(store.getState().cart.items[0].quantity).toBe(4)
   })
 
-  it('con cantidad 0 quita la línea (DELETE) en vez de actualizar', async () => {
+  it('con cantidad 0 quita el renglón (DELETE) en vez de actualizar', async () => {
     const { dispatch } = await withCart()
     await dispatch(updateCartQuantityThunk({ cartId: 11, quantity: 0 }))
-    expect(deleteCartItem).toHaveBeenCalledWith(11)
+    expect(deleteCartItem).toHaveBeenCalledWith(9, 11)
     expect(updateCartItemQuantity).not.toHaveBeenCalled()
   })
 
-  it('removeCartItemThunk quita la línea y relee', async () => {
-    vi.mocked(deleteCartItem).mockResolvedValue(undefined)
+  it('removeCartItemThunk quita el renglón y relee', async () => {
     const { store, dispatch } = await withCart()
-    vi.mocked(fetchCartItems).mockResolvedValue([])
+    vi.mocked(fetchActiveCart).mockResolvedValue(snapshot())
     await dispatch(removeCartItemThunk(11))
-    expect(deleteCartItem).toHaveBeenCalledWith(11)
+    expect(deleteCartItem).toHaveBeenCalledWith(9, 11)
     expect(store.getState().cart.items).toEqual([])
   })
 
-  it('clearCartThunk vacía con el uuid y olvida los niveles', async () => {
+  it('clearCartThunk vacía el carrito por su id y olvida los niveles', async () => {
     const { store, dispatch } = await withCart()
-    const uuid = store.getState().shop.cartUuid
+    vi.mocked(fetchActiveCart).mockResolvedValue(snapshot())
     await dispatch(clearCartThunk())
-    expect(deleteCart).toHaveBeenCalledWith(ctx, uuid, undefined)
+    expect(clearCart).toHaveBeenCalledWith(9)
     expect(store.getState().cart.items).toEqual([])
     expect(store.getState().shop.cartLevels).toEqual({})
   })

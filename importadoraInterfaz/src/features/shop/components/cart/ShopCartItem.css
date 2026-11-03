@@ -54,7 +54,6 @@
 }
 
 /* categoría y título: 13 px en negrita, una sola línea con puntos suspensivos */
-.shop-cart-item-category,
 .shop-cart-item-name {
   min-width: 0;
   margin: 0;
@@ -64,10 +63,6 @@
   font-weight: var(--font-weight-bold);
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.shop-cart-item-category {
-  flex: 0 1 auto;
 }
 
 .shop-cart-item-name {
@@ -98,7 +93,7 @@
   width: clamp(56px, 20%, 80px);
   min-width: 56px;
   height: 36px;
-  padding: 0 6px 0 10px;
+  padding: 0;
   border: 1px solid var(--color-card-border);
   border-radius: var(--radius-base);
   background: var(--bg-card);
@@ -106,7 +101,15 @@
   font-family: inherit;
   font-size: var(--text-md);
   text-align: center;
-  appearance: auto;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+/* sin flechitas de subir y bajar: el número queda centrado en el campo */
+.shop-cart-item-qty::-webkit-inner-spin-button,
+.shop-cart-item-qty::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .shop-cart-item-qty:disabled {

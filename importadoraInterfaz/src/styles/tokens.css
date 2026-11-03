@@ -73,6 +73,7 @@
   --c-slate-800: #1e293b;
   --c-slate-900: #0f172a;
   --c-white: #ffffff;
+  --c-black: #000000;
 
   /* ---- 1a. PALETA DE LA MAQUETA (MAQUETA-V3): el «chrome» de la app (menú, cabecera, tablas, panel) y las cards de IP ---- */
   --c-shell-50: #f5f6f9;
@@ -224,6 +225,7 @@
   --duration-halo: 360ms;
   /* menú: halo de salida cuando el cambio ya se aplicó */
   --duration-enter: 260ms;
+  --duration-screensaver-in: 2400ms; /* el protector de pantalla se funde desde la transparencia en este tiempo */
   /* entrada de contenido y apertura de paneles */
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
 

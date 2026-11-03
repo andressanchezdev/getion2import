@@ -1,5 +1,8 @@
 package repositories
 
+// purchase_repo.go · acceso a la base de compras: aquí vive el SQL; cada método recibe la conexión o la transacción
+// conecta con: core/db (DBExecutor) y los dtos de compras; los usan los services de compras
+
 import (
 	"context"
 	"errors"
@@ -52,10 +55,12 @@ type PurchaseItemEntity struct {
 
 type PurchaseRepository struct{}
 
+// NewPurchaseRepository crea el repositorio; no guarda estado, cada método recibe la conexión o transacción.
 func NewPurchaseRepository() *PurchaseRepository {
 	return &PurchaseRepository{}
 }
 
+// Create inserta la orden de compra y devuelve el registro guardado.
 func (r *PurchaseRepository) Create(ctx context.Context, q db.DBExecutor, p *PurchaseEntity) (*PurchaseEntity, error) {
 	const sql = `
 		INSERT INTO purchases (
@@ -76,6 +81,7 @@ func (r *PurchaseRepository) Create(ctx context.Context, q db.DBExecutor, p *Pur
 	return p, nil
 }
 
+// CreateItem inserta un renglón.
 func (r *PurchaseRepository) CreateItem(ctx context.Context, q db.DBExecutor, it *PurchaseItemEntity) error {
 	const sql = `
 		INSERT INTO purchase_items (
@@ -90,6 +96,7 @@ func (r *PurchaseRepository) CreateItem(ctx context.Context, q db.DBExecutor, it
 	).Scan(&it.ID)
 }
 
+// FindByID busca la orden de compra por su id (nil si no existe).
 func (r *PurchaseRepository) FindByID(ctx context.Context, q db.DBExecutor, id int64) (*PurchaseEntity, error) {
 	const sql = `
 		SELECT
@@ -119,6 +126,7 @@ func (r *PurchaseRepository) FindByID(ctx context.Context, q db.DBExecutor, id i
 	return &entity, nil
 }
 
+// ListItems lista los renglones.
 func (r *PurchaseRepository) ListItems(ctx context.Context, q db.DBExecutor, purchaseID int64) ([]PurchaseItemEntity, error) {
 	const sql = `
 		SELECT
@@ -151,6 +159,7 @@ func (r *PurchaseRepository) ListItems(ctx context.Context, q db.DBExecutor, pur
 	return items, rows.Err()
 }
 
+// List lista las órdenes de compra según los filtros, con su total para paginar.
 func (r *PurchaseRepository) List(ctx context.Context, q db.DBExecutor, f dtos.PurchaseFilterQuery) ([]PurchaseEntity, int, error) {
 	where := make([]string, 0)
 	args := make([]interface{}, 0)
@@ -253,6 +262,7 @@ func (r *PurchaseRepository) List(ctx context.Context, q db.DBExecutor, f dtos.P
 	return list, total, rows.Err()
 }
 
+// UpdateItemReceived guarda la cantidad recibida de un renglón de la orden de compra.
 func (r *PurchaseRepository) UpdateItemReceived(ctx context.Context, q db.DBExecutor, itemID int64, additionalQty int) error {
 	const sql = `
 		UPDATE purchase_items
@@ -269,6 +279,7 @@ func (r *PurchaseRepository) UpdateItemReceived(ctx context.Context, q db.DBExec
 	return nil
 }
 
+// UpdateStatus cambia el estado de la orden de compra.
 func (r *PurchaseRepository) UpdateStatus(ctx context.Context, q db.DBExecutor, purchaseID int64, status types.PurchaseStatus, receivedAt *time.Time) error {
 	const sql = `
 		UPDATE purchases
@@ -279,6 +290,7 @@ func (r *PurchaseRepository) UpdateStatus(ctx context.Context, q db.DBExecutor, 
 	return err
 }
 
+// UpsertSupplierProduct guarda o actualiza un producto del catálogo de un proveedor (código, costo y descripción).
 func (r *PurchaseRepository) UpsertSupplierProduct(ctx context.Context, q db.DBExecutor, productID, supplierID int64, cost float64, supplierCode string) error {
 	const sql = `
 		INSERT INTO product_suppliers (product_id, supplier_id, cost, supplier_code)
@@ -291,6 +303,7 @@ func (r *PurchaseRepository) UpsertSupplierProduct(ctx context.Context, q db.DBE
 	return err
 }
 
+// FindProductByCode busca un producto de la compañía por su código.
 func (r *PurchaseRepository) FindProductByCode(ctx context.Context, q db.DBExecutor, companyID int64, code string) (int64, string, error) {
 	const sql = `
 		SELECT id, name FROM products
@@ -306,6 +319,7 @@ func (r *PurchaseRepository) FindProductByCode(ctx context.Context, q db.DBExecu
 	return id, name, nil
 }
 
+// ListSupplierProducts lista los productos del catálogo de un proveedor.
 func (r *PurchaseRepository) ListSupplierProducts(ctx context.Context, q db.DBExecutor, supplierID int64) ([]dtos.SupplierProductItemDTO, error) {
 	const sql = `
 		SELECT
@@ -332,3 +346,9 @@ func (r *PurchaseRepository) ListSupplierProducts(ctx context.Context, q db.DBEx
 	return list, rows.Err()
 }
 
+// UpdateProductLastCost guarda el costo de la última compra recibida en el producto
+func (r *PurchaseRepository) UpdateProductLastCost(ctx context.Context, q db.DBExecutor, productID int64, cost float64) error {
+	const sql = `UPDATE products SET last_cost = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`
+	_, err := q.Exec(ctx, sql, cost, productID)
+	return err
+}

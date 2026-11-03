@@ -1,5 +1,8 @@
 package controllers
 
+// product_code_controller.go · controlador HTTP de productos: recibe la petición, valida la entrada y llama al servicio; no tiene lógica de negocio
+// conecta con: los services y dtos de productos y core/utils (respuestas y errores); los registra routes
+
 import (
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/utils"
@@ -67,4 +70,3 @@ func (c *ProductController) DeleteCode(ctx echo.Context) error {
 	}
 	return utils.RespondNoContent(ctx)
 }
-

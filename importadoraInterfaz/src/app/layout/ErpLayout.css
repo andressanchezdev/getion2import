@@ -20,11 +20,3 @@
     min-width: 0;
     background-color: var(--bg-main);
 }
-
-/* ojo: .store-app-body ya no se usa (el cuerpo con los 3 bloques ahora es .store-app-layout); se deja como referencia
-.store-app-body {
-    display: flex;
-    flex: 1 1 0%;
-    overflow: hidden;
-}
-*/

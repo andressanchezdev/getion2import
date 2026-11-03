@@ -1,5 +1,7 @@
+// CreditAccountMetrics · cifras del crédito de un cliente (cupo, usado y disponible) con su porcentaje de uso y el color según el nivel
+// conecta con: CreditAccountDetail (la pinta), wallet.helpers (getUsagePercentage y getUsageLevel) y format (pesos)
 import React from 'react'
-import { formatCOP } from '@/global/helpers/format'
+import { formatCOP } from '@/global/helpers/formatting/format'
 import { getUsagePercentage, getUsageLevel } from '../../helpers/wallet.helpers'
 import type { CreditAccountMetricsProps } from '../../types/wallet.account.types'
 import './CreditAccountMetrics.css'

@@ -89,12 +89,6 @@
   text-align: center;
 }
 
-.customers-table-message-text {
-  margin-bottom: var(--space-2);
-  font-size: var(--text-md);
-  color: var(--color-text-secondary);
-}
-
 .customers-table-retry {
   background: none;
   border: none;

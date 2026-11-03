@@ -1,6 +1,10 @@
 package utils
 
+// response.go · respuestas JSON estándar de la API y paginación
+// conecta con: todos los controllers
+
 import (
+	"fmt"
 	"errors"
 	"net/http"
 	"strconv"
@@ -111,12 +115,14 @@ func RespondPaginated[T any](c echo.Context, message string, items []T, meta Pag
 	})
 }
 
+// RespondNoContent responde 204 sin cuerpo.
 func RespondNoContent(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
 // EchoErrorHandler maneja de forma centralizada cualquier error en Echo devolviendo el contrato ErrorResponse.
 func EchoErrorHandler(err error, c echo.Context) {
+	fmt.Printf("[SERVER ERROR] %s %s: %v\n", c.Request().Method, c.Request().RequestURI, err)
 	if c.Response().Committed {
 		return
 	}
@@ -151,11 +157,12 @@ func EchoErrorHandler(err error, c echo.Context) {
 
 	_ = c.JSON(http.StatusInternalServerError, ErrorResponse{
 		Success: false,
-		Message: "Ocurrió un error interno inesperado en el servidor.",
+		Message: err.Error(),
 		Error:   "INTERNAL_SERVER_ERROR",
 	})
 }
 
+// queryInt lee un parámetro numérico de la URL y usa el valor por defecto si falta o no es válido.
 func queryInt(c echo.Context, key string, fallback int) int {
 	raw := c.QueryParam(key)
 	if raw == "" {

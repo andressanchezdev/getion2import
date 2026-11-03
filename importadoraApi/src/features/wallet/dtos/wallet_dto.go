@@ -1,5 +1,8 @@
 package dtos
 
+// wallet_dto.go · formas de lo que entra y sale por la API en cartera (peticiones y respuestas)
+// conecta con: los controllers y services de cartera
+
 import (
 	"time"
 

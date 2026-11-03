@@ -20,21 +20,26 @@ export interface MotoModel {
   name: string
 }
 
-// ---- lo que responde el backend (Swagger: models.BrandResponse, CategoryResponse y ModelResponse) ----
+// ---- lo que responde la API en Go (GET /brands, /categories y /models: BrandResponse, CategoryResponse y ModelResponse) ----
+// ojo: antes (backend anterior) venían como brandId, categoryId, modelId e image; ahora todos traen id e imageUrl
 export interface BrandDto {
-  brandId: number
+  id: number
   name: string
-  image?: string
+  imageUrl?: string | null
+  isActive?: boolean
 }
 
 export interface CategoryDto {
-  categoryId: number
+  id: number
   name: string
+  parentId?: number | null
+  isActive?: boolean
 }
 
 export interface ModelDto {
-  modelId: number
+  id: number
   name: string
+  isActive?: boolean
 }
 
 // ---- estado del slice: cada catálogo se carga por separado ----
@@ -48,4 +53,33 @@ export interface CatalogsState {
   brands: CatalogResource<Brand>
   categories: CatalogResource<Category>
   models: CatalogResource<MotoModel>
+}
+
+// ---- edición de los catálogos desde el panel lateral y la tabla ----
+export type CatalogType = 'brand' | 'category' | 'model'
+
+// una fila de cualquiera de los tres catálogos, como la muestran la tabla y el detalle
+export interface CatalogRow {
+  id: number
+  name: string
+  image?: string
+  description?: string
+  isActive?: boolean
+}
+
+// lo que recibe el panel lateral: el tipo de catálogo, su nombre en plural y, si se edita, el registro
+export interface CatalogItemPayload {
+  type: CatalogType
+  noun: string
+  item?: CatalogRow
+}
+
+// lo que se envía al guardar un registro (id solo cuando se edita)
+export interface CatalogItemInput {
+  type: CatalogType
+  id?: number
+  name: string
+  imageUrl?: string
+  description?: string
+  isActive?: boolean
 }

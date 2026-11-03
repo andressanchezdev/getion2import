@@ -1,5 +1,8 @@
 package config
 
+// env.go · lectura de variables de entorno: texto, números, duraciones y listas, con su valor por defecto
+// conecta con: loader.go (las usa para llenar la configuración)
+
 import (
 	"fmt"
 	"os"

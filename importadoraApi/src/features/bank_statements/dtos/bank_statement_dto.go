@@ -1,5 +1,8 @@
 package dtos
 
+// bank_statement_dto.go · formas de lo que entra y sale por la API en extractos bancarios (peticiones y respuestas)
+// conecta con: los controllers y services de extractos bancarios
+
 import (
 	"time"
 )

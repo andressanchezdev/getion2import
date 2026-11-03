@@ -1,5 +1,8 @@
 package services
 
+// return_service.go · reglas de negocio de devoluciones: valida permisos, compañía y datos, coordina las transacciones y arma las respuestas
+// conecta con: los repositories y dtos de devoluciones; los llama el controller y la conexión llega del contenedor
+
 import (
 	"context"
 	"errors"
@@ -21,6 +24,7 @@ type ReturnService struct {
 	inventoryRepo *inventoryrepos.InventoryRepository
 }
 
+// NewReturnService crea el servicio con las piezas que necesita para funcionar.
 func NewReturnService(
 	pool *pgxpool.Pool,
 	returnRepo *repositories.ReturnRepository,
@@ -35,6 +39,7 @@ func NewReturnService(
 	}
 }
 
+// Create crea la devolución con las validaciones del negocio (compañía, duplicados y permisos).
 func (s *ReturnService) Create(ctx context.Context, actorCompanyID *int64, actorEmployeeID int64, req dtos.CreateReturnRequest) (*dtos.ReturnResponse, error) {
 	if req.SaleID <= 0 {
 		return nil, errors.New("saleId es requerido")
@@ -44,6 +49,9 @@ func (s *ReturnService) Create(ctx context.Context, actorCompanyID *int64, actor
 	}
 	if req.Reason == "" {
 		return nil, errors.New("el motivo de devolución es obligatorio")
+	}
+	if req.ReasonType == "" {
+		req.ReasonType = types.ReturnReasonWarranty
 	}
 	if req.ReasonType != types.ReturnReasonWarranty && req.ReasonType != types.ReturnReasonWrongItem {
 		return nil, errors.New("el tipo de causal debe ser 'warranty' (garantía) o 'wrong_item' (error en envío)")
@@ -133,22 +141,14 @@ func (s *ReturnService) Create(ctx context.Context, actorCompanyID *int64, actor
 		if req.ReplacementStockID == nil || *req.ReplacementStockID <= 0 {
 			return nil, errors.New("para resolución 'exchange' (cambio de repuesto) debe especificar replacementStockId")
 		}
-		var pID int64
-		var avail, res int
-		var pCode string
-		err := tx.QueryRow(ctx, `
-			SELECT s.product_id, s.available, s.reserved, p.code
-			FROM stock s
-			JOIN products p ON p.id = s.product_id
-			WHERE s.id = $1 AND s.company_id = $2
-		`, *req.ReplacementStockID, sale.CompanyID).Scan(&pID, &avail, &res, &pCode)
+		replacement, err := s.returnRepo.FindReplacementStock(ctx, tx, *req.ReplacementStockID, sale.CompanyID)
 		if err != nil {
 			return nil, fmt.Errorf("el stock de reemplazo ID %d no existe en la compañía: %w", *req.ReplacementStockID, err)
 		}
-		if (avail - res) < 1 {
-			return nil, fmt.Errorf("el repuesto de reemplazo %s no cuenta con stock disponible suficiente", pCode)
+		if (replacement.Available - replacement.Reserved) < 1 {
+			return nil, fmt.Errorf("el repuesto de reemplazo %s no cuenta con stock disponible suficiente", replacement.ProductCode)
 		}
-		replacementProductID = &pID
+		replacementProductID = &replacement.ProductID
 		replacementStockID = req.ReplacementStockID
 	}
 
@@ -190,6 +190,7 @@ func (s *ReturnService) Create(ctx context.Context, actorCompanyID *int64, actor
 	return s.FindByID(ctx, createdRet.ID)
 }
 
+// FindByID devuelve la devolución por su id, validando que sea de la compañía del usuario.
 func (s *ReturnService) FindByID(ctx context.Context, id int64) (*dtos.ReturnResponse, error) {
 	ret, err := s.returnRepo.FindByID(ctx, s.pool, id)
 	if err != nil {
@@ -224,6 +225,8 @@ func (s *ReturnService) FindByID(ctx context.Context, id int64) (*dtos.ReturnRes
 		CompanyID:              ret.CompanyID,
 		SaleID:                 ret.SaleID,
 		SaleSerial:             ret.SaleSerial,
+		WarehouseID:             ret.WarehouseID,
+		WarehouseName:           ret.WarehouseName,
 		CustomerID:             ret.CustomerID,
 		CustomerName:           ret.CustomerName,
 		EmployeeID:             ret.EmployeeID,
@@ -245,6 +248,7 @@ func (s *ReturnService) FindByID(ctx context.Context, id int64) (*dtos.ReturnRes
 	}, nil
 }
 
+// List devuelve las devoluciones paginados según los filtros, limitados a lo que el usuario puede ver.
 func (s *ReturnService) List(ctx context.Context, f dtos.ReturnFilterQuery) ([]dtos.ReturnResponse, int, error) {
 	list, total, err := s.returnRepo.List(ctx, s.pool, f)
 	if err != nil {
@@ -258,6 +262,8 @@ func (s *ReturnService) List(ctx context.Context, f dtos.ReturnFilterQuery) ([]d
 			CompanyID:              ret.CompanyID,
 			SaleID:                 ret.SaleID,
 			SaleSerial:             ret.SaleSerial,
+			WarehouseID:             ret.WarehouseID,
+			WarehouseName:           ret.WarehouseName,
 			CustomerID:             ret.CustomerID,
 			CustomerName:           ret.CustomerName,
 			EmployeeID:             ret.EmployeeID,
@@ -336,33 +342,18 @@ func (s *ReturnService) Approve(ctx context.Context, returnID, approverEmployeeI
 	// Aplicar la resolución acordada para la devolución
 	if ret.ResolutionType == types.ReturnResolutionCredit {
 		creditReason := fmt.Sprintf("Saldo a favor por devolución #%d sobre pedido %s (Causal: %s)", ret.ID, ret.SaleSerial, ret.ReasonType)
-		const creditSQL = `
-			INSERT INTO credit_entries (
-				company_id, customer_id, employee_id, entry_type, amount, return_id, reason
-			) VALUES (
-				$1, $2, $3, 'return', $4, $5, $6
-			)
-		`
-		if _, err := tx.Exec(ctx, creditSQL, ret.CompanyID, ret.CustomerID, approverEmployeeID, ret.Total, ret.ID, creditReason); err != nil {
+		if err := s.returnRepo.InsertReturnCreditEntry(ctx, tx, ret.CompanyID, ret.CustomerID, approverEmployeeID, ret.Total, ret.ID, creditReason); err != nil {
 			return fmt.Errorf("error al asentar saldo a favor en el crédito del cliente: %w", err)
 		}
 	} else if ret.ResolutionType == types.ReturnResolutionExchange && ret.ReplacementStockID != nil {
-		var whID int64
-		var pID int64
-		var pCode string
-		err := tx.QueryRow(ctx, `
-			SELECT s.warehouse_id, s.product_id, p.code
-			FROM stock s
-			JOIN products p ON p.id = s.product_id
-			WHERE s.id = $1
-			FOR UPDATE
-		`, *ret.ReplacementStockID).Scan(&whID, &pID, &pCode)
+		lock, err := s.returnRepo.LockReplacementStock(ctx, tx, *ret.ReplacementStockID)
 		if err != nil {
 			return fmt.Errorf("error al consultar stock de reemplazo: %w", err)
 		}
+		whID, pID, pCode := lock.WarehouseID, lock.ProductID, lock.ProductCode
 
-		tag, err := tx.Exec(ctx, `UPDATE stock SET available = available - 1 WHERE id = $1 AND available >= 1`, *ret.ReplacementStockID)
-		if err != nil || tag.RowsAffected() == 0 {
+		rows, err := s.returnRepo.DecrementStock(ctx, tx, *ret.ReplacementStockID)
+		if err != nil || rows == 0 {
 			return fmt.Errorf("no hay stock disponible suficiente para despachar la pieza de reemplazo %s", pCode)
 		}
 

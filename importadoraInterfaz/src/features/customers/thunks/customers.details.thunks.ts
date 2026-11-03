@@ -3,7 +3,7 @@
 // ojo: después de agregar o borrar se vuelve a leer la lista (el backend manda). Los errores de un cambio se avisan con una alerta; mientras uno corre no se acepta otro (condition)
 import { createAsyncThunk } from '@reduxjs/toolkit'
 import { getErrorMessage } from '@/api'
-import { toast } from '@/global/helpers/toast'
+import { toast } from '@/global/helpers/feedback/toast'
 import {
   addDirection,
   deleteDirection,
@@ -52,7 +52,7 @@ export const deleteDirectionThunk = createAsyncThunk<Direction[], { customerId: 
   'customers/deleteDirection',
   async ({ customerId, directionId }, { rejectWithValue }) => {
     try {
-      await deleteDirection(directionId)
+      await deleteDirection(customerId, directionId)
       return await fetchDirections(customerId)
     } catch (error) {
       return rejectWithValue(failWith(error, 'No se pudo borrar la dirección.'))
@@ -63,9 +63,9 @@ export const deleteDirectionThunk = createAsyncThunk<Direction[], { customerId: 
 
 export const loadDiscountsThunk = createAsyncThunk<Discount[], number, ThunkConfig>(
   'customers/loadDiscounts',
-  async (customerId, { rejectWithValue }) => {
+  async (_customerId, { rejectWithValue }) => {
     try {
-      return await fetchDiscounts(customerId)
+      return await fetchDiscounts()
     } catch (error) {
       return rejectWithValue(getErrorMessage(error, 'No se pudieron cargar los descuentos.'))
     }
@@ -74,10 +74,10 @@ export const loadDiscountsThunk = createAsyncThunk<Discount[], number, ThunkConf
 
 export const deleteDiscountThunk = createAsyncThunk<Discount[], { customerId: number; discountId: number }, ThunkConfig>(
   'customers/deleteDiscount',
-  async ({ customerId, discountId }, { rejectWithValue }) => {
+  async (_discount, { rejectWithValue }) => {
     try {
-      await deleteDiscount(discountId)
-      return await fetchDiscounts(customerId)
+      await deleteDiscount()
+      return await fetchDiscounts()
     } catch (error) {
       return rejectWithValue(failWith(error, 'No se pudo borrar el descuento.'))
     }

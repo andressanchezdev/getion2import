@@ -1,0 +1,143 @@
+// useCheckoutFlow · estado del flujo de finalizar compra o cotizar: renglones, cliente elegido, datos de entrega, empleado (si lo confirma un administrador), picking inmediato, forma de pago y confirmación
+// conecta con: CheckoutPanel (lo usa), checkout.thunks (buscar, cargar, confirmar), checkout.adapter (cálculos), navigation (cerrar y abrir el detalle), usePermissions (nivel) y global toast
+// ojo: con la caja de la bodega cerrada el pago en efectivo se bloquea (cashBlocked)
+// ojo: es el borrador del formulario (estado local); los datos del cliente y la creación de la venta pasan por thunks. El administrador debe elegir el empleado al que le entrega la venta
+import { useEffect, useMemo, useState } from 'react'
+import { useCashSession } from '@/features/cashRegister'
+import { closeDrawerForm, openDrawerForm } from '@/features/navigation'
+import { toast } from '@/global/helpers/feedback/toast'
+import { useAppDispatch } from '@/global/hooks/store/useRedux'
+import { useDebouncedValue } from '@/global/hooks/data/useDebouncedValue'
+import { usePermissions } from '@/global/hooks/access/usePermissions'
+import { canPayByCredit, initialDelivery, isDeliveryValid, linesTotal, totalWithDiscount } from '../helpers/checkout.adapter'
+import { confirmQuotationThunk, confirmSaleThunk, loadCheckoutCustomerThunk, loadCheckoutLinesThunk, searchCheckoutCustomersThunk } from '../thunks/checkout.thunks'
+import type { CheckoutCustomer, CheckoutLine, CheckoutPayload, DeliveryData, PaymentChoice } from '../types/checkout.types'
+
+const EMPTY_DELIVERY: DeliveryData = { address: '', city: '', phone: '', notes: '' }
+
+export const useCheckoutFlow = (payload: CheckoutPayload) => {
+  const dispatch = useAppDispatch()
+  const { level } = usePermissions()
+  const isQuotation = payload.mode === 'quotation'
+  const needsEmployee = !isQuotation && (level === 'admin' || level === 'superadmin')
+  const cash = useCashSession()
+
+  const [step, setStep] = useState<'customer' | 'payment'>('customer')
+  const [lines, setLines] = useState<CheckoutLine[] | null>(null)
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<CheckoutCustomer[]>([])
+  const [customer, setCustomer] = useState<CheckoutCustomer | null>(null)
+  const [delivery, setDelivery] = useState<DeliveryData>(EMPTY_DELIVERY)
+  const [employeeId, setEmployeeId] = useState(0)
+  const [payment, setPayment] = useState<PaymentChoice>('cash')
+  const [transferProof, setTransferProof] = useState('')
+  const [transferReference, setTransferReference] = useState('')
+  const [transferBank, setTransferBank] = useState('')
+  const [immediatePicking, setImmediatePicking] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const debouncedQuery = useDebouncedValue(query, 300)
+
+  // Carga automática del cliente cuando se viene de una cotización o se envía en el payload
+  useEffect(() => {
+    if (!payload.customerId) return
+    let cancelled = false
+    dispatch(loadCheckoutCustomerThunk(payload.customerId)).then((result) => {
+      if (cancelled) return
+      if (!loadCheckoutCustomerThunk.fulfilled.match(result)) return setError(result.payload ?? 'No se pudo cargar el cliente.')
+      setCustomer(result.payload)
+      setDelivery(initialDelivery(result.payload))
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [dispatch, payload.customerId])
+
+  useEffect(() => {
+    let cancelled = false
+    dispatch(loadCheckoutLinesThunk(payload)).then((result) => {
+      if (cancelled) return
+      if (loadCheckoutLinesThunk.fulfilled.match(result)) setLines(result.payload)
+      else setError(result.payload ?? 'No se pudo preparar la compra.')
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [dispatch, payload])
+
+  useEffect(() => {
+    if (debouncedQuery.trim().length < 2) return
+    let cancelled = false
+    dispatch(searchCheckoutCustomersThunk(debouncedQuery)).then((result) => {
+      if (!cancelled && searchCheckoutCustomersThunk.fulfilled.match(result)) setResults(result.payload)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [dispatch, debouncedQuery])
+
+  const chooseCustomer = async (id: number) => {
+    setError(null)
+    const result = await dispatch(loadCheckoutCustomerThunk(id))
+    if (!loadCheckoutCustomerThunk.fulfilled.match(result)) return setError(result.payload ?? 'No se pudo cargar el cliente.')
+    setCustomer(result.payload)
+    setDelivery(initialDelivery(result.payload)) // se cargan los datos guardados; se pueden editar
+    setPayment('cash')
+  }
+
+  const clearCustomer = () => {
+    setCustomer(null)
+    setQuery('')
+    setResults([])
+  }
+
+  const total = useMemo(() => linesTotal(lines ?? []), [lines])
+  const payable = customer ? totalWithDiscount(total, customer.discountPercent) : total
+  const creditAllowed = customer ? canPayByCredit(customer, payable) : false
+  const deliveryOk = isQuotation || isDeliveryValid(delivery)
+  const transferOk = payment !== 'transfer' || Boolean(transferProof.trim())
+  // con la caja de la bodega cerrada no se emite un pedido pagado en efectivo (hay que abrir el turno antes); si no se pudo consultar la caja no se bloquea
+  const cashBlocked = !isQuotation && payment === 'cash' && cash.warehouseId > 0 && !cash.loading && !cash.failed && !cash.isOpen
+  const canContinue = Boolean(customer) && (lines?.length ?? 0) > 0 && deliveryOk && (!needsEmployee || employeeId > 0) && (step !== 'payment' || transferOk)
+
+  const confirm = async () => {
+    if (!customer || !lines || cashBlocked) return
+    if (payment === 'transfer' && !transferProof.trim()) {
+      setError('Debes adjuntar el comprobante de transferencia para continuar.')
+      return
+    }
+    setSubmitting(true)
+    setError(null)
+    if (isQuotation) {
+      const result = await dispatch(confirmQuotationThunk({ customer, lines }))
+      setSubmitting(false)
+      if (!confirmQuotationThunk.fulfilled.match(result)) return setError(result.payload ?? 'No se pudo crear la cotización.')
+      toast.success('Cotización creada', { description: 'La encuentras en Tienda > Cotizaciones.' })
+      dispatch(openDrawerForm({ kind: 'quotationDetail', payload: result.payload }))
+      return
+    }
+    const result = await dispatch(confirmSaleThunk({
+      payload,
+      customer,
+      lines,
+      delivery,
+      payment,
+      salespersonEmployeeId: needsEmployee ? employeeId : undefined,
+      immediatePicking,
+      proofUrl: payment === 'transfer' ? transferProof : undefined,
+      paymentReference: payment === 'transfer' ? (transferReference.trim() || undefined) : undefined,
+    }))
+    setSubmitting(false)
+    if (!confirmSaleThunk.fulfilled.match(result)) return setError(result.payload ?? 'No se pudo crear el pedido.')
+    toast.success('Pedido creado', { description: `Consecutivo ${result.payload.serialCode}` })
+    dispatch(closeDrawerForm())
+  }
+
+  return {
+    isQuotation, needsEmployee, step, setStep, lines, query, setQuery, results, customer, chooseCustomer, clearCustomer,
+    delivery, setDelivery, employeeId, setEmployeeId, payment, setPayment,
+    transferProof, setTransferProof, transferReference, setTransferReference, transferBank, setTransferBank,
+    immediatePicking, setImmediatePicking,
+    total, payable, creditAllowed, canContinue, cashBlocked, cashWarehouseName: cash.warehouseName, submitting, error, confirm,
+  }
+}

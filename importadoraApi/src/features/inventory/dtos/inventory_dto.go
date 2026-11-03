@@ -1,5 +1,8 @@
 package dtos
 
+// inventory_dto.go · formas de lo que entra y sale por la API en inventario (peticiones y respuestas)
+// conecta con: los controllers y services de inventario
+
 import (
 	"encoding/json"
 	"time"
@@ -61,6 +64,15 @@ type AdjustStockRequest struct {
 	StockID  int64  `json:"stockId" validate:"required"`
 	NewQty   int    `json:"newQty" validate:"min=0"`
 	Reason   string `json:"reason" validate:"required"`
+}
+
+// AssignStockRequest entrada para POST /stock/assign: pone un producto del catálogo en una ubicación de la bodega.
+type AssignStockRequest struct {
+	ProductID   int64  `json:"productId" validate:"required"`
+	WarehouseID int64  `json:"warehouseId" validate:"required"`
+	Location    string `json:"location" validate:"required"`
+	Quantity    int    `json:"quantity" validate:"required,min=1"`
+	Reason      string `json:"reason"`
 }
 
 type RelocateStockRequest struct {

@@ -16,14 +16,15 @@ const product: Product = {
   stockByWarehouse: {},
 }
 const item: CartItem = { cartId: 1, productId: '5', product, quantity: 2, selectedPrice: 10, priceLevel: null, subtotal: 20 }
+const snapshot = { cartId: 9, uuid: 'u-9', items: [item] }
 const addArg = { product, quantity: 2, priceLevel: 'P0' as const }
 
 describe('shop.cart.slice', () => {
-  it('leer: loading, luego las líneas y "succeeded"', () => {
+  it('leer: loading, luego el id del carrito, sus renglones y "succeeded"', () => {
     let state = cartReducer(INITIAL_CART_STATE, fetchCartThunk.pending('r1'))
     expect(state.status).toBe('loading')
-    state = cartReducer(state, fetchCartThunk.fulfilled([item], 'r1'))
-    expect(state).toMatchObject({ status: 'succeeded', items: [item] })
+    state = cartReducer(state, fetchCartThunk.fulfilled(snapshot, 'r1'))
+    expect(state).toMatchObject({ status: 'succeeded', cartId: 9, items: [item] })
   })
 
   it('leer con error guarda el mensaje', () => {
@@ -31,11 +32,11 @@ describe('shop.cart.slice', () => {
     expect(state).toMatchObject({ status: 'failed', error: 'Sin conexión' })
   })
 
-  it('un cambio en curso levanta la bandera y al terminar (bien o mal) la baja', () => {
+  it('un cambio en curso levanta la bandera y al terminar (bien o mal) la baja; agregar recuerda el producto', () => {
     let state = cartReducer(INITIAL_CART_STATE, addToCartThunk.pending('r1', addArg))
     expect(state.mutating).toBe(true)
-    state = cartReducer(state, addToCartThunk.fulfilled({ items: [item], uuid: 'u' }, 'r1', addArg))
-    expect(state).toMatchObject({ mutating: false, items: [item] })
+    state = cartReducer(state, addToCartThunk.fulfilled(snapshot, 'r1', addArg))
+    expect(state).toMatchObject({ mutating: false, cartId: 9, items: [item], products: { '5': product } })
 
     state = cartReducer(state, clearCartThunk.pending('r2'))
     expect(state.mutating).toBe(true)
@@ -44,13 +45,14 @@ describe('shop.cart.slice', () => {
     expect(state.items).toEqual([item]) // si vaciar falla, el carrito se conserva
   })
 
-  it('vaciar con éxito deja el carrito sin líneas', () => {
-    const full = { ...INITIAL_CART_STATE, items: [item] }
-    expect(cartReducer(full, clearCartThunk.fulfilled([], 'r1')).items).toEqual([])
+  it('vaciar con éxito deja el carrito sin renglones y olvida los productos recordados', () => {
+    const full = { ...INITIAL_CART_STATE, cartId: 9, items: [item], products: { '5': product } }
+    const state = cartReducer(full, clearCartThunk.fulfilled({ cartId: 9, uuid: 'u-9', items: [] }, 'r1'))
+    expect(state).toMatchObject({ items: [], products: {} })
   })
 
   it('resetCart vuelve al estado inicial (al cerrar sesión)', () => {
-    const full = { ...INITIAL_CART_STATE, items: [item], status: 'succeeded' as const, mutating: true }
+    const full = { ...INITIAL_CART_STATE, cartId: 9, items: [item], status: 'succeeded' as const, mutating: true }
     expect(cartReducer(full, resetCart())).toEqual(INITIAL_CART_STATE)
   })
 })

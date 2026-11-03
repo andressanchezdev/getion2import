@@ -1,8 +1,9 @@
 // customers.constants · tamaños de página, textos y estado inicial de clientes
 // conecta con: customers.service (cuántos pide), customers.slice (initialState) y los componentes (textos)
 import type { CustomersState, DirectionInput } from '../types/customers.types'
+import { DEFAULT_PAGE_SIZE } from '@/api'
 
-export const CUSTOMERS_PAGE_SIZE = 30
+export const CUSTOMERS_PAGE_SIZE = DEFAULT_PAGE_SIZE
 
 // las direcciones y los descuentos de un cliente caben en una sola página
 export const CUSTOMER_EXTRAS_PAGE_SIZE = 50
@@ -24,4 +25,6 @@ export const INITIAL_CUSTOMERS_STATE: CustomersState = {
   detail: { data: null, status: 'idle', error: null, requestId: null },
   directions: emptyResource(),
   discounts: emptyResource(),
+  documents: emptyResource(),
+  documentAlerts: emptyResource(),
 }

@@ -3,7 +3,8 @@
 // src/api/index.ts
 export * from './types/api.types'
 export * from './config'
-export * from './client'
-export * from './errors'
-export * from './pagination'
-export * from './health'
+export * from './http/client'
+export * from './http/errors'
+export * from './helpers/pagination'
+export * from './helpers/params'
+export * from './http/health'

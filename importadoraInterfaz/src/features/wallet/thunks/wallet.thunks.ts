@@ -3,7 +3,6 @@
 // ojo: la lista y las facturas llevan su requestId/estado y el slice descarta respuestas viejas; la bodega activa viaja como número y se omite si todavía no hay
 import { createAsyncThunk } from '@reduxjs/toolkit'
 import { getErrorMessage, type PaginatorMetadata } from '@/api'
-import { toWarehouseNumber } from '@/global/helpers/warehouse'
 import type { NavigationState } from '@/features/navigation'
 import { selectRequestContext, type AuthState } from '@/features/auth'
 import { WALLET_PAGE_SIZE } from '../constants/wallet.constants'
@@ -28,7 +27,7 @@ export const loadWalletThunk = createAsyncThunk<WalletListResult, void, WalletTh
     const ctx = selectRequestContext(state)
     if (!ctx) return rejectWithValue(NO_SESSION)
     try {
-      const page = await fetchWalletPage(ctx, state.wallet.list.page, WALLET_PAGE_SIZE, toWarehouseNumber(state.ui.activeWarehouseId))
+      const page = await fetchWalletPage(ctx, state.wallet.list.page, WALLET_PAGE_SIZE)
       return { customers: page.items, meta: page.meta }
     } catch (error) {
       return rejectWithValue(getErrorMessage(error, 'No se pudo cargar la cartera.'))
@@ -43,7 +42,7 @@ export const loadWalletSummaryThunk = createAsyncThunk<WalletSummary, void, Wall
     const ctx = selectRequestContext(state)
     if (!ctx) return rejectWithValue(NO_SESSION)
     try {
-      return await fetchWalletSummary(ctx, toWarehouseNumber(state.ui.activeWarehouseId))
+      return await fetchWalletSummary(ctx)
     } catch (error) {
       return rejectWithValue(getErrorMessage(error, 'No se pudieron cargar los totales de cartera.'))
     }
@@ -57,7 +56,7 @@ export const loadInvoicesThunk = createAsyncThunk<CreditInvoice[], number, Walle
     const ctx = selectRequestContext(state)
     if (!ctx) return rejectWithValue(NO_SESSION)
     try {
-      return await fetchCustomerInvoices(ctx, customerId, toWarehouseNumber(state.ui.activeWarehouseId))
+      return await fetchCustomerInvoices(ctx, customerId)
     } catch (error) {
       return rejectWithValue(getErrorMessage(error, 'No se pudieron cargar las facturas.'))
     }

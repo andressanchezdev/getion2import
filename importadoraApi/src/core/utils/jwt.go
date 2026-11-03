@@ -1,5 +1,8 @@
 package utils
 
+// jwt.go · creación y lectura de tokens JWT de acceso
+// conecta con: auth (emite el token) y core/middlewares (lo valida)
+
 import (
 	"fmt"
 	"strconv"
