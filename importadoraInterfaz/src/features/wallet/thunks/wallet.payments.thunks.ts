@@ -1,6 +1,6 @@
-// wallet.payments.thunks · cambios de cartera: abonar a una factura (o repartir un abono entre las más antiguas) y cambiar el cupo y el plazo de un cliente
-// conecta con: wallet.payments.service (POST /payments/register y PUT /users/credit), wallet.service (releer facturas), wallet.thunks (recargar lista y totales) y wallet.slice (reacciona)
-// ojo: después de cambiar algo se vuelven a leer facturas, lista y totales (el backend calcula los saldos, no se suman a mano); los errores se avisan con una alerta; un solo cambio a la vez (condition)
+// wallet.payments.thunks · cambios de cartera: abonar, verificar transferencia, anular pago, ajustes y cupo/plazo
+// conecta con: wallet.payments.service, wallet.service (releer facturas), wallet.thunks (recargar lista y totales) y wallet.slice (reacciona)
+// ojo: después de cambiar algo se vuelven a leer facturas, lista y totales (el backend calcula los saldos, no se suman a mano)
 import { createAsyncThunk } from '@reduxjs/toolkit'
 import { getErrorMessage } from '@/api'
 import { formatCOP } from '@/global/helpers/formatting/format'
@@ -8,7 +8,8 @@ import { toast } from '@/global/helpers/feedback/toast'
 import { selectRequestContext } from '@/features/auth'
 import { splitPayment } from '../helpers/wallet.helpers'
 import { fetchCustomerInvoices } from '../services/wallet.service'
-import { registerPayment, updateCredit } from '../services/wallet.payments.service'
+import { adjustCustomerCredit, registerPayment, updateCredit, verifyPayment, voidPayment } from '../services/wallet.payments.service'
+import { loadPaymentsHistoryThunk } from './wallet.history.thunks'
 import { loadWalletSummaryThunk, loadWalletThunk, NO_SESSION, type WalletThunkConfig } from './wallet.thunks'
 import type { CreditUpdateInput, PaymentDetails, PaymentInput } from '../types/wallet.api.types'
 import type { CreditInvoice } from '../types/wallet.types'
@@ -81,4 +82,49 @@ export const updateCreditThunk = createAsyncThunk<void, CreditUpdateInput, Walle
     }
   },
   { condition: noOtherChangeRunning }
+)
+
+// verifica / aprueba formalmente un pago en revisión (POST /payments/:id/verify)
+export const verifyPaymentThunk = createAsyncThunk<void, { paymentId: number }, WalletThunkConfig>(
+  'wallet/verifyPayment',
+  async ({ paymentId }, { dispatch, rejectWithValue }) => {
+    try {
+      await verifyPayment(paymentId)
+      toast.success('Pago verificado y aprobado exitosamente')
+      dispatch(loadPaymentsHistoryThunk())
+      dispatch(loadWalletSummaryThunk())
+    } catch (error) {
+      return rejectWithValue(failWith(error, 'No se pudo verificar el pago.'))
+    }
+  }
+)
+
+// anula un pago con motivo explícito (POST /payments/:id/void)
+export const voidPaymentThunk = createAsyncThunk<void, { paymentId: number; reason: string }, WalletThunkConfig>(
+  'wallet/voidPayment',
+  async ({ paymentId, reason }, { dispatch, rejectWithValue }) => {
+    try {
+      await voidPayment(paymentId, reason)
+      toast.success('Pago anulado exitosamente')
+      dispatch(loadPaymentsHistoryThunk())
+      dispatch(loadWalletSummaryThunk())
+    } catch (error) {
+      return rejectWithValue(failWith(error, 'No se pudo anular el pago.'))
+    }
+  }
+)
+
+// aplica un ajuste de cartera manual (POST /wallet/adjust)
+export const adjustCreditThunk = createAsyncThunk<void, { customerId: number; amount: number; reason: string }, WalletThunkConfig>(
+  'wallet/adjustCredit',
+  async ({ customerId, amount, reason }, { dispatch, rejectWithValue }) => {
+    try {
+      await adjustCustomerCredit(customerId, amount, reason)
+      toast.success('Ajuste de cartera aplicado exitosamente')
+      dispatch(loadWalletThunk())
+      dispatch(loadWalletSummaryThunk())
+    } catch (error) {
+      return rejectWithValue(failWith(error, 'No se pudo registrar el ajuste de cartera.'))
+    }
+  }
 )

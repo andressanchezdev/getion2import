@@ -1,4 +1,4 @@
-// shop.cart.service · llamadas al backend del carrito: GET /carts/active (leer), POST /carts/:id/items (agregar), PUT y DELETE de un renglón y DELETE /carts/:id (vaciar)
+// shop.cart.service · llamadas al backend del carrito: GET /carts/active (leer), POST /carts (crear/alterno), POST /carts/:id/items (agregar), PUT y DELETE de un renglón y DELETE /carts/:id (vaciar)
 // conecta con: api/client y api/config, shop.adapter (toCartSnapshot); las usa shop.cart.thunks
 // ojo: la API crea sola el carrito del empleado y toma la compañía y el vendedor del token; este service no lee el almacenamiento ni el store
 // ojo: el cliente de la venta ya no viaja en el carrito: se guarda en la app (shop.slice) y se manda al crear la venta
@@ -13,6 +13,12 @@ const { CARTS } = API_CONFIG.ENDPOINTS
 export const fetchActiveCart = async (known: Record<string, Product> = {}): Promise<CartSnapshot> => {
     const { data } = await apiClient.get<APIResponse<CartDto>>(CARTS.ACTIVE)
     return toCartSnapshot(data.data, known)
+}
+
+// crea un nuevo carrito explícito (POST /carts) para ventas alternas o en espera
+export const createCartRequest = async (payload?: { customerId?: number; warehouseId?: number }): Promise<CartSnapshot> => {
+    const { data } = await apiClient.post<APIResponse<CartDto>>(CARTS.BASE, payload ?? {})
+    return toCartSnapshot(data.data)
 }
 
 // agrega un producto desde una ubicación de la bodega (stockId); el precio es el del nivel elegido en la pantalla

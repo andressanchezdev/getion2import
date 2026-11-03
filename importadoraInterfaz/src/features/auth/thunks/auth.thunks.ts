@@ -1,8 +1,8 @@
-// auth.thunks · acciones asíncronas de la sesión: iniciar, renovar y cerrar sesión
-// conecta con: auth.service (login, refresh, logout), auth.session (guardar/borrar) y auth.slice (reacciona a los resultados); useSessionActivity y SideMenuUser los despachan
+// auth.thunks · acciones asíncronas de la sesión: iniciar, renovar, consultar perfil y cerrar sesión
+// conecta con: auth.service (login, refresh, me, logout), auth.session (guardar/borrar) y auth.slice (reacciona a los resultados); useSessionActivity y SideMenuUser los despachan
 import { createAsyncThunk } from '@reduxjs/toolkit'
 import { toast } from '@/global/helpers/feedback/toast'
-import { loginRequest, logoutRequest, refreshRequest } from '../services/auth.service'
+import { getMeRequest, loginRequest, logoutRequest, refreshRequest } from '../services/auth.service'
 import { getLoginErrorMessage } from '../helpers/auth.helpers'
 import {
   clearAuthSession,
@@ -28,6 +28,19 @@ export const loginThunk = createAsyncThunk<AuthUser, LoginCredentials, { rejectV
       return response.user
     } catch (error) {
       return rejectWithValue(getLoginErrorMessage(error))
+    }
+  }
+)
+
+// consulta y actualiza en caliente el perfil y permisos del usuario activo (GET /auth/me)
+export const fetchCurrentUserThunk = createAsyncThunk<AuthUser, void, { rejectValue: string }>(
+  'auth/fetchMe',
+  async (_, { rejectWithValue }) => {
+    try {
+      const user = await getMeRequest()
+      return user
+    } catch (error) {
+      return rejectWithValue('No se pudo recuperar el perfil del usuario activo')
     }
   }
 )

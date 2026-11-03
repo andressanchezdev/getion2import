@@ -1,0 +1,57 @@
+/* RecycleBinScreen.css */
+.recycle-bin-screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.recycle-bin-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+
+.recycle-bin-toolbar {
+  padding: var(--space-4) var(--space-6);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--color-border);
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.recycle-table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.recycle-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: var(--text-sm);
+}
+
+.recycle-table th {
+  background: var(--c-slate-50);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-semibold);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.recycle-table td {
+  padding: 0.875rem var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+
+.recycle-table-empty {
+  padding: 3rem var(--space-4);
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+

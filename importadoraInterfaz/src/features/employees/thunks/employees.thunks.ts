@@ -5,7 +5,7 @@ import { createAsyncThunk } from '@reduxjs/toolkit'
 import { getErrorMessage } from '@/api'
 import { selectRequestContext, type AuthState } from '@/features/auth'
 import { toast } from '@/global/helpers/feedback/toast'
-import { createEmployee, createRole, fetchEmployeePermissions, fetchEmployeesList, fetchRolesList, saveEmployeePermissions, setEmployeeStatus, updateRole } from '../services/employees.service'
+import { createEmployee, createRole, fetchEmployeePermissions, fetchEmployeesList, fetchRolesList, saveEmployeePermissions, setEmployeeStatus, unlockEmployee, updateRole } from '../services/employees.service'
 import type { EmployeePermissionsResponse, EmployeeRole, ModulePermission, EmployeesState, NewEmployeeInput, RoleInput, SimpleEmployee } from '../types/employees.types'
 
 type ThunkState = { auth: AuthState; ui?: { activeCompanyId?: number } }
@@ -96,6 +96,22 @@ export const setEmployeeStatusThunk = createAsyncThunk<{ employeeId: number; isA
     } catch (error) {
       toast.error(getErrorMessage(error, 'No se pudo actualizar el estado del empleado'))
       return rejectWithValue('No se pudo actualizar el estado del empleado')
+    }
+  }
+)
+
+// desbloquea la cuenta del empleado
+export const unlockEmployeeThunk = createAsyncThunk<number, number, { rejectValue: string }>(
+  'employees/unlock',
+  async (employeeId, { rejectWithValue }) => {
+    try {
+      await unlockEmployee(employeeId)
+      toast.success('Cuenta del empleado desbloqueada exitosamente')
+      return employeeId
+    } catch (error) {
+      const msg = getErrorMessage(error, 'No se pudo desbloquear la cuenta del empleado.')
+      toast.error(msg)
+      return rejectWithValue(msg)
     }
   }
 )

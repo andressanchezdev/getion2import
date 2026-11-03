@@ -4,6 +4,7 @@ import './AppHeader.css'
 import { useAppSelector } from '@/global/hooks/store/useRedux'
 import { CompanySelector } from './company/CompanySelector'
 import { WarehouseSelector } from './warehouse/WarehouseSelector'
+import { NotificationsPopover } from '@/features/notifications'
 
 export const AppHeader: React.FC = () => {
   const { activeModule, activeSubitem } = useAppSelector((state) => state.ui)
@@ -14,6 +15,8 @@ export const AppHeader: React.FC = () => {
       <CompanySelector />
       {/* Selector de bodega en cabecera: únicamente dentro del catálogo de Tienda, nunca en Gestión Ventas */}
       {activeModule === 'shop' && (activeSubitem === 'catalog' || !activeSubitem) && <WarehouseSelector />}
+      {/* Notificaciones del usuario */}
+      <NotificationsPopover />
     </div>
   )
 }

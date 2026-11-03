@@ -50,3 +50,10 @@ export interface AuthApiResponse {
   actor: AuthActorDto
   permissions: AuthPermissionDto[]
 }
+
+// salida de GET /auth/me (viene dentro del envoltorio { success, data })
+export interface AuthMeApiResponse {
+  actorType: AuthActorType
+  actor: AuthActorDto
+  permissions: AuthPermissionDto[]
+}

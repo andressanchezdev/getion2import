@@ -6,6 +6,7 @@ import { getInitials } from '@/global/helpers/formatting/format'
 import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import type { Customer } from '../../types/customers.types'
 import { selectCustomer } from '../../slices/customers.slice'
+import { useDocumentAlerts } from '../../hooks/useDocumentAlerts'
 import { deleteCustomerThunk, loadCustomersThunk, updateCustomerThunk } from '../../thunks/customers.thunks'
 import {
   selectCustomersError,
@@ -29,6 +30,7 @@ export const CustomersTable: React.FC = () => {
   const status = useAppSelector(selectCustomersStatus)
   const error = useAppSelector(selectCustomersError)
   const openId = useAppSelector(selectOpenCustomerId)
+  const docAlerts = useDocumentAlerts()
 
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null)
   const [deleteReason, setDeleteReason] = useState('')
@@ -147,6 +149,16 @@ export const CustomersTable: React.FC = () => {
                     <span className="table-badge-bg is-document">
                       {customer.identification || '—'}
                     </span>
+                    {docAlerts[customer.id] === 'expired' && (
+                      <span className="badge-doc-alert is-expired" title="Documentos legales vencidos">
+                        ⚠️ Vencido
+                      </span>
+                    )}
+                    {docAlerts[customer.id] === 'expiring' && (
+                      <span className="badge-doc-alert is-expiring" title="Documentos legales próximos a vencer">
+                        ⏱ Por vencer
+                      </span>
+                    )}
                   </td>
                   <td>
                     <span className="table-cell-muted">{customer.email || '—'}</span>

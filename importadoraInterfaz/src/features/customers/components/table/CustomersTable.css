@@ -97,3 +97,26 @@
   font-weight: var(--font-weight-semibold);
   cursor: pointer;
 }
+
+.badge-doc-alert {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: var(--font-weight-medium);
+  margin-left: 6px;
+}
+
+.badge-doc-alert.is-expired {
+  background: var(--c-red-50);
+  color: var(--c-red-700);
+  border: 1px solid var(--c-red-200);
+}
+
+.badge-doc-alert.is-expiring {
+  background: var(--c-amber-50);
+  color: var(--c-amber-800);
+  border: 1px solid var(--c-amber-200);
+}

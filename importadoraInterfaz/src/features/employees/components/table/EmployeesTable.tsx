@@ -7,9 +7,10 @@ import { RowActions } from '@/global/components/UI/molecules/table/RowActions'
 import { usePermissions } from '@/global/hooks/access/usePermissions'
 import eyeIcon from '@/assets/icons/eye.svg?raw'
 import editIcon from '@/assets/icons/edit.svg?raw'
+import refreshIcon from '@/assets/icons/refresh.svg?raw'
 import type { SimpleEmployee } from '../../types/employees.types'
 import { useAppDispatch } from '@/global/hooks/store/useRedux'
-import { setEmployeeStatusThunk } from '../../thunks/employees.thunks'
+import { setEmployeeStatusThunk, unlockEmployeeThunk } from '../../thunks/employees.thunks'
 import './EmployeesTable.css'
 import { usePagedList } from '@/global/hooks/data/usePagedList'
 import { Pagination } from '@/global/components/UI/molecules/table/Pagination'
@@ -91,6 +92,7 @@ export const EmployeesTable: React.FC<EmployeesTableProps> = ({ employees, loadi
                       actions={[
                         { key: 'view', label: 'Ver detalle', icon: eyeIcon, visible: canViewPermissions, onClick: () => onViewPermissions(employee) },
                         { key: 'edit', label: 'Editar permisos', icon: editIcon, visible: canEditPermissions, onClick: () => onEditPermissions(employee) },
+                        { key: 'unlock', label: 'Desbloquear cuenta', icon: refreshIcon, visible: canEditPermissions, onClick: () => dispatch(unlockEmployeeThunk(employee.employeeId)) },
                       ]}
                     />
                   </td>

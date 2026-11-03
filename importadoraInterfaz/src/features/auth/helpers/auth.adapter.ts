@@ -1,11 +1,11 @@
 // auth.adapter · convierte la respuesta de la API (actor + permisos) al usuario y los tokens que usa la app
 // conecta con: auth.service (lo aplica al login y a la renovación); no lo importa nadie más
 // ojo: es el único lugar que conoce los nombres del backend en la sesión
-import type { AuthApiResponse } from '../types/auth.api.types'
+import type { AuthActorDto, AuthApiResponse, AuthPermissionDto } from '../types/auth.api.types'
 import type { AuthResponse, AuthUser } from '../types/auth.types'
 
 // el actor de la API pasa a ser AuthUser; lo que la API no trae queda vacío (el superadmin no tiene compañía: companyId 0)
-export const toAuthUser = (api: AuthApiResponse): AuthUser => {
+export const toAuthUser = (api: { actor: AuthActorDto; permissions?: AuthPermissionDto[] }): AuthUser => {
   const actor = api.actor
   return {
     userId: actor.id,

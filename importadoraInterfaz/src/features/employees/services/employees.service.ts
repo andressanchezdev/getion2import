@@ -75,3 +75,8 @@ export const createEmployee = async (input: NewEmployeeInput): Promise<void> => 
 export const setEmployeeStatus = async (employeeId: number, status: 'active' | 'inactive'): Promise<void> => {
   await apiClient.put(EMPLOYEES.BY_ID(employeeId), { status })
 }
+
+// desbloquea la cuenta del empleado tras intentos fallidos (POST /employees/:id/unlock)
+export const unlockEmployee = async (employeeId: number): Promise<void> => {
+  await apiClient.post(EMPLOYEES.UNLOCK(employeeId))
+}

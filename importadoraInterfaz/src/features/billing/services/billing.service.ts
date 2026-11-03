@@ -1,4 +1,4 @@
-// billing.service · llamadas al backend de facturación: facturas de la bodega, datos fiscales (GET y PUT) y series de consecutivos (GET y PUT)
+// billing.service · llamadas al backend de facturación: facturas de la bodega (listado y detalle), datos fiscales (GET y PUT) y series de consecutivos (GET y PUT)
 // conecta con: api/client y api/config (INVOICES, WAREHOUSES.FACTURATION y DOC_SERIES) y billing.adapter (convierte); las usa billing.thunks
 // ojo: una bodega sin datos fiscales responde 404 en facturation: aquí eso es «null» (aún no configurada), no un error
 import { apiClient, API_CONFIG, toPaginated, type APIResponse } from '@/api'
@@ -15,6 +15,12 @@ export const fetchInvoices = async (warehouseId?: number): Promise<Invoice[]> =>
   }
   const { data } = await apiClient.get<APIResponse<InvoiceDto[] | null>>(INVOICES.LIST, { params })
   return toPaginated(data).items.map(toInvoice)
+}
+
+// trae el detalle completo de una factura por su ID (GET /invoices/:id)
+export const fetchInvoiceById = async (invoiceId: number): Promise<Invoice> => {
+  const { data } = await apiClient.get<APIResponse<InvoiceDto>>(INVOICES.BY_ID(invoiceId))
+  return toInvoice(data.data)
 }
 
 export const fetchBillingConfig = async (warehouseId: number): Promise<BillingConfig | null> => {

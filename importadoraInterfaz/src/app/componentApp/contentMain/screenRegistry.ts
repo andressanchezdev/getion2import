@@ -4,7 +4,7 @@ import type { ERPModule } from '@/features/navigation'
 import { ShopCatalogScreen } from '@/features/shop'
 import { OrdersScreen } from '@/features/orders'
 import { QuotationsScreen } from '@/features/quotations'
-import { BrandsScreen, CategoriesScreen, ModelsScreen, ProductsScreen } from '@/features/inventory'
+import { BrandsScreen, CategoriesScreen, ModelsScreen, ProductsScreen, InventoryCountsScreen } from '@/features/inventory'
 import { WarehousesScreen } from '@/features/warehouses'
 import { LocationsScreen } from '@/features/locations'
 import { CustomersScreen } from '@/features/customers'
@@ -19,6 +19,7 @@ import { PurchaseOrdersScreen, ReceivingScreen } from '@/features/purchases'
 import { BillingSettingsScreen, InvoicesScreen } from '@/features/billing'
 import { SuppliersScreen, CarriersScreen } from '@/features/externals'
 import { GeneralReportScreen, DashboardScreen } from '@/features/reports'
+import { RecycleBinScreen } from '@/features/recyclebin'
 import { SuperadminAdminsScreen } from '@/features/superadmin'
 import { NotFoundScreen } from './NotFoundScreen'
 
@@ -51,6 +52,7 @@ export const SCREEN_REGISTRY: Partial<Record<ERPModule, ScreenEntry>> = {
     subitems: {
       warehouses: WarehousesScreen,
       products: ProductsScreen,
+      counts: InventoryCountsScreen,
       brands: BrandsScreen,
       categories: CategoriesScreen,
       models: ModelsScreen,
@@ -78,6 +80,7 @@ export const SCREEN_REGISTRY: Partial<Record<ERPModule, ScreenEntry>> = {
     subitems: {
       dashboard: DashboardScreen,
       general: GeneralReportScreen,
+      recycleBin: RecycleBinScreen,
       dailySales: DashboardScreen,
       inventoryReport: GeneralReportScreen,
       audit: AuditScreen,

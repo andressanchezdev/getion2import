@@ -43,6 +43,7 @@ export const MENU_ITEMS: NavItem[] = [
         subitems: [
             { id: 'warehouses', label: 'Bodegas' },
             { id: 'products', label: 'Productos' },
+            { id: 'counts', label: 'Conteos Físicos' },
             { id: 'brands', label: 'Marcas' },
             { id: 'categories', label: 'Categorías' },
             { id: 'models', label: 'Modelos' },
