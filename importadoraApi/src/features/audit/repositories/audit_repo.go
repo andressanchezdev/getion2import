@@ -60,6 +60,29 @@ func (r *AuditLogQueryRepository) List(ctx context.Context, q db.DBExecutor, f d
 		argIdx++
 	}
 
+	if strings.TrimSpace(f.ActorType) != "" {
+		switch strings.ToLower(strings.TrimSpace(f.ActorType)) {
+		case "superadmin":
+			where = append(where, "al.superadmin_id IS NOT NULL")
+		case "admin":
+			where = append(where, "al.admin_id IS NOT NULL")
+		case "employee":
+			where = append(where, "al.employee_id IS NOT NULL")
+		}
+	}
+
+	if strings.TrimSpace(f.From) != "" {
+		where = append(where, fmt.Sprintf("al.created_at >= $%d", argIdx))
+		args = append(args, strings.TrimSpace(f.From)+" 00:00:00")
+		argIdx++
+	}
+
+	if strings.TrimSpace(f.To) != "" {
+		where = append(where, fmt.Sprintf("al.created_at <= $%d", argIdx))
+		args = append(args, strings.TrimSpace(f.To)+" 23:59:59")
+		argIdx++
+	}
+
 	whereClause := ""
 	if len(where) > 0 {
 		whereClause = "WHERE " + strings.Join(where, " AND ")
@@ -126,4 +149,3 @@ func (r *AuditLogQueryRepository) List(ctx context.Context, q db.DBExecutor, f d
 
 	return list, total, rows.Err()
 }
-

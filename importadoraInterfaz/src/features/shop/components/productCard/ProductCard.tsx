@@ -13,7 +13,7 @@ import { ProductCardPricing } from './pricing/ProductCardPricing'
 import { ProductCardActions } from './actions/ProductCardActions'
 import './ProductCard.css'
 
-export const ProductCard: React.FC<ProductCardProps> = ({
+export const ProductCard: React.FC<ProductCardProps> = React.memo(({
     product,
     activeWarehouseId,
     selectedPriceLevel,
@@ -81,6 +81,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             </div>
         </article>
     )
-}
+})
+
+ProductCard.displayName = 'ProductCard'
 
 export default ProductCard

@@ -36,11 +36,35 @@ export const CheckoutPanel: React.FC<{ payload: CheckoutPayload }> = ({ payload 
           <button type="button" className="btn-secondary" onClick={() => dispatch(closeDrawerForm())}>Cancelar</button>
         )}
         {flow.isQuotation ? (
-          <button type="button" className="btn-primary" disabled={!flow.canContinue || flow.submitting} onClick={flow.confirm}>{flow.submitting ? 'Creando...' : 'Crear cotización'}</button>
+          <button
+            type="button"
+            className="btn-primary"
+            disabled={!flow.canContinue || flow.submitting}
+            onClick={flow.canContinue ? flow.confirm : flow.notifyBlockers}
+          >
+            {flow.submitting ? 'Creando...' : 'Crear cotización'}
+          </button>
         ) : onPayment ? (
-          <button type="button" className="btn-primary" disabled={flow.submitting || flow.cashBlocked} title={flow.cashBlocked ? 'Abre el turno de caja o elige otra forma de pago' : undefined} onClick={flow.confirm}>{flow.submitting ? 'Creando pedido...' : 'Confirmar pedido'}</button>
+          <button
+            type="button"
+            className="btn-primary"
+            disabled={flow.submitting}
+            style={!flow.canContinue ? { opacity: 0.65, cursor: 'not-allowed' } : undefined}
+            title={flow.blockers.length > 0 ? flow.blockers[0] : undefined}
+            onClick={flow.canContinue ? flow.confirm : flow.notifyBlockers}
+          >
+            {flow.submitting ? 'Creando pedido...' : 'Confirmar pedido'}
+          </button>
         ) : (
-          <button type="button" className="btn-primary" disabled={!flow.canContinue} onClick={() => flow.setStep('payment')}>Continuar al pago</button>
+          <button
+            type="button"
+            className="btn-primary"
+            style={!flow.canContinue ? { opacity: 0.65, cursor: 'not-allowed' } : undefined}
+            title={flow.blockers.length > 0 ? flow.blockers[0] : undefined}
+            onClick={flow.canContinue ? () => flow.setStep('payment') : flow.notifyBlockers}
+          >
+            Continuar al pago
+          </button>
         )}
       </div>
     </div>

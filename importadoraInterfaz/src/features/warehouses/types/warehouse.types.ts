@@ -37,6 +37,7 @@ export interface WarehouseDto {
 }
 
 export interface CreateWarehouseInput {
+    companyId?: number
     code: string
     name: string
     city?: string

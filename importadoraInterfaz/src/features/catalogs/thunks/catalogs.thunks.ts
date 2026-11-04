@@ -7,7 +7,7 @@ import { fetchBrands, fetchCategories, fetchMotoModels } from '../services/catal
 import type { CatalogResource, CatalogsState } from '../types/catalogs.types'
 
 // forma mínima del state que necesitan estos thunks (la feature no importa el store de app)
-type ThunkState = { auth: AuthState; catalogs: CatalogsState }
+type ThunkState = { auth: AuthState; catalogs: CatalogsState; ui?: { activeCompanyId?: number } }
 
 // los tres catálogos se cargan igual (contexto → service → lista); solo cambia el service, por eso se crean con una sola función
 // ojo: la condición evita pedir otra vez un catálogo que ya se está cargando (en desarrollo, React StrictMode ejecuta los efectos dos veces)

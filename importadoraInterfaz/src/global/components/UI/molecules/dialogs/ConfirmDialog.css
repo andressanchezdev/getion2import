@@ -111,7 +111,8 @@
 }
 
 /* confirmar inactivo (ej. falta el motivo de la anulación) */
-.confirm-dialog-btn-confirm:disabled {
+.confirm-dialog-btn-confirm:disabled,
+.confirm-dialog-btn-confirm.is-disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }

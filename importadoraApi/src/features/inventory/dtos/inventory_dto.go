@@ -61,9 +61,9 @@ type StockFilterQuery struct {
 }
 
 type AdjustStockRequest struct {
-	StockID  int64  `json:"stockId" validate:"required"`
-	NewQty   int    `json:"newQty" validate:"min=0"`
-	Reason   string `json:"reason" validate:"required"`
+	StockID int64  `json:"stockId" validate:"required"`
+	NewQty  int    `json:"newQty" validate:"min=0"`
+	Reason  string `json:"reason" validate:"required"`
 }
 
 // AssignStockRequest entrada para POST /stock/assign: pone un producto del catálogo en una ubicación de la bodega.
@@ -100,27 +100,27 @@ type TransferItemResponse struct {
 }
 
 type TransferResponse struct {
-	ID                     int64                  `json:"id"`
-	CompanyID              int64                  `json:"companyId"`
-	SerialCode             string                 `json:"serialCode"`
-	OriginWarehouseID      int64                  `json:"originWarehouseId"`
-	OriginWarehouseName    string                 `json:"originWarehouseName"`
-	DestinationWarehouseID int64                  `json:"destinationWarehouseId"`
-	DestinationWarehouseName string               `json:"destinationWarehouseName"`
-	EmployeeID             int64                  `json:"employeeId"`
-	EmployeeName           string                 `json:"employeeName"`
-	DispatchedByEmployeeID *int64                 `json:"dispatchedByEmployeeId,omitempty"`
-	DispatchedByName       *string                `json:"dispatchedByName,omitempty"`
-	ReceivedByEmployeeID   *int64                 `json:"receivedByEmployeeId,omitempty"`
-	ReceivedByName         *string                `json:"receivedByName,omitempty"`
-	Status                 types.TransferStatus   `json:"status"`
-	Notes                  *string                `json:"notes,omitempty"`
-	CancelReason           *string                `json:"cancelReason,omitempty"`
-	DispatchedAt           *time.Time             `json:"dispatchedAt,omitempty"`
-	ReceivedAt             *time.Time             `json:"receivedAt,omitempty"`
-	CreatedAt              time.Time              `json:"createdAt"`
-	UpdatedAt              time.Time              `json:"updatedAt"`
-	Items                  []TransferItemResponse `json:"items,omitempty"`
+	ID                       int64                  `json:"id"`
+	CompanyID                int64                  `json:"companyId"`
+	SerialCode               string                 `json:"serialCode"`
+	OriginWarehouseID        int64                  `json:"originWarehouseId"`
+	OriginWarehouseName      string                 `json:"originWarehouseName"`
+	DestinationWarehouseID   int64                  `json:"destinationWarehouseId"`
+	DestinationWarehouseName string                 `json:"destinationWarehouseName"`
+	EmployeeID               int64                  `json:"employeeId"`
+	EmployeeName             string                 `json:"employeeName"`
+	DispatchedByEmployeeID   *int64                 `json:"dispatchedByEmployeeId,omitempty"`
+	DispatchedByName         *string                `json:"dispatchedByName,omitempty"`
+	ReceivedByEmployeeID     *int64                 `json:"receivedByEmployeeId,omitempty"`
+	ReceivedByName           *string                `json:"receivedByName,omitempty"`
+	Status                   types.TransferStatus   `json:"status"`
+	Notes                    *string                `json:"notes,omitempty"`
+	CancelReason             *string                `json:"cancelReason,omitempty"`
+	DispatchedAt             *time.Time             `json:"dispatchedAt,omitempty"`
+	ReceivedAt               *time.Time             `json:"receivedAt,omitempty"`
+	CreatedAt                time.Time              `json:"createdAt"`
+	UpdatedAt                time.Time              `json:"updatedAt"`
+	Items                    []TransferItemResponse `json:"items,omitempty"`
 }
 
 type CreateTransferItemRequest struct {
@@ -156,7 +156,7 @@ type TransferFilterQuery struct {
 	CompanyID              *int64
 	OriginWarehouseID      *int64
 	DestinationWarehouseID *int64
-	WarehouseID            *int64 // la bodega es origen O destino del traslado
+	WarehouseID            *int64 // la bodega es origen O destino del traslado pero si el que quiere crearel traslado entonces indica la bodega de el usuario a donde van a crear el trastaldo de el item, al presionar la opiocn de la bodega dentro de el catalogo por un empleado, desplega el drawwer rigth ya el id de su bodega fijo para solicitar el traslado de un item de otra bodega, no la de el mismo
 	Status                 *types.TransferStatus
 	Page                   int
 	PageSize               int
@@ -249,4 +249,3 @@ type MovementFilterQuery struct {
 	Page         int
 	PageSize     int
 }
-

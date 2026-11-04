@@ -27,7 +27,10 @@ export interface AuditEntry {
 
 export interface AuditFilters {
   entity: string // '' = todas las gestiones
-  action: string // '' = todas las acciones
+  action: string // '' = todas las acciones (o CREATE, UPDATE, DELETE, LOGIN)
+  role?: string // '' = todos los roles ('admin' | 'employee' | 'superadmin')
+  from?: string // fecha desde AAAA-MM-DD
+  to?: string // fecha hasta AAAA-MM-DD
   entityId?: number // solo los movimientos de este registro (la API no lo filtra: se aplica sobre la página cargada)
 }
 

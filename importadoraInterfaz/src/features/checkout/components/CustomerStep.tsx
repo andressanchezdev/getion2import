@@ -79,12 +79,22 @@ export const CustomerStep: React.FC<{ flow: Flow }> = ({ flow }) => {
         <>
           <h4 className="checkout-title">3. Empleado que recibe la venta</h4>
           <p className="checkout-hint">El administrador no vende por sí mismo: la venta queda a nombre del empleado que elijas.</p>
-          <select className="checkout-select" value={flow.employeeId} onChange={(e) => flow.setEmployeeId(Number(e.target.value))}>
-            <option value={0}>Selecciona un empleado...</option>
+          <select
+            className="checkout-select"
+            value={flow.employeeId}
+            onChange={(e) => flow.setEmployeeId(Number(e.target.value))}
+            style={flow.employeeId <= 0 ? { borderColor: 'var(--c-amber-500, #f59e0b)', backgroundColor: 'var(--c-amber-50, #fffbeb)' } : undefined}
+          >
+            <option value={0}>Selecciona un vendedor responsable...</option>
             {employees.map((emp) => (
               <option key={emp.employeeId} value={emp.employeeId}>{emp.name}</option>
             ))}
           </select>
+          {flow.employeeId <= 0 && (
+            <span style={{ fontSize: '11.5px', color: 'var(--c-amber-700, #b45309)', marginTop: '2px', display: 'block' }}>
+              ⚠️ Campo obligatorio para administradores antes de continuar al pago.
+            </span>
+          )}
         </>
       )}
     </div>

@@ -110,8 +110,18 @@ export const useCheckoutFlow = (payload: CheckoutPayload) => {
     employeeId,
     onPayment: step === 'payment',
     transferMissingProof: !transferOk,
+    cashBlocked,
   })
-  const canContinue = blockers.length === 0 && deliveryOk
+  const canContinue = blockers.length === 0 && deliveryOk && !cashBlocked
+
+  // Notifica al usuario en caso de presionar o consultar por qué está bloqueado el flujo
+  const notifyBlockers = () => {
+    if (blockers.length > 0) {
+      toast.warning('No se puede continuar con el pedido', {
+        description: blockers[0],
+      })
+    }
+  }
 
   const confirm = async () => {
     if (!customer || !lines || cashBlocked) return
@@ -151,6 +161,6 @@ export const useCheckoutFlow = (payload: CheckoutPayload) => {
     delivery, setDelivery, employeeId, setEmployeeId, payment, setPayment,
     transferProof, setTransferProof, transferReference, setTransferReference, transferBank, setTransferBank,
     immediatePicking, setImmediatePicking,
-    total, totals, payable, creditAllowed, canContinue, blockers, cashBlocked, cashWarehouseName: cash.warehouseName, submitting, error, confirm,
+    total, totals, payable, creditAllowed, canContinue, blockers, cashBlocked, cashWarehouseName: cash.warehouseName, submitting, error, confirm, notifyBlockers,
   }
 }

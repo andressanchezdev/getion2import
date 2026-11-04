@@ -32,30 +32,39 @@ const writeStored = (key: string, top: number): void => {
 }
 
 // permite arrastrar un elemento en vertical y recuerda dónde quedó
-export const useVerticalDrag = (storageKey: string) => {
+export const useVerticalDrag = (storageKey: string, extraHeight = 0) => {
   const ref = useRef<HTMLButtonElement>(null)
   const [top, setTop] = useState<number | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const drag = useRef({ active: false, moved: false, startY: 0, startTop: 0, lastTop: 0 })
   const suppressClick = useRef(false)
 
-  const place = useCallback((value: number) => {
-    const size = ref.current?.offsetHeight ?? 0
-    const next = clampTop(value, size, window.innerHeight)
-    setTop(next)
-    return next
-  }, [])
+  const place = useCallback(
+    (value: number) => {
+      const size = (ref.current?.offsetHeight ?? 0) + extraHeight
+      const next = clampTop(value, size, window.innerHeight)
+      setTop(next)
+      return next
+    },
+    [extraHeight]
+  )
 
   // posición inicial: la guardada, o el centro de la pantalla; y se reajusta si la ventana cambia de alto
   useLayoutEffect(() => {
-    const size = ref.current?.offsetHeight ?? 0
+    const size = (ref.current?.offsetHeight ?? 0) + extraHeight
     place(readStored(storageKey) ?? (window.innerHeight - size) / 2)
-  }, [place, storageKey])
+  }, [place, storageKey, extraHeight])
+
   useEffect(() => {
-    const onResize = () => setTop((current) => (current === null ? current : clampTop(current, ref.current?.offsetHeight ?? 0, window.innerHeight)))
+    const onResize = () =>
+      setTop((current) =>
+        current === null
+          ? current
+          : clampTop(current, (ref.current?.offsetHeight ?? 0) + extraHeight, window.innerHeight)
+      )
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
-  }, [])
+  }, [extraHeight])
 
   const onPointerDown = (event: PointerEvent<HTMLButtonElement>) => {
     event.currentTarget.setPointerCapture?.(event.pointerId)
@@ -100,5 +109,17 @@ export const useVerticalDrag = (storageKey: string) => {
     writeStored(storageKey, next)
   }
 
-  return { ref, top, isDragging, handlers: { onPointerDown, onPointerMove, onPointerUp: endDrag, onPointerCancel: endDrag, onClickCapture, onKeyDown } }
+  return {
+    ref,
+    top,
+    isDragging,
+    handlers: {
+      onPointerDown,
+      onPointerMove,
+      onPointerUp: endDrag,
+      onPointerCancel: endDrag,
+      onClickCapture,
+      onKeyDown,
+    },
+  }
 }

@@ -66,6 +66,12 @@ export interface CreateTransferBatchInput {
   notes?: string
 }
 
+export interface TransferRequestOriginOption {
+  warehouseId: number
+  warehouseName: string
+  stock: number
+}
+
 // una línea del pedido de traslado: un producto, de qué bodega sale y cuántas unidades (max = lo disponible allá)
 export interface TransferRequestLine {
   productId: number
@@ -75,6 +81,7 @@ export interface TransferRequestLine {
   originWarehouseName: string
   quantity: number
   max: number
+  availableOrigins?: TransferRequestOriginOption[]
 }
 
 // lo que pasó con cada bodega de origen al enviar el pedido: el traslado creado o por qué falló

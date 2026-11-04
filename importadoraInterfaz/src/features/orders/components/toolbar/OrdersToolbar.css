@@ -1,4 +1,4 @@
-/* OrdersToolbar.css · barra de búsqueda (40%), filtros centrales y acciones · idéntico al diseño de QuotationsToolbar */
+/* OrdersToolbar.css · barra de búsqueda (38%), filtros centrales y acciones · idéntico al diseño canónico */
 .orders-toolbar {
   background: var(--bg-card);
   display: flex;
@@ -21,15 +21,10 @@
   overflow: hidden;
 }
 
-.orders-toolbar-actions .btn-primary,
-.orders-toolbar-actions .btn-secondary {
-  white-space: nowrap;
-}
-
 .orders-toolbar-search {
-  flex: 0 0 40%;
-  width: 40%;
-  max-width: 40%;
+  flex: 0 0 38%;
+  width: 38%;
+  max-width: 38%;
   min-width: 240px;
 }
 
@@ -86,6 +81,17 @@
   align-items: center;
   gap: var(--space-3);
   margin-left: auto;
+}
+
+.orders-toolbar-count {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.orders-toolbar-actions .btn-primary,
+.orders-toolbar-actions .btn-secondary {
+  white-space: nowrap;
 }
 
 @media (max-width: 768px) {

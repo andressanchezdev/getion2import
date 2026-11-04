@@ -20,6 +20,7 @@ export const uploadBankStatement = async (file: File): Promise<BankUploadResult>
 export const fetchBankRecords = async (filters: BankFilters, page: number, pageSize: number): Promise<Paginated<BankRecord>> => {
   const params: Record<string, string | number> = { page, pageSize }
   if (filters.status !== 'all') params.status = filters.status
+  if (filters.warehouseId) params.warehouseId = filters.warehouseId
   if (filters.query.trim()) params.description = filters.query.trim()
   if (filters.from) params.from = filters.from
   if (filters.to) params.to = filters.to

@@ -22,7 +22,9 @@ export const useCatalogItemForm = (payload: CatalogItemPayload) => {
   const submit = async (event: React.FormEvent) => {
     event.preventDefault()
     if (!name.trim()) {
-      setError('El nombre es obligatorio.')
+      const msg = `El nombre de ${payload.noun.slice(0, -1)} es obligatorio.`
+      setError(msg)
+      toast.warning('No se puede guardar', { description: msg })
       return
     }
     setSaving(true)

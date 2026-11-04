@@ -1,11 +1,11 @@
-/* DrawerTab.css · estilos de la pestaña lateral del carrito contraído (arrastrable en vertical) · solo usa tokens de styles/tokens.css */
+/* DrawerTab.css · estilos de la pestaña lateral del carrito o traslados contraídos (arrastrable en vertical) · solo usa tokens de styles/tokens.css */
 /* ojo: la altura (top) la pone useVerticalDrag en línea porque cambia al arrastrar; antes la pestaña iba fija en top 50% con translateY(-50%) */
 .drawer-tab {
   position: fixed;
   right: 0;
   top: 50%; /* solo mientras se calcula la posición inicial */
   touch-action: none; /* el dedo arrastra la pestaña en vez de desplazar la página */
-  z-index: var(--z-toggle);
+  z-index: var(--z-toggle, 10);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -19,6 +19,7 @@
   cursor: grab;
   user-select: none;
   animation: drawer-tab-enter var(--duration-enter) var(--ease-out);
+  transition: right var(--duration-enter, 200ms) var(--ease-out), background-color var(--transition-fast, 150ms ease);
 }
 
 .drawer-tab:hover {
@@ -28,6 +29,7 @@
 .drawer-tab-dragging {
   cursor: grabbing;
   box-shadow: var(--shadow-card-hover);
+  will-change: top;
 }
 
 .drawer-tab-icon {
@@ -47,6 +49,19 @@
   text-align: center;
 }
 
+/* Variante para pestaña de traslados */
+.drawer-tab-transfer {
+  border-left: 2px solid var(--color-primary, #2563eb);
+}
+
+.drawer-tab-transfer:hover {
+  border-left-color: var(--color-primary-hover, #1d4ed8);
+}
+
+.drawer-tab-transfer .drawer-tab-count {
+  background-color: var(--color-primary, #2563eb);
+}
+
 @keyframes drawer-tab-enter {
   from {
     opacity: 0;
@@ -62,5 +77,6 @@
 @media (prefers-reduced-motion: reduce) {
   .drawer-tab {
     animation: none;
+    transition: none;
   }
 }

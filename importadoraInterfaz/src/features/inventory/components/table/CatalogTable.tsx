@@ -174,6 +174,7 @@ export const CatalogTable: React.FC<CatalogTableProps> = ({ type, noun, rows, lo
         message={`¿Estás seguro de que deseas eliminar ${toDelete?.name}? Esta acción enviará el registro a la papelera.`}
         confirmLabel={deleting ? 'Eliminando…' : 'Eliminar'}
         confirmDisabled={deleting || deleteReason.trim().length < 3}
+        confirmDisabledReason={deleteReason.trim().length < 3 ? 'Debes especificar el motivo de eliminación (mínimo 3 caracteres).' : undefined}
         onConfirm={handleConfirmDelete}
         onCancel={() => {
           if (!deleting) {

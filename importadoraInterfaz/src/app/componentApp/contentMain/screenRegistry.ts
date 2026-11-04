@@ -1,27 +1,41 @@
 // screenRegistry · qué componente de pantalla se muestra para cada combinación de módulo y subgestión
-import { createElement, type ComponentType, type ReactNode } from 'react'
+// Optimizado: ShopCatalogScreen se importa de forma inmediata para el renderizado instantáneo del catálogo.
+// Las pantallas secundarias y administrativas se cargan de forma diferida (code-splitting con React.lazy)
+// apuntando a sus rutas específicas de pantalla para que Vite las desacople en chunks independientes
+// sin modificar en lo absoluto la apariencia visual ni la estructura de navegación.
+import { createElement, lazy, type ComponentType, type ReactNode } from 'react'
 import type { ERPModule } from '@/features/navigation'
 import { ShopCatalogScreen } from '@/features/shop'
-import { OrdersScreen } from '@/features/orders'
-import { QuotationsScreen } from '@/features/quotations'
-import { BrandsScreen, CategoriesScreen, ModelsScreen, ProductsScreen, InventoryCountsScreen } from '@/features/inventory'
-import { WarehousesScreen } from '@/features/warehouses'
-import { LocationsScreen } from '@/features/locations'
-import { CustomersScreen } from '@/features/customers'
-import { EmployeesScreen, RolesPermissionsScreen } from '@/features/employees'
-import { CashRegisterScreen } from '@/features/cashRegister'
-import { ReturnsScreen } from '@/features/returns'
-import { WalletScreen } from '@/features/wallet'
-import { AuditScreen } from '@/features/audit'
-import { TransfersScreen } from '@/features/transfers'
-import { SettingsScreen } from '@/features/settings'
-import { PurchaseOrdersScreen, ReceivingScreen } from '@/features/purchases'
-import { BillingSettingsScreen, InvoicesScreen } from '@/features/billing'
-import { SuppliersScreen, CarriersScreen } from '@/features/externals'
-import { GeneralReportScreen, DashboardScreen } from '@/features/reports'
-import { RecycleBinScreen } from '@/features/recyclebin'
-import { SuperadminAdminsScreen } from '@/features/superadmin'
 import { NotFoundScreen } from './NotFoundScreen'
+
+const OrdersScreen = lazy(() => import('@/features/orders/screens/OrdersScreen').then((m) => ({ default: m.OrdersScreen })))
+const QuotationsScreen = lazy(() => import('@/features/quotations/screens/QuotationsScreen').then((m) => ({ default: m.QuotationsScreen })))
+const BrandsScreen = lazy(() => import('@/features/inventory/screens/CatalogScreens').then((m) => ({ default: m.BrandsScreen })))
+const CategoriesScreen = lazy(() => import('@/features/inventory/screens/CatalogScreens').then((m) => ({ default: m.CategoriesScreen })))
+const ModelsScreen = lazy(() => import('@/features/inventory/screens/CatalogScreens').then((m) => ({ default: m.ModelsScreen })))
+const ProductsScreen = lazy(() => import('@/features/inventory/screens/ProductsScreen').then((m) => ({ default: m.ProductsScreen })))
+const InventoryCountsScreen = lazy(() => import('@/features/inventory/screens/InventoryCountsScreen').then((m) => ({ default: m.InventoryCountsScreen })))
+const WarehousesScreen = lazy(() => import('@/features/warehouses/screens/WarehousesScreen').then((m) => ({ default: m.WarehousesScreen })))
+const LocationsScreen = lazy(() => import('@/features/locations/screens/LocationsScreen').then((m) => ({ default: m.LocationsScreen })))
+const CustomersScreen = lazy(() => import('@/features/customers/screens/CustomersScreen').then((m) => ({ default: m.CustomersScreen })))
+const EmployeesScreen = lazy(() => import('@/features/employees/screens/EmployeesScreen').then((m) => ({ default: m.EmployeesScreen })))
+const RolesPermissionsScreen = lazy(() => import('@/features/employees/screens/RolesPermissionsScreen').then((m) => ({ default: m.RolesPermissionsScreen })))
+const CashRegisterScreen = lazy(() => import('@/features/cashRegister/screens/CashRegisterScreen').then((m) => ({ default: m.CashRegisterScreen })))
+const ReturnsScreen = lazy(() => import('@/features/returns/screens/ReturnsScreen').then((m) => ({ default: m.ReturnsScreen })))
+const WalletScreen = lazy(() => import('@/features/wallet/screens/WalletScreen').then((m) => ({ default: m.WalletScreen })))
+const AuditScreen = lazy(() => import('@/features/audit/screens/AuditScreen').then((m) => ({ default: m.AuditScreen })))
+const TransfersScreen = lazy(() => import('@/features/transfers/screens/TransfersScreen').then((m) => ({ default: m.TransfersScreen })))
+const SettingsScreen = lazy(() => import('@/features/settings/screens/SettingsScreen').then((m) => ({ default: m.SettingsScreen })))
+const PurchaseOrdersScreen = lazy(() => import('@/features/purchases/screens/PurchaseOrdersScreen').then((m) => ({ default: m.PurchaseOrdersScreen })))
+const ReceivingScreen = lazy(() => import('@/features/purchases/screens/ReceivingScreen').then((m) => ({ default: m.ReceivingScreen })))
+const BillingSettingsScreen = lazy(() => import('@/features/billing/screens/BillingSettingsScreen').then((m) => ({ default: m.BillingSettingsScreen })))
+const InvoicesScreen = lazy(() => import('@/features/billing/screens/InvoicesScreen').then((m) => ({ default: m.InvoicesScreen })))
+const SuppliersScreen = lazy(() => import('@/features/externals/screens/SuppliersScreen').then((m) => ({ default: m.SuppliersScreen })))
+const CarriersScreen = lazy(() => import('@/features/externals/screens/CarriersScreen').then((m) => ({ default: m.CarriersScreen })))
+const GeneralReportScreen = lazy(() => import('@/features/reports/screens/GeneralReportScreen').then((m) => ({ default: m.GeneralReportScreen })))
+const DashboardScreen = lazy(() => import('@/features/reports/screens/DashboardScreen').then((m) => ({ default: m.DashboardScreen })))
+const RecycleBinScreen = lazy(() => import('@/features/recyclebin/screens/RecycleBinScreen').then((m) => ({ default: m.RecycleBinScreen })))
+const SuperadminAdminsScreen = lazy(() => import('@/features/superadmin/screens/SuperadminAdminsScreen').then((m) => ({ default: m.SuperadminAdminsScreen })))
 
 export interface ScreenEntry {
   screen?: ComponentType // pantalla única para todo el módulo

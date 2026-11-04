@@ -3,6 +3,7 @@
 // ojo: el foco empieza en "Cancelar" (la opción segura), Tab no sale del diálogo y al cerrar el foco vuelve al botón que lo abrió
 import React, { useEffect, useId, useRef } from 'react'
 import { useEscapeKey } from '@/global/hooks/ui/useEscapeKey'
+import { toast } from '@/global/helpers/feedback/toast'
 import './ConfirmDialog.css'
 
 export interface ConfirmDialogProps {
@@ -14,6 +15,7 @@ export interface ConfirmDialogProps {
     // ojo: contenido extra bajo el mensaje (ej. el motivo de una anulación) y confirmar inactivo hasta que esté completo
     children?: React.ReactNode
     confirmDisabled?: boolean
+    confirmDisabledReason?: string
     onConfirm: () => void
     onCancel: () => void
 }
@@ -26,6 +28,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     cancelLabel = 'Cancelar',
     children,
     confirmDisabled = false,
+    confirmDisabledReason,
     onConfirm,
     onCancel,
 }) => {
@@ -58,6 +61,16 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         }
     }
 
+    const handleConfirmClick = () => {
+        if (confirmDisabled) {
+            if (confirmDisabledReason) {
+                toast.warning('Acción no permitida', { description: confirmDisabledReason })
+            }
+            return
+        }
+        onConfirm()
+    }
+
     if (!open) return null
 
     return (
@@ -79,7 +92,14 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                     <button ref={cancelRef} type="button" className="confirm-dialog-btn-cancel" onClick={onCancel}>
                         {cancelLabel}
                     </button>
-                    <button ref={confirmRef} type="button" className="confirm-dialog-btn-confirm" onClick={onConfirm} disabled={confirmDisabled}>
+                    <button
+                        ref={confirmRef}
+                        type="button"
+                        className={`confirm-dialog-btn-confirm ${confirmDisabled ? 'is-disabled' : ''}`}
+                        onClick={handleConfirmClick}
+                        title={confirmDisabled ? confirmDisabledReason : undefined}
+                        aria-disabled={confirmDisabled}
+                    >
                         {confirmLabel}
                     </button>
                 </div>

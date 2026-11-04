@@ -6,7 +6,13 @@ import { DEFAULT_PAGE_SIZE } from '@/api'
 
 export const AUDIT_PAGE_SIZE = DEFAULT_PAGE_SIZE
 
-export const EMPTY_AUDIT_FILTERS: AuditFilters = { entity: '', action: '' }
+export const EMPTY_AUDIT_FILTERS: AuditFilters = {
+  entity: '',
+  action: '',
+  role: '',
+  from: '',
+  to: '',
+}
 
 export const INITIAL_AUDIT_STATE: AuditState = {
   filters: EMPTY_AUDIT_FILTERS,
@@ -48,3 +54,18 @@ export const AUDIT_ACTORS: Record<string, string> = {
   admin: 'Administrador',
   employee: 'Empleado',
 }
+
+export const AUDIT_ROLE_OPTIONS = [
+  { value: '', label: 'Todos los roles' },
+  { value: 'admin', label: 'Administrador' },
+  { value: 'employee', label: 'Empleado' },
+  { value: 'superadmin', label: 'Superadmin' },
+]
+
+export const AUDIT_ACTION_OPTIONS = [
+  { value: '', label: 'Todas las acciones' },
+  { value: 'LOGIN', label: 'Inicios de sesión (Login)' },
+  { value: 'CREATE', label: 'Creaciones (Create)' },
+  { value: 'UPDATE', label: 'Modificaciones (Update)' },
+  { value: 'DELETE', label: 'Eliminaciones / Anulaciones (Delete)' },
+]

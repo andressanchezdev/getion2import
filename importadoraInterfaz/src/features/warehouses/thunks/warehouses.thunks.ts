@@ -34,7 +34,7 @@ export const loadCompanyWarehousesThunk = createAsyncThunk<Warehouse[], number, 
 })
 
 // ---- gestión de bodegas (pantalla Sedes): todas, con totales, y los cambios que devuelven la lista nueva ----
-type ManageConfig = { state: { auth: AuthState; warehouses: WarehousesState }; rejectValue: string }
+type ManageConfig = { state: { auth: AuthState; ui: { activeCompanyId?: number }; warehouses: WarehousesState }; rejectValue: string }
 
 export const loadManagedWarehousesThunk = createAsyncThunk<Warehouse[], void, ManageConfig>('warehouses/loadManaged', async (_, { getState, rejectWithValue }) => {
     const ctx = selectRequestContext(getState())
@@ -60,10 +60,16 @@ const notSaving = (_: unknown, { getState }: { getState: () => { warehouses: War
 export const saveWarehouseThunk = createAsyncThunk<WarehouseChangeResult, { id?: string; input: CreateWarehouseInput }, ManageConfig>(
     'warehouses/save',
     async ({ id, input }, { getState, dispatch, rejectWithValue }) => {
-        const ctx = selectRequestContext(getState())
+        const state = getState()
+        const ctx = selectRequestContext(state)
+        const targetCompanyId = ctx?.companyId || state.ui.activeCompanyId
         try {
-            const saved = id ? await updateWarehouse(id, input) : await createWarehouse(input)
-            const items = await fetchAllWarehouses(ctx?.companyId)
+            const payloadWithCompany: CreateWarehouseInput = {
+                ...input,
+                companyId: targetCompanyId ? Number(targetCompanyId) : undefined,
+            }
+            const saved = id ? await updateWarehouse(id, input) : await createWarehouse(payloadWithCompany)
+            const items = await fetchAllWarehouses(targetCompanyId)
             dispatch(fetchWarehousesThunk())
             return { items, recent: { id: saved.id, kind: id ? 'updated' : 'new' } }
         } catch (error) {

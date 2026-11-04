@@ -9,8 +9,18 @@ import type { AuditLogDto } from '../types/audit.api.types'
 import type { AuditEntry, AuditFilters } from '../types/audit.types'
 
 export const fetchAuditPage = async (ctx: RequestContext, page: number, filters: AuditFilters): Promise<Paginated<AuditEntry>> => {
+  const queryParams: Record<string, string | number> = {
+    page,
+    pageSize: AUDIT_PAGE_SIZE,
+  }
+  if (filters.entity) queryParams.entity = filters.entity
+  if (filters.action) queryParams.action = filters.action
+  if (filters.role) queryParams.actorType = filters.role
+  if (filters.from) queryParams.from = filters.from
+  if (filters.to) queryParams.to = filters.to
+
   const { data } = await apiClient.get<APIResponse<AuditLogDto[] | null>>(API_CONFIG.ENDPOINTS.AUDIT.LIST, {
-    params: withCompany(ctx.companyId, { entity: filters.entity, action: filters.action, page, pageSize: AUDIT_PAGE_SIZE }),
+    params: withCompany(ctx.companyId, queryParams),
   })
   const result = toPaginated(data)
   return { items: result.items.map(toAuditEntry), meta: result.meta }

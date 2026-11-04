@@ -1,6 +1,6 @@
 // useEditProductForm · estado del formulario de edición de un producto: campos, validación y guardado
 // conecta con: EditProductPanel (lo usa), inventory.thunks (saveProductDetailsThunk), inventory.slice (actualiza la fila local), catalogs (categorías), navigation y toast
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { closeDrawerForm } from '@/features/navigation'
 import { selectBrands, selectCategories, selectMotoModels, useLoadCatalogs } from '@/features/catalogs'
 import type { Product } from '@/features/shop'
@@ -37,11 +37,38 @@ export const useEditProductForm = (product: Product) => {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Sincroniza categoryId si los catálogos terminan de cargar después de montar el componente
+  useEffect(() => {
+    if (!categoryId && product.category && categories.length > 0) {
+      const found = categories.find((c) => c.name.toLowerCase() === product.category.toLowerCase())
+      if (found) setCategoryId(found.id)
+    }
+  }, [categories, product.category, categoryId])
+
+  // Sincroniza brandId cuando cargan las marcas
+  useEffect(() => {
+    if (!brandId && product.brand && brands.length > 0) {
+      const found = brands.find((b) => b.name.toLowerCase() === product.brand.toLowerCase())
+      if (found) setBrandId(found.id)
+    }
+  }, [brands, product.brand, brandId])
+
+  // Sincroniza modelId cuando cargan los modelos
+  useEffect(() => {
+    if (!modelId && product.modelCompatible && models.length > 0) {
+      const targetModel = product.modelCompatible.toLowerCase()
+      const found = models.find((m) => m.name.toLowerCase() === targetModel)
+      if (found) setModelId(found.id)
+    }
+  }, [models, product.modelCompatible, modelId])
+
   // valida el nombre, guarda en el servidor y refleja el cambio en la tabla
   const submit = async (event: React.FormEvent) => {
     event.preventDefault()
     if (!name.trim()) {
-      setError('El nombre del producto no puede estar vacío.')
+      const msg = 'El nombre del producto no puede estar vacío.'
+      setError(msg)
+      toast.warning('No se puede guardar el producto', { description: msg })
       return
     }
     setSaving(true)

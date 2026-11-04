@@ -1,12 +1,12 @@
-// OrdersToolbar · barra de la tabla de pedidos: búsqueda (40%), filtros centrales (bodega, etapa, canal) y acciones
+// OrdersToolbar · barra de la tabla de pedidos: búsqueda (38%), filtros centrales (bodega, etapa, canal) y acciones
 // conecta con: orders.slice (filtros), orders.selectors, global SearchBar
-// ojo: sigue estrictamente la misma estructura y línea de diseño de QuotationsToolbar
+// ojo: sigue estrictamente la misma estructura y línea de diseño canónica
 import React from 'react'
 import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { SearchBar } from '@/global/components/UI/molecules/filters/SearchBar'
 import { selectWarehouses } from '@/features/warehouses'
 import { ORDER_CHANNELS } from '../../constants/orders.constants'
-import { selectOrderStageChips } from '../../selectors/orders.selectors'
+import { selectOrderStageChips, selectVisibleOrders } from '../../selectors/orders.selectors'
 import { setOrderChannel, setOrderQuery, setOrderStage, setOrderWarehouse } from '../../slices/orders.slice'
 import { loadOrderCountsThunk, loadOrdersThunk } from '../../thunks/orders.thunks'
 import type { OrderChannelFilter, OrderStageKey } from '../../types/orders.types'
@@ -22,6 +22,7 @@ export const OrdersToolbar: React.FC<OrdersToolbarProps> = ({ hideWarehouseFilte
   const { stage, channel, query, selectedWarehouseId } = useAppSelector((state) => state.orders)
   const chips = useAppSelector(selectOrderStageChips)
   const warehouses = useAppSelector(selectWarehouses)
+  const visible = useAppSelector(selectVisibleOrders)
 
   const handleWarehouseChange = (val: string) => {
     const nextId = !val || val === 'all' ? null : Number(val)
@@ -110,11 +111,12 @@ export const OrdersToolbar: React.FC<OrdersToolbarProps> = ({ hideWarehouseFilte
         </label>
       </div>
 
-      {extraActions && (
-        <div className="orders-toolbar-actions">
-          {extraActions}
-        </div>
-      )}
+      <div className="orders-toolbar-actions">
+        <span className="orders-toolbar-count">
+          {visible.length} {visible.length === 1 ? 'pedido' : 'pedidos'}
+        </span>
+        {extraActions}
+      </div>
     </div>
   )
 }

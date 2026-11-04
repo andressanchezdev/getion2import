@@ -59,7 +59,9 @@ export const MainContent: React.FC = () => {
             </div>
           </div>
         ) : (
-          screen ?? <MainContentPlaceholder moduleId={activeModule} subitemLabel={subitemLabel} />
+          <React.Suspense fallback={null}>
+            {screen ?? <MainContentPlaceholder moduleId={activeModule} subitemLabel={subitemLabel} />}
+          </React.Suspense>
         )}
       </div>
     </main>

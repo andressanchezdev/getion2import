@@ -37,6 +37,7 @@ export interface PendingPayment {
 
 export interface BankFilters {
   status: BankRecordStatus | 'all'
+  warehouseId?: number | null
   query: string // busca en la descripción del movimiento
   from: string // AAAA-MM-DD o ''
   to: string

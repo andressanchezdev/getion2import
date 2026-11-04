@@ -18,7 +18,10 @@ export const useProductsTable = () => {
   const query = useDebouncedValue(table.query, SEARCH_DELAY_MS)
 
   useEffect(() => {
-    if (hasSession) dispatch(loadProductsTableThunk({ page: table.page, query }))
+    // warehouseId condiciona el cálculo de stock reactivo en el thunk
+    if (hasSession && warehouseId !== undefined) {
+      dispatch(loadProductsTableThunk({ page: table.page, query }))
+    }
   }, [dispatch, hasSession, warehouseId, table.page, query])
 
   return table

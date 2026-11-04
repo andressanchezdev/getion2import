@@ -23,15 +23,50 @@ export const transfersSlice = createSlice({
         (l) => l.productId === line.productId && l.originWarehouseId === line.originWarehouseId
       )
       if (existing) {
+        if (line.availableOrigins) {
+          existing.availableOrigins = line.availableOrigins
+        }
         if (existing.quantity < line.max) {
           existing.quantity += 1
         }
       } else {
-        state.draft.lines.push({ ...line, quantity: line.quantity || 1 })
+        // Si el producto ya está en el borrador con otro origen pero el usuario lo vuelve a agregar desde catálogo
+        const existingAnyOrigin = state.draft.lines.find((l) => l.productId === line.productId)
+        if (existingAnyOrigin) {
+          if (line.availableOrigins) {
+            existingAnyOrigin.availableOrigins = line.availableOrigins
+          }
+          if (existingAnyOrigin.quantity < existingAnyOrigin.max) {
+            existingAnyOrigin.quantity += 1
+          }
+        } else {
+          state.draft.lines.push({ ...line, quantity: line.quantity || 1 })
+        }
       }
     },
     setTransferDraftDest: (state, action: PayloadAction<number>) => {
       state.draft.destWarehouseId = action.payload
+    },
+    changeTransferDraftOrigin: (
+      state,
+      action: PayloadAction<{
+        productId: number
+        currentOriginWarehouseId: number
+        newOriginWarehouseId: number
+        newOriginWarehouseName: string
+        newMax: number
+      }>
+    ) => {
+      const { productId, currentOriginWarehouseId, newOriginWarehouseId, newOriginWarehouseName, newMax } = action.payload
+      const target = state.draft.lines.find(
+        (l) => l.productId === productId && l.originWarehouseId === currentOriginWarehouseId
+      )
+      if (target) {
+        target.originWarehouseId = newOriginWarehouseId
+        target.originWarehouseName = newOriginWarehouseName
+        target.max = newMax
+        target.quantity = Math.max(1, Math.min(newMax, target.quantity))
+      }
     },
     updateTransferDraftQuantity: (
       state,
@@ -121,6 +156,7 @@ export const transfersSlice = createSlice({
 export const {
   addTransferDraftLine,
   setTransferDraftDest,
+  changeTransferDraftOrigin,
   updateTransferDraftQuantity,
   removeTransferDraftLine,
   clearTransferDraft,

@@ -17,7 +17,7 @@ import {
 import type { CatalogItemInput, CatalogsState, CatalogType } from '../types/catalogs.types'
 import { fetchBrandsThunk, fetchCategoriesThunk, fetchMotoModelsThunk } from './catalogs.thunks'
 
-type ThunkState = { auth: AuthState; catalogs: CatalogsState }
+type ThunkState = { auth: AuthState; catalogs: CatalogsState; ui?: { activeCompanyId?: number } }
 type ThunkConfig = { state: ThunkState; rejectValue: string }
 
 // recarga el catálogo que acaba de cambiar

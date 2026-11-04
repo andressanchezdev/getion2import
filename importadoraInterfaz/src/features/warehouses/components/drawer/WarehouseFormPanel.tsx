@@ -36,8 +36,8 @@ export const WarehouseFormPanel: React.FC<{ payload: WarehouseFormPayload }> = (
                 {form.error && <div className="form-field-error-msg">{form.error}</div>}
 
                 <section className="drawer-form-section">
-                    <div className={form.isEdit ? 'drawer-form-grid' : ''}>
-                        {form.isEdit && text('code', 'Código', 'Ej: B-01', { required: true, upper: true, hint: 'Identifica la bodega en traslados y stock.' })}
+                    <div className="drawer-form-grid">
+                        {text('code', 'Código', 'Ej: B-01', { required: true, upper: true, hint: form.isEdit ? 'Identifica la bodega en traslados y stock.' : 'Código sugerido automáticamente.' })}
                         {text('name', 'Nombre de la sede', 'Ej: Bodega Principal', { required: true })}
                     </div>
                     <div className="drawer-form-field">

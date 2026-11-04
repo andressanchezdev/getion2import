@@ -1,60 +1,64 @@
-/* ProductCardWarehouseStock.css · indicadores de cantidades en línea (horizontal) por bodega · sin efecto al pasar el cursor, solo se pinta el clic que abre la solicitud de traslado · solo usa tokens de styles/tokens.css */
+/* ProductCardWarehouseStock.css · indicador consolidado único de stock sobre la tarjeta de producto · solo usa tokens de styles/tokens.css */
 
 .product-card-warehouse-stock {
     display: flex;
     flex-direction: row;
-    gap: 4px;
     align-items: center;
     max-width: 100%;
-    overflow-x: auto;
-    scrollbar-width: none;
 }
 
-.product-card-warehouse-stock::-webkit-scrollbar {
-    display: none;
-}
-
-.warehouse-stock-badge {
+.warehouse-stock-consolidated-btn {
     all: unset;
     cursor: pointer;
     box-sizing: border-box;
-    min-width: 38px;
-    padding: 2px 6px;
-    background: rgba(255, 255, 255, 0.95);
-    border: 1px solid rgba(226, 232, 240, 0.95);
-    border-radius: 6px;
+    padding: 3px 8px;
     display: inline-flex;
     flex-direction: row;
     align-items: center;
-    justify-content: center;
-    gap: 4px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    gap: 5px;
     user-select: none;
-    backdrop-filter: blur(4px);
 }
 
-.warehouse-badge-code {
-    font-size: var(--text-2xs);
-    font-weight: var(--font-weight-bold);
-    text-transform: uppercase;
-    color: var(--c-slate-500);
+.warehouse-stock-consolidated-btn:hover {
+    transform: translateY(-1px);
+}
+
+.warehouse-stock-consolidated-btn:active {
+    transform: translateY(0);
+}
+
+.consolidated-icon {
+    font-size: 11px;
     line-height: 1;
-    letter-spacing: normal;
 }
 
-.warehouse-badge-qty {
-    font-size: var(--text-11px);
-    font-weight: var(--font-weight-bold);
-    color: var(--c-slate-800);
+.consolidated-label {
+    font-size: var(--text-2xs, 10px);
+    font-weight: var(--font-weight-semibold, 600);
+    text-transform: uppercase;
+    color: var(--color-text-secondary, #64748b);
+    line-height: 1;
+    letter-spacing: 0.02em;
+}
+
+.consolidated-qty {
+    font-size: var(--text-xs, 12px);
+    font-weight: var(--font-weight-bold, 700);
+    color: var(--color-text-primary, #0f172a);
     line-height: 1;
     font-variant-numeric: tabular-nums;
+    background: var(--color-bg-muted, #f1f5f9);
+    padding: 2px 7px;
+    border-radius: 4px;
 }
 
-.warehouse-stock-badge.is-empty {
+.warehouse-stock-consolidated-btn.is-empty {
     opacity: 0.65;
     background: rgba(248, 250, 252, 0.85);
+    border-color: rgba(226, 232, 240, 0.8);
+    cursor: not-allowed;
 }
 
-.warehouse-stock-badge.is-empty .warehouse-badge-qty {
-    color: var(--color-text-tertiary);
+.warehouse-stock-consolidated-btn.is-empty .consolidated-qty {
+    color: var(--color-text-tertiary, #94a3b8);
 }

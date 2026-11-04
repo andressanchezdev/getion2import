@@ -37,9 +37,16 @@ export const OPERATIONS_ENTRIES: Partial<Record<DrawerFormKind, FormEntry>> = {
   },
   createTransfer: {
     icon: shippingIcon,
-    title: () => 'Nuevo Traslado',
-    subtitle: 'Reubicación entre bodegas',
-    render: (payload) => createElement(CreateTransferForm, { initialPayload: payload as CreateTransferInitialPayload }),
+    title: (payload) => {
+      const p = payload as CreateTransferInitialPayload | undefined
+      return p?.product ? `Solicitud: ${p.product.code}` : 'Nuevo Traslado'
+    },
+    subtitle: 'Reubicación y solicitud entre sedes',
+    render: (payload) =>
+      createElement(CreateTransferForm, {
+        key: String((payload as CreateTransferInitialPayload | undefined)?.product?.id || 'transfer-draft'),
+        initialPayload: payload as CreateTransferInitialPayload,
+      }),
   },
   receiveTransfer: {
     icon: shippingIcon,

@@ -76,20 +76,18 @@ export const PurchasesTable: React.FC<{ mode: PurchasesMode }> = ({ mode }) => {
               ))}
             </select>
           </label>
-          {!receiving && (
-            <label className="purchases-toolbar-filter">
-              <span>Estado:</span>
-              <select
-                className="purchases-toolbar-select"
-                value={list.status}
-                onChange={(e) => list.setStatus((e.target.value || 'all') as PurchaseStatus | 'all')}
-              >
-                {PURCHASE_STATUS_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            </label>
-          )}
+          <label className="purchases-toolbar-filter">
+            <span>Estado:</span>
+            <select
+              className="purchases-toolbar-select"
+              value={list.status}
+              onChange={(e) => list.setStatus((e.target.value || 'all') as PurchaseStatus | 'all')}
+            >
+              {PURCHASE_STATUS_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </label>
         </div>
         <div className="purchases-toolbar-actions">
           <span className="purchases-count" aria-live="polite">

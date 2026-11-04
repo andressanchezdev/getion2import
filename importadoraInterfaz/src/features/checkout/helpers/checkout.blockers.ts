@@ -20,6 +20,7 @@ export interface BlockerInput {
   employeeId: number
   onPayment: boolean
   transferMissingProof: boolean
+  cashBlocked?: boolean
 }
 
 // lista de lo que falta; vacía = se puede continuar
@@ -35,5 +36,6 @@ export const checkoutBlockers = (input: BlockerInput): string[] => {
   }
   if (input.needsEmployee && input.employeeId <= 0) missing.push('Elige el empleado al que se asigna la venta.')
   if (input.onPayment && input.transferMissingProof) missing.push('Adjunta el comprobante de la transferencia.')
+  if (input.onPayment && input.cashBlocked) missing.push('La caja de la bodega está cerrada: abre el turno o elige otra forma de pago.')
   return missing
 }

@@ -6,6 +6,8 @@ import './BankReconciliationScreen.css'
 import { FilterSelect } from '@/global/components/UI/molecules/filters/FilterSelect'
 import { SearchBar } from '@/global/components/UI/molecules/filters/SearchBar'
 import { Pagination } from '@/global/components/UI/molecules/table/Pagination'
+import { useAppSelector } from '@/global/hooks/store/useRedux'
+import { selectWarehouses } from '@/features/warehouses'
 import { BankRecordsTable } from '../components/table/BankRecordsTable'
 import { BankKpis } from '../components/upload/BankKpis'
 import { BankUploadButton } from '../components/upload/BankUploadButton'
@@ -15,8 +17,17 @@ import type { BankRecordStatus } from '../types/bank.types'
 
 export const BankReconciliationScreen: React.FC = () => {
   const bank = useBankRecords()
+  const warehouses = useAppSelector(selectWarehouses)
   const { filters } = bank
-  const hasFilters = filters.status !== INITIAL_BANK_FILTERS.status || Boolean(filters.query || filters.from || filters.to)
+  const hasFilters =
+    filters.status !== INITIAL_BANK_FILTERS.status ||
+    Boolean(filters.warehouseId || filters.query || filters.from || filters.to)
+
+  const warehouseOptions = [
+    { value: 'all', label: 'Todas las bodegas' },
+    ...warehouses.map((wh) => ({ value: String(wh.id), label: wh.name })),
+  ]
+
   const message =
     bank.status === 'failed'
       ? bank.error
@@ -35,6 +46,13 @@ export const BankReconciliationScreen: React.FC = () => {
         <div className="bank-filters">
           <SearchBar value={bank.text} onChange={bank.setText} hasActiveFilters={hasFilters} onClear={bank.clearFilters} placeholder="Buscar por descripción del movimiento..." className="bank-search" />
           <FilterSelect label="Estado" emptyValue="all" value={filters.status} options={BANK_STATUS_OPTIONS} onChange={(value) => bank.setFilter({ status: (value || 'all') as BankRecordStatus | 'all' })} />
+          <FilterSelect
+            label="Bodega"
+            emptyValue="all"
+            value={filters.warehouseId ? String(filters.warehouseId) : 'all'}
+            options={warehouseOptions}
+            onChange={(value) => bank.setFilter({ warehouseId: !value || value === 'all' ? null : Number(value) })}
+          />
           <input type="date" className="bank-date" aria-label="Desde" value={filters.from} onChange={(e) => bank.setFilter({ from: e.target.value })} />
           <input type="date" className="bank-date" aria-label="Hasta" value={filters.to} onChange={(e) => bank.setFilter({ to: e.target.value })} />
           <BankUploadButton />

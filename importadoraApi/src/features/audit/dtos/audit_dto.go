@@ -28,7 +28,9 @@ type AuditLogFilterQuery struct {
 	CompanyID *int64
 	Entity    string
 	Action    string
+	ActorType string
+	From      string
+	To        string
 	Page      int
 	PageSize  int
 }
-

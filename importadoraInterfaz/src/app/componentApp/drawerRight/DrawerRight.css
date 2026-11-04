@@ -9,6 +9,7 @@
   background-color: var(--bg-drawer);
   user-select: none;
   transition: width var(--duration-enter) var(--ease-out);
+  will-change: width;
 }
 
 .drawer-right-open {
@@ -44,6 +45,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .drawer-right,
   .drawer-right-panel {
     transition: none;

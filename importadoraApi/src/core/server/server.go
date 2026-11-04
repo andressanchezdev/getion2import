@@ -32,6 +32,9 @@ func NewServer(cfg *config.Config) *Server {
 
 	// Middlewares globales estándar
 	e.Use(middleware.Recover())
+	e.Use(middleware.GzipWithConfig(middleware.GzipConfig{
+		Level: 5,
+	}))
 	e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
 		Format: "${time_rfc3339} | ${status} | ${latency_human} | ${remote_ip} | ${method} ${uri}\n",
 	}))
@@ -89,4 +92,3 @@ func (s *Server) Start() error {
 func (s *Server) Echo() *echo.Echo {
 	return s.echo
 }
-

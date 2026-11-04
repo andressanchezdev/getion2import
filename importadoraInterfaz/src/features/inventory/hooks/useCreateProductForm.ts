@@ -62,11 +62,31 @@ export const useCreateProductForm = () => {
   // valida y crea el producto; con ubicación abre las etiquetas QR, sin ella cierra el panel
   const submit = async (event: React.FormEvent) => {
     event.preventDefault()
-    if (!code.trim() || !name.trim()) return setError('El código y el nombre del producto son obligatorios.')
-    if (!categoryId) return setError('Elige la categoría del producto.')
+    if (!code.trim() || !name.trim()) {
+      const msg = 'El código y el nombre del producto son obligatorios.'
+      setError(msg)
+      toast.warning('No se puede crear el producto', { description: msg })
+      return
+    }
+    if (!categoryId) {
+      const msg = 'Elige la categoría del producto.'
+      setError(msg)
+      toast.warning('No se puede crear el producto', { description: msg })
+      return
+    }
     const chosen = places.filter((place) => place.location)
-    if (chosen.length > 0 && !warehouseId) return setError('Elige la bodega donde queda guardado.')
-    if (new Set(chosen.map((place) => place.location)).size !== chosen.length) return setError('Una ubicación está repetida: cada una se elige una sola vez.')
+    if (chosen.length > 0 && !warehouseId) {
+      const msg = 'Elige la bodega donde queda guardado.'
+      setError(msg)
+      toast.warning('No se puede crear el producto', { description: msg })
+      return
+    }
+    if (new Set(chosen.map((place) => place.location)).size !== chosen.length) {
+      const msg = 'Una ubicación está repetida: cada una se elige una sola vez.'
+      setError(msg)
+      toast.warning('No se puede crear el producto', { description: msg })
+      return
+    }
     setSaving(true)
     setError(null)
     try {

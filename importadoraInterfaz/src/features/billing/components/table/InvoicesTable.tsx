@@ -40,8 +40,9 @@ export const InvoicesTable: React.FC = () => {
           hasActiveFilters={list.hasFilters}
           onClear={list.clearFilters}
           placeholder="Buscar por número de factura o pedido..."
+          className="invoices-search"
         />
-        <div className="invoices-toolbar-filters">
+        <div className="invoices-toolbar-middle">
           <label className="invoices-toolbar-filter">
             <span>Bodega:</span>
             <select
@@ -99,7 +100,7 @@ export const InvoicesTable: React.FC = () => {
                   <td>
                     <button
                       type="button"
-                      style={{ background: 'none', border: 'none', padding: 0, color: 'var(--primary-600, #2563eb)', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}
+                      style={{ background: 'none', border: 'none', padding: 0, color: 'var(--color-primary, #2563eb)', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}
                       onClick={() => setSelectedInvoiceId(invoice.id)}
                       title="Ver detalle completo de la factura"
                     >
@@ -116,7 +117,7 @@ export const InvoicesTable: React.FC = () => {
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                       <button
                         type="button"
-                        style={{ background: 'none', border: 'none', padding: 0, color: 'var(--primary-600, #2563eb)', cursor: 'pointer', fontSize: '0.85rem' }}
+                        style={{ background: 'none', border: 'none', padding: 0, color: 'var(--color-primary, #2563eb)', cursor: 'pointer', fontSize: '0.85rem' }}
                         onClick={() => setSelectedInvoiceId(invoice.id)}
                       >
                         Ver Detalle

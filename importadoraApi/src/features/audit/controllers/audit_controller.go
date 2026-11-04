@@ -27,10 +27,13 @@ func (ctrl *AuditController) List(c echo.Context) error {
 	params := utils.ParsePagination(c)
 
 	filter := dtos.AuditLogFilterQuery{
-		Entity:   c.QueryParam("entity"),
-		Action:   c.QueryParam("action"),
-		Page:     params.Page,
-		PageSize: params.PageSize,
+		Entity:    c.QueryParam("entity"),
+		Action:    c.QueryParam("action"),
+		ActorType: c.QueryParam("actorType"),
+		From:      c.QueryParam("from"),
+		To:        c.QueryParam("to"),
+		Page:      params.Page,
+		PageSize:  params.PageSize,
 	}
 
 	list, meta, err := ctrl.service.List(c.Request().Context(), actor, filter)
@@ -40,4 +43,3 @@ func (ctrl *AuditController) List(c echo.Context) error {
 
 	return utils.RespondPaginated(c, "Trazabilidad de auditoría obtenida", list, *meta)
 }
-

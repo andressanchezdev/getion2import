@@ -1,11 +1,16 @@
-// GeneralReportScreen · reporte integral de operaciones de la tienda: 4 cards estructuradas con ventas/caja, traslados/afectación física, stock bajo/agotados y productos más movidos
-import React from 'react'
+// GeneralReportScreen · reporte integral de operaciones de la tienda: toolbar canónico, KPIs estructurados y tablas de stock crítico y rotación
+import React, { useState } from 'react'
 import { formatCOP } from '@/global/helpers/formatting/format'
+import { Pill } from '@/global/components/UI/atoms/Pill'
+import { useAppSelector } from '@/global/hooks/store/useRedux'
+import { selectWarehouses } from '@/features/warehouses'
 import { useGeneralReport } from '../hooks/useGeneralReport'
 import './GeneralReportScreen.css'
 
 export const GeneralReportScreen: React.FC = () => {
-  const { report, loading } = useGeneralReport()
+  const { report, loading, reload } = useGeneralReport()
+  const warehouses = useAppSelector(selectWarehouses)
+  const [selectedWarehouse, setSelectedWarehouse] = useState<string>('all')
 
   const todayRevenue = report?.todayRevenue ?? 0
   const todayCash = report?.todayCash ?? (todayRevenue > 0 ? Math.round(todayRevenue * 0.45) : 0)
@@ -20,135 +25,151 @@ export const GeneralReportScreen: React.FC = () => {
 
   return (
     <div className="gen-report-screen">
-      {/* Grid de 4 Cards Maestras */}
-      <div className="gen-report-cards-grid">
-        {/* CARD 1: Reporte de Ventas y Caja */}
-        <section className="gen-report-card">
-          <div className="gen-report-card-header">
+      {/* Toolbar general */}
+      <div className="gen-report-card">
+        <div className="gen-report-toolbar">
+          <div className="gen-report-toolbar-left">
+            <h3 className="gen-report-heading">Reporte Operativo y Comercial</h3>
+            <span className="gen-report-subheading">Consolidado general de ventas, recaudos, rotación y alertas de inventario</span>
+          </div>
+
+          <div className="gen-report-toolbar-middle">
+            <label className="gen-report-toolbar-filter">
+              <span>Sede / Bodega:</span>
+              <select
+                className="gen-report-toolbar-select"
+                value={selectedWarehouse}
+                onChange={(e) => setSelectedWarehouse(e.target.value)}
+              >
+                <option value="all">Todas las sedes</option>
+                {warehouses.map((wh) => (
+                  <option key={wh.id} value={String(wh.id)}>{wh.name}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="gen-report-toolbar-actions">
+            <Pill tone="blue">Corte en tiempo real</Pill>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={reload}
+              disabled={loading}
+            >
+              {loading ? 'Actualizando…' : '🔄 Actualizar'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Grid de KPIs principales */}
+      <div className="gen-report-kpi-grid">
+        <div className="gen-report-kpi-card">
+          <div className="gen-report-kpi-header">
+            <span className="gen-report-kpi-icon">💵</span>
+            <span className="gen-report-kpi-title">Ventas Totales Hoy</span>
+          </div>
+          <div className="gen-report-kpi-amount is-revenue">{formatCOP(todayRevenue)}</div>
+          <div className="gen-report-kpi-meta">
+            <span>{report?.todaySalesCount ?? 0} pedidos procesados</span>
+            <span className="gen-report-kpi-badge is-success">{report?.todayCompleted ?? 0} completados</span>
+          </div>
+        </div>
+
+        <div className="gen-report-kpi-card">
+          <div className="gen-report-kpi-header">
+            <span className="gen-report-kpi-icon">💰</span>
+            <span className="gen-report-kpi-title">Efectivo en Caja</span>
+          </div>
+          <div className="gen-report-kpi-amount">{formatCOP(todayCash)}</div>
+          <div className="gen-report-kpi-meta">
+            <span>Recaudado en turno de mostrador</span>
+          </div>
+        </div>
+
+        <div className="gen-report-kpi-card">
+          <div className="gen-report-kpi-header">
+            <span className="gen-report-kpi-icon">🏦</span>
+            <span className="gen-report-kpi-title">Transferencias</span>
+          </div>
+          <div className="gen-report-kpi-amount">{formatCOP(todayTransfer)}</div>
+          <div className="gen-report-kpi-meta">
+            <span>Ingresos bancarios registrados</span>
+          </div>
+        </div>
+
+        <div className="gen-report-kpi-card">
+          <div className="gen-report-kpi-header">
+            <span className="gen-report-kpi-icon">💳</span>
+            <span className="gen-report-kpi-title">Crédito a Clientes</span>
+          </div>
+          <div className="gen-report-kpi-amount">{formatCOP(todayCredit)}</div>
+          <div className="gen-report-kpi-meta">
+            <span>Cuentas por cobrar generadas</span>
+          </div>
+        </div>
+
+        <div className="gen-report-kpi-card">
+          <div className="gen-report-kpi-header">
+            <span className="gen-report-kpi-icon">📦</span>
+            <span className="gen-report-kpi-title">Flujo Físico y Traslados</span>
+          </div>
+          <div className="gen-report-kpi-amount is-transfers">{physicalUnitsMoved} <small>und</small></div>
+          <div className="gen-report-kpi-meta">
+            <span>{transfersIn} entradas · {transfersOut} despachos</span>
+            {transfersPending > 0 && <span className="gen-report-kpi-badge is-warning">{transfersPending} en tránsito</span>}
+          </div>
+        </div>
+      </div>
+
+      {/* Tablas canónicas de información operativa */}
+      <div className="gen-report-sections-grid">
+        {/* Tabla 1: Stock Crítico */}
+        <div className="gen-report-card">
+          <div className="gen-report-section-header">
             <div>
-              <h4 className="gen-report-card-title">💵 Ventas y Caja del Día</h4>
-              <p className="gen-report-card-desc">
-                Facturación global, medios de recaudo y cartera/crédito otorgado hoy.
-              </p>
+              <h4 className="gen-report-section-title">⚠️ Repuestos con Stock Bajo o Agotados</h4>
+              <p className="gen-report-section-desc">Artículos bajo el umbral mínimo para sugerir reposición inmediata</p>
             </div>
-            <span className="gen-report-badge is-success">
-              {report?.todayCompleted ?? 0} cerrados
-            </span>
-          </div>
-
-          <div className="gen-report-card-body">
-            <div className="gen-report-kpi-highlight">
-              <span className="gen-report-kpi-label">Total Facturado Hoy</span>
-              <strong className="gen-report-kpi-value is-sales">{formatCOP(todayRevenue)}</strong>
-              <small>{report?.todaySalesCount ?? 0} pedidos procesados en la tienda</small>
-            </div>
-
-            <div className="gen-report-submetrics-list">
-              <div className="gen-report-submetric-item">
-                <span className="submetric-name">Efectivo Recibido en Caja</span>
-                <strong className="submetric-val is-cash">{formatCOP(todayCash)}</strong>
-              </div>
-              <div className="gen-report-submetric-item">
-                <span className="submetric-name">Transferencias Bancarias</span>
-                <strong className="submetric-val is-transfer">{formatCOP(todayTransfer)}</strong>
-              </div>
-              <div className="gen-report-submetric-item">
-                <span className="submetric-name">Crédito Utilizado por Clientes</span>
-                <strong className="submetric-val is-credit">{formatCOP(todayCredit)}</strong>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* CARD 2: Información General de Traslados y Afectaciones Físicas */}
-        <section className="gen-report-card">
-          <div className="gen-report-card-header">
-            <div>
-              <h4 className="gen-report-card-title">📦 Traslados y Flujo Físico</h4>
-              <p className="gen-report-card-desc">
-                Movimientos entre bodegas y afectación de existencias almacenadas.
-              </p>
-            </div>
-            <span className="gen-report-badge is-info">
-              {transfersTotal} traslados
-            </span>
-          </div>
-
-          <div className="gen-report-card-body">
-            <div className="gen-report-kpi-highlight">
-              <span className="gen-report-kpi-label">Unidades Físicas Desplazadas</span>
-              <strong className="gen-report-kpi-value is-transfers">{physicalUnitsMoved} und</strong>
-              <small>Artículos reubicados y abastecidos durante el día</small>
-            </div>
-
-            <div className="gen-report-submetrics-list">
-              <div className="gen-report-submetric-item">
-                <span className="submetric-name">Entradas Recibidas en Sede</span>
-                <strong className="submetric-val is-in">{transfersIn} operaciones</strong>
-              </div>
-              <div className="gen-report-submetric-item">
-                <span className="submetric-name">Salidas Despachadas a Otras Sedes</span>
-                <strong className="submetric-val is-out">{transfersOut} despachos</strong>
-              </div>
-              <div className="gen-report-submetric-item">
-                <span className="submetric-name">Traslados Pendientes / En Tránsito</span>
-                <strong className="submetric-val is-pending">{transfersPending} pendientes</strong>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* CARD 3: Productos Bajos de Stock o Agotados */}
-        <section className="gen-report-card gen-report-card-wide">
-          <div className="gen-report-card-header">
-            <div>
-              <h4 className="gen-report-card-title">⚠️ Productos con Stock Bajo o Agotados</h4>
-              <p className="gen-report-card-desc">
-                Repuestos que han alcanzado el umbral crítico de abastecimiento o agotamiento total.
-              </p>
-            </div>
-            <span className="gen-report-badge is-warning">
+            <Pill tone={report?.lowStockProducts.length ? 'amber' : 'green'}>
               {report?.lowStockProducts.length ?? 0} en alerta
-            </span>
+            </Pill>
           </div>
 
-          <div className="gen-report-table-wrap table-scroll">
-            <table className="gen-report-table">
+          <div className="gen-report-table-responsive table-scroll">
+            <table className="inv-table">
               <thead>
                 <tr>
                   <th>Código</th>
-                  <th>Nombre del Repuesto</th>
+                  <th>Producto</th>
                   <th>Categoría</th>
-                  <th className="align-center">Unidades Físicas</th>
+                  <th style={{ textAlign: 'center' }}>Disponible</th>
                   <th>Estado</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={5} className="gen-report-empty">Cargando inventario crítico...</td>
+                    <td colSpan={5} className="gen-report-empty">Cargando inventario crítico…</td>
                   </tr>
                 ) : (report?.lowStockProducts.length ?? 0) === 0 ? (
                   <tr>
-                    <td colSpan={5} className="gen-report-empty">
-                      ✓ No hay productos con alertas de stock bajo en este momento.
-                    </td>
+                    <td colSpan={5} className="gen-report-empty">✓ No hay productos con alertas de stock bajo en este momento.</td>
                   </tr>
                 ) : (
                   report?.lowStockProducts.map((p) => (
                     <tr key={p.id}>
-                      <td><strong className="gen-report-code">{p.code}</strong></td>
-                      <td><span className="gen-report-product-name">{p.name}</span></td>
-                      <td><span className="gen-report-tag">{p.category}</span></td>
-                      <td className="align-center">
-                        <span className={`gen-report-stock-pill ${p.available === 0 ? 'is-out' : 'is-low'}`}>
-                          {p.available} und
-                        </span>
+                      <td><span className="gen-report-code">{p.code}</span></td>
+                      <td><strong>{p.name}</strong></td>
+                      <td><span className="gen-report-category">{p.category}</span></td>
+                      <td style={{ textAlign: 'center' }}>
+                        <Pill tone={p.available === 0 ? 'red' : 'amber'}>{p.available} und</Pill>
                       </td>
                       <td>
-                        <span className={`gen-report-status-badge ${p.available === 0 ? 'is-danger' : 'is-warning'}`}>
+                        <Pill tone={p.available === 0 ? 'red' : 'amber'}>
                           {p.available === 0 ? 'Agotado' : 'Bajo Stock'}
-                        </span>
+                        </Pill>
                       </td>
                     </tr>
                   ))
@@ -156,36 +177,34 @@ export const GeneralReportScreen: React.FC = () => {
               </tbody>
             </table>
           </div>
-        </section>
+        </div>
 
-        {/* CARD 4: Productos Más Movidos ese Día (Alta Rotación) */}
-        <section className="gen-report-card gen-report-card-wide">
-          <div className="gen-report-card-header">
+        {/* Tabla 2: Alta Rotación */}
+        <div className="gen-report-card">
+          <div className="gen-report-section-header">
             <div>
-              <h4 className="gen-report-card-title">🔥 Productos Más Movidos del Día</h4>
-              <p className="gen-report-card-desc">
-                Repuestos con el mayor volumen de salida y rotación continua en las ventas de hoy.
-              </p>
+              <h4 className="gen-report-section-title">🔥 Productos de Mayor Rotación</h4>
+              <p className="gen-report-section-desc">Repuestos con el mayor volumen de unidades vendidas y recaudos del día</p>
             </div>
-            <span className="gen-report-badge is-rotation">
+            <Pill tone="blue">
               {report?.highRotationProducts.length ?? 0} en rotación
-            </span>
+            </Pill>
           </div>
 
-          <div className="gen-report-table-wrap table-scroll">
-            <table className="gen-report-table">
+          <div className="gen-report-table-responsive table-scroll">
+            <table className="inv-table">
               <thead>
                 <tr>
                   <th>Código</th>
-                  <th>Repuesto</th>
-                  <th className="align-right">Unidades Vendidas</th>
-                  <th className="align-right">Total Facturado</th>
+                  <th>Producto</th>
+                  <th style={{ textAlign: 'right' }}>Unidades Vendidas</th>
+                  <th style={{ textAlign: 'right' }}>Total Facturado</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={4} className="gen-report-empty">Cargando rotación de productos...</td>
+                    <td colSpan={4} className="gen-report-empty">Cargando rotación de productos…</td>
                   </tr>
                 ) : (report?.highRotationProducts.length ?? 0) === 0 ? (
                   <tr>
@@ -194,19 +213,19 @@ export const GeneralReportScreen: React.FC = () => {
                 ) : (
                   report?.highRotationProducts.map((p) => (
                     <tr key={p.productId}>
-                      <td><strong className="gen-report-code">{p.code}</strong></td>
-                      <td><span className="gen-report-product-name">{p.name}</span></td>
-                      <td className="align-right">
-                        <strong className="gen-report-units-sold">{p.unitsSold} und</strong>
+                      <td><span className="gen-report-code">{p.code}</span></td>
+                      <td><strong>{p.name}</strong></td>
+                      <td style={{ textAlign: 'right' }}>
+                        <strong>{p.unitsSold} und</strong>
                       </td>
-                      <td className="align-right">{formatCOP(p.totalAmount)}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 600 }}>{formatCOP(p.totalAmount)}</td>
                     </tr>
                   ))
                 )}
               </tbody>
             </table>
           </div>
-        </section>
+        </div>
       </div>
     </div>
   )

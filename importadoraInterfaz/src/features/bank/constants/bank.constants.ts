@@ -5,7 +5,7 @@ import type { BankFilters, BankState } from '../types/bank.types'
 
 export const BANK_PAGE_SIZE = DEFAULT_PAGE_SIZE
 
-export const INITIAL_BANK_FILTERS: BankFilters = { status: 'pending', query: '', from: '', to: '' }
+export const INITIAL_BANK_FILTERS: BankFilters = { status: 'pending', warehouseId: null, query: '', from: '', to: '' }
 
 // la lista arranca vacía: no hay datos de ejemplo; todo sale del PDF que se sube
 export const INITIAL_BANK_STATE: BankState = {
