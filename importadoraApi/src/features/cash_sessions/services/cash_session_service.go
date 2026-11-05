@@ -75,8 +75,7 @@ func (s *CashSessionService) Open(ctx context.Context, actor *middlewares.ActorC
 		return nil, utils.BadRequest("INVALID_AMOUNT", "El fondo inicial no puede ser negativo.")
 	}
 
-	var whCompanyID int64
-	if err := s.pool.QueryRow(ctx, "SELECT company_id FROM warehouses WHERE id = $1", req.WarehouseID).Scan(&whCompanyID); err == nil && whCompanyID > 0 {
+	if whCompanyID, err := s.repo.FindWarehouseCompanyID(ctx, s.pool, req.WarehouseID); err == nil && whCompanyID > 0 {
 		companyID = whCompanyID
 	}
 
@@ -258,22 +257,12 @@ func (s *CashSessionService) resolveActorName(ctx context.Context, actor *middle
 		return "Super Administrador"
 	}
 	if actor.ActorType == types.ActorEmployee {
-		var firstName, lastName string
-		err := s.pool.QueryRow(ctx, "SELECT first_name, COALESCE(last_name, '') FROM employees WHERE id = $1", actor.ActorID).Scan(&firstName, &lastName)
-		if err == nil {
-			full := strings.TrimSpace(firstName + " " + lastName)
-			if full != "" {
-				return full
-			}
+		if full, err := s.repo.ResolveActorName(ctx, s.pool, "employees", actor.ActorID); err == nil && full != "" {
+			return full
 		}
 	} else if actor.ActorType == types.ActorAdmin {
-		var firstName, lastName string
-		err := s.pool.QueryRow(ctx, "SELECT first_name, COALESCE(last_name, '') FROM admins WHERE id = $1", actor.ActorID).Scan(&firstName, &lastName)
-		if err == nil {
-			full := strings.TrimSpace(firstName + " " + lastName)
-			if full != "" {
-				return full
-			}
+		if full, err := s.repo.ResolveActorName(ctx, s.pool, "admins", actor.ActorID); err == nil && full != "" {
+			return full
 		}
 	}
 	if actor.Email != "" {

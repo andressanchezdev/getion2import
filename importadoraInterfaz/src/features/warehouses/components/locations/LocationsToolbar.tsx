@@ -5,8 +5,7 @@ import { FilterSelect } from '@/global/components/UI/molecules/filters/FilterSel
 import { SearchBar } from '@/global/components/UI/molecules/filters/SearchBar'
 import { useAppDispatch } from '@/global/hooks/store/useRedux'
 import { openDrawerForm } from '@/features/navigation'
-import { locationLabel } from '@/features/locations/helpers/locations.adapter'
-import type { WarehouseLocation } from '@/features/locations/types/locations.types'
+import { locationLabel, type WarehouseLocation } from '@/features/locations'
 import type { Warehouse } from '../../types/warehouse.types'
 
 interface Props {

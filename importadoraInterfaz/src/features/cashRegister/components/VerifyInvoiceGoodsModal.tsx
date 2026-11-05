@@ -2,8 +2,8 @@
 // conecta con: CashOrdersPanel (lo abre), useSaleLines (renglones del pedido) y VerifyLinesTable (tabla con casillas)
 // ojo: solo se autoriza la salida cuando todos los renglones están marcados; el marcado es local al modal
 import React, { useState } from 'react'
-import { formatCurrency } from '@/global/helpers/format'
-import { notify } from '@/global/helpers/toast'
+import { formatCurrency } from '@/global/helpers/formatting/format'
+import { notify } from '@/global/helpers/feedback/toast'
 import { useSaleLines } from '../hooks/useSaleLines'
 import { VerifyLinesTable } from './VerifyLinesTable'
 import './VerifyInvoiceGoodsModal.css'

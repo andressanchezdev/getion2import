@@ -3,7 +3,7 @@
 // ojo: un producto puede quedar en VARIAS ubicaciones de la misma bodega (cada una con sus unidades); al crear con ubicaciones el panel pasa a las etiquetas QR (una por ubicación, para pegar en cada estante); sin ubicación se cierra
 import { useState } from 'react'
 import { closeDrawerForm, openDrawerForm } from '@/features/navigation'
-import { selectBrands, selectCategories, selectMotoModels, useLoadCatalogs } from '@/features/catalogs'
+import { selectActiveBrands, selectActiveCategories, selectActiveMotoModels, useLoadCatalogs } from '@/features/catalogs'
 import { productLabel, useLocations } from '@/features/locations'
 import { useWarehouses } from '@/features/warehouses'
 import type { ProductPrices } from '@/features/shop'
@@ -17,9 +17,9 @@ const EMPTY_PRICES: ProductPrices = { p0: 0, p1: 0, p2: 0, p3: 0 }
 export const useCreateProductForm = () => {
   const dispatch = useAppDispatch()
   useLoadCatalogs()
-  const brands = useAppSelector(selectBrands)
-  const categories = useAppSelector(selectCategories)
-  const models = useAppSelector(selectMotoModels)
+  const brands = useAppSelector(selectActiveBrands)
+  const categories = useAppSelector(selectActiveCategories)
+  const models = useAppSelector(selectActiveMotoModels)
   const { warehouses } = useWarehouses() // la lista de bodegas para elegir dónde queda guardado (la pide si todavía no está)
   const activeWarehouseId = useAppSelector((state) => state.ui.activeWarehouseId)
 

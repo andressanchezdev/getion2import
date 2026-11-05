@@ -54,6 +54,9 @@ func validateDatabase(cfg *Config) error {
 
 // validateSecurity revisa que la configuración de seguridad (llaves y tiempos de los tokens) esté completa y sea válida.
 func validateSecurity(cfg *Config) error {
+	if cfg.AppEnv == "production" && cfg.JWTSecret == "importadora_v4_secret_key_dev_2026_secure" {
+		return fmt.Errorf("JWT_SECRET no puede usar la clave por defecto de desarrollo en entorno de producción")
+	}
 	if len(strings.TrimSpace(cfg.JWTSecret)) < 16 {
 		return fmt.Errorf("JWT_SECRET debe tener al menos 16 caracteres para garantizar seguridad criptográfica")
 	}

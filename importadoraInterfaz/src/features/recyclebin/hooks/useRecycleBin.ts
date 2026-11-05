@@ -41,7 +41,13 @@ export const useRecycleBin = () => {
   }, [tableFilter, statusFilter, search, page])
 
   useEffect(() => {
-    loadItems()
+    let cancelled = false
+    void Promise.resolve().then(() => {
+      if (!cancelled) void loadItems()
+    })
+    return () => {
+      cancelled = true
+    }
   }, [loadItems])
 
   const handleRestore = async (item: RecycleBinItem) => {

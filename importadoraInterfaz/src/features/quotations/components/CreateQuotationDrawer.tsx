@@ -2,7 +2,7 @@
 // conecta con: QuotationsScreen (lo abre), useQuotationForm (todo el estado y el envío) y las piezas de components/form
 // ojo: el cuerpo se monta solo al abrir, así cada apertura empieza limpia; al crear, el thunk recarga la lista
 import React from 'react'
-import { formatCurrency } from '@/global/helpers/format'
+import { formatCurrency } from '@/global/helpers/formatting/format'
 import { useQuotationForm } from '../hooks/useQuotationForm'
 import { QuotationCustomerPicker } from './form/QuotationCustomerPicker'
 import { QuotationItemsEditor } from './form/QuotationItemsEditor'

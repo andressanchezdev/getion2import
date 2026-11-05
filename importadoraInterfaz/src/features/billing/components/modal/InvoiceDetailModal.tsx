@@ -18,25 +18,25 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({ invoiceI
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!invoiceId) {
-      setInvoice(null)
-      return
-    }
+    if (!invoiceId) return
 
     let isMounted = true
-    setLoading(true)
-    setError(null)
+    void Promise.resolve().then(() => {
+      if (!isMounted) return
+      setLoading(true)
+      setError(null)
 
-    fetchInvoiceById(invoiceId)
-      .then((data) => {
-        if (isMounted) setInvoice(data)
-      })
-      .catch((err) => {
-        if (isMounted) setError(err.message || 'No se pudo cargar la factura')
-      })
-      .finally(() => {
-        if (isMounted) setLoading(false)
-      })
+      fetchInvoiceById(invoiceId)
+        .then((data) => {
+          if (isMounted) setInvoice(data)
+        })
+        .catch((err) => {
+          if (isMounted) setError(err.message || 'No se pudo cargar la factura')
+        })
+        .finally(() => {
+          if (isMounted) setLoading(false)
+        })
+    })
 
     return () => {
       isMounted = false

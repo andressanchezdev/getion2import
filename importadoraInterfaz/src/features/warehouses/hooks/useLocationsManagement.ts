@@ -5,10 +5,7 @@ import { useState } from 'react'
 import { toast } from '@/global/helpers/feedback/toast'
 import { useAppDispatch } from '@/global/hooks/store/useRedux'
 import { openDrawerForm } from '@/features/navigation'
-import { hasStock } from '@/features/locations/helpers/locations.adapter'
-import { useLocationActions } from '@/features/locations/hooks/useLocationActions'
-import { createLocationThunk } from '@/features/locations/thunks/locations.thunks'
-import type { WarehouseLocation } from '@/features/locations/types/locations.types'
+import { hasStock, useLocationActions, createLocationThunk, type WarehouseLocation } from '@/features/locations'
 
 export const useLocationsManagement = (warehouseId: number, warehouseName: string, locations: WarehouseLocation[], reload: () => void) => {
   const dispatch = useAppDispatch()

@@ -1,5 +1,5 @@
-// CashRegisterScreen · Tienda > Caja: el turno de caja de la bodega (resumen y aviso) y, en la barra de pedidos, las acciones de caja
-// conecta con: useCashSession (turno), CashShiftSlider, CashShiftSummary, CashClosedBanner, CashOrdersPanel (pedidos, toolbar y cobro) y navigation (abrir el abono a cartera o registrar gasto)
+// CashRegisterScreen · Tienda > Caja: el turno de caja de la bodega (aviso de apertura) y, en la barra de pedidos, las acciones de caja
+// conecta con: useCashSession (turno), CashShiftSlider, CashClosedBanner, CashOrdersPanel (pedidos, toolbar y cobro) y navigation (abrir el abono a cartera o registrar gasto)
 // ojo: las alertas de error se delegan a toast flotantes; las acciones de caja se ubican a nivel de orders-toolbar-tools
 import React, { useEffect } from 'react'
 import './CashRegisterScreen.css'
@@ -10,7 +10,6 @@ import { toast } from '@/global/helpers/feedback/toast'
 import { CashOrdersPanel } from '../components/orders/CashOrdersPanel'
 import { CashClosedBanner } from '../components/shift/CashClosedBanner'
 import { CashShiftSlider } from '../components/shift/CashShiftSlider'
-import { CashShiftSummary } from '../components/shift/CashShiftSummary'
 import { useCashSession } from '../hooks/useCashSession'
 
 export const CashRegisterScreen: React.FC = () => {
@@ -32,10 +31,6 @@ export const CashRegisterScreen: React.FC = () => {
 
   return (
     <div className="cash-mgmt-screen">
-      <div className="cash-shift-bar">
-        <CashShiftSummary session={cash.session} warehouseName={cash.warehouseName} />
-      </div>
-
       {!cash.loading && !cash.failed && !cash.isOpen && cash.warehouseId > 0 && (
         <CashClosedBanner warehouseName={cash.warehouseName} onOpen={cash.requestOpen} />
       )}

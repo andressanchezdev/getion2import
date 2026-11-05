@@ -1,7 +1,7 @@
 // QuotationItemsEditor · paso 2 de la cotización: buscar productos, agregarlos y ajustar cantidad y precio de cada renglón
 // conecta con: CreateQuotationDrawer; datos y acciones de useQuotationForm
 import React from 'react'
-import { formatCurrency } from '@/global/helpers/format'
+import { formatCurrency } from '@/global/helpers/formatting/format'
 import type { QuotationItemDraft, QuotationProductOption } from '../../types/quotations.types'
 
 interface Props {

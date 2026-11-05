@@ -1,5 +1,5 @@
 // CountDetailModal.tsx · modal para ver y actualizar items de un conteo físico
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import './CountDetailModal.css'
 import { Pill, type PillTone } from '@/global/components/UI/atoms/Pill'
 import { formatDate } from '@/global/helpers/formatting/format'
@@ -25,6 +25,18 @@ const STATUS_LABELS: Record<string, string> = {
   corroborated: 'Corroborado',
 }
 
+const extractInitialQuantities = (count: InventoryCount): Record<number, number> => {
+  const initial: Record<number, number> = {}
+  if (count.items) {
+    for (const item of count.items) {
+      if (item.countedQty != null) {
+        initial[item.stockId] = item.countedQty
+      }
+    }
+  }
+  return initial
+}
+
 export const CountDetailModal: React.FC<Props> = ({
   count,
   onClose,
@@ -32,22 +44,16 @@ export const CountDetailModal: React.FC<Props> = ({
   onVerify,
   onCorroborate,
 }) => {
-  const [quantities, setQuantities] = useState<Record<number, number>>({})
+  const [quantities, setQuantities] = useState<Record<number, number>>(() => extractInitialQuantities(count))
+  const [prevCount, setPrevCount] = useState(count)
+  if (prevCount !== count) {
+    setPrevCount(count)
+    setQuantities(extractInitialQuantities(count))
+  }
+
   const [saving, setSaving] = useState(false)
   const isPending = count.status === 'pending'
   const isVerified = count.status === 'verified'
-
-  useEffect(() => {
-    if (count.items) {
-      const initial: Record<number, number> = {}
-      for (const item of count.items) {
-        if (item.countedQty != null) {
-          initial[item.stockId] = item.countedQty
-        }
-      }
-      setQuantities(initial)
-    }
-  }, [count])
 
   const handleQtyChange = (stockId: number, val: string) => {
     const num = parseInt(val, 10)

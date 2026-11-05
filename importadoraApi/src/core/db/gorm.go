@@ -42,6 +42,7 @@ func ConnectDatabase(ctx context.Context, cfg *config.Config) (*Database, error)
 	// Auto-migración idempotente de columnas y tablas requeridas
 	_, _ = pool.Exec(ctx, "ALTER TABLE products ADD COLUMN IF NOT EXISTS is_new BOOLEAN NOT NULL DEFAULT FALSE;")
 	_, _ = pool.Exec(ctx, "ALTER TABLE warehouses ADD COLUMN IF NOT EXISTS manager_employee_id BIGINT;")
+	_, _ = pool.Exec(ctx, "ALTER TABLE warehouse_locations ADD COLUMN IF NOT EXISTS qr_code TEXT NOT NULL DEFAULT '';")
 	_, _ = pool.Exec(ctx, `
 		CREATE TABLE IF NOT EXISTS screensaver_settings (
 			id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -93,6 +94,17 @@ func ConnectDatabase(ctx context.Context, cfg *config.Config) (*Database, error)
 			transfer_amount NUMERIC(14,2) NOT NULL DEFAULT 0,
 			created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 		);
+	`)
+	_, _ = pool.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS sale_stage_history (
+			id           BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+			sale_id      BIGINT NOT NULL REFERENCES sales(id) ON DELETE CASCADE,
+			stage        VARCHAR(20) NOT NULL,
+			employee_id  BIGINT REFERENCES employees(id) ON DELETE SET NULL,
+			entered_at   TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			left_at      TIMESTAMPTZ
+		);
+		CREATE INDEX IF NOT EXISTS idx_sale_stage_history_sale ON sale_stage_history (sale_id, entered_at);
 	`)
 
 	return gormDb, nil

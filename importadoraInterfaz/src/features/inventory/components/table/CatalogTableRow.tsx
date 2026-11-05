@@ -1,10 +1,11 @@
-// CatalogTableRow — una fila de la tabla de catálogos: logo opcional, id, nombre, estado como dropdown y acciones
-// conecta con: CatalogTable (la pinta) y los iconos de acciones de assets
+// CatalogTableRow — una fila de la tabla de catálogos: logo opcional, id, nombre, estado como dropdown y acciones heredadas de RowActions
+// conecta con: CatalogTable (la pinta), RowActions (acciones en fila) y los iconos de acciones de assets
 import React from 'react'
-import eyeIcon from '@/assets/icons/eye.svg'
-import editIcon from '@/assets/icons/edit.svg'
-import copyIcon from '@/assets/icons/copy.svg'
-import trashIcon from '@/assets/icons/trash.svg'
+import { RowActions } from '@/global/components/UI/molecules/table/RowActions'
+import eyeIcon from '@/assets/icons/eye.svg?raw'
+import editIcon from '@/assets/icons/edit.svg?raw'
+import copyIcon from '@/assets/icons/copy.svg?raw'
+import trashIcon from '@/assets/icons/trash.svg?raw'
 import type { CatalogRow } from '@/features/catalogs'
 
 interface CatalogTableRowProps {
@@ -64,20 +65,14 @@ export const CatalogTableRow: React.FC<CatalogTableRowProps> = ({
       </select>
     </td>
     <td>
-      <div className="inv-actions">
-        <button type="button" className="inv-action-btn" title={`Ver detalles de ${row.name}`} onClick={() => onView(row)}>
-          <img src={eyeIcon} alt="Ver detalles" />
-        </button>
-        <button type="button" className="inv-action-btn" title={`Editar ${singular.toLowerCase()}`} onClick={() => onEdit(row)}>
-          <img src={editIcon} alt="Editar" />
-        </button>
-        <button type="button" className="inv-action-btn" title={`Clonar ${singular.toLowerCase()}`} disabled={cloning} onClick={() => onClone(row)}>
-          <img src={copyIcon} alt="Clonar" />
-        </button>
-        <button type="button" className="inv-action-btn" title={`Eliminar ${singular.toLowerCase()}`} disabled={deleting} onClick={() => onDelete(row)}>
-          <img src={trashIcon} alt="Eliminar" />
-        </button>
-      </div>
+      <RowActions
+        actions={[
+          { key: 'view', label: `Ver detalles de ${row.name}`, icon: eyeIcon, onClick: () => onView(row) },
+          { key: 'edit', label: `Editar ${singular.toLowerCase()}`, icon: editIcon, onClick: () => onEdit(row) },
+          { key: 'clone', label: `Clonar ${singular.toLowerCase()}`, icon: copyIcon, visible: !cloning, onClick: () => onClone(row) },
+          { key: 'delete', label: `Eliminar ${singular.toLowerCase()}`, icon: trashIcon, tone: 'danger', visible: !deleting, onClick: () => onDelete(row) },
+        ]}
+      />
     </td>
   </tr>
 )

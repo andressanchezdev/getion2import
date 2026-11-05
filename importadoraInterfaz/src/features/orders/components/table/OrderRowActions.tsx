@@ -1,11 +1,29 @@
-// OrderRowActions · acciones de una fila de la tabla de pedidos: botón «Ver detalle» y menú ⋯ con el resto (copiar el número y anular)
-// conecta con: OrdersTable (le pasa el pedido y recibe la acción elegida), orders.actions (qué acciones hay), global useClickOutside (cierra el menú con clic fuera o Escape)
-// ojo: el menú es el .pop de la maqueta; anular solo se ofrece a quien tiene el permiso
-import React, { useRef, useState } from 'react'
-import { useClickOutside } from '@/global/hooks/ui/useClickOutside'
+// OrderRowActions · acciones en línea con íconos para una fila de la tabla de pedidos, delegando en el componente padre RowActions
+// conecta con: OrdersTable (le pasa el pedido y recibe la acción elegida), RowActions y orders.actions
+import React from 'react'
+import { RowActions } from '@/global/components/UI/molecules/table/RowActions'
+import eyeIcon from '@/assets/icons/eye.svg?raw'
+import copyIcon from '@/assets/icons/copy.svg?raw'
+import banIcon from '@/assets/icons/ban.svg?raw'
+import listIcon from '@/assets/icons/list.svg?raw'
+import bagIcon from '@/assets/icons/shopping-bag.svg?raw'
+import receiptIcon from '@/assets/icons/receipt.svg?raw'
+import shippingIcon from '@/assets/icons/shipping.svg?raw'
+import checkIcon from '@/assets/icons/check.svg?raw'
 import { getOrderActions, type OrderActionKey } from '../../helpers/orders.actions'
 import type { OrderRow } from '../../types/orders.types'
 import './OrderRowActions.css'
+
+const ACTION_ICONS: Record<OrderActionKey, string> = {
+  detail: eyeIcon,
+  copy: copyIcon,
+  cancel: banIcon,
+  pick: listIcon,
+  pack: bagIcon,
+  invoice: receiptIcon,
+  dispatch: shippingIcon,
+  send: checkIcon,
+}
 
 interface OrderRowActionsProps {
   order: OrderRow
@@ -15,48 +33,22 @@ interface OrderRowActionsProps {
 }
 
 export const OrderRowActions: React.FC<OrderRowActionsProps> = ({ order, canCancel, canAdvance = false, onAction }) => {
-  const [isOpen, setIsOpen] = useState(false)
-  const wrapperRef = useRef<HTMLDivElement>(null)
-  useClickOutside(wrapperRef, () => setIsOpen(false), isOpen)
-
-  const menu = getOrderActions(order, canCancel, canAdvance).filter((action) => action.key !== 'detail')
+  const actions = getOrderActions(order, canCancel, canAdvance)
 
   return (
-    // ojo: los clics de las acciones no abren el detalle de la fila
-    <div className="order-actions" ref={wrapperRef} onClick={(e) => e.stopPropagation()}>
-      <button type="button" className="order-actions-primary" onClick={() => onAction('detail', order)}>
-        Ver detalle
-      </button>
-      <div className="order-actions-wrap">
-        <button
-          type="button"
-          className="order-actions-dots"
-          aria-haspopup="menu"
-          aria-expanded={isOpen}
-          aria-label={`Más acciones del pedido ${order.serial}`}
-          onClick={() => setIsOpen((prev) => !prev)}
-        >
-          ⋯
-        </button>
-        {isOpen && (
-          <div className="order-actions-pop" role="menu">
-            {menu.map((action) => (
-              <button
-                key={action.key}
-                type="button"
-                role="menuitem"
-                className={action.danger ? 'order-actions-item order-actions-item-danger' : 'order-actions-item'}
-                onClick={() => {
-                  setIsOpen(false)
-                  onAction(action.key, order)
-                }}
-              >
-                {action.label}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+    <div className="order-actions" onClick={(e) => e.stopPropagation()}>
+      <RowActions
+        actions={actions.map((action) => {
+          const isAdvance = action.key !== 'detail' && action.key !== 'copy' && action.key !== 'cancel'
+          return {
+            key: action.key,
+            label: `${action.label} (${order.serial})`,
+            icon: ACTION_ICONS[action.key],
+            tone: action.danger ? 'danger' : isAdvance ? 'success' : 'default',
+            onClick: () => onAction(action.key, order),
+          }
+        })}
+      />
     </div>
   )
 }

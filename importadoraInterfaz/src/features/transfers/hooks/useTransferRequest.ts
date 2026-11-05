@@ -2,6 +2,7 @@
 // conecta con: CreateTransferForm (lo usa), useTransferProductSearch (buscar), transfers.request (reglas), createTransferRequestThunk (enviar) y warehouses y auth
 // ojo: cada línea es un repuesto de UNA bodega; al enviar, la API crea un traslado por cada bodega de origen
 import { useState, useEffect } from 'react'
+import { closeDrawerForm } from '@/features/navigation'
 import { toast } from '@/global/helpers/feedback/toast'
 import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { totalUnits, validateRequest } from '../helpers/transfers.request'
@@ -201,6 +202,9 @@ export const useTransferRequest = (initial?: CreateTransferInitialPayload) => {
         dispatch(clearTransferDraft())
       }
       const failedOrigins = new Set(outcome.filter((result) => result.error).map((result) => result.originWarehouseId))
+      if (created > 0 && failedOrigins.size === 0) {
+        dispatch(closeDrawerForm())
+      }
       const failedLines = lines.filter((line) => failedOrigins.has(line.originWarehouseId))
       if (failedLines.length > 0) {
         dispatch(clearTransferDraft())

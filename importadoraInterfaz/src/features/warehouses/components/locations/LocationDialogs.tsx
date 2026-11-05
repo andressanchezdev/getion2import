@@ -2,7 +2,7 @@
 // conecta con: WarehouseLocationsManagement; el estado viene de useLocationsManagement; usa ConfirmDialog (global)
 import React from 'react'
 import { ConfirmDialog } from '@/global/components/UI/molecules/dialogs/ConfirmDialog'
-import type { WarehouseLocation } from '@/features/locations/types/locations.types'
+import type { WarehouseLocation } from '@/features/locations'
 
 interface Props {
   toDeactivate: WarehouseLocation | null

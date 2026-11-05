@@ -1,7 +1,7 @@
 // VerifyLinesTable · tabla del cotejo de mercancía: cada renglón de la factura con su casilla de verificación
 // conecta con: VerifyInvoiceGoodsModal (la usa); los renglones llegan de useSaleLines y el marcado vive en el modal
 import React from 'react'
-import { formatCurrency } from '@/global/helpers/format'
+import { formatCurrency } from '@/global/helpers/formatting/format'
 import type { InvoiceLineItem } from '../types/cash.types'
 
 interface Props {

@@ -39,7 +39,7 @@ export const fetchCurrentUserThunk = createAsyncThunk<AuthUser, void, { rejectVa
     try {
       const user = await getMeRequest()
       return user
-    } catch (error) {
+    } catch {
       return rejectWithValue('No se pudo recuperar el perfil del usuario activo')
     }
   }

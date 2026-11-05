@@ -1,16 +1,47 @@
-// GeneralReportScreen · reporte integral de operaciones de la tienda: toolbar canónico, KPIs estructurados y tablas de stock crítico y rotación
+// GeneralReportScreen · reporte integral de operaciones de la tienda: toolbar canónico de búsqueda y filtro, KPIs estructurados y tablas de stock crítico y rotación
 import React, { useState } from 'react'
 import { formatCOP } from '@/global/helpers/formatting/format'
 import { Pill } from '@/global/components/UI/atoms/Pill'
+import { SearchBar } from '@/global/components/UI/molecules/filters/SearchBar'
 import { useAppSelector } from '@/global/hooks/store/useRedux'
 import { selectWarehouses } from '@/features/warehouses'
+import refreshIcon from '@/assets/icons/refresh.svg?raw'
+import receiptIcon from '@/assets/icons/receipt.svg?raw'
+import walletIcon from '@/assets/icons/wallet.svg?raw'
+import buildingIcon from '@/assets/icons/building.svg?raw'
+import fileTextIcon from '@/assets/icons/file-text.svg?raw'
+import shippingIcon from '@/assets/icons/shipping.svg?raw'
+import databaseIcon from '@/assets/icons/database.svg?raw'
+import shoppingBagIcon from '@/assets/icons/shopping-bag.svg?raw'
+import checkIcon from '@/assets/icons/check.svg?raw'
 import { useGeneralReport } from '../hooks/useGeneralReport'
 import './GeneralReportScreen.css'
 
 export const GeneralReportScreen: React.FC = () => {
   const { report, loading, reload } = useGeneralReport()
   const warehouses = useAppSelector(selectWarehouses)
+  const [search, setSearch] = useState('')
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>('all')
+
+  const needle = search.trim().toLowerCase()
+  const hasFilters = Boolean(needle || selectedWarehouse !== 'all')
+
+  const handleClearFilters = () => {
+    setSearch('')
+    setSelectedWarehouse('all')
+  }
+
+  const lowStockFiltered = (report?.lowStockProducts ?? []).filter(
+    (p) =>
+      !needle ||
+      p.code.toLowerCase().includes(needle) ||
+      p.name.toLowerCase().includes(needle) ||
+      (p.category ?? '').toLowerCase().includes(needle)
+  )
+
+  const highRotationFiltered = (report?.highRotationProducts ?? []).filter(
+    (p) => !needle || p.code.toLowerCase().includes(needle) || p.name.toLowerCase().includes(needle)
+  )
 
   const todayRevenue = report?.todayRevenue ?? 0
   const todayCash = report?.todayCash ?? (todayRevenue > 0 ? Math.round(todayRevenue * 0.45) : 0)
@@ -25,41 +56,42 @@ export const GeneralReportScreen: React.FC = () => {
 
   return (
     <div className="gen-report-screen">
-      {/* Toolbar general */}
+      {/* Toolbar general: únicamente controles de búsqueda y filtrado orientados en la misma dirección */}
       <div className="gen-report-card">
         <div className="gen-report-toolbar">
-          <div className="gen-report-toolbar-left">
-            <h3 className="gen-report-heading">Reporte Operativo y Comercial</h3>
-            <span className="gen-report-subheading">Consolidado general de ventas, recaudos, rotación y alertas de inventario</span>
-          </div>
+          <SearchBar
+            value={search}
+            onChange={setSearch}
+            hasActiveFilters={hasFilters}
+            onClear={handleClearFilters}
+            placeholder="Buscar por código, producto o categoría…"
+            className="gen-report-search"
+          />
 
-          <div className="gen-report-toolbar-middle">
-            <label className="gen-report-toolbar-filter">
-              <span>Sede / Bodega:</span>
-              <select
-                className="gen-report-toolbar-select"
-                value={selectedWarehouse}
-                onChange={(e) => setSelectedWarehouse(e.target.value)}
-              >
-                <option value="all">Todas las sedes</option>
-                {warehouses.map((wh) => (
-                  <option key={wh.id} value={String(wh.id)}>{wh.name}</option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <div className="gen-report-toolbar-actions">
-            <Pill tone="blue">Corte en tiempo real</Pill>
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={reload}
-              disabled={loading}
+          <label className="gen-report-toolbar-filter">
+            <span>Sede / Bodega:</span>
+            <select
+              className="gen-report-toolbar-select"
+              value={selectedWarehouse}
+              onChange={(e) => setSelectedWarehouse(e.target.value)}
             >
-              {loading ? 'Actualizando…' : '🔄 Actualizar'}
-            </button>
-          </div>
+              <option value="all">Todas las sedes</option>
+              {warehouses.map((wh) => (
+                <option key={wh.id} value={String(wh.id)}>{wh.name}</option>
+              ))}
+            </select>
+          </label>
+
+          <button
+            type="button"
+            className="btn-secondary gen-report-refresh-btn"
+            onClick={reload}
+            disabled={loading}
+            title="Actualizar reporte general"
+          >
+            <span className="gen-report-inline-icon" aria-hidden="true" dangerouslySetInnerHTML={{ __html: refreshIcon }} />
+            <span>{loading ? 'Actualizando…' : 'Actualizar'}</span>
+          </button>
         </div>
       </div>
 
@@ -67,19 +99,19 @@ export const GeneralReportScreen: React.FC = () => {
       <div className="gen-report-kpi-grid">
         <div className="gen-report-kpi-card">
           <div className="gen-report-kpi-header">
-            <span className="gen-report-kpi-icon">💵</span>
+            <span className="gen-report-kpi-icon" aria-hidden="true" dangerouslySetInnerHTML={{ __html: receiptIcon }} />
             <span className="gen-report-kpi-title">Ventas Totales Hoy</span>
           </div>
-          <div className="gen-report-kpi-amount is-revenue">{formatCOP(todayRevenue)}</div>
+          <div className="gen-report-kpi-amount">{formatCOP(todayRevenue)}</div>
           <div className="gen-report-kpi-meta">
             <span>{report?.todaySalesCount ?? 0} pedidos procesados</span>
-            <span className="gen-report-kpi-badge is-success">{report?.todayCompleted ?? 0} completados</span>
+            <Pill tone="green">{report?.todayCompleted ?? 0} completados</Pill>
           </div>
         </div>
 
         <div className="gen-report-kpi-card">
           <div className="gen-report-kpi-header">
-            <span className="gen-report-kpi-icon">💰</span>
+            <span className="gen-report-kpi-icon" aria-hidden="true" dangerouslySetInnerHTML={{ __html: walletIcon }} />
             <span className="gen-report-kpi-title">Efectivo en Caja</span>
           </div>
           <div className="gen-report-kpi-amount">{formatCOP(todayCash)}</div>
@@ -90,7 +122,7 @@ export const GeneralReportScreen: React.FC = () => {
 
         <div className="gen-report-kpi-card">
           <div className="gen-report-kpi-header">
-            <span className="gen-report-kpi-icon">🏦</span>
+            <span className="gen-report-kpi-icon" aria-hidden="true" dangerouslySetInnerHTML={{ __html: buildingIcon }} />
             <span className="gen-report-kpi-title">Transferencias</span>
           </div>
           <div className="gen-report-kpi-amount">{formatCOP(todayTransfer)}</div>
@@ -101,7 +133,7 @@ export const GeneralReportScreen: React.FC = () => {
 
         <div className="gen-report-kpi-card">
           <div className="gen-report-kpi-header">
-            <span className="gen-report-kpi-icon">💳</span>
+            <span className="gen-report-kpi-icon" aria-hidden="true" dangerouslySetInnerHTML={{ __html: fileTextIcon }} />
             <span className="gen-report-kpi-title">Crédito a Clientes</span>
           </div>
           <div className="gen-report-kpi-amount">{formatCOP(todayCredit)}</div>
@@ -112,13 +144,13 @@ export const GeneralReportScreen: React.FC = () => {
 
         <div className="gen-report-kpi-card">
           <div className="gen-report-kpi-header">
-            <span className="gen-report-kpi-icon">📦</span>
+            <span className="gen-report-kpi-icon" aria-hidden="true" dangerouslySetInnerHTML={{ __html: shippingIcon }} />
             <span className="gen-report-kpi-title">Flujo Físico y Traslados</span>
           </div>
-          <div className="gen-report-kpi-amount is-transfers">{physicalUnitsMoved} <small>und</small></div>
+          <div className="gen-report-kpi-amount">{physicalUnitsMoved} <small>und</small></div>
           <div className="gen-report-kpi-meta">
             <span>{transfersIn} entradas · {transfersOut} despachos</span>
-            {transfersPending > 0 && <span className="gen-report-kpi-badge is-warning">{transfersPending} en tránsito</span>}
+            {transfersPending > 0 && <Pill tone="amber">{transfersPending} en tránsito</Pill>}
           </div>
         </div>
       </div>
@@ -128,12 +160,15 @@ export const GeneralReportScreen: React.FC = () => {
         {/* Tabla 1: Stock Crítico */}
         <div className="gen-report-card">
           <div className="gen-report-section-header">
-            <div>
-              <h4 className="gen-report-section-title">⚠️ Repuestos con Stock Bajo o Agotados</h4>
-              <p className="gen-report-section-desc">Artículos bajo el umbral mínimo para sugerir reposición inmediata</p>
+            <div className="gen-report-section-title-group">
+              <span className="gen-report-section-icon" aria-hidden="true" dangerouslySetInnerHTML={{ __html: databaseIcon }} />
+              <div>
+                <h4 className="gen-report-section-title">Repuestos con Stock Bajo o Agotados</h4>
+                <p className="gen-report-section-desc">Artículos bajo el umbral mínimo para sugerir reposición inmediata</p>
+              </div>
             </div>
-            <Pill tone={report?.lowStockProducts.length ? 'amber' : 'green'}>
-              {report?.lowStockProducts.length ?? 0} en alerta
+            <Pill tone={lowStockFiltered.length ? 'amber' : 'green'}>
+              {lowStockFiltered.length} en alerta
             </Pill>
           </div>
 
@@ -144,7 +179,7 @@ export const GeneralReportScreen: React.FC = () => {
                   <th>Código</th>
                   <th>Producto</th>
                   <th>Categoría</th>
-                  <th style={{ textAlign: 'center' }}>Disponible</th>
+                  <th className="gen-report-th-center">Disponible</th>
                   <th>Estado</th>
                 </tr>
               </thead>
@@ -153,17 +188,22 @@ export const GeneralReportScreen: React.FC = () => {
                   <tr>
                     <td colSpan={5} className="gen-report-empty">Cargando inventario crítico…</td>
                   </tr>
-                ) : (report?.lowStockProducts.length ?? 0) === 0 ? (
+                ) : lowStockFiltered.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="gen-report-empty">✓ No hay productos con alertas de stock bajo en este momento.</td>
+                    <td colSpan={5} className="gen-report-empty">
+                      <span className="gen-report-empty-inline">
+                        <span className="gen-report-inline-icon" aria-hidden="true" dangerouslySetInnerHTML={{ __html: checkIcon }} />
+                        <span>{needle ? 'Ningún repuesto en alerta coincide con la búsqueda.' : 'No hay productos con alertas de stock bajo en este momento.'}</span>
+                      </span>
+                    </td>
                   </tr>
                 ) : (
-                  report?.lowStockProducts.map((p) => (
+                  lowStockFiltered.map((p) => (
                     <tr key={p.id}>
                       <td><span className="gen-report-code">{p.code}</span></td>
                       <td><strong>{p.name}</strong></td>
                       <td><span className="gen-report-category">{p.category}</span></td>
-                      <td style={{ textAlign: 'center' }}>
+                      <td className="gen-report-td-center">
                         <Pill tone={p.available === 0 ? 'red' : 'amber'}>{p.available} und</Pill>
                       </td>
                       <td>
@@ -182,12 +222,15 @@ export const GeneralReportScreen: React.FC = () => {
         {/* Tabla 2: Alta Rotación */}
         <div className="gen-report-card">
           <div className="gen-report-section-header">
-            <div>
-              <h4 className="gen-report-section-title">🔥 Productos de Mayor Rotación</h4>
-              <p className="gen-report-section-desc">Repuestos con el mayor volumen de unidades vendidas y recaudos del día</p>
+            <div className="gen-report-section-title-group">
+              <span className="gen-report-section-icon" aria-hidden="true" dangerouslySetInnerHTML={{ __html: shoppingBagIcon }} />
+              <div>
+                <h4 className="gen-report-section-title">Productos de Mayor Rotación</h4>
+                <p className="gen-report-section-desc">Repuestos con el mayor volumen de unidades vendidas y recaudos del día</p>
+              </div>
             </div>
             <Pill tone="blue">
-              {report?.highRotationProducts.length ?? 0} en rotación
+              {highRotationFiltered.length} en rotación
             </Pill>
           </div>
 
@@ -197,8 +240,8 @@ export const GeneralReportScreen: React.FC = () => {
                 <tr>
                   <th>Código</th>
                   <th>Producto</th>
-                  <th style={{ textAlign: 'right' }}>Unidades Vendidas</th>
-                  <th style={{ textAlign: 'right' }}>Total Facturado</th>
+                  <th className="gen-report-th-right">Unidades Vendidas</th>
+                  <th className="gen-report-th-right">Total Facturado</th>
                 </tr>
               </thead>
               <tbody>
@@ -206,19 +249,21 @@ export const GeneralReportScreen: React.FC = () => {
                   <tr>
                     <td colSpan={4} className="gen-report-empty">Cargando rotación de productos…</td>
                   </tr>
-                ) : (report?.highRotationProducts.length ?? 0) === 0 ? (
+                ) : highRotationFiltered.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="gen-report-empty">Sin movimientos registrados hoy.</td>
+                    <td colSpan={4} className="gen-report-empty">
+                      {needle ? 'Ningún producto en rotación coincide con la búsqueda.' : 'Sin movimientos registrados hoy.'}
+                    </td>
                   </tr>
                 ) : (
-                  report?.highRotationProducts.map((p) => (
+                  highRotationFiltered.map((p) => (
                     <tr key={p.productId}>
                       <td><span className="gen-report-code">{p.code}</span></td>
                       <td><strong>{p.name}</strong></td>
-                      <td style={{ textAlign: 'right' }}>
+                      <td className="gen-report-td-right">
                         <strong>{p.unitsSold} und</strong>
                       </td>
-                      <td style={{ textAlign: 'right', fontWeight: 600 }}>{formatCOP(p.totalAmount)}</td>
+                      <td className="gen-report-td-right gen-report-td-amount">{formatCOP(p.totalAmount)}</td>
                     </tr>
                   ))
                 )}

@@ -3,8 +3,7 @@
 // ojo: «cargando» se deduce de que lo guardado sea de otra bodega (así no hay setState síncrono en el efecto); si falla se muestra la lista vacía
 import { useCallback, useEffect, useState } from 'react'
 import { useAppDispatch } from '@/global/hooks/store/useRedux'
-import { loadLocationsThunk } from '@/features/locations/thunks/locations.thunks'
-import type { WarehouseLocation } from '@/features/locations/types/locations.types'
+import { loadLocationsThunk, type WarehouseLocation } from '@/features/locations'
 
 interface Loaded {
   warehouseId: number

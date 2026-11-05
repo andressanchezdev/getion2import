@@ -1,7 +1,7 @@
 // ReturnItemsPicker · paso 2 del formulario de devolución: marcar los renglones de la venta que se devuelven y su cantidad (de 1 a lo vendido)
 // conecta con: CreateReturnDrawer; estado de useCreateReturnForm y tipos de returns.helpers
 import React from 'react'
-import { formatCurrency } from '@/global/helpers/format'
+import { formatCurrency } from '@/global/helpers/formatting/format'
 import type { ItemPick } from '../helpers/returns.helpers'
 import type { SaleOption } from '../types/returns.types'
 

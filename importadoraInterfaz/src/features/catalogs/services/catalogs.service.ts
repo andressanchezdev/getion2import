@@ -7,8 +7,8 @@ import type { Brand, BrandDto, Category, CategoryDto, ModelDto, MotoModel } from
 
 const { CATALOGS, MODELS } = API_CONFIG.ENDPOINTS
 
-// parámetros comunes de los tres catálogos
-const params = (ctx: RequestContext) => withCompany(ctx.companyId, { activeOnly: true })
+// parámetros comunes de los tres catálogos (activeOnly: false para ver todos en administración)
+const params = (ctx: RequestContext) => withCompany(ctx.companyId, { activeOnly: false })
 
 // trae las marcas de la compañía
 export const fetchBrands = async (ctx: RequestContext): Promise<Brand[]> => {

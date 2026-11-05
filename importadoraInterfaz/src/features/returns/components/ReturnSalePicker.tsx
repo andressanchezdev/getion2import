@@ -1,7 +1,7 @@
 // ReturnSalePicker · paso 1 del formulario de devolución: buscar una venta y elegirla, o ver la elegida con opción de cambiarla
 // conecta con: CreateReturnDrawer; los datos y acciones vienen de useCreateReturnForm
 import React from 'react'
-import { formatCurrency } from '@/global/helpers/format'
+import { formatCurrency } from '@/global/helpers/formatting/format'
 import type { SaleOption } from '../types/returns.types'
 
 interface Props {

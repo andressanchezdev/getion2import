@@ -115,7 +115,7 @@
   cursor: pointer;
   appearance: none;
   -webkit-appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-image: var(--select-chevron-svg);
   background-repeat: no-repeat;
   background-position: right 0.5rem center;
   background-size: 0.75rem;
@@ -260,41 +260,6 @@
 .returns-td-actions {
   text-align: right;
   padding-right: 20px !important;
-}
-
-.ret-action-btns {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.ret-btn-approve,
-.ret-btn-reject {
-  padding: 6px 12px;
-  border: none !important;
-  border-radius: 6px;
-  font-size: var(--text-xs);
-  font-weight: var(--font-weight-medium);
-  cursor: pointer;
-  transition: all var(--motion-fast);
-}
-
-.ret-btn-approve {
-  background: #ecfdf5 !important;
-  color: #047857 !important;
-}
-
-.ret-btn-approve:hover {
-  background: #d1fae5 !important;
-}
-
-.ret-btn-reject {
-  background: #fee2e2 !important;
-  color: #b91c1c !important;
-}
-
-.ret-btn-reject:hover {
-  background: #fecaca !important;
 }
 
 .ret-action-done {

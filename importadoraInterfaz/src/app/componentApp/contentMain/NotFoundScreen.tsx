@@ -1,7 +1,7 @@
 // NotFoundScreen · pantalla 404 interactiva con partículas formando la imagen 404.jpg
 import React, { useRef } from 'react'
 import image404Src from '@/assets/images/404.jpg'
-import { useParticleAnimation } from '@/features/screensaver/hooks/useParticleAnimation'
+import { useParticleAnimation } from '@/features/screensaver'
 import { useAppDispatch } from '@/global/hooks/store/useRedux'
 import { setActiveModule, setActiveSubitem } from '@/features/navigation'
 import './NotFoundScreen.css'

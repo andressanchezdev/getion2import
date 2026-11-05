@@ -205,3 +205,27 @@ func (r *CashSessionRepository) ListExpenses(ctx context.Context, q db.DBExecuto
 	}
 	return items, rows.Err()
 }
+
+// FindWarehouseCompanyID obtiene el company_id de una bodega para asociar el turno de caja.
+func (r *CashSessionRepository) FindWarehouseCompanyID(ctx context.Context, q db.DBExecutor, warehouseID int64) (int64, error) {
+	var companyID int64
+	err := q.QueryRow(ctx, "SELECT company_id FROM warehouses WHERE id = $1", warehouseID).Scan(&companyID)
+	if err != nil {
+		return 0, err
+	}
+	return companyID, nil
+}
+
+// ResolveActorName obtiene el nombre completo del actor (empleado o administrador) por su ID.
+func (r *CashSessionRepository) ResolveActorName(ctx context.Context, q db.DBExecutor, table string, actorID int64) (string, error) {
+	var firstName, lastName string
+	query := "SELECT first_name, COALESCE(last_name, '') FROM employees WHERE id = $1"
+	if table == "admins" {
+		query = "SELECT first_name, COALESCE(last_name, '') FROM admins WHERE id = $1"
+	}
+	err := q.QueryRow(ctx, query, actorID).Scan(&firstName, &lastName)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(firstName + " " + lastName), nil
+}

@@ -1,6 +1,7 @@
 // employees/index · API pública de la feature employees
 // conecta con: screenRegistry, usePermissions, auth.types y UI
 export * from './types/employees.types'
+export * from './helpers/employees.adapter'
 export * from './services/employees.service'
 export * from './slices/employees.slice'
 export * from './selectors/employees.selectors'

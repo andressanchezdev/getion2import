@@ -7,12 +7,14 @@ export interface Brand {
   id: number
   name: string
   image?: string
+  isActive?: boolean
 }
 
 export interface Category {
   id: number
   name: string
   description?: string
+  isActive?: boolean
 }
 
 // ojo: se llama MotoModel (y no Model) para no confundirlo con "modelo" de datos o de TypeScript
@@ -20,6 +22,7 @@ export interface MotoModel {
   id: number
   name: string
   description?: string
+  isActive?: boolean
 }
 
 // ---- lo que responde la API en Go (GET /brands, /categories y /models: BrandResponse, CategoryResponse y ModelResponse) ----

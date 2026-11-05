@@ -33,8 +33,8 @@ export const voidPayment = async (paymentId: number, voidReason: string): Promis
 }
 
 // consulta el detalle individual de un pago (GET /payments/:id)
-export const fetchPaymentDetails = async (paymentId: number): Promise<any> => {
-  const { data } = await apiClient.get<APIResponse<any>>(PAYMENTS.BY_ID(paymentId))
+export const fetchPaymentDetails = async (paymentId: number): Promise<Record<string, unknown>> => {
+  const { data } = await apiClient.get<APIResponse<Record<string, unknown>>>(PAYMENTS.BY_ID(paymentId))
   return data.data
 }
 

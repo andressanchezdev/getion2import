@@ -2435,4 +2435,22 @@ UPDATE products SET iva = 5 WHERE iva = 19 AND id % 10 = 5;
 -- Limpieza de funciones temporales de semilla
 DROP FUNCTION IF EXISTS seed_product CASCADE;
 
+-- 10) Sincronización universal de todas las secuencias IDENTITY/SERIAL al máximo ID existente
+DO $sync_all_sequences$
+DECLARE
+    r RECORD;
+BEGIN
+    FOR r IN (
+        SELECT table_name, column_name, pg_get_serial_sequence(quote_ident(table_name), quote_ident(column_name)) AS seq
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND (column_default LIKE 'nextval%' OR is_identity = 'YES')
+    ) LOOP
+        IF r.seq IS NOT NULL THEN
+            EXECUTE format('SELECT setval(%L, GREATEST(COALESCE((SELECT MAX(%I) FROM %I), 1), 1))', r.seq, r.column_name, r.table_name);
+        END IF;
+    END LOOP;
+END
+$sync_all_sequences$;
+
 COMMIT;

@@ -126,8 +126,10 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({ onCancel, extraActions
                   </td>
                   <td>{dateLabel(order.createdAt)}</td>
                   <td className="orders-table-actions">
-                    {extraActions && <span className="orders-table-extra" onClick={(e) => e.stopPropagation()}>{extraActions(order)}</span>}
-                    <OrderRowActions order={order} canCancel={canCancel} canAdvance={canAdvance} onAction={(key) => handleAction(key, order)} />
+                    <div className="orders-table-actions-inline">
+                      {extraActions && <span className="orders-table-extra" onClick={(e) => e.stopPropagation()}>{extraActions(order)}</span>}
+                      <OrderRowActions order={order} canCancel={canCancel} canAdvance={canAdvance} onAction={(key) => handleAction(key, order)} />
+                    </div>
                   </td>
                 </tr>
               ))

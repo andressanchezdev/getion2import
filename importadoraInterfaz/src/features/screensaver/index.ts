@@ -3,3 +3,4 @@
 export * from './constants/screensaver.constants'
 export * from './components/IdleScreensaver'
 export * from './hooks/useIdle'
+export * from './hooks/useParticleAnimation'

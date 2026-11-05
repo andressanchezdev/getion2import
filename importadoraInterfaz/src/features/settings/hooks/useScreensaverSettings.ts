@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react'
 import defaultLogo from '@/assets/images/screensaver-logo.jpg'
 import { formatBytes, optimizeImageFile } from '@/global/helpers/images/imageOptimizer'
-import { notify } from '@/global/helpers/toast'
+import { notify } from '@/global/helpers/feedback/toast'
 import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { validateScreensaverFile } from '../helpers/settings.helpers'
 import { selectSettings } from '../selectors/settings.selectors'

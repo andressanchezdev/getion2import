@@ -29,7 +29,13 @@ export const useNotifications = () => {
   }, [user])
 
   useEffect(() => {
-    loadNotifications()
+    let cancelled = false
+    void Promise.resolve().then(() => {
+      if (!cancelled) void loadNotifications()
+    })
+    return () => {
+      cancelled = true
+    }
   }, [loadNotifications])
 
   const unreadCount = notifications.filter((n) => !n.readAt).length

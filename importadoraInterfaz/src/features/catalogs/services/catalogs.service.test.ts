@@ -10,7 +10,7 @@ vi.mock('@/api', async (importOriginal) => ({
 }))
 
 const ctx = { companyId: 3, userId: 7 }
-const expectedConfig = { params: { companyId: 3, activeOnly: true } }
+const expectedConfig = { params: { companyId: 3, activeOnly: false } }
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -21,25 +21,25 @@ describe('catalogs.service', () => {
     vi.mocked(apiClient.get).mockResolvedValue({ data: { success: true, data: [{ id: 1, name: 'Yamaha' }] } })
     const result = await fetchBrands(ctx)
     expect(apiClient.get).toHaveBeenCalledWith('/brands', expectedConfig)
-    expect(result).toEqual([{ id: 1, name: 'Yamaha', image: undefined }])
+    expect(result).toEqual([{ id: 1, name: 'Yamaha', image: undefined, isActive: true }])
   })
 
   it('fetchCategories: GET /categories', async () => {
     vi.mocked(apiClient.get).mockResolvedValue({ data: { success: true, data: [{ id: 2, name: 'Frenos' }] } })
-    expect(await fetchCategories(ctx)).toEqual([{ id: 2, name: 'Frenos' }])
+    expect(await fetchCategories(ctx)).toEqual([{ id: 2, name: 'Frenos', description: undefined, isActive: true }])
     expect(apiClient.get).toHaveBeenCalledWith('/categories', expectedConfig)
   })
 
   it('fetchMotoModels: GET /models', async () => {
     vi.mocked(apiClient.get).mockResolvedValue({ data: { success: true, data: [{ id: 3, name: 'Pulsar NS 200' }] } })
-    expect(await fetchMotoModels(ctx)).toEqual([{ id: 3, name: 'Pulsar NS 200' }])
+    expect(await fetchMotoModels(ctx)).toEqual([{ id: 3, name: 'Pulsar NS 200', description: undefined, isActive: true }])
     expect(apiClient.get).toHaveBeenCalledWith('/models', expectedConfig)
   })
 
   it('el superadmin (sin compañía) no manda companyId', async () => {
     vi.mocked(apiClient.get).mockResolvedValue({ data: { success: true, data: [] } })
     await fetchBrands({ companyId: 0, userId: 1 })
-    expect(apiClient.get).toHaveBeenCalledWith('/brands', { params: { activeOnly: true } })
+    expect(apiClient.get).toHaveBeenCalledWith('/brands', { params: { activeOnly: false } })
   })
 
   it('si la API devuelve data nulo, la lista queda vacía', async () => {

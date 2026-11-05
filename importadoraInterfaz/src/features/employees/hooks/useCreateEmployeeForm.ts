@@ -2,7 +2,7 @@
 // conecta con: CreateEmployeeDrawer y EmployeeFormFields; despacha employees.thunks (createEmployeeThunk) y pide los roles con useRoles
 // ojo: el cuerpo del drawer se monta solo al abrir (formulario limpio cada vez); la bodega y el rol arrancan en la primera de cada lista
 import { useState } from 'react'
-import { notify } from '@/global/helpers/toast'
+import { notify } from '@/global/helpers/feedback/toast'
 import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { selectWarehouses } from '@/features/warehouses'
 import { createEmployeeThunk } from '../thunks/employees.thunks'

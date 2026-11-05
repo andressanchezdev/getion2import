@@ -1,5 +1,4 @@
-// DrawerTab.test · pruebas de la pestaña del carrito: un clic lo abre, un arrastre vertical lo mueve sin abrirlo y las flechas también lo mueven
-// conecta con: DrawerTab y global useVerticalDrag (clampTop); se corre con npm test
+// DrawerTab.test · pruebas de la pestaña del carrito y traslados: renderizado de ícono, contador, clic y arrastre vertical
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { clampTop } from '@/global/hooks/ui/useVerticalDrag'
@@ -17,17 +16,50 @@ describe('DrawerTab', () => {
   beforeEach(() => window.localStorage.clear())
   afterEach(cleanup)
 
-  const setup = () => {
+  const setup = (count = 3, icon = 'icon.svg') => {
     const onOpen = vi.fn()
-    render(<DrawerTab icon="icon.svg" count={3} onOpen={onOpen} />)
+    render(<DrawerTab icon={icon} count={count} onOpen={onOpen} />)
     return { onOpen, tab: screen.getByRole('button') }
   }
   const topOf = (tab: HTMLElement) => Number.parseFloat(tab.style.top)
 
-  it('un clic sin arrastre abre el carrito', () => {
+  it('renderiza la imagen del ícono con la clase drawer-tab-icon', () => {
+    const { tab } = setup(0, 'shipping.svg')
+    const img = tab.querySelector('.drawer-tab-icon') as HTMLImageElement
+    expect(img).not.toBeNull()
+    expect(img.getAttribute('src')).toBe('shipping.svg')
+    expect(tab.querySelector('.drawer-tab-count')).toBeNull()
+  })
+
+  it('muestra el contador cuando count > 0', () => {
+    const { tab } = setup(5, 'shipping.svg')
+    const countEl = tab.querySelector('.drawer-tab-count')
+    expect(countEl).not.toBeNull()
+    expect(countEl?.textContent).toBe('5')
+  })
+
+  it('un clic sin arrastre abre el drawer', () => {
     const { onOpen, tab } = setup()
     fireEvent.click(tab)
     expect(onOpen).toHaveBeenCalledTimes(1)
+  })
+
+  it('respeta controlledTop y controlledRight para no sobreponerse', () => {
+    const onOpen = vi.fn()
+    render(
+      <DrawerTab
+        icon="shipping.svg"
+        count={2}
+        onOpen={onOpen}
+        controlledTop={368}
+        controlledRight="400px"
+        className="drawer-tab-transfer"
+      />
+    )
+    const tab = screen.getByRole('button')
+    expect(tab.style.top).toBe('368px')
+    expect(tab.style.right).toBe('400px')
+    expect(tab.classList.contains('drawer-tab-transfer')).toBe(true)
   })
 
   it('arrastrar en vertical lo mueve, lo guarda y no abre el carrito', () => {

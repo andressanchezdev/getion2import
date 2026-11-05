@@ -54,7 +54,13 @@ export const useInventoryCounts = () => {
   }, [activeWarehouseId, statusFilter, page])
 
   useEffect(() => {
-    loadCounts()
+    let cancelled = false
+    void Promise.resolve().then(() => {
+      if (!cancelled) void loadCounts()
+    })
+    return () => {
+      cancelled = true
+    }
   }, [loadCounts])
 
   const openDetail = async (countId: number) => {

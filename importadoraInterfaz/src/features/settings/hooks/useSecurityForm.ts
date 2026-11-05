@@ -3,7 +3,7 @@
 // ojo: el backend no pide la clave actual para cambiarla (lo autoriza el permiso employees:edit), por eso el formulario no la pide
 import { useState } from 'react'
 import { selectCurrentUser } from '@/features/auth'
-import { notify } from '@/global/helpers/toast'
+import { notify } from '@/global/helpers/feedback/toast'
 import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { validateNewPassword } from '../helpers/settings.helpers'
 import { saveAccountThunk } from '../thunks/settings.thunks'

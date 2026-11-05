@@ -5,18 +5,24 @@
 // $165.000 (sin decimales); es el mismo formato de formatPesos para que todos los montos de la app se vean igual
 export const formatCOP = (val: number) => formatPesos(val)
 
+// alias universal de moneda
+export const formatCurrency = formatCOP
+
+// número con separador de miles (sin símbolo $)
+export const formatNumber = (val: number): string => new Intl.NumberFormat('es-CO').format(val)
+
 // $165.000 sin espacio después del signo, como se ve en las cards y el carrito de la maqueta (sin decimales)
 export const formatPesos = (val: number) => `$${new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(val)}`
 
 // 27 oct 2026, 10:42 (fecha y hora cortas en español de Colombia); '—' si no hay fecha válida
-export const formatDateTime = (value: string): string => {
+export const formatDateTime = (value?: string | null): string => {
   const date = value ? new Date(value) : null
   if (!date || Number.isNaN(date.getTime())) return '—'
   return new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeStyle: 'short' }).format(date)
 }
 
 // 27 oct 2026 (solo la fecha, en español de Colombia); '—' si no hay fecha válida
-export const formatDate = (value: string): string => {
+export const formatDate = (value?: string | null): string => {
   const date = value ? new Date(value) : null
   if (!date || Number.isNaN(date.getTime())) return '—'
   return new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium' }).format(date)

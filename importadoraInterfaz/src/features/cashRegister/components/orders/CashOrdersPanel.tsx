@@ -2,9 +2,12 @@
 // conecta con: CashRegisterScreen (lo pinta), orders (OrdersToolbar, OrdersTable, OrderCancelDialog, useOrdersLoader), cash.collect (cuándo se ofrece cobrar), navigation (abre «cashCollect») y VerifyInvoiceGoodsModal
 // ojo: «Cobrar» abre el panel del cobro mixto (efectivo, transferencia y crédito); el efectivo exige turno abierto y el panel lo avisa; las transferencias de un pedido se aprueban en su detalle (botón «Aprobar comprobante»)
 import React, { useState } from 'react'
+import { RowActions } from '@/global/components/UI/molecules/table/RowActions'
 import { useAppDispatch } from '@/global/hooks/store/useRedux'
 import { openDrawerForm } from '@/features/navigation'
 import { OrderCancelDialog, OrdersTable, OrdersToolbar, loadOrdersThunk, useOrdersLoader, type OrderRow } from '@/features/orders'
+import walletIcon from '@/assets/icons/wallet.svg?raw'
+import checkIcon from '@/assets/icons/check.svg?raw'
 import { canCollect } from '../../helpers/cash.collect'
 import { VerifyInvoiceGoodsModal } from '../VerifyInvoiceGoodsModal'
 
@@ -19,18 +22,25 @@ export const CashOrdersPanel: React.FC<CashOrdersPanelProps> = ({ shiftActions }
   const [toCheck, setToCheck] = useState<OrderRow | null>(null)
 
   const extraActions = (order: OrderRow) => (
-    <>
-      {canCollect(order) && (
-        <button type="button" className="btn-primary" title="Cobrar el pedido: efectivo, transferencia o crédito" onClick={() => dispatch(openDrawerForm({ kind: 'cashCollect', payload: { order } }))}>
-          Cobrar
-        </button>
-      )}
-      {(order.stage === 'invoicing' || order.stage === 'dispatch') && (
-        <button type="button" className="btn-secondary" title="Verifica que lo que sale coincida con la factura" onClick={() => setToCheck(order)}>
-          Cotejar salida
-        </button>
-      )}
-    </>
+    <RowActions
+      actions={[
+        {
+          key: 'collect',
+          label: `Cobrar el pedido ${order.serial}: efectivo, transferencia o crédito`,
+          icon: walletIcon,
+          tone: 'success',
+          visible: canCollect(order),
+          onClick: () => dispatch(openDrawerForm({ kind: 'cashCollect', payload: { order } })),
+        },
+        {
+          key: 'check',
+          label: `Cotejar salida del pedido ${order.serial}`,
+          icon: checkIcon,
+          visible: order.stage === 'invoicing' || order.stage === 'dispatch',
+          onClick: () => setToCheck(order),
+        },
+      ]}
+    />
   )
 
   return (

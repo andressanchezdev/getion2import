@@ -5,8 +5,7 @@ import '../InventoryTables.css'
 import { SearchBar } from '@/global/components/UI/molecules/filters/SearchBar'
 import { useAppDispatch } from '@/global/hooks/store/useRedux'
 import { openDrawerForm } from '@/features/navigation'
-import { singularOf, type CatalogRow, type CatalogType } from '@/features/catalogs'
-import { deleteCatalogItemThunk, saveCatalogItemThunk } from '@/features/catalogs/thunks/catalogs.items.thunks'
+import { singularOf, deleteCatalogItemThunk, saveCatalogItemThunk, type CatalogRow, type CatalogType } from '@/features/catalogs'
 import { toast } from '@/global/helpers/feedback/toast'
 import { CatalogTableRow } from './CatalogTableRow'
 import { usePagedList } from '@/global/hooks/data/usePagedList'
@@ -38,7 +37,14 @@ export const CatalogTable: React.FC<CatalogTableProps> = ({ type, noun, rows, lo
   const [deleting, setDeleting] = useState(false)
 
   const needle = search.trim().toLowerCase()
-  const visible = rows.filter((row) => !needle || row.name.toLowerCase().includes(needle))
+  // Priorizar registros activos primero, luego alfabéticamente por nombre
+  const sortedRows = [...rows].sort((a, b) => {
+    const aActive = a.isActive !== false ? 1 : 0
+    const bActive = b.isActive !== false ? 1 : 0
+    if (aActive !== bActive) return bActive - aActive
+    return a.name.localeCompare(b.name, 'es', { sensitivity: 'base' })
+  })
+  const visible = sortedRows.filter((row) => !needle || row.name.toLowerCase().includes(needle))
   const { pageItems, meta, setPage } = usePagedList(visible, needle)
   const message = emptyMessage(noun, failed, loading, visible.length)
   const singular = singularOf(noun)

@@ -5,7 +5,10 @@ import './InvoicesTable.css'
 import { Pill } from '@/global/components/UI/atoms/Pill'
 import { SearchBar } from '@/global/components/UI/molecules/filters/SearchBar'
 import { Pagination } from '@/global/components/UI/molecules/table/Pagination'
+import { RowActions } from '@/global/components/UI/molecules/table/RowActions'
 import { usePagedList } from '@/global/hooks/data/usePagedList'
+import eyeIcon from '@/assets/icons/eye.svg?raw'
+import fileTextIcon from '@/assets/icons/file-text.svg?raw'
 import { INVOICE_KIND_LABELS, INVOICE_STATUS, INVOICE_STATUS_OPTIONS } from '../../constants/billing.constants'
 import { useInvoices } from '../../hooks/useInvoices'
 import type { InvoiceStatus } from '../../types/billing.types'
@@ -100,7 +103,7 @@ export const InvoicesTable: React.FC = () => {
                   <td>
                     <button
                       type="button"
-                      style={{ background: 'none', border: 'none', padding: 0, color: 'var(--color-primary, #2563eb)', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}
+                      className="invoices-number-btn"
                       onClick={() => setSelectedInvoiceId(invoice.id)}
                       title="Ver detalle completo de la factura"
                     >
@@ -114,23 +117,25 @@ export const InvoicesTable: React.FC = () => {
                   <td>{invoice.employeeName}</td>
                   <td><Pill tone={INVOICE_STATUS[invoice.status]?.tone ?? 'gray'}>{INVOICE_STATUS[invoice.status]?.label ?? invoice.status}</Pill></td>
                   <td>
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                      <button
-                        type="button"
-                        style={{ background: 'none', border: 'none', padding: 0, color: 'var(--color-primary, #2563eb)', cursor: 'pointer', fontSize: '0.85rem' }}
-                        onClick={() => setSelectedInvoiceId(invoice.id)}
-                      >
-                        Ver Detalle
-                      </button>
-                      {invoice.pdfUrl && (
-                        <>
-                          <span>•</span>
-                          <a href={invoice.pdfUrl} target="_blank" rel="noreferrer" style={{ fontSize: '0.85rem' }}>
-                            PDF
-                          </a>
-                        </>
-                      )}
-                    </div>
+                    <RowActions
+                      actions={[
+                        {
+                          key: 'detail',
+                          label: `Ver detalle de factura ${invoice.number}`,
+                          icon: eyeIcon,
+                          onClick: () => setSelectedInvoiceId(invoice.id),
+                        },
+                        {
+                          key: 'pdf',
+                          label: `Abrir PDF de factura ${invoice.number}`,
+                          icon: fileTextIcon,
+                          visible: Boolean(invoice.pdfUrl),
+                          onClick: () => {
+                            if (invoice.pdfUrl) window.open(invoice.pdfUrl, '_blank', 'noopener,noreferrer')
+                          },
+                        },
+                      ]}
+                    />
                   </td>
                 </tr>
               ))

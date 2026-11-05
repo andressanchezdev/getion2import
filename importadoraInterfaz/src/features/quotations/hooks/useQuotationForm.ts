@@ -2,7 +2,7 @@
 // conecta con: CreateQuotationDrawer y sus piezas; despacha quotations.thunks (nada de HTTP aquí) y usa quotations.draft
 // ojo: sin cliente elegido se cotiza al cliente 1 (Consumidor Final / mostrador); el cuerpo del drawer se monta solo al abrir, así que cerrar limpia todo
 import { useEffect, useState } from 'react'
-import { notify } from '@/global/helpers/toast'
+import { notify } from '@/global/helpers/feedback/toast'
 import { useAppDispatch } from '@/global/hooks/store/useRedux'
 import { addProductToDraft, draftTotal, patchDraftItem } from '../helpers/quotations.draft'
 import { createQuotationThunk, searchQuotationCustomersThunk, searchQuotationProductsThunk } from '../thunks/quotations.thunks'
