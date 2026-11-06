@@ -20,6 +20,7 @@ export const BillingSettingsScreen: React.FC = () => {
   const resolutionWarnings = config
     ? [
         !config.resolutionNumber.trim() ? 'No hay una resolución DIAN configurada; la facturación permanece habilitada.' : '',
+        config.rangeFrom === null || config.rangeTo === null ? 'No hay un rango de numeración completo; la facturación permanece habilitada.' : '',
         config.resolutionValidUntil && config.resolutionValidUntil < today ? 'La resolución DIAN está vencida; la facturación permanece habilitada.' : '',
         remaining === 0 ? 'El rango autorizado está agotado; la facturación permanece habilitada.' : '',
         config.rangeFrom !== null && invoiceSeries && invoiceSeries.nextNumber < config.rangeFrom ? 'El próximo consecutivo está por debajo del rango autorizado.' : '',

@@ -109,6 +109,9 @@ func (s *SaleService) IssueInvoice(ctx context.Context, saleID, employeeID int64
 	if warehouseFacturation.ResolutionExpired {
 		response.Warnings = append(response.Warnings, "La resolución DIAN está vencida; la factura se emitió y debe revisarse.")
 	}
+	if warehouseFacturation.RangeFrom == nil || warehouseFacturation.RangeTo == nil {
+		response.Warnings = append(response.Warnings, "No hay un rango de numeración completo configurado; la factura se emitió y debe revisarse.")
+	}
 	if warehouseFacturation.RangeTo != nil && issuedNumber > *warehouseFacturation.RangeTo {
 		response.Warnings = append(response.Warnings, "El consecutivo emitido excede el rango autorizado; la factura se emitió y debe revisarse.")
 	}

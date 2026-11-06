@@ -38,5 +38,6 @@ export const billingProblem = (input: Pick<BillingConfigInput, 'nit' | 'legalNam
 // cuántos números de la resolución quedan por usar según el próximo número de la serie de facturas (null si no hay rango)
 export const rangeRemaining = (config: Pick<BillingConfig, 'rangeFrom' | 'rangeTo'>, nextInvoiceNumber: number): number | null => {
   if (config.rangeTo === null) return null
-  return Math.max(config.rangeTo - nextInvoiceNumber + 1, 0)
+  const firstAllowedNumber = config.rangeFrom === null ? nextInvoiceNumber : Math.max(nextInvoiceNumber, config.rangeFrom)
+  return Math.max(config.rangeTo - firstAllowedNumber + 1, 0)
 }

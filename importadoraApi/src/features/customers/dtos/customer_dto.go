@@ -15,90 +15,90 @@ import (
 // ==========================================
 
 type CustomerResponse struct {
-	ID                  int64                  `json:"id"`
-	CompanyID           int64                  `json:"companyId"`
-	DocumentType        types.DocumentType     `json:"documentType"`
-	Document            string                 `json:"document"`
-	PersonType          types.PersonType       `json:"personType"`
-	Name                string                 `json:"name"`
-	LastName            *string                `json:"lastName,omitempty"`
-	TradeName           *string                `json:"tradeName,omitempty"`
-	LegalRepresentative *string                `json:"legalRepresentative,omitempty"`
-	Email               *string                `json:"email,omitempty"`
-	Phone               *string                `json:"phone,omitempty"`
-	Mobile              *string                `json:"mobile,omitempty"`
-	Address             *string                `json:"address,omitempty"`
-	City                *string                `json:"city,omitempty"`
-	VATResponsible      bool                   `json:"vatResponsible"`
-	FiscalRespCodes     []string               `json:"fiscalRespCodes"`
-	Addresses           json.RawMessage        `json:"addresses"`
-	Contacts            json.RawMessage        `json:"contacts"`
-	PriceTier           types.PriceTier        `json:"priceTier"`
-	DiscountPercent     float64                `json:"discountPercent"`
-	CreditEnabled       bool                   `json:"creditEnabled"`
-	CreditLimit         float64                `json:"creditLimit"`
-	CreditDays          int16                  `json:"creditDays"`
-	CreditWarningPct    float64                `json:"creditWarningPct"`
-	DocsValidityMonths  int                    `json:"docsValidityMonths"`
-	Status              types.CustomerStatus   `json:"status"`
-	CreatedAt           time.Time              `json:"createdAt"`
-	UpdatedAt           time.Time              `json:"updatedAt"`
-	Documents           []CustomerDocumentDTO  `json:"documents,omitempty"`
+	ID                  int64                 `json:"id"`
+	CompanyID           int64                 `json:"companyId"`
+	DocumentType        types.DocumentType    `json:"documentType"`
+	Document            string                `json:"document"`
+	PersonType          types.PersonType      `json:"personType"`
+	Name                string                `json:"name"`
+	LastName            *string               `json:"lastName,omitempty"`
+	TradeName           *string               `json:"tradeName,omitempty"`
+	LegalRepresentative *string               `json:"legalRepresentative,omitempty"`
+	Email               *string               `json:"email,omitempty"`
+	Phone               *string               `json:"phone,omitempty"`
+	Mobile              *string               `json:"mobile,omitempty"`
+	Address             *string               `json:"address,omitempty"`
+	City                *string               `json:"city,omitempty"`
+	VATResponsible      bool                  `json:"vatResponsible"`
+	FiscalRespCodes     []string              `json:"fiscalRespCodes"`
+	Addresses           json.RawMessage       `json:"addresses"`
+	Contacts            json.RawMessage       `json:"contacts"`
+	PriceTier           types.PriceTier       `json:"priceTier"`
+	DiscountPercent     float64               `json:"discountPercent"`
+	CreditEnabled       bool                  `json:"creditEnabled"`
+	CreditLimit         float64               `json:"creditLimit"`
+	CreditDays          int16                 `json:"creditDays"`
+	CreditWarningPct    float64               `json:"creditWarningPct"`
+	DocsValidityMonths  int                   `json:"docsValidityMonths"`
+	Status              types.CustomerStatus  `json:"status"`
+	CreatedAt           time.Time             `json:"createdAt"`
+	UpdatedAt           time.Time             `json:"updatedAt"`
+	Documents           []CustomerDocumentDTO `json:"documents,omitempty"`
 }
 
 type CreateCustomerRequest struct {
-	CompanyID           *int64                 `json:"companyId"`
-	DocumentType        types.DocumentType     `json:"documentType" validate:"required"`
-	Document            string                 `json:"document" validate:"required"`
-	PersonType          types.PersonType       `json:"personType" validate:"required"`
-	Name                string                 `json:"name" validate:"required"`
-	LastName            *string                `json:"lastName"`
-	TradeName           *string                `json:"tradeName"`
-	LegalRepresentative *string                `json:"legalRepresentative"`
-	Email               *string                `json:"email"`
-	Phone               *string                `json:"phone"`
-	Mobile              *string                `json:"mobile"`
-	Address             *string                `json:"address"`
-	City                *string                `json:"city"`
-	VATResponsible      *bool                  `json:"vatResponsible"`
-	FiscalRespCodes     []string               `json:"fiscalRespCodes"`
-	Addresses           json.RawMessage        `json:"addresses"`
-	Contacts            json.RawMessage        `json:"contacts"`
-	PriceTier           types.PriceTier        `json:"priceTier"`
-	DiscountPercent     *float64               `json:"discountPercent"`
-	CreditEnabled       *bool                  `json:"creditEnabled"`
-	CreditLimit         *float64               `json:"creditLimit"`
-	CreditDays          *int16                 `json:"creditDays"`
-	CreditWarningPct    *float64               `json:"creditWarningPct"`
-	DocsValidityMonths  *int                   `json:"docsValidityMonths"`
-	Status              *types.CustomerStatus  `json:"status"`
+	CompanyID           *int64                `json:"companyId"`
+	DocumentType        types.DocumentType    `json:"documentType" validate:"required"`
+	Document            string                `json:"document" validate:"required"`
+	PersonType          types.PersonType      `json:"personType" validate:"required"`
+	Name                string                `json:"name" validate:"required"`
+	LastName            *string               `json:"lastName"`
+	TradeName           *string               `json:"tradeName"`
+	LegalRepresentative *string               `json:"legalRepresentative"`
+	Email               *string               `json:"email"`
+	Phone               *string               `json:"phone"`
+	Mobile              *string               `json:"mobile"`
+	Address             *string               `json:"address"`
+	City                *string               `json:"city"`
+	VATResponsible      *bool                 `json:"vatResponsible"`
+	FiscalRespCodes     []string              `json:"fiscalRespCodes"`
+	Addresses           json.RawMessage       `json:"addresses"`
+	Contacts            json.RawMessage       `json:"contacts"`
+	PriceTier           types.PriceTier       `json:"priceTier"`
+	DiscountPercent     *float64              `json:"discountPercent"`
+	CreditEnabled       *bool                 `json:"creditEnabled"`
+	CreditLimit         *float64              `json:"creditLimit"`
+	CreditDays          *int16                `json:"creditDays"`
+	CreditWarningPct    *float64              `json:"creditWarningPct"`
+	DocsValidityMonths  *int                  `json:"docsValidityMonths"`
+	Status              *types.CustomerStatus `json:"status"`
 }
 
 type UpdateCustomerRequest struct {
-	DocumentType        *types.DocumentType    `json:"documentType"`
-	Document            *string                `json:"document"`
-	PersonType          *types.PersonType      `json:"personType"`
-	Name                *string                `json:"name"`
-	LastName            *string                `json:"lastName"`
-	TradeName           *string                `json:"tradeName"`
-	LegalRepresentative *string                `json:"legalRepresentative"`
-	Email               *string                `json:"email"`
-	Phone               *string                `json:"phone"`
-	Mobile              *string                `json:"mobile"`
-	Address             *string                `json:"address"`
-	City                *string                `json:"city"`
-	VATResponsible      *bool                  `json:"vatResponsible"`
-	FiscalRespCodes     []string               `json:"fiscalRespCodes"`
-	Addresses           json.RawMessage        `json:"addresses"`
-	Contacts            json.RawMessage        `json:"contacts"`
-	PriceTier           *types.PriceTier       `json:"priceTier"`
-	DiscountPercent     *float64               `json:"discountPercent"`
-	CreditEnabled       *bool                  `json:"creditEnabled"`
-	CreditLimit         *float64               `json:"creditLimit"`
-	CreditDays          *int16                 `json:"creditDays"`
-	CreditWarningPct    *float64               `json:"creditWarningPct"`
-	DocsValidityMonths  *int                   `json:"docsValidityMonths"`
-	Status              *types.CustomerStatus  `json:"status"`
+	DocumentType        *types.DocumentType   `json:"documentType"`
+	Document            *string               `json:"document"`
+	PersonType          *types.PersonType     `json:"personType"`
+	Name                *string               `json:"name"`
+	LastName            *string               `json:"lastName"`
+	TradeName           *string               `json:"tradeName"`
+	LegalRepresentative *string               `json:"legalRepresentative"`
+	Email               *string               `json:"email"`
+	Phone               *string               `json:"phone"`
+	Mobile              *string               `json:"mobile"`
+	Address             *string               `json:"address"`
+	City                *string               `json:"city"`
+	VATResponsible      *bool                 `json:"vatResponsible"`
+	FiscalRespCodes     []string              `json:"fiscalRespCodes"`
+	Addresses           json.RawMessage       `json:"addresses"`
+	Contacts            json.RawMessage       `json:"contacts"`
+	PriceTier           *types.PriceTier      `json:"priceTier"`
+	DiscountPercent     *float64              `json:"discountPercent"`
+	CreditEnabled       *bool                 `json:"creditEnabled"`
+	CreditLimit         *float64              `json:"creditLimit"`
+	CreditDays          *int16                `json:"creditDays"`
+	CreditWarningPct    *float64              `json:"creditWarningPct"`
+	DocsValidityMonths  *int                  `json:"docsValidityMonths"`
+	Status              *types.CustomerStatus `json:"status"`
 }
 
 type DeleteCustomerRequest struct {
@@ -125,7 +125,7 @@ type CustomerCreditStatusResponse struct {
 	Name             string  `json:"name"`
 	CreditEnabled    bool    `json:"creditEnabled"`
 	CreditLimit      float64 `json:"creditLimit"`
-	CreditBalance    float64 `json:"creditBalance"` // saldo contable (< 0 es deuda)
+	CreditBalance    float64 `json:"creditBalance"`  // saldo contable (< 0 es deuda)
 	CurrentDebt      float64 `json:"currentDebt"`    // deuda actual positiva
 	ReservedOrders   float64 `json:"reservedOrders"` // pedidos abiertos no facturados
 	AvailableCredit  float64 `json:"availableCredit"`

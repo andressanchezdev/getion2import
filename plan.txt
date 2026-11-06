@@ -8,13 +8,15 @@ D-09	Canal de notificación cuando SUPERADMIN restaura registro	UI / Notificacio
 B-01	Validación de NIT (formato, unicidad, dígito verificación)	Facturación por bodega	Posibles datos inválidos	Parcial: validador y unicidad entre compañías; falta migración aplicada y prueba con PostgreSQL
 B-02	Política de expiración de contraseñas y tokens	Seguridad	Tokens pueden quedar válidos indefinidamente	Parcial: expiración/renovación de tokens existentes; no se fuerza vencimiento de contraseña por decisión acordada
 B-03	Configuración de intervalo de inactividad del protector de pantalla por compañía	UX	Intervalo está hard‑coded, impide personalización	Implementado según decisión: cinco minutos fijos y comunes a todas las compañías
-B-04	Cobertura de papelera para todas las entidades (pedidos, facturas, empleados, bodegas)	Gestión de datos	Restauraciones imposibles para ciertos objetos	Parcial: restauración ampliada; solo clientes/productos se registran al retirarlos y facturas se anulan, no se borran
+B-04	Cobertura de papelera para todas las entidades (pedidos, facturas, empleados, bodegas)	Gestión de datos	Restauraciones imposibles para ciertos objetos	Parcial: clientes/productos se archivan transaccionalmente con motivo y auditoría; falta cobertura del resto, excepto facturas que se anulan
 2. Prioridades y Orden de Ejecución
 Seguridad y Auditoría (D‑03, D‑09, B‑02) – prioridad alta para cumplimiento regulatorio.
 Integridad de datos (D‑08, B‑01, B‑04) – evitar pérdidas de información.
 Operatividad de negocio (D‑04, B‑03) – garantizar fluidez en facturación y experiencia de usuario.
 
 Estado revisado tras la implementación: prevalecen los casos de uso y decisiones confirmadas. La expiración de contraseñas queda excluida; los tokens sí vencen. El protector queda fijo en cinco minutos para todas las compañías. Una resolución DIAN vencida, ausente o agotada genera alerta, pero no bloquea la facturación. La validación del NIT se aplica a la facturación de bodega, no al registro de compañía. Las facturas se anulan con motivo y permisos; no se tratan como registros borrables ordinarios. La migración incremental está preparada en `importadoraApi/src/core/db/migrations/20261126_close-plan-gaps.sql`, pero aún no se ha aplicado ni validado en staging. No ejecutar `startdb.pgsql` en bases existentes: es un inicializador destructivo.
+
+El plan todavía no está al 100 %: D-08 continúa pendiente, D-04 y D-03 requieren pruebas/integración adicionales, B-04 no cubre todas las entidades y la migración no está desplegada. Los estados de esta tabla reflejan código validado localmente, no despliegue en base de datos.
 3. Plan de Acción Detallado
 3.1. Auditoría del Cambio de Contexto (D‑03)
 Backend: Añadir registro en tabla audit_context_change con campos user_id, from_company_id, to_company_id, timestamp.
@@ -393,4 +395,3 @@ ya te respondi todo en este mensaje
 
 recrea el plan denuevo siiguiento estas respuestas 
 y recrea el plan de nuevo
-

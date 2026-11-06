@@ -20,6 +20,7 @@ describe('series y rango', () => {
   it('cuántos números del rango quedan', () => {
     expect(rangeRemaining({ rangeFrom: 1, rangeTo: 5000 }, 101)).toBe(4900)
     expect(rangeRemaining({ rangeFrom: 1, rangeTo: 100 }, 150)).toBe(0)
+    expect(rangeRemaining({ rangeFrom: 100, rangeTo: 200 }, 1)).toBe(101)
     expect(rangeRemaining({ rangeFrom: null, rangeTo: null }, 5)).toBeNull()
   })
 

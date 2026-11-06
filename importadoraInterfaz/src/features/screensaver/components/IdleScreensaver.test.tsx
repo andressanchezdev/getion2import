@@ -5,6 +5,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SCREENSAVER_LABELS, SCREENSAVER_TIMING } from '../constants/screensaver.constants'
 import { IdleScreensaver } from './IdleScreensaver'
 
+const { dispatchMock } = vi.hoisted(() => ({ dispatchMock: vi.fn() }))
+vi.mock('@/global/hooks/store/useRedux', () => ({
+  useAppDispatch: () => dispatchMock,
+  useAppSelector: () => ({ screensaverImage: 'screensaver-test.png', screensaverLoading: false }),
+}))
+vi.mock('../hooks/useParticleAnimation', () => ({ useParticleAnimation: vi.fn() }))
+
 const advance = (ms: number) => act(() => void vi.advanceTimersByTime(ms))
 const fire = (event: Event) => act(() => void window.dispatchEvent(event))
 const isShown = () => screen.queryByLabelText(SCREENSAVER_LABELS.region) !== null

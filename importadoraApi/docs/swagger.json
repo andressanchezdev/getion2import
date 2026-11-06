@@ -164,6 +164,66 @@
         }
       }
     },
+    "/audit-logs/context-change": {
+      "post": {
+        "tags": [
+          "audit"
+        ],
+        "summary": "POST /audit-logs/context-change",
+        "description": "Registra el cambio de contexto multiempresa realizado por SUPERADMIN.",
+        "operationId": "post__audit_logs_context_change",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": [
+                "toAllCompanies"
+              ],
+              "properties": {
+                "fromCompanyId": {
+                  "type": "integer",
+                  "format": "int64",
+                  "x-nullable": true
+                },
+                "toCompanyId": {
+                  "type": "integer",
+                  "format": "int64",
+                  "x-nullable": true
+                },
+                "toAllCompanies": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cambio de contexto auditado exitosamente"
+          },
+          "400": {
+            "description": "Destino o compañía inválidos"
+          },
+          "401": {
+            "description": "No autenticado o token JWT inválido/expirado"
+          },
+          "403": {
+            "description": "Solo SUPERADMIN puede registrar cambios de contexto"
+          },
+          "500": {
+            "description": "Error interno del servidor"
+          }
+        }
+      }
+    },
     "/auth/login": {
       "post": {
         "tags": [
