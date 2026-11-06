@@ -34,3 +34,9 @@ type AuditLogFilterQuery struct {
 	Page      int
 	PageSize  int
 }
+
+type ContextChangeRequest struct {
+	FromCompanyID  *int64 `json:"fromCompanyId"`
+	ToCompanyID    *int64 `json:"toCompanyId"`
+	ToAllCompanies bool   `json:"toAllCompanies"`
+}

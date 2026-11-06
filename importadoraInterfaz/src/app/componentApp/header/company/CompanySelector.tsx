@@ -9,6 +9,9 @@ import { selectCurrentUser } from '@/features/auth'
 import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { canLevelSee, getActorLevel } from '@/global/helpers/access/accessLevels'
 import { useClickOutside } from '@/global/hooks/ui/useClickOutside'
+import { getErrorMessage } from '@/api'
+import { toast } from '@/global/helpers/feedback/toast'
+import { recordCompanyContextChange } from '@/features/audit/services/audit.service'
 import buildingIcon from '@/assets/icons/building.svg'
 
 export const CompanySelector: React.FC = () => {
@@ -24,8 +27,16 @@ export const CompanySelector: React.FC = () => {
 
     if (!isSuperadmin) return null
 
-    const choose = (id: number, name: string) => {
-        if (id !== activeCompanyId) dispatch(setActiveCompany({ id, name }))
+    const choose = async (id: number, name: string) => {
+        if (id !== activeCompanyId) {
+            try {
+                await recordCompanyContextChange(activeCompanyId > 0 ? activeCompanyId : null, id > 0 ? id : null)
+                dispatch(setActiveCompany({ id, name }))
+            } catch (error) {
+                toast.error(getErrorMessage(error, 'No se pudo auditar el cambio de compañía; el contexto no fue cambiado.'))
+                return
+            }
+        }
         setIsOpen(false)
     }
 

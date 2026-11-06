@@ -35,6 +35,8 @@ export interface ReturnDto {
   replacementProductId?: number
   replacementProductCode?: string
   replacementProductName?: string
+  evidenceUrl?: string
+  receiptUrl?: string
   status: ReturnStatus
   total: number
   createdAt: string
@@ -53,6 +55,8 @@ export interface CreateReturnInput {
   reasonType?: ReturnReasonType
   resolutionType: ReturnResolutionType
   replacementStockId?: number
+  evidenceUrl?: string
+  receiptUrl?: string
   items: CreateReturnItemInput[]
 }
 

@@ -37,6 +37,8 @@ type ReturnEntity struct {
 	ReplacementStockID     *int64
 	ReplacementProductCode *string
 	ReplacementProductName *string
+	EvidenceURL            *string
+	ReceiptURL             *string
 	Status                 types.ReturnStatus
 	Total                  float64
 	ApprovedAt             *time.Time
@@ -71,15 +73,17 @@ func (r *ReturnRepository) Create(ctx context.Context, q db.DBExecutor, ret *Ret
 	const sql = `
 		INSERT INTO returns (
 			company_id, sale_id, customer_id, employee_id, reason, status, total,
-			reason_type, resolution_type, replacement_product_id, replacement_stock_id
+			reason_type, resolution_type, replacement_product_id, replacement_stock_id,
+			evidence_url, receipt_url
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
 		)
 		RETURNING id, created_at
 	`
 	err := q.QueryRow(ctx, sql,
 		ret.CompanyID, ret.SaleID, ret.CustomerID, ret.EmployeeID, ret.Reason, ret.Status, ret.Total,
 		ret.ReasonType, ret.ResolutionType, ret.ReplacementProductID, ret.ReplacementStockID,
+		ret.EvidenceURL, ret.ReceiptURL,
 	).Scan(&ret.ID, &ret.CreatedAt)
 	if err != nil {
 		return nil, err
@@ -112,6 +116,7 @@ func (r *ReturnRepository) FindByID(ctx context.Context, q db.DBExecutor, id int
 			ret.reason, ret.reason_type, ret.resolution_type,
 			ret.replacement_product_id, ret.replacement_stock_id,
 			rp.code, rp.name,
+			ret.evidence_url, ret.receipt_url,
 			ret.status, ret.total, ret.approved_at, ret.created_at
 		FROM returns ret
 		JOIN sales s ON s.id = ret.sale_id
@@ -132,6 +137,7 @@ func (r *ReturnRepository) FindByID(ctx context.Context, q db.DBExecutor, id int
 		&entity.Reason, &entity.ReasonType, &entity.ResolutionType,
 		&entity.ReplacementProductID, &entity.ReplacementStockID,
 		&entity.ReplacementProductCode, &entity.ReplacementProductName,
+		&entity.EvidenceURL, &entity.ReceiptURL,
 		&entity.Status, &entity.Total, &entity.ApprovedAt, &entity.CreatedAt,
 	)
 	if err != nil {
@@ -244,6 +250,7 @@ func (r *ReturnRepository) List(ctx context.Context, q db.DBExecutor, f dtos.Ret
 			ret.reason, ret.reason_type, ret.resolution_type,
 			ret.replacement_product_id, ret.replacement_stock_id,
 			rp.code, rp.name,
+			ret.evidence_url, ret.receipt_url,
 			ret.status, ret.total, ret.approved_at, ret.created_at
 		FROM returns ret
 		JOIN sales s ON s.id = ret.sale_id
@@ -277,6 +284,7 @@ func (r *ReturnRepository) List(ctx context.Context, q db.DBExecutor, f dtos.Ret
 			&entity.Reason, &entity.ReasonType, &entity.ResolutionType,
 			&entity.ReplacementProductID, &entity.ReplacementStockID,
 			&entity.ReplacementProductCode, &entity.ReplacementProductName,
+			&entity.EvidenceURL, &entity.ReceiptURL,
 			&entity.Status, &entity.Total, &entity.ApprovedAt, &entity.CreatedAt,
 		); err != nil {
 			return nil, 0, err

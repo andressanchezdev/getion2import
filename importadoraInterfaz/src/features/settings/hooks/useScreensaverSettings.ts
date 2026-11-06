@@ -56,7 +56,7 @@ export const useScreensaverSettings = () => {
   }
 
   return {
-    currentImage: screensaverImage || defaultLogo, loading: screensaverLoading, saving: screensaverSaving,
+    currentImage: screensaverImage, loading: screensaverLoading, saving: screensaverSaving,
     newImage, fileName, info, optimizing, pickFile, save, restoreDefault,
   }
 }

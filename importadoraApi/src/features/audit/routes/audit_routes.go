@@ -5,6 +5,7 @@ package routes
 
 import (
 	"importadoraApi/src/core/middlewares"
+	"importadoraApi/src/core/types"
 	"importadoraApi/src/features/audit/controllers"
 
 	"github.com/labstack/echo/v4"
@@ -15,5 +16,6 @@ func RegisterRoutes(e *echo.Echo, authMiddleware *middlewares.AuthMiddleware, ct
 	g := e.Group("/audit-logs", authMiddleware.Authenticate())
 	{
 		g.GET("", ctrl.List, authMiddleware.RequirePermission("audit", "view"))
+		g.POST("/context-change", ctrl.LogContextChange, middlewares.RequireActors(types.ActorSuperadmin))
 	}
 }

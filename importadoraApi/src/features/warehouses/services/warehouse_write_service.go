@@ -270,6 +270,9 @@ func (s *WarehouseService) Deactivate(ctx context.Context, actor *middlewares.Ac
 	if err := s.warehouseRepo.Deactivate(ctx, s.pool, id); err != nil {
 		return utils.Internal("Error al desactivar la bodega.", err)
 	}
+	if err := s.authRepo.RevokeTokensByWarehouse(ctx, s.pool, id); err != nil {
+		return utils.Internal("La bodega fue desactivada, pero no se pudieron cerrar las sesiones de sus empleados.", err)
+	}
 
 	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
 		CompanyID: &current.CompanyID,

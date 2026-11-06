@@ -57,6 +57,63 @@ func NewCashSessionRepository() *CashSessionRepository {
 	return &CashSessionRepository{}
 }
 
+func (r *CashSessionRepository) FindActiveByActor(ctx context.Context, q db.DBExecutor, companyID, warehouseID int64, actorType string, actorID int64) (*CashSessionEntity, error) {
+	const sql = `
+		SELECT
+			cs.id, cs.company_id, cs.warehouse_id, COALESCE(w.name, ''),
+			cs.status, cs.opened_by_actor_type, cs.opened_by_actor_id, cs.opened_by_name,
+			cs.opened_at, cs.opening_amount, cs.closed_by_actor_type, cs.closed_by_actor_id,
+			cs.closed_by_name, cs.closed_at, cs.cash_total, cs.transfer_total,
+			cs.payments_count, cs.expected_cash, cs.counted_cash, cs.difference, cs.notes
+		FROM cash_sessions cs
+		LEFT JOIN warehouses w ON cs.warehouse_id = w.id
+		WHERE cs.company_id = $1 AND cs.warehouse_id = $2 
+		  AND cs.opened_by_actor_type = $3 AND cs.opened_by_actor_id = $4 
+		  AND cs.status = 'open'
+		LIMIT 1
+	`
+	var s CashSessionEntity
+	err := q.QueryRow(ctx, sql, companyID, warehouseID, actorType, actorID).Scan(
+		&s.ID, &s.CompanyID, &s.WarehouseID, &s.WarehouseName,
+		&s.Status, &s.OpenedByActorType, &s.OpenedByActorID, &s.OpenedByName,
+		&s.OpenedAt, &s.OpeningAmount, &s.ClosedByActorType, &s.ClosedByActorID,
+		&s.ClosedByName, &s.ClosedAt, &s.CashTotal, &s.TransferTotal,
+		&s.PaymentsCount, &s.ExpectedCash, &s.CountedCash, &s.Difference, &s.Notes,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) || isMissingSchemaElement(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &s, nil
+}
+
+// CountPendingVerificationSales cuenta los pedidos pendientes de verificación en la bodega.
+func (r *CashSessionRepository) CountPendingVerificationSales(ctx context.Context, q db.DBExecutor, companyID, warehouseID int64) (int, error) {
+	const sql = `
+		SELECT COUNT(*)
+		FROM sales
+		WHERE company_id = $1 AND warehouse_id = $2 AND current_stage = 'verification' AND status = 'open'
+	`
+	var count int
+	err := q.QueryRow(ctx, sql, companyID, warehouseID).Scan(&count)
+	return count, err
+}
+
+// HasAnyOpenSessionInWarehouse verifica si hay al menos una caja abierta en la bodega.
+func (r *CashSessionRepository) HasAnyOpenSessionInWarehouse(ctx context.Context, q db.DBExecutor, companyID, warehouseID int64) (bool, error) {
+	const sql = `
+		SELECT EXISTS (
+			SELECT 1 FROM cash_sessions
+			WHERE company_id = $1 AND warehouse_id = $2 AND status = 'open'
+		)
+	`
+	var exists bool
+	err := q.QueryRow(ctx, sql, companyID, warehouseID).Scan(&exists)
+	return exists, err
+}
+
 func (r *CashSessionRepository) FindActiveByWarehouse(ctx context.Context, q db.DBExecutor, companyID, warehouseID int64) (*CashSessionEntity, error) {
 	const sql = `
 		SELECT

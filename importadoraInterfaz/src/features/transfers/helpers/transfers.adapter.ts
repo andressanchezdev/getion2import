@@ -31,7 +31,7 @@ export const toTrasladeItem = (dto: TransferDto): TrasladeItem => {
     type: dto.transferType || 'standard',
     typeLabel: getTransferTypeLabel(dto.transferType),
     status: isNovelty ? 'with_novelty' : status,
-    priority: isNovelty || dto.priority === 'high' ? 'high' : 'normal',
+    priority: isNovelty || dto.priority === 'high' || Boolean(dto.isPriority) ? 'high' : 'normal',
     originWarehouse: { id: dto.originWarehouseId, name: dto.originWarehouseName || 'Bodega Origen' },
     destWarehouse: { id: dto.destinationWarehouseId, name: dto.destinationWarehouseName || 'Bodega Destino' },
     products: (dto.items ?? []).map((item) => ({

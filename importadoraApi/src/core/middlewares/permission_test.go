@@ -1,6 +1,6 @@
 package middlewares
 
-// permission_test · pruebas de RequirePermission y RequireActors: el empleado necesita el permiso exacto, administradores y superadministradores pasan siempre
+// permission_test · pruebas de RequirePermission y RequireActors: el empleado necesita el permiso exacto y el superadministrador solo puede mutar gobernanza
 // conecta con: auth_middleware.go (RequirePermission y RequireActors)
 
 import (
@@ -41,7 +41,7 @@ func TestRequirePermission(t *testing.T) {
 		{"empleado sin ningún permiso no pasa", &ActorContext{ActorType: types.ActorEmployee}, false},
 		{"empleado con el permiso exacto pasa (el rol no importa)", &ActorContext{ActorType: types.ActorEmployee, Permissions: map[string]bool{"roles:edit": true}}, true},
 		{"administrador pasa siempre", &ActorContext{ActorType: types.ActorAdmin}, true},
-		{"superadministrador pasa siempre", &ActorContext{ActorType: types.ActorSuperadmin}, true},
+		{"superadministrador no puede mutar módulos operativos", &ActorContext{ActorType: types.ActorSuperadmin}, false},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -54,6 +54,20 @@ func TestRequirePermission(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("superadministrador puede consultar módulos operativos", func(t *testing.T) {
+		passed, err := run(RequirePermission("sales", "view"), &ActorContext{ActorType: types.ActorSuperadmin})
+		if !passed || err != nil {
+			t.Fatalf("se esperaba acceso de solo lectura (pasó = %v, error: %v)", passed, err)
+		}
+	})
+
+	t.Run("superadministrador puede mutar gobernanza", func(t *testing.T) {
+		passed, err := run(RequirePermission("audit", "edit"), &ActorContext{ActorType: types.ActorSuperadmin})
+		if !passed || err != nil {
+			t.Fatalf("se esperaba acceso a gobernanza (pasó = %v, error: %v)", passed, err)
+		}
+	})
 }
 
 // TestRequireActors revisa que solo pasen los tipos de actor permitidos.

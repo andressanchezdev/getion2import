@@ -4,7 +4,6 @@
 // ojo: el cursor remueve la arena mientras se mueve y no hace nada si está quieto; con el clic sostenido en vez de remover se GIRA la imagen en 3D (horizontal y vertical, sin límite); soltar el clic cierra el protector (lo decide useIdle)
 // ojo: con "reducir movimiento" activado en el sistema el logo aparece ya formado y quieto
 import { useEffect, type RefObject } from 'react'
-import logoSrc from '@/assets/images/screensaver-logo.jpg'
 import { SCREENSAVER_RENDER, SCREENSAVER_VIEW } from '../constants/screensaver.constants'
 import { loadScreensaverTargets } from '../helpers/screensaver.image'
 import { createField, getLayout, getPhase, snapToTargets, stepField } from '../helpers/screensaver.physics'
@@ -27,8 +26,8 @@ export const useParticleAnimation = (
     let cleanup = () => {}
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-    const activeLogo = customImageSrc || localStorage.getItem('custom_screensaver_logo') || logoSrc
-    loadScreensaverTargets(activeLogo)
+    if (!customImageSrc) return
+    loadScreensaverTargets(customImageSrc)
       .then((targets) => {
         if (cancelled) return
 

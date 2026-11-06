@@ -73,6 +73,9 @@ func (s *AuthService) Login(ctx context.Context, req dtos.LoginRequest, ip, user
 	if !acc.CompanyIsActive {
 		return nil, utils.Forbidden("COMPANY_INACTIVE", "La compañía asociada a esta cuenta se encuentra inactiva.")
 	}
+	if acc.ActorType == types.ActorEmployee && !acc.WarehouseIsActive {
+		return nil, utils.Forbidden("WAREHOUSE_INACTIVE", "La bodega asociada a esta cuenta no está disponible. Comunícate con el área de desarrollo.")
+	}
 
 	// Verificar contraseña con bcrypt
 	if !utils.CheckPassword(acc.PasswordHash, req.Password) {
@@ -189,7 +192,7 @@ func (s *AuthService) Refresh(ctx context.Context, req dtos.RefreshRequest, ip, 
 	}
 
 	acc, err := s.authRepo.FindActorByID(ctx, s.pool, actorType, actorID)
-	if err != nil || !acc.IsActive || !acc.CompanyIsActive {
+	if err != nil || !acc.IsActive || !acc.CompanyIsActive || (actorType == types.ActorEmployee && !acc.WarehouseIsActive) {
 		_ = s.authRepo.RevokeRefreshTokenByID(ctx, s.pool, activeRec.ID)
 		return nil, utils.Unauthorized("ACCOUNT_INACTIVE", "La cuenta o compañía ya no está activa.")
 	}

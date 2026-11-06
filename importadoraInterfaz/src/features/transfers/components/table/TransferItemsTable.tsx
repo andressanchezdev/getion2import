@@ -128,7 +128,7 @@ export const TransferItemsTable: React.FC<TransferItemsTableProps> = ({
                     <Person
                       name={item.receivedByEmployeeName}
                       id={item.receivedByEmployeeId}
-                      fallback={item.status === 'received' ? 'Recibido' : item.status === 'with_novelty' ? 'Con novedad' : 'En tránsito'}
+                      fallback={item.status === 'received' ? 'Recibido' : item.status === 'with_novelty' ? 'Aceptado con novedad' : 'En tránsito'}
                     />
                   </td>
                   <td data-label="Repuestos">

@@ -164,6 +164,7 @@ type InvoiceResponse struct {
 	Number                 string              `json:"number"`
 	Status                 types.InvoiceStatus `json:"status"`
 	PDFURL                 *string             `json:"pdfUrl,omitempty"`
+	Warnings               []string            `json:"warnings,omitempty"`
 	IssuedAt               time.Time           `json:"issuedAt"`
 	CreatedAt              time.Time           `json:"createdAt"`
 }

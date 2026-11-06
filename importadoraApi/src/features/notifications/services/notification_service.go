@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"importadoraApi/src/core/middlewares"
+	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
 	"importadoraApi/src/features/notifications/dtos"
 	"importadoraApi/src/features/notifications/repositories"
@@ -33,8 +34,12 @@ func (s *NotificationService) List(ctx context.Context, actor *middlewares.Actor
 		return nil, nil, utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
 	}
 
+	if actor.ActorType == types.ActorSuperadmin {
+		return nil, nil, utils.Forbidden("NOTIFICATIONS_UNAVAILABLE", "Las notificaciones están disponibles para administradores y empleados.")
+	}
 	filter := dtos.NotificationFilterQuery{
-		EmployeeID: actor.ActorID,
+		ActorType:  string(actor.ActorType),
+		ActorID:    actor.ActorID,
 		UnreadOnly: unreadOnly,
 		Page:       params.Page,
 		PageSize:   params.PageSize,
@@ -51,6 +56,7 @@ func (s *NotificationService) List(ctx context.Context, actor *middlewares.Actor
 		resp = append(resp, dtos.NotificationResponse{
 			ID:         n.ID,
 			EmployeeID: n.EmployeeID,
+			AdminID:    n.AdminID,
 			Kind:       n.Kind,
 			Title:      n.Title,
 			Body:       n.Body,
@@ -69,7 +75,7 @@ func (s *NotificationService) MarkAsRead(ctx context.Context, actor *middlewares
 	if actor == nil || actor.ActorID <= 0 {
 		return utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
 	}
-	return s.notificationRepo.MarkAsRead(ctx, s.pool, id, actor.ActorID)
+	return s.notificationRepo.MarkAsRead(ctx, s.pool, string(actor.ActorType), id, actor.ActorID)
 }
 
 // MarkAllAsRead marca como leídas todas las notificaciones del usuario.
@@ -77,6 +83,5 @@ func (s *NotificationService) MarkAllAsRead(ctx context.Context, actor *middlewa
 	if actor == nil || actor.ActorID <= 0 {
 		return utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
 	}
-	return s.notificationRepo.MarkAllAsRead(ctx, s.pool, actor.ActorID)
+	return s.notificationRepo.MarkAllAsRead(ctx, s.pool, string(actor.ActorType), actor.ActorID)
 }
-

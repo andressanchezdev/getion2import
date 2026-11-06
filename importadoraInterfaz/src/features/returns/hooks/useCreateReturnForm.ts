@@ -21,6 +21,8 @@ export const useCreateReturnForm = (onClose: () => void) => {
   const [reasonType, setReasonType] = useState<ReturnReasonType>('warranty')
   const [resolutionType, setResolutionType] = useState<ReturnResolutionType>('exchange')
   const [reason, setReason] = useState('')
+  const [evidenceUrl, setEvidenceUrl] = useState('')
+  const [receiptUrl, setReceiptUrl] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
@@ -48,16 +50,31 @@ export const useCreateReturnForm = (onClose: () => void) => {
   const submit = async () => {
     if (!sale) return notify.error('Selecciona una venta para asociar la devolución')
     if (!reason.trim()) return notify.error('Ingresa el motivo de la devolución o garantía')
+    if (reasonType === 'warranty') {
+      if (!evidenceUrl.trim()) return notify.error('La evidencia fotográfica del defecto o falla es obligatoria')
+      if (!receiptUrl.trim()) return notify.error('El número de soporte o factura es obligatorio')
+    }
     const items = picksToItems(picks)
     if (items.length === 0) return notify.error('Selecciona al menos un producto a devolver')
     setSubmitting(true)
-    const result = await dispatch(createReturnThunk({ saleId: sale.id, reason: reason.trim(), reasonType, resolutionType, items }))
+    const result = await dispatch(
+      createReturnThunk({
+        saleId: sale.id,
+        reason: reason.trim(),
+        reasonType,
+        resolutionType,
+        evidenceUrl: evidenceUrl.trim() || undefined,
+        receiptUrl: receiptUrl.trim() || undefined,
+        items,
+      })
+    )
     setSubmitting(false)
     if (createReturnThunk.fulfilled.match(result)) onClose()
   }
 
   return {
     search, setSearch, sales, searching, sale, clearSale: () => setSale(null), loadingSale, selectSale,
-    picks, togglePick, setPickQuantity, reasonType, setReasonType, resolutionType, setResolutionType, reason, setReason, submitting, submit,
+    picks, togglePick, setPickQuantity, reasonType, setReasonType, resolutionType, setResolutionType, reason, setReason,
+    evidenceUrl, setEvidenceUrl, receiptUrl, setReceiptUrl, submitting, submit,
   }
 }

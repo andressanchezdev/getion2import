@@ -26,6 +26,7 @@ type StaffService struct {
 	permissionRepo *repositories.PermissionRepository
 	employeeRepo   *repositories.EmployeeRepository
 	auditRepo      *authRepos.AuditRepository
+	authRepo       *authRepos.AuthRepository
 }
 
 // NewStaffService crea el servicio con las piezas que necesita para funcionar.
@@ -37,6 +38,7 @@ func NewStaffService(
 	permissionRepo *repositories.PermissionRepository,
 	employeeRepo *repositories.EmployeeRepository,
 	auditRepo *authRepos.AuditRepository,
+	authRepo *authRepos.AuthRepository,
 ) *StaffService {
 	return &StaffService{
 		cfg:            cfg,
@@ -46,6 +48,7 @@ func NewStaffService(
 		permissionRepo: permissionRepo,
 		employeeRepo:   employeeRepo,
 		auditRepo:      auditRepo,
+		authRepo:       authRepo,
 	}
 }
 
@@ -221,6 +224,13 @@ func (s *StaffService) UpdateAdmin(ctx context.Context, actor *middlewares.Actor
 		return nil, utils.Internal("Error al actualizar administrador.", err)
 	}
 
+	// Si se inactiva el admin, revocar sus sesiones inmediatamente
+	if req.IsActive != nil && !*req.IsActive && s.authRepo != nil {
+		if err := s.authRepo.RevokeAllActorSessions(ctx, s.pool, types.ActorAdmin, current.ID); err != nil {
+			return nil, utils.Internal("El administrador fue desactivado, pero no se pudieron cerrar sus sesiones.", err)
+		}
+	}
+
 	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
 		CompanyID: &current.CompanyID,
 		ActorType: actor.ActorType,
@@ -262,6 +272,9 @@ func (s *StaffService) DeactivateAdmin(ctx context.Context, actor *middlewares.A
 
 	if err := s.adminRepo.SoftDelete(ctx, s.pool, id); err != nil {
 		return utils.Internal("Error al desactivar administrador.", err)
+	}
+	if err := s.authRepo.RevokeAllActorSessions(ctx, s.pool, types.ActorAdmin, id); err != nil {
+		return utils.Internal("El administrador fue desactivado, pero no se pudieron cerrar sus sesiones.", err)
 	}
 
 	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
@@ -312,4 +325,3 @@ func (s *StaffService) mapAdminToDTO(a *repositories.AdminEntity) *dtos.AdminRes
 // ==========================================
 // SERVICIOS PARA EMPLEADOS
 // ==========================================
-

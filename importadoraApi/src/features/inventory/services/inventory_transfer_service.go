@@ -130,6 +130,7 @@ func (s *InventoryService) CreateTransfer(ctx context.Context, actor *middleware
 			DestinationWarehouseID: req.DestinationWarehouseID,
 			EmployeeID:             actor.ActorID,
 			Status:                 types.TransferPending,
+			IsPriority:             req.IsPriority,
 			Notes:                  req.Notes,
 		}
 
@@ -232,6 +233,7 @@ func (s *InventoryService) mapTransferToDTO(t *repositories.TransferEntity, item
 		ReceivedByEmployeeID:     t.ReceivedByEmployeeID,
 		ReceivedByName:           t.ReceivedByName,
 		Status:                   t.Status,
+		IsPriority:               t.IsPriority,
 		Notes:                    t.Notes,
 		CancelReason:             t.CancelReason,
 		DispatchedAt:             t.DispatchedAt,

@@ -17,6 +17,7 @@ export interface Invoice {
   employeeName: string
   issuedAt: string // AAAA-MM-DD
   pdfUrl: string // '' si no hay
+  warnings: string[]
 }
 
 export interface InvoiceDto {
@@ -30,6 +31,7 @@ export interface InvoiceDto {
   employeeName?: string | null
   issuedAt?: string
   pdfUrl?: string | null
+  warnings?: string[] | null
 }
 
 // ---- datos fiscales de la bodega ----
@@ -54,6 +56,7 @@ export interface BillingConfig {
   invoicePrefix: string
   resolutionNumber: string
   resolutionDate: string // AAAA-MM-DD o ''
+  resolutionValidUntil: string // AAAA-MM-DD o ''
   rangeFrom: number | null
   rangeTo: number | null
   isActive: boolean
@@ -77,13 +80,14 @@ export interface BillingConfigDto {
   invoicePrefix?: string
   resolutionNumber?: string
   resolutionDate?: string | null
+  resolutionValidUntil?: string | null
   rangeFrom?: number | null
   rangeTo?: number | null
   isActive?: boolean
 }
 
 // lo que se envía a PUT /warehouses/:id/facturation (todo opcional: se manda lo que se editó)
-export type BillingConfigInput = Partial<Omit<BillingConfig, 'id' | 'warehouseId' | 'resolutionDate' | 'rangeFrom' | 'rangeTo'>> & { resolutionDate?: string; rangeFrom?: number; rangeTo?: number }
+export type BillingConfigInput = Partial<Omit<BillingConfig, 'id' | 'warehouseId' | 'resolutionDate' | 'resolutionValidUntil' | 'rangeFrom' | 'rangeTo'>> & { resolutionDate?: string; resolutionValidUntil?: string; rangeFrom?: number; rangeTo?: number }
 
 // ---- series de consecutivos ----
 export type DocSeriesType = 'sale' | 'transfer' | 'quotation' | 'purchase' | 'payment' | 'invoice'

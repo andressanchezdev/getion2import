@@ -49,6 +49,23 @@ func (s *SaleService) Create(ctx context.Context, actorCompanyID *int64, actorEm
 		return nil, err
 	}
 
+	// Regla estricta: para ventas en efectivo se exige turno de caja abierto en la bodega
+	if req.PaymentMethod == types.PaymentCash {
+		var hasOpenSession bool
+		err := s.pool.QueryRow(ctx, `
+			SELECT EXISTS (
+				SELECT 1 FROM cash_sessions 
+				WHERE company_id = $1 AND warehouse_id = $2 AND status = 'open'
+			)
+		`, companyID, req.WarehouseID).Scan(&hasOpenSession)
+		if err != nil {
+			return nil, utils.Internal("Error al validar turno de caja de la bodega.", err)
+		}
+		if !hasOpenSession {
+			return nil, utils.Conflict("CASH_SESSION_CLOSED", "No se pueden realizar ventas en efectivo sin un turno de caja abierto en esta sede. Abre el turno de caja antes de continuar.")
+		}
+	}
+
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return nil, err
@@ -183,15 +200,8 @@ func (s *SaleService) Create(ctx context.Context, actorCompanyID *int64, actorEm
 		return nil, fmt.Errorf("error al generar consecutivo de venta: %w", err)
 	}
 
-	immediatePicking := false
-	if req.ImmediatePicking != nil {
-		immediatePicking = *req.ImmediatePicking
-	}
-
+	// Todo pedido nace estrictamente en verificación (los inmediatos solo llevan el indicador de prioridad)
 	initialStage := types.StageVerification
-	if immediatePicking {
-		initialStage = types.StagePicking
-	}
 
 	var dueDate *time.Time
 	if req.DueDate != nil && *req.DueDate != "" {
@@ -225,7 +235,7 @@ func (s *SaleService) Create(ctx context.Context, actorCompanyID *int64, actorEm
 		PriceTier:        customerTier,
 		PaymentMethod:    req.PaymentMethod,
 		PaymentCondition: req.PaymentCondition,
-		ImmediatePicking: immediatePicking,
+		ImmediatePicking: req.ImmediatePicking != nil && *req.ImmediatePicking,
 		Status:           types.SaleOpen,
 		CurrentStage:     initialStage,
 		Subtotal:         grandSubtotal,
@@ -256,12 +266,7 @@ func (s *SaleService) Create(ctx context.Context, actorCompanyID *int64, actorEm
 		if err := s.saleRepo.SetCreditAmount(ctx, tx, createdSale.ID, grandTotal); err != nil {
 			return nil, fmt.Errorf("error al fijar la parte a crédito del pedido: %w", err)
 		}
-		// todo el pedido queda a crédito y el cupo ya se validó: el pago nace confirmado (listo para la cola de picking)
-		if initialStage == types.StageVerification {
-			if err := s.saleRepo.UpdateStageBy(ctx, tx, createdSale.ID, types.StageVerificationOK, types.SaleOpen, &creatorID); err != nil {
-				return nil, fmt.Errorf("error al confirmar el pedido a crédito: %w", err)
-			}
-		}
+		// El pedido a crédito nace en verification: debe ser verificado por caja/cartera antes de alistarse
 	}
 
 	if req.PaymentMethod == types.PaymentTransfer && req.CustomerID != nil {

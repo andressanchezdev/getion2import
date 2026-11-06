@@ -2,7 +2,8 @@
 // conecta con: auth.session (estado inicial), auth.slice (al iniciar sesión) y usePermissions (la lee); usa el adaptador de empleados y el menú
 // ojo: solo los empleados tienen matriz; administradores y superadministradores no (null = acceso total). Una sesión guardada antes de esta versión no trae permisos: tampoco tiene matriz y no se le oculta nada (la API igual exige los permisos en cada ruta)
 import { MENU_ITEMS } from '@/features/navigation'
-import { toModulePermissions, type EmployeePermissionsResponse } from '@/features/employees'
+import { toModulePermissions } from '@/features/employees/helpers/employees.adapter'
+import type { EmployeePermissionsResponse } from '@/features/employees/types/employees.types'
 import type { AuthUser } from '../types/auth.types'
 
 // los permisos del usuario como matriz del menú, o null si no aplica

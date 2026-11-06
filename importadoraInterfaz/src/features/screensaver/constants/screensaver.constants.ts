@@ -1,9 +1,8 @@
 // screensaver.constants · tiempos, tamaños y textos del protector de pantalla (arena que forma el logo de Importadora Premium)
 // conecta con: useIdle (espera), screensaver.sampling y screensaver.physics (puntos y movimiento), IdleScreensaver (textos)
-// ojo: IDLE_MS es el único valor que se cambia si piden otro tiempo de espera
-// ojo: hoy está en 25 segundos solo para probar; el valor definitivo es 5 * 60 * 1000 (5 minutos)
+// El intervalo es único para todas las compañías y se define desde el código.
 export const SCREENSAVER_TIMING = {
-  IDLE_MS: 70 * 1000, // sin actividad durante este tiempo → aparece el protector
+  IDLE_MS: 5 * 60 * 1000, // sin actividad durante este tiempo → aparece el protector
   CHECK_MS: 1000, // cada cuánto se revisa la inactividad (se compara con la hora, no se suman timers)
   WAKE_GRACE_MS: 600, // al aparecer ignora los clics y teclas este tiempo para que un toque suelto no lo cierre
 } as const

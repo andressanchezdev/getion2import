@@ -12,8 +12,9 @@ import type { OrderChannelFilter, OrderDetail, OrderRow, OrderStageKey, StageCou
 const { SALES, PAYMENTS } = API_CONFIG.ENDPOINTS
 
 // pasa el pedido a la siguiente etapa (alistar, empacar, facturar, despachar o enviar); Go rechaza con 409 si no corresponde
-export const advanceSale = async (saleId: number, action: 'pick' | 'pack' | 'invoice' | 'dispatch' | 'send'): Promise<void> => {
-  await apiClient.post(SALES.ACTION(saleId, action), {})
+export const advanceSale = async (saleId: number, action: 'pick' | 'pack' | 'invoice' | 'dispatch' | 'send'): Promise<string[]> => {
+  const { data } = await apiClient.post<APIResponse<{ warnings?: string[] } | null>>(SALES.ACTION(saleId, action), {})
+  return data.data?.warnings ?? []
 }
 
 // parámetros de una etapa: solo pedidos abiertos de la bodega

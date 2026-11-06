@@ -15,6 +15,14 @@ export const BillingSettingsScreen: React.FC = () => {
   const { config } = billing
   const invoiceSeries = billing.series.find((series) => series.docType === 'invoice')
   const remaining = config && invoiceSeries ? rangeRemaining(config, invoiceSeries.nextNumber) : null
+  const today = new Date().toISOString().slice(0, 10)
+  const resolutionWarnings = config
+    ? [
+        !config.resolutionNumber.trim() ? 'No hay una resolución DIAN configurada; la facturación permanece habilitada.' : '',
+        config.resolutionValidUntil && config.resolutionValidUntil < today ? 'La resolución DIAN está vencida; la facturación permanece habilitada.' : '',
+        remaining === 0 ? 'El rango autorizado está agotado; la facturación permanece habilitada.' : '',
+      ].filter(Boolean)
+    : []
 
   const message = billing.warehouseId <= 0 ? 'Elige una bodega para ver su facturación.' : billing.failed ? billing.error : billing.loading ? 'Cargando facturación…' : null
 
@@ -38,7 +46,7 @@ export const BillingSettingsScreen: React.FC = () => {
           <dl className="billing-facts">
             <div><dt>Razón social</dt><dd>{config.legalName}</dd></div>
             <div><dt>{config.documentType}</dt><dd>{config.nit}</dd></div>
-            <div><dt>Resolución</dt><dd>{config.resolutionNumber || '—'}{config.resolutionDate ? ` · ${config.resolutionDate}` : ''}</dd></div>
+            <div><dt>Resolución</dt><dd>{config.resolutionNumber || '—'}{config.resolutionDate ? ` · ${config.resolutionDate}` : ''}{config.resolutionValidUntil ? ` · Vigente hasta ${config.resolutionValidUntil}` : ''}</dd></div>
             <div><dt>Prefijo y rango</dt><dd>{config.invoicePrefix || '—'} · {config.rangeFrom ?? '—'} a {config.rangeTo ?? '—'}</dd></div>
             <div>
               <dt>Números por usar</dt>
@@ -47,6 +55,7 @@ export const BillingSettingsScreen: React.FC = () => {
             <div><dt>Estado</dt><dd><Pill tone={config.isActive ? 'green' : 'gray'}>{config.isActive ? 'Activa' : 'Inactiva'}</Pill></dd></div>
           </dl>
         )}
+        {resolutionWarnings.map((warning) => <p className="billing-resolution-warning" role="alert" key={warning}>{warning}</p>)}
       </div>
 
       <div className="billing-card">

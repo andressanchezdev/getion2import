@@ -43,8 +43,37 @@ const DrawerBody: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               <label className="cr-section-label">4. Tipo de Resolución Acordada *</label>
               <ReturnChoiceCards name="resolutionType" value={form.resolutionType} options={RESOLUTION_OPTIONS} onChange={form.setResolutionType} />
             </div>
+            {form.reasonType === 'warranty' && (
+              <div className="cr-form-section">
+                <label className="cr-section-label">5. Evidencias de Garantía *</label>
+                <div className="cr-warranty-inputs">
+                  <div>
+                    <label className="cr-field-label">Foto / Evidencia del defecto (URL o referencia) *</label>
+                    <input
+                      type="text"
+                      className="cr-input"
+                      value={form.evidenceUrl}
+                      onChange={(e) => form.setEvidenceUrl(e.target.value)}
+                      placeholder="Ej: https://evidencias.empresa.com/garantias/foto1.jpg"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="cr-field-label">Factura / Soporte de venta *</label>
+                    <input
+                      type="text"
+                      className="cr-input"
+                      value={form.receiptUrl}
+                      onChange={(e) => form.setReceiptUrl(e.target.value)}
+                      placeholder="Ej: FACT-00123 o número de factura"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="cr-form-section">
-              <label className="cr-section-label">5. Motivo / Justificación *</label>
+              <label className="cr-section-label">{form.reasonType === 'warranty' ? '6.' : '5.'} Motivo / Justificación *</label>
               <textarea
                 value={form.reason}
                 onChange={(e) => form.setReason(e.target.value)}

@@ -155,3 +155,45 @@ func (r *AuthRepository) IsSessionActive(ctx context.Context, q db.DBExecutor, s
 	err := q.QueryRow(ctx, sqlQuery, sessionID).Scan(&active)
 	return active, err
 }
+
+// RevokeTokensByCompany revoca todos los tokens de todos los admins y empleados de una compañía dada.
+func (r *AuthRepository) RevokeTokensByCompany(ctx context.Context, q db.DBExecutor, companyID int64) error {
+	const sqlQuery = `
+		UPDATE refresh_tokens
+		SET revoked_at = CURRENT_TIMESTAMP
+		WHERE revoked_at IS NULL
+		  AND (
+			admin_id IN (SELECT id FROM admins WHERE company_id = $1)
+			OR employee_id IN (SELECT id FROM employees WHERE company_id = $1)
+		  )
+	`
+	_, err := q.Exec(ctx, sqlQuery, companyID)
+	return err
+}
+
+// RevokeTokensByWarehouse cierra las sesiones de los empleados asignados a una bodega.
+func (r *AuthRepository) RevokeTokensByWarehouse(ctx context.Context, q db.DBExecutor, warehouseID int64) error {
+	const sqlQuery = `
+		UPDATE refresh_tokens
+		SET revoked_at = CURRENT_TIMESTAMP
+		WHERE revoked_at IS NULL
+		  AND employee_id IN (SELECT id FROM employees WHERE warehouse_id = $1)
+	`
+	_, err := q.Exec(ctx, sqlQuery, warehouseID)
+	return err
+}
+
+// IsActorAvailable confirma que el usuario, su compañía y su bodega sigan activos.
+func (r *AuthRepository) IsActorAvailable(ctx context.Context, q db.DBExecutor, actorType types.ActorType, actorID int64) (bool, error) {
+	account, err := r.FindActorByID(ctx, q, actorType, actorID)
+	if err != nil {
+		return false, err
+	}
+	if !account.IsActive || !account.CompanyIsActive {
+		return false, nil
+	}
+	if actorType == types.ActorEmployee && account.WarehouseID != nil && !account.WarehouseIsActive {
+		return false, nil
+	}
+	return true, nil
+}

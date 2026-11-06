@@ -8,11 +8,20 @@ import { toAuditEntry } from '../helpers/audit.adapter'
 import type { AuditLogDto } from '../types/audit.api.types'
 import type { AuditEntry, AuditFilters } from '../types/audit.types'
 
+export const recordCompanyContextChange = async (fromCompanyId: number | null, toCompanyId: number | null): Promise<void> => {
+  await apiClient.post(API_CONFIG.ENDPOINTS.AUDIT.CONTEXT_CHANGE, {
+    fromCompanyId,
+    toCompanyId,
+    toAllCompanies: toCompanyId === null,
+  })
+}
+
 export const fetchAuditPage = async (ctx: RequestContext, page: number, filters: AuditFilters): Promise<Paginated<AuditEntry>> => {
   const queryParams: Record<string, string | number> = {
     page,
     pageSize: AUDIT_PAGE_SIZE,
   }
+
   if (filters.entity) queryParams.entity = filters.entity
   if (filters.action) queryParams.action = filters.action
   if (filters.role) queryParams.actorType = filters.role

@@ -89,7 +89,7 @@ export const ReceiveTransferForm: React.FC<Props> = ({ transfer }) => {
                 setErrorMsg(null)
               }}
             >
-              Con novedad
+              Aceptado con novedad
               <small>Faltante, avería o daño</small>
             </button>
           </div>
@@ -110,7 +110,7 @@ export const ReceiveTransferForm: React.FC<Props> = ({ transfer }) => {
         ) : (
           <div className="receive-transfer-section">
             <p className="receive-transfer-warning">
-              Al registrar con novedad, el traslado pasará a estado <strong>Con novedad (alta prioridad)</strong> para su posterior resolución por administración.
+              Al registrar con novedad, el traslado pasará a estado <strong>Aceptado con novedad (alta prioridad)</strong> para su posterior resolución por administración.
             </p>
             <ValidatedInput
               id="novelty-notes"

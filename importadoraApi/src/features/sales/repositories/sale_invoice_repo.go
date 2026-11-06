@@ -36,15 +36,43 @@ type InvoiceEntity struct {
 	CreatedAt              time.Time
 }
 
+type WarehouseFacturationResolution struct {
+	ID                   int64
+	ResolutionNumber     *string
+	ResolutionValidUntil *time.Time
+	RangeFrom            *int64
+	RangeTo              *int64
+	ResolutionExpired    bool
+}
+
 // FindWarehouseFacturation busca la configuración de facturación de la bodega del pedido.
-func (r *SaleRepository) FindWarehouseFacturation(ctx context.Context, q db.DBExecutor, warehouseID int64) (int64, error) {
-	const sql = `SELECT id FROM warehouse_facturation WHERE warehouse_id = $1`
-	var id int64
-	err := q.QueryRow(ctx, sql, warehouseID).Scan(&id)
+func (r *SaleRepository) FindWarehouseFacturation(ctx context.Context, q db.DBExecutor, warehouseID int64) (*WarehouseFacturationResolution, error) {
+	const sql = `
+		SELECT id, resolution_number, resolution_valid_until, range_from, range_to,
+			COALESCE(resolution_valid_until < CURRENT_DATE, FALSE)
+		FROM warehouse_facturation
+		WHERE warehouse_id = $1
+	`
+	var facturation WarehouseFacturationResolution
+	err := q.QueryRow(ctx, sql, warehouseID).Scan(
+		&facturation.ID, &facturation.ResolutionNumber, &facturation.ResolutionValidUntil,
+		&facturation.RangeFrom, &facturation.RangeTo, &facturation.ResolutionExpired,
+	)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	return id, nil
+	return &facturation, nil
+}
+
+func (r *SaleRepository) FindInvoiceSeriesNextNumber(ctx context.Context, q db.DBExecutor, companyID, warehouseID int64) (int64, error) {
+	const sql = `
+		SELECT next_number
+		FROM doc_series
+		WHERE company_id = $1 AND warehouse_id = $2 AND doc_type = $3
+	`
+	var nextNumber int64
+	err := q.QueryRow(ctx, sql, companyID, warehouseID, types.SeriesInvoice).Scan(&nextNumber)
+	return nextNumber, err
 }
 
 // CreateInvoice inserta la factura de un pedido.

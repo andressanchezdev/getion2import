@@ -20,13 +20,19 @@ const fire = (event: Event) => act(() => void window.dispatchEvent(event))
 const move = (x: number, y: number) => fire(new MouseEvent('mousemove', { clientX: x, clientY: y }))
 
 describe('useIdle', () => {
-  it('el tiempo por defecto es de 70 segundos (valor de prueba; el definitivo son 5 minutos)', () => {
-    expect(SCREENSAVER_TIMING.IDLE_MS).toBe(70 * 1000)
+  it('usa el intervalo único de inactividad definido por desarrollo: cinco minutos', () => {
+    expect(SCREENSAVER_TIMING.IDLE_MS).toBe(5 * 60 * 1000)
   })
 
   it('empieza despierto y sigue así antes del tiempo de espera', () => {
     const { result } = renderHook(() => useIdle())
     advance(IDLE - 2000)
+    expect(result.current).toBe(false)
+  })
+
+  it('no activa ni escucha la inactividad cuando el protector no está configurado', () => {
+    const { result } = renderHook(() => useIdle(SCREENSAVER_TIMING.IDLE_MS, false))
+    advance(IDLE + 1000)
     expect(result.current).toBe(false)
   })
 

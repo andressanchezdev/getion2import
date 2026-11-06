@@ -79,6 +79,7 @@ export const createTransferBatch = async (ctx: RequestContext, input: CreateTran
     destinationWarehouseId: input.destWarehouseId,
     ...(input.type ? { transferType: input.type } : {}),
     ...(input.notes ? { notes: input.notes } : {}),
+    ...(input.isPriority ? { isPriority: input.isPriority } : {}),
     items,
   }
   const { data } = await apiClient.post<APIResponse<TransferDto>>(TRANSFERS.LIST, body)

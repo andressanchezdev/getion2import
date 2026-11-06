@@ -14,7 +14,8 @@ const SCREENSAVER_CACHE_KEY = 'custom_screensaver_logo' // lo lee el protector p
 
 const cacheScreensaver = (imageUrl: string) => {
   try {
-    localStorage.setItem(SCREENSAVER_CACHE_KEY, imageUrl)
+    if (imageUrl) localStorage.setItem(SCREENSAVER_CACHE_KEY, imageUrl)
+    else localStorage.removeItem(SCREENSAVER_CACHE_KEY)
   } catch {
     // ojo: almacenamiento lleno o bloqueado; el backend ya la guardó
   }
@@ -61,8 +62,9 @@ export const saveAccountThunk = createAsyncThunk<void, ProfileInput & { password
 export const loadScreensaverThunk = createAsyncThunk<string, void, Config>('settings/loadScreensaver', async (_, { rejectWithValue }) => {
   try {
     const settings = await fetchScreensaver()
-    if (settings?.imageUrl) cacheScreensaver(settings.imageUrl)
-    return settings?.imageUrl ?? ''
+    const imageUrl = settings?.isActive ? settings.imageUrl : ''
+    cacheScreensaver(imageUrl)
+    return imageUrl
   } catch (error) {
     return rejectWithValue(getErrorMessage(error, 'No se pudo cargar la imagen del protector.'))
   }

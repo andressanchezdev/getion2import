@@ -145,6 +145,18 @@ export const CreateTransferForm: React.FC<CreateTransferFormProps> = ({ initialP
                 </ul>
               </div>
             )}
+
+            {/* Prioridad de traslado */}
+            <div className="transfer-priority-field">
+              <label className="transfer-checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={request.isPriority}
+                  onChange={(e) => request.setIsPriority(e.target.checked)}
+                />
+                <span>Marcar como traslado prioritario (urgente)</span>
+              </label>
+            </div>
           </>
         )}
 

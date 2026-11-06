@@ -279,6 +279,12 @@ func (s *StaffService) UpdateEmployee(ctx context.Context, actor *middlewares.Ac
 	if err != nil {
 		return nil, utils.Internal("Error al actualizar empleado.", err)
 	}
+	if (req.Status != nil && *req.Status != types.EmployeeActive) ||
+		(req.EmploymentStatus != nil && *req.EmploymentStatus != types.EmploymentActive) {
+		if err := s.authRepo.RevokeAllActorSessions(ctx, s.pool, types.ActorEmployee, current.ID); err != nil {
+			return nil, utils.Internal("El empleado fue actualizado, pero no se pudieron cerrar sus sesiones.", err)
+		}
+	}
 
 	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
 		CompanyID: &current.CompanyID,
@@ -318,6 +324,9 @@ func (s *StaffService) DeactivateEmployee(ctx context.Context, actor *middleware
 
 	if err := s.employeeRepo.SoftDelete(ctx, s.pool, id); err != nil {
 		return utils.Internal("Error al desactivar empleado.", err)
+	}
+	if err := s.authRepo.RevokeAllActorSessions(ctx, s.pool, types.ActorEmployee, id); err != nil {
+		return utils.Internal("El empleado fue desactivado, pero no se pudieron cerrar sus sesiones.", err)
 	}
 
 	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{

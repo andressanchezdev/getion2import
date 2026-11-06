@@ -19,13 +19,17 @@ export const ScreensaverTab: React.FC = () => {
         <div className="screensaver-card">
           <div className="screensaver-card-header">
             <h5>Imagen Activa en el Protector</h5>
-            <span className="screensaver-badge-active">En Uso</span>
+            <span className={s.currentImage ? 'screensaver-badge-active' : 'screensaver-badge-new'}>
+              {s.currentImage ? 'En Uso' : '⚠ Sin imagen configurada'}
+            </span>
           </div>
           <div className="screensaver-preview-box">
             {s.loading ? (
               <div className="screensaver-loading">Cargando imagen actual...</div>
-            ) : (
+            ) : s.currentImage ? (
               <img src={s.currentImage} alt="Logo Actual del Protector" className="screensaver-preview-img" />
+            ) : (
+              <div className="screensaver-loading">⚠ El protector está desactivado hasta que se configure una imagen.</div>
             )}
           </div>
           <div className="screensaver-card-meta">

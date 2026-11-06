@@ -7,7 +7,7 @@ export const TRANSFER_STATUS_BADGE: Record<TransferStatus, { label: string; clas
   pending: { label: 'Pendiente', className: 'pending' },
   in_transit: { label: 'En tránsito', className: 'in-transit' },
   received: { label: 'Aceptado', className: 'received' },
-  with_novelty: { label: 'Con novedad', className: 'novelty' },
+  with_novelty: { label: 'Aceptado con novedad', className: 'novelty' },
   cancelled: { label: 'Anulado', className: 'cancelled' },
 }
 
@@ -47,5 +47,5 @@ export const TRANSFER_STATUS_OPTIONS = [
   { value: 'pending', label: 'Pendiente' },
   { value: 'in_transit', label: 'En tránsito' },
   { value: 'received', label: 'Aceptado' },
-  { value: 'novelty', label: 'Con novedad (prioritario)' },
+  { value: 'novelty', label: 'Aceptado con novedad (prioritario)' },
 ]

@@ -114,6 +114,7 @@ type TransferResponse struct {
 	ReceivedByEmployeeID     *int64                 `json:"receivedByEmployeeId,omitempty"`
 	ReceivedByName           *string                `json:"receivedByName,omitempty"`
 	Status                   types.TransferStatus   `json:"status"`
+	IsPriority               bool                   `json:"isPriority"`
 	Notes                    *string                `json:"notes,omitempty"`
 	CancelReason             *string                `json:"cancelReason,omitempty"`
 	DispatchedAt             *time.Time             `json:"dispatchedAt,omitempty"`
@@ -134,6 +135,7 @@ type CreateTransferItemRequest struct {
 type CreateTransferRequest struct {
 	OriginWarehouseID      int64                       `json:"originWarehouseId" validate:"required"`
 	DestinationWarehouseID int64                       `json:"destinationWarehouseId" validate:"required"`
+	IsPriority             bool                        `json:"isPriority"`
 	Notes                  *string                     `json:"notes"`
 	Items                  []CreateTransferItemRequest `json:"items" validate:"required,min=1"`
 }

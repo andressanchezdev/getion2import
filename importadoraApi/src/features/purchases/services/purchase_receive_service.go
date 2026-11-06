@@ -26,6 +26,9 @@ func (s *PurchaseService) Receive(ctx context.Context, actor *middlewares.ActorC
 	if len(req.Items) == 0 {
 		return nil, utils.BadRequest("EMPTY_ITEMS", "Debe especificar las cantidades a recibir.")
 	}
+	if req.SupplierRef == nil || strings.TrimSpace(*req.SupplierRef) == "" {
+		return nil, utils.BadRequest("MISSING_SUPPLIER_INVOICE", "El número de factura física del proveedor (supplierRef) es obligatorio para recibir la mercancía.")
+	}
 
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {

@@ -5,6 +5,7 @@ package routes
 
 import (
 	"importadoraApi/src/core/middlewares"
+	"importadoraApi/src/core/types"
 	"importadoraApi/src/features/recyclebin/controllers"
 
 	"github.com/labstack/echo/v4"
@@ -15,6 +16,6 @@ func RegisterRoutes(e *echo.Echo, authMiddleware *middlewares.AuthMiddleware, ct
 	g := e.Group("/recycle-bin", authMiddleware.Authenticate())
 	{
 		g.GET("", ctrl.List, authMiddleware.RequirePermission("audit", "view"))
-		g.POST("/:id/restore", ctrl.Restore, authMiddleware.RequirePermission("audit", "edit"))
+		g.POST("/:id/restore", ctrl.Restore, middlewares.RequireActors(types.ActorSuperadmin))
 	}
 }

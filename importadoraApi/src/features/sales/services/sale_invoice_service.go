@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
@@ -41,21 +42,28 @@ func (s *SaleService) IssueInvoice(ctx context.Context, saleID, employeeID int64
 		return nil, utils.Conflict("ALREADY_INVOICED", "El pedido ya tiene factura emitida.")
 	}
 
-	whFactID, err := s.saleRepo.FindWarehouseFacturation(ctx, tx, sale.WarehouseID)
+	warehouseFacturation, err := s.saleRepo.FindWarehouseFacturation(ctx, tx, sale.WarehouseID)
 	if err != nil {
-		return nil, utils.Unprocessable("WAREHOUSE_WITHOUT_BILLING", fmt.Sprintf("La bodega %d no tiene configuración de facturación activa; configúrala en Facturación antes de facturar.", sale.WarehouseID))
+		return nil, utils.Internal("No se pudo consultar la configuración fiscal de la bodega.", err)
 	}
-
+	if warehouseFacturation == nil {
+		return nil, utils.Unprocessable("WAREHOUSE_WITHOUT_BILLING", fmt.Sprintf("La bodega %d no tiene configuración fiscal; configúrala antes de facturar.", sale.WarehouseID))
+	}
 	whID := sale.WarehouseID
 	invNumber, err := utils.NextSerialCode(ctx, tx, sale.CompanyID, &whID, types.SeriesInvoice, "FAC-")
 	if err != nil {
 		return nil, fmt.Errorf("error al obtener consecutivo de factura: %w", err)
 	}
+	nextNumber, err := s.saleRepo.FindInvoiceSeriesNextNumber(ctx, tx, sale.CompanyID, sale.WarehouseID)
+	if err != nil {
+		return nil, utils.Internal("No se pudo validar el rango autorizado de la factura.", err)
+	}
+	issuedNumber := nextNumber - 1
 
 	invEntity := &repositories.InvoiceEntity{
 		CompanyID:              sale.CompanyID,
 		WarehouseID:            sale.WarehouseID,
-		WarehouseFacturationID: whFactID,
+		WarehouseFacturationID: warehouseFacturation.ID,
 		SaleID:                 sale.ID,
 		EmployeeID:             &employeeID,
 		Kind:                   types.InvoiceKindStandard,
@@ -91,7 +99,23 @@ func (s *SaleService) IssueInvoice(ctx context.Context, saleID, employeeID int64
 		return nil, err
 	}
 
-	return s.FindInvoiceByID(ctx, createdInv.ID)
+	response, err := s.FindInvoiceByID(ctx, createdInv.ID)
+	if err != nil {
+		return nil, err
+	}
+	if warehouseFacturation.ResolutionNumber == nil || strings.TrimSpace(*warehouseFacturation.ResolutionNumber) == "" {
+		response.Warnings = append(response.Warnings, "La factura se emitió sin una resolución DIAN configurada.")
+	}
+	if warehouseFacturation.ResolutionExpired {
+		response.Warnings = append(response.Warnings, "La resolución DIAN está vencida; la factura se emitió y debe revisarse.")
+	}
+	if warehouseFacturation.RangeTo != nil && issuedNumber > *warehouseFacturation.RangeTo {
+		response.Warnings = append(response.Warnings, "El consecutivo emitido excede el rango autorizado; la factura se emitió y debe revisarse.")
+	}
+	if warehouseFacturation.RangeFrom != nil && issuedNumber < *warehouseFacturation.RangeFrom {
+		response.Warnings = append(response.Warnings, "El consecutivo emitido está por debajo del rango autorizado; la factura se emitió y debe revisarse.")
+	}
+	return response, nil
 }
 
 // FindInvoiceByID devuelve una factura por su id, validando que sea de la compañía del usuario.

@@ -41,6 +41,8 @@ type ReturnResponse struct {
 	ReplacementStockID     *int64                     `json:"replacementStockId,omitempty"`
 	ReplacementProductCode *string                    `json:"replacementProductCode,omitempty"`
 	ReplacementProductName *string                    `json:"replacementProductName,omitempty"`
+	EvidenceURL            *string                    `json:"evidenceUrl,omitempty"`
+	ReceiptURL             *string                    `json:"receiptUrl,omitempty"`
 	Status                 types.ReturnStatus         `json:"status"`
 	Total                  float64                    `json:"total"`
 	ApprovedAt             *time.Time                 `json:"approvedAt,omitempty"`
@@ -60,6 +62,8 @@ type CreateReturnRequest struct {
 	ReasonType         types.ReturnReasonType     `json:"reasonType"`
 	ResolutionType     types.ReturnResolutionType `json:"resolutionType" validate:"required"`
 	ReplacementStockID *int64                     `json:"replacementStockId,omitempty"`
+	EvidenceURL        *string                    `json:"evidenceUrl,omitempty"`
+	ReceiptURL         *string                    `json:"receiptUrl,omitempty"`
 	Items              []CreateReturnItemRequest  `json:"items" validate:"required,min=1"`
 }
 

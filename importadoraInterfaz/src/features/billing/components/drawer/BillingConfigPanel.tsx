@@ -68,10 +68,12 @@ export const BillingConfigPanel: React.FC = () => {
             {text('resolutionNumber', 'Número de resolución')}
           </div>
           {text('resolutionDate', 'Fecha de la resolución', '', 'date')}
+          {text('resolutionValidUntil', 'Vigente hasta', '', 'date')}
           <div className="drawer-form-grid">
             {text('rangeFrom', 'Rango desde', '1', 'number')}
             {text('rangeTo', 'Rango hasta', '5000', 'number')}
           </div>
+          <div className="drawer-form-note">Cambiar la resolución no reinicia el consecutivo. Verifica que el próximo número siga dentro del rango autorizado. Si la resolución vence o se agota el rango, se alertará sin bloquear la facturación.</div>
         </section>
 
         <section className="drawer-form-section">

@@ -226,6 +226,7 @@ CREATE TABLE warehouse_facturation (
     invoice_prefix      VARCHAR(20),
     resolution_number   VARCHAR(60),
     resolution_date     DATE,
+    resolution_valid_until DATE,
     range_from          BIGINT,
     range_to            BIGINT,
     is_active           BOOLEAN NOT NULL DEFAULT TRUE,
@@ -235,6 +236,34 @@ CREATE TABLE warehouse_facturation (
 );
 
 CREATE INDEX idx_warehouse_facturation_company ON warehouse_facturation (company_id);
+
+CREATE OR REPLACE FUNCTION prevent_cross_company_nit_duplicate() RETURNS trigger AS $$
+DECLARE
+    normalized_nit TEXT;
+BEGIN
+    normalized_nit := regexp_replace(NEW.nit, '[^0-9]', '', 'g');
+    IF normalized_nit = '' OR normalized_nit = '0' THEN
+        RETURN NEW;
+    END IF;
+
+    PERFORM pg_advisory_xact_lock(hashtextextended(normalized_nit, 0));
+    IF EXISTS (
+        SELECT 1
+        FROM warehouse_facturation existing
+        WHERE existing.company_id <> NEW.company_id
+          AND existing.warehouse_id <> NEW.warehouse_id
+          AND regexp_replace(existing.nit, '[^0-9]', '', 'g') = normalized_nit
+    ) THEN
+        RAISE EXCEPTION 'NIT already belongs to another company'
+            USING ERRCODE = '23505', CONSTRAINT = 'warehouse_facturation_company_nit_unique';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_warehouse_facturation_nit_unique
+BEFORE INSERT OR UPDATE OF nit, company_id ON warehouse_facturation
+FOR EACH ROW EXECUTE FUNCTION prevent_cross_company_nit_duplicate();
 
 -- 5. TABLA: warehouse_locations (Ubicaciones físicas administrables por bodega)
 CREATE TABLE warehouse_locations (
@@ -617,6 +646,7 @@ CREATE TABLE transfers (
         CHECK (status IN ('pending', 'in_transit', 'received', 'with_novelty', 'cancelled')),
     priority                    VARCHAR(20) NOT NULL DEFAULT 'normal',
     notes                       TEXT,
+    is_priority                 BOOLEAN NOT NULL DEFAULT FALSE,
     novelty_notes               TEXT,
     cancel_reason               TEXT,
     dispatched_at               TIMESTAMPTZ,
@@ -726,7 +756,7 @@ CREATE TABLE carts (
         CHECK (price_tier IN ('p1', 'p2', 'p3', 'p4')),
     status          VARCHAR(20) NOT NULL DEFAULT 'open'
         CHECK (status IN ('open', 'converted', 'abandoned')),
-    expires_at      TIMESTAMPTZ NOT NULL DEFAULT (CURRENT_TIMESTAMP + INTERVAL '1 hour'),
+    expires_at      TIMESTAMPTZ,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -919,6 +949,8 @@ CREATE TABLE returns (
     status                      VARCHAR(20) NOT NULL DEFAULT 'pending'
         CHECK (status IN ('pending', 'approved', 'rejected')),
     total                       NUMERIC(14,2) NOT NULL CHECK (total > 0),
+    evidence_url                TEXT,
+    receipt_url                 TEXT,
     approved_at                 TIMESTAMPTZ,
     created_at                  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -968,7 +1000,9 @@ CREATE TABLE cash_sessions (
     CHECK (status = 'open' OR closed_at IS NOT NULL)
 );
 
-CREATE UNIQUE INDEX idx_cash_sessions_one_open_per_warehouse ON cash_sessions (warehouse_id) WHERE status = 'open';
+CREATE UNIQUE INDEX idx_cash_sessions_one_open_per_actor 
+    ON cash_sessions (warehouse_id, opened_by_actor_type, opened_by_actor_id) 
+    WHERE status = 'open';
 CREATE INDEX idx_cash_sessions_company_opened ON cash_sessions (company_id, opened_at DESC);
 
 -- 36c. TABLA: cash_session_expenses (gastos menores y operativos pagados desde la caja/tienda)
@@ -1163,22 +1197,41 @@ CREATE INDEX idx_audit_logs_company_created ON audit_logs (company_id, created_a
 CREATE INDEX idx_audit_logs_entity ON audit_logs (entity, entity_id);
 CREATE INDEX idx_audit_logs_employee ON audit_logs (employee_id, created_at DESC);
 
+CREATE TABLE audit_context_change (
+    id                  BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    actor_id            BIGINT NOT NULL,
+    actor_type          VARCHAR(20) NOT NULL CHECK (actor_type = 'superadmin'),
+    from_company_id     BIGINT REFERENCES companies(id) ON DELETE SET NULL,
+    to_company_id       BIGINT REFERENCES companies(id) ON DELETE SET NULL,
+    to_all_companies    BOOLEAN NOT NULL DEFAULT FALSE,
+    ip                  VARCHAR(64),
+    user_agent          TEXT,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK ((to_all_companies AND to_company_id IS NULL) OR (NOT to_all_companies AND to_company_id IS NOT NULL))
+);
+CREATE INDEX idx_audit_context_change_actor_created ON audit_context_change (actor_id, created_at DESC);
+
 -- 42. TABLA: notifications
 CREATE TABLE notifications (
     id              BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    employee_id     BIGINT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    employee_id     BIGINT REFERENCES employees(id) ON DELETE CASCADE,
+    admin_id        BIGINT REFERENCES admins(id) ON DELETE CASCADE,
     kind            VARCHAR(20) NOT NULL DEFAULT 'info'
-        CHECK (kind IN ('info', 'success', 'warning', 'error')),
+        CHECK (kind IN ('info', 'success', 'warning', 'error', 'restore_record')),
     title           VARCHAR(160) NOT NULL,
     body            TEXT,
     entity          VARCHAR(60),
     entity_id       BIGINT,
     read_at         TIMESTAMPTZ,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT notifications_recipient_check CHECK (num_nonnulls(employee_id, admin_id) = 1)
 );
 
 CREATE INDEX idx_notifications_employee_unread
     ON notifications (employee_id, created_at DESC)
+    WHERE read_at IS NULL;
+CREATE INDEX idx_notifications_admin_unread
+    ON notifications (admin_id, created_at DESC)
     WHERE read_at IS NULL;
 
 -- 43. TABLA: recycle_bin (Papelera de reciclaje y recuperación de entidades)
@@ -1303,6 +1356,7 @@ CREATE TABLE IF NOT EXISTS screensaver_settings (
 );
 
 CREATE INDEX IF NOT EXISTS idx_screensaver_settings_company ON screensaver_settings(company_id, is_active);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_screensaver_settings_company_unique ON screensaver_settings(company_id);
 
 CREATE TRIGGER trg_screensaver_settings_updated_at
     BEFORE UPDATE ON screensaver_settings

@@ -1,0 +1,395 @@
+Plan Detallado para Cerrar Brechas y Completar Solución
+1. Resumen de Brechas Identificadas
+ID	Brecha	Área Afectada	Impacto	Estado Actual
+D-03	Auditoría del cambio de contexto y acciones del SUPERADMIN	Seguridad / Auditoría	Falta de trazabilidad completa	Pendiente
+D-04	Impacto de cambio de resolución DIAN a mitad de operación	Facturación	Posibles inconsistencias en numeración	Pendiente
+D-08	Integridad referencial al eliminar definitivamente registros	Base de datos	Riesgo de datos huérfanos	Pendiente
+D-09	Canal de notificación cuando SUPERADMIN restaura registro	UI / Notificaciones	No hay feedback al admin	Pendiente
+B-01	Validación de NIT (formato, unicidad, dígito verificación)	Registro de compañía	Posibles datos inválidos	Pendiente
+B-02	Política de expiración de contraseñas y tokens	Seguridad	Tokens pueden quedar válidos indefinidamente	Pendiente
+B-03	Configuración de intervalo de inactividad del protector de pantalla por compañía	UX	Intervalo está hard‑coded, impide personalización	Pendiente
+B-04	Cobertura de papelera para todas las entidades (pedidos, facturas, empleados, bodegas)	Gestión de datos	Restauraciones imposibles para ciertos objetos	Pendiente
+2. Prioridades y Orden de Ejecución
+Seguridad y Auditoría (D‑03, D‑09, B‑02) – prioridad alta para cumplimiento regulatorio.
+Integridad de datos (D‑08, B‑01, B‑04) – evitar pérdidas de información.
+Operatividad de negocio (D‑04, B‑03) – garantizar fluidez en facturación y experiencia de usuario.
+3. Plan de Acción Detallado
+3.1. Auditoría del Cambio de Contexto (D‑03)
+Backend: Añadir registro en tabla audit_context_change con campos user_id, from_company_id, to_company_id, timestamp.
+Service Layer: Modificar ChangeCompanyContextService para invocar AuditService.LogContextChange.
+Front‑end: En HeaderContextSelector.tsx emitir evento a API /audit/context-change después de selección exitosa.
+Tests: Unit test para asegurar que se crea el registro y que el payload contiene los IDs correctos.
+Deploy: Migración de tabla + documentación en Swagger.
+3.2. Notificaciones de Restauración (D‑09)
+Channel: Definir nuevo tipo de notificación restore_record en notification_service.
+Backend: En RecycleBinService.Restore disparar NotificationService.Send(admin_id, "restore_record", payload).
+Front‑end: Componente NotificationsDrawer mostrar toast con mensaje "El SUPERADMIN restauró el registro {entity}".
+UX: Añadir botón “Ver historial de restauraciones” en la página de admin.
+3.3. Validación de NIT (B‑01)
+Regex: Implementar función ValidateNIT(nit string) error que verifica formato \d{9}-\d y calcula dígito de verificación.
+Service: En CompanyService.Create y Update llamar a la validación; devolver error ERR_INVALID_NIT.
+DB: Añadir restricción UNIQUE sobre campo nit (migración).
+Front‑end: Mostrar mensaje de error inline en formulario de compañía.
+Tests: Casos de NIT válidos/inválidos y colisión de duplicados.
+3.4. Política de Expiración de Tokens y Contraseñas (B‑02)
+Config: Añadir parámetro tokenTTLHours (default 24) en auth_config.yaml.
+Auth Service: Ajustar generación de JWT para incluir exp según TTL.
+Refresh: Implementar endpoint /auth/refresh que renueve token si aún no expiró.
+Contraseñas: En PasswordPolicy definir maxAgeDays (90 días) y forzar reset vía PasswordService.CheckExpiration al login.
+UI: Aviso al usuario 10 días antes del vencimiento.
+3.5. Integridad Referencial en Borrado Definitivo (D‑08)
+DB: Definir ON DELETE RESTRICT en FK críticas (pedidos → clientes, facturas → pedidos, etc.).
+Service: En RecycleBinService.Purge validar que no existan dependencias antes de eliminación física; si existen, registrar en log y abortar.
+Logs: Auditar intentos fallidos de purge.
+3.6. Intervalo de Inactividad del Protector de Pantalla (B‑03)
+Backend: Añadir columna idle_timeout_minutes en tabla company_settings (default 15).
+API: Endpoints GET /settings/idle-timeout y PUT /settings/idle-timeout (admin only).
+Front‑end: En módulo de “Protector de Pantalla” permitir al admin elegir entre 5, 10, 15, 30 minutos.
+Persistencia: Guardar selección en company_settings y usarla en el cliente JS que controla el protector.
+3.7. Extensión de Papelera a Todas las Entidades (B‑04)
+Modelo: Crear tabla recycle_bin genérica con columnas entity_type, entity_id, deleted_at, deleted_by.
+Repository: Implementar RecycleBinRepository.GenericDelete y Restore.
+Service: Refactorizar servicios existentes (Pedidos, Facturas, Empleados, Bodegas) para usar la capa genérica en lugar de lógica propia.
+UI: Añadir vista “Papelera Global” visible solo para SUPERADMIN con filtros por entidad.
+Migración: Script que migra registros actuales de deleted_* a la nueva tabla.
+3.8. Impacto de Cambio de Resolución DIAN (D‑04)
+Reglas de Negocio: Cuando una resolución expira, bloquear generación automática de nuevos documentos; permitir generación manual con aviso.
+Service: ResolutionService.ValidateActiveResolution usado en InvoiceService.Create.
+UI: Banner alerta en módulo de facturación indicando “Resolución vencida, seleccione una activa”.
+Migración: Añadir campo is_active en tabla dian_resolutions y procedimiento para activar una nueva resolución sin romper secuencias.
+4. Cronograma Propuesto (2 semanas)
+Semana	Tareas	Responsable
+1	Implementar D‑03, D‑09, B‑01, B‑02 (backend + pruebas)	Backend Team
+1	Actualizar UI para auditoría y notificaciones	Front‑end Team
+2	Implementar B‑03, B‑04, D‑08 (migraciones + servicios)	Full‑stack
+2	Implementar D‑04 (lógica de resolución) y pruebas E2E	Backend + QA
+2	Documentación y revisión de código	Docs/Lead
+5. Dependencias y Riesgos
+Migraciones DB: Necesario aplicar en entorno de staging antes de producción; riesgo de bloqueo de escritura – planificar ventana de mantenimiento.
+Cambios en API: Versionado mayor (v2) para endpoints que introducen nuevos campos.
+Feedback de usuarios: Validar con ADMINs la nueva configuración de protector de pantalla antes del despliegue.
+6. Próximos Pasos
+Aprobación de este plan por parte del Product Owner.
+Asignación de tickets en el backlog correspondiente a cada ítem.
+Creación de ramas feature (feature/audit-context, feature/recycle-bin, etc.).
+Ejecución del cronograma y reporte diario de progreso.
+
+Nota: Los puntos D‑03, D‑04, D‑08 y D‑09 ya estaban marcados como decisiones pendientes en el documento plan_alineacion_casos_de_uso.md (ya aprobado). Este plan los aborda con acciones ejecutables.
+
+
+casos de uso:
+ACTOR 1: SUPERADMIN
+*¿Qué pasa con los datos de una compañía suspendida? si el admin cambia el estado de la bodega la bodega y los datos anexados a esta quedan suspendidos, ni sus empleados pueden hacer login ni la bodega debe salir, en la lista de el admin, y en la tabla de bodegas a¿para el admin esta debe mostrar su estado y la tabla debe priorizar en la tabla las bodegas activas
+
+*¿Se puede eliminar una compañía o solo suspender? se puede "eliminar" queda fuera de el sistema, pero queda en la db de respaldo para devolver la accion 
+
+*¿Qué pasa con el stock, cartera y facturas históricas de una compañía suspendida? - al el admin cambiar el estado a inactivo, debe indicarle las concecuencias de continuar con la accion, ya que la bodega cuenta con cuentas en cartera pendientes,debe advertir que puede generar sobre la operacion de la bodega la acicon de inactivarla
+
+*¿Quién puede crear compañías? el admin, y quien puede crear admins solo el superadmin, al crear un admin, se crea y se le entrega su usuario y password para que el ingrese y cree sus bodegas
+
+*No se define validación de NIT (formato, unicidad, dígito de verificación)., al el admin integrar los datos de su empresa debe contar con todas las validacione, el super admin solo crea el admin y el mismo admin gestio0na su company y bodegas de la misma
+
+Cambio de Contexto Multi-Empresa
+*¿El cambio de contexto reinicia carrito, filtros, bodega seleccionada?  el cambio entre perfiles y los datos de cada ususario, el cambio de contexto debe aplicarse en base a los usuarios, solo acciones de este tipo y acciones crud permitidas por los permisos
+
+*¿El SUPERADMIN puede operar (crear pedidos, facturar) en cualquier compañía o solo inspeccionar?  el super admin se limita a solo observas todas las acciones, no crea pedidos ni productos ni empleados, solo los admin de cada compañy que desee agregar para entregarle las credenciales a el admin de la company 
+
+*¿Cómo interactúa con la bodega asignada? Si el SUPERADMIN no tiene bodega, ¿cómo ve stock? 
+il id de super admin debe poder acceder a todos los datos de visualizacion, dejar claro que solo para visualizar y monitorear
+
+*si ¿Se audita el cambio de contexto? todo debe quedar  registrado en su debida tabla de auditorias
+
+*¿Qué pasa si la compañía seleccionada se suspende mientras la sesión está activa?
+debemos contar con el desarrollo completo anticipandonos a este paso para que inmediatamente cierre sesiones de todos los usuarios, indicandole el mensaje que la compañia o bodega no estan disponibles en la aplicacion, comunicars con el area de desarrollo, todo esta contemplando los mensjes a usuario   
+
+· Administración de Administradores de Compañía
+¿El admin creado aquí es distinto del employee con rol ADMIN del CU-AD03? Hay dos caminos para crear administradores y no se define la relación ni cuál prevalece.::: no solo existe un caminio  y forma de crear admin y es solo la de el superadmin, y el admin solo puede crear empleados a su compañia y gestionarle los permisos como desea
+-¿Un admin puede pertenecer a varias compañías? no, un admin 1 compañia, muchas bodegas, otro admin otra compañia, admin por compañia
+-¿Qué pasa con las sesiones activas de un admin al inactivarlo? ¿Se revocan tokens?, si se debe expulsar sus ususario con mensaje amigable 
+-No se define política de contraseñas ni expiración., no las db las gestiona el admin y usuarios, lo que expira son los toquens, deben tener su expiracion para evitar una fuga de toquen y si se fuga entonces que este toquen este limitado 
+
+*Protector de Pantalla Corporativo 
+¿Es global (todas las compañías) o por compañía? - no es propio de cada compañy, cada admin puede administrar su pimagen de protector
+-¿Qué formatos y pesos máximos de imagen?, debemos darle el mejor tratamiento a la image para mantener su calidad y mejorar su peso, y almacenarla de momento en db, a futuro vamos a almacenarla en un gcp que almacena esto, pero de momento en db
+
+-¿El intervalo de inactividad es configurable por compañía o único?, unico, se da desde el desarrollo no desde el programa,
+
+-¿Qué pasa si no hay láminas cargadas pero está activo? no se muestra nada, y en la pestaña de el proyecto debe mostrar el inoico de warning, pero si no se tiene establecida imagen entonces no se activa
+
+*Auditoría Global y Papelera
+-La papelera solo cubre clientes, productos y marcas. ¿Qué pasa con pedidos, facturas, empleados, bodegas? No hay simetría., debe cubrir todos, incluidos los que faltan
+
+-¿La auditoría es inmutable de verdad? ¿Hay retención? ¿Se puede purgar?, se purga cada 6 meses solicitando autorixacion por el admin a el iniciar sesio, se le debe mostrar la noticicaion donde se le pregunte:
+¿se tiene registro de auditorias de {xmeses}
+desea borrarlo y reiniciar el registro de las auditorias?
+confirmar cancelar, 
+[]preguntar mas tarde?
+-todas las acciones como cambiar de estado a inactivo, eliminar un registro (no se elimina de la db) debe pedir motivo minimo de 10 caracteres  con un maximo de 100 aceptables, en la tabla de la auditoria sale el motivo
+- cada tabla debe tener la relacion con su tabla de auditorias
+
+-¿Se auditan también los cambios del SUPERADMIN? (riesgo de "quién audita al auditor"). no admin solo monitorea y crea admin, y monitorea 
+
+-devolver un registro borrado,  lo devuelve a el registro de donde se borro y queda para actualizar los datos copn los que se requiere restablecer la accion, solo lo puede devolver el super admin, y se le debe mostrar la notificacion unicamente en a el admin, de que este registro fue devuelto por el super admin, todo debe estar muy claro sobre la cominucacion entre superadmin y admin completamente bien manejado 
+
+* ADMIN. Bodegas y Sedes 
+-¿Se puede eliminar una bodega?, no solo desactivarla 
+-¿Las ubicaciones (estantes) tienen capacidad? ¿Se valida duplicidad de código? no, titnene cantidades modificables por los que interactuan con esta, al guardar productos en la ubicacion de debe registar la cantidad para saber que productos y cantidades estan en cada ubicaion y que los movimientos sobre estas esten correctaemten, para poder hacer el control de movimientos, traslados y ventas, un codigo de producto es unico y un codigo de cada ubicacion debe ser unico tambien, no pueden haber dos ubicaciones con el mismo codigo, pueden almacenar el mismo producto pero cada uno tienesu qr unico de ubicacion
+
+-¿Una bodega puede desactivarse sin eliminar? si una bodega puede pasar a etsado inactivo por el admin y solicitar motivo
+-¿Quién puede crear bodegas: ADMIN de compañía o solo SUPERADMIN? solo es admin, el unico que gestioan las bodegas es el admin de la compány 
+
+CU-AD02 · Facturación y Resoluciones por Sede
+
+-¿Qué pasa cuando se agota el rango de la resolución? ¿Alerta? ¿Bloqueo de facturación?, alertar, mostrar a los usuarios relacionados con la facturacion la alerta de el vencimiento 
+
+-¿Se puede facturar sin resolución configurada? ¿Hay bloqueo?, debe permitir facturar a el cliente de linea para poder continuar con la operacion 
+-¿Cambiar de resolución a mitad de operación afecta consecutivos? debe  dejarse claro que el cambio debe aplicarse de forma ordenada para no generar perdida en los consecutivos o definir que cambios se van a aplicar sobre lo consecutivos luego de este cambio
+
+*CU-AD03 · Empleados, Roles y Matriz de Permisos 
+"Administración de Administradores". ¿El ADMIN puede crear otros ADMIN desde aquí? ¿O solo el SUPERADMIN? Ambigüedad fuerte... no solo puede crear emleados 
+-La matriz de permisos puede ampliar permisos del rol o solo restringirlos? No se define el modelo (rol base + overrides vs. permisos aditivos). los permisos no van atados a roles, los permisos van atados a usuarios(empleados) 
+-¿Un empleado puede tener múltiples bodegas o solo una principal? un empleado pertenece a una bodega, un empleado siempre opera sobre la bodega que se le asigne 
+-¿Qué pasa con las sesiones activas al cambiar rol o estado a retired?, debemos indicar el mensaje e invitar a iniciar sesion nuevamente
+-¿El desbloqueo de login resetea contador o también contraseña? No se aclara, contraseña no, contador puede llevar la cantidad y al hacer login exitoso reiniciarse su contador a 0
+-¿Estados laborales (active, leave, retired) impactan login?leave y retirado bloquean y desactivas el usuario, noptifican el motivo de usuario incactivo 
+
+CU-AD04 · Catálogo Maestro
+-¿Un producto puede existir en múltiples compañías (catálogo compartido del holding) o es por compañía? Crítico para SaaS., cada compañia administra sus propios productos no productos de otra compañia 
+-¿Las tarifas P1–P4 son por compañía o globales? estas se le definen a los priductos, ya el vendedor el libre de elegir cual usar para la venta
+-¿El IVA se define por producto o por categoría? ¿Hay excepciones?, el iva se debe definir en el producto, yaque acorde a el prooducto es o no exento, pero entonces debe ir en la tabla de el producto y solicitarse en su creacion 
+-¿Qué pasa con un producto inactivo que está en un carrito o pedido abierto? No se define., al pasar a inactivo debe salir de todo el flujo de operacion, no debe contineuar disponible para operacion, en general los datos que pasen a inactivos no siguen en operacion, deben salir de operaicon completamente, al cambiar a incactivo un producto este debe dejar de aparecen en sistema de catalogo, carrito
+-¿Los códigos alternativos (OEM, barras, proveedor) tienen unicidad? ¿Pueden colisionar entre marcas? codigos alternativos van unidos a los proveedores ya que cada proveedor tiene un codigo para nuestro producto creado que contiene otro codigo, el codigo de nuestro producto y nuetsro es para operacion y el codigo de nuestro producto contra el codigo de el proveedor es para hacer comprar a el proveedor (crear una orden de compra), el proveedor envia su exel con datos y estos tienen sus productos codigos y precios 
+
+-¿Hay control de imágenes, unidad de medida, peso/dimensiones para logística?, las imagens van a llevar una estandar ya que contamos con el software para el tratamiento de estas imagenes, entonces tener solo validarores que funcionen sobre el archivo subido al momento de la accion  (crear un producto) 
+
+CU-AD05 · Proveedores y Transportadoras
+-¿Se pueden eliminar o solo inactivar? No se dice., ambos, el usuario puede ambos, eliminar no elimina en la db recordar esto
+-¿La "cobertura" de transportadoras es geográfica?, la trasportadora es la estidad que podemos utilizar para enviar la mercancia de el pedido, solo para asociar envios de prodyctos a estas transportadoras  y asi saber qeue pedido enviado por que trasnportadora se envio
+
+-¿Los proveedores se vinculan a compañías específicas o son globales del holding? los proveedores pertenecen a cada compañia, de la compañia son los productos, proveedores, empleados, admin y bodegas, cada admin tiene su compañia y cada compañia tiene sus datos propios nda se comparte entre compañias 
+-¿Hay integración con la orden de compra (CU-BO02)?, la integracion de la orden de compra, se integra con la recepticion de la mercancia de la orden y luego se gestiona a la distribucion en la bodega
+-¿Se validan datos tributarios del proveedor (para retenciones)? si, cada proveedor debe tener los datos necesarios en su creacion para un seguimiento sde gastos tributarios y todo este tema
+
+*CU-AD06 · Aprobación de Devoluciones y Garantías 
+-¿Quién crea la solicitud de devolución?, el empleado con el permiso para esta, pero vinculemos la creacion de devuluciones a el nivel de lña lista deventas registradas para que a esa venta se registre la garantia cambio o credito a favor
+-¿Qué pasa con el stock devuelto? depende, se es garantia no vuelve a stock, si es devolucion por error de el que preparo los items de el pedido entonces es reubicado a una location  ¿Vuelve a inventario?si es devolucion por error de desapcho si, si es garantia queda el registro de que este item fue devuelto a el proveedor por garantia ¿A qué ubicación?  a la de donde salio (validando que no haya tenido movimientos o cambios esta ubicaicon luego de sacar el item)¿Se inspecciona calidad? no,  el empelado debe porder indicar si es devolucion o garantia y si queda como saldo a favor 
+*¿quién ejecuta el reembolso (CASHIER?)? reemboloso de dinero no existe, saldo a favor o cambio por otro item y la venta debe actualizarce a este cambio, entonces por eso la gestion solo se puede hacer sobre la venta generada 
+
+*¿genera automáticamente el abono en cartera (CU-FA03)? si es saldo a favor debe alterar el valor de el crtedito de forma positiva para el cliente,  si tiene saldo negativo entonces reducir este negativo y si tiene saldo positivo entonces sumarle el saldo a favor a este, validar que contemos con la tabla que audita las devoluciones
+
+*¿Hay plazos legales o SLA de respuesta? no plazos como tal para darle respuesta a el cliente de su devolucion deben ser inmediatos ya que el cliente debe traer el item a devolver y indicar el motivo, apartir de alli comienza la devolucion  o garantia 
+*¿Se adjuntan evidencias (fotos, factura)? para garantia si, detalle de el defecto de fabrica y comprovante (imagen), entonces a la venta se le crea el cambio y se actualiza y acorde a el flujo seguido se deja el registro de la devolucion unicamente, el registro de el saldo a favor queda en el credito de el cliente e historias de este 
+
+*CU-AD07 · Reporte General 
+*¿"Consolidado" significa todas las compañías o todas las bodegas de una compañía? Ambigüedad multi-tenant. significa todas las bodegas de esa compañia, en general las bodegas 
+*¿Los reportes son en tiempo real o batch? se deben hacer sobre los ultimos datos registardos en la operacion de cada bodega
+
+*¿Se pueden exportar (PDF/Excel)? , pdf para facturas pos que le entregemos a el cliente, puede ser la factura actualizada o puede ser el recibo de confirmaciopn de saldo a favor 
+*¿Qué rango de fechas? ¿Histórico completo? debe ser historico y permitir tambien filtrar por fechas que el usuario defina a su gustoi (fecha a - fecha b)
+*¿"Saldo neto en cartera" cómo se calcula exactamente? Se asume la vista v_customer_credit_summary, pero no se declara. general de los clientes de la compañia, en cartega se accede a nivel general sobre todas las bodegas y permitir filtrar por alguna de ellas en el dropdown 
+
+*ACTOR 3: SELLER
+CU-VE01 · Búsqueda Inteligente / POS
+-¿El SELLER puede cambiar de tarifa libremente o hay restricción por rol? Riesgo comercial (vender a P4 Mayorista a un cliente de mostrador). si el empleado encargado de la operacion puede elegir cualquier precio de la lista de precios de el producto a su elecion queda el precio que desee, si el desea darle precio de matorista a un minoritario puede hacerlo, despues de que el precio sea uno elegido de la lista de precios de el producto 
+ 
+-¿La búsqueda es global (todas las bodegas) o solo la asignada?, las busquedas son generales sobre productos, empleados ,clientes, bodegas, ya qeu todo pertenece a la compañia entonces las barras de busquedas encargadas de buscar estos deben buscar en general sobre todas las bodegas, solo bodegas de la compañia, no bodegas de otro admin o otra comñia aprte de la que perteneces
+
+-¿Qué pasa si el producto está inactivo? ¿Aparece en resultados? , si esta incactivo no puede estar en ningun proceso de operacion el estado de inactivo es igual a un dato en db que no se puede usar en operacion hasta activar su estado 
+-¿"easysearch" es un motor específico (Elastic, trigram)?  debemos integrar el control completo ya que la barra de busqueda debe permitir busuqedas aun con errores ortograficos aun con errores de todo tipo, el usuario puede ingresar una palabra casi al 70% exacta pero con errores, y el buscador debe ser muy preciso, no indicar que ningun producto coincidio y no mostrar nada como resultado,entonces este aspecto debe ternerse muy claro y en general sobre los datos generales de la comñaia, las barras de busqueda deben ser  "antibobos" 
+-¿Se registra en auditoría el cambio de tarifa? No se menciona. si, todo deja registro en auditorias (TODO)
+
+CU-VE02 · Carrito Sincronizado 
+¿Un SELLER puede tener múltiples carritos (uno por cliente) o uno solo activo?, un empleado solo puede tener un carrito para operar, no uno por cliente 
+-¿Se puede asociar cliente después de armar el carrito? el carrito se arma y en el flujo de finalizar el pedido se asocia a el cleinte, luego siguie el flujo para poder crear el pedido correctamete 
+-¿Cambiar de bodega en el carrito recalcula precios y disponibilidad?  no deberia, ya que la bodega va unida a los datos generales de la empresa entonces, lo unico que cambiaria entre cambios en bodega son las cantidades dentro de esa bodega   correctos 
+-¿El carrito caduca?  no, la gestion sobre el carrito es libre de el empleado productos en carrito de el emplado deben tener el control de esto correctametne, de cantidades y bodegas, los carritos son unicos de empleados y dentro de sus bodegas, solo admin puede acceder a todos los carritos de los empleados 
+-¿Qué pasa si otro vendedor vende el mismo stock mientras el carrito está abierto? No se define política de concurrencia ni reserva temporal en carrito., se bloquea la accion y se notifica el motivo, el primero en finalizar el proceso de creacion de el pedido se queda con las existencias de este, vale la primera en entrar la segunda se bloquea si el stock vendible ya no esta disponible
+
+CU-VE03 · Alta y Actualización de Clientes 
+-¿El SELLER puede editar datos fiscales de un cliente existente? solo acorde si el empleado cuenta con este permiso dado, si no cuenta con el no, y se gestiona desde la tabla de cleintes
+-¿Los documentos se almacenan dónde y con qué retención? de momento en db, a futuro en un server gcp 
+-acorde a la alerta, si es de alerta entonces solo informatica, y si es critica entonces bloquea, acorde a los valores de el credito
+
+*¿Se valida NIT/dígito de verificación?  no
+
+-¿Quién valida los documentos (RUT, cámara de comercio)? el que crea el cliente debe validar los documentos al estar creandolo, a futuro se le pueden pedir actualizacion de los mismos si se presenta error sobre estos
+
+-¿Un cliente puede pertenecer a múltiples compañías del holding?, no un clinete es unico de la compañia 
+
+CU-VE04 · Cotizaciones
+*¿La cotización reserva stock? no, cotizaciones solo es para llevar unregistro de las cotizacciones realizadas y apartir de ellas retomar el pedido si se desea, cada cotizacion va unida a un cliente 
+*¿Tiene vigencia (fecha de expiración)? No, puede ser gestionado y tiene valides de 15 dias 
+*¿Quién puede aprobar (approved)? ¿El cliente, el SELLER, un ADMIN? empleados y admins pueden continuar y convertir la cotizacion a realizar el pedido de esta cotizcion, y al presionarlo se validad los stocks de los items de la cotizacion contra los fisicos en la bodega
+*¿Convertir a pedido revalida precios y stock? si debe validarse no pueden entrar dereecho 
+*¿Se puede convertir una cotización parcialmente?  no, o es cotizacion o pasa a pedido 
+
+*CU-VE05 · Emisión de Pedido 
+-El SELLER puede emitir pedido a crédito sin validación de cupo?, el emplado debe trabajar con el valor de el credito, no puede saltarselo 
+-¿"Picking inmediato" para mostrador salta la verificación de cajero (CU-CA02)? No se define la relación. ¿Quién confirma el pago en mostrador? el pickin inmediato solo es un estado alterno a pickikng que indica que este pedido deve salir primero que otros, este se le da al momento de crear el pedido, se indica si es picking inmediato (chech box)  el pago en caja sigue en responsabilidad de el empleado con permisos de caja 
+-¿Qué pasa si el pago es transfer y el cajero aún no verifica? ¿El pedido queda en qué estado? No se declara el estado inicial, el estad verificacion debe quedar y cuando se confirme el pago verificacion cambia a verificaion confirmada "
+
+*¿Se puede cancelar un pedido, se puede "Anular" con motivo y solo si se tiene  el permiso
+*¿Se valida stock vendible (available − reserved) al confirmar o solo al agregar al carrito?, solo al continuar con el flujo de creacion de el pedido, no al agregar a el carrito 
+ 
+CU-VE06 · Solicitud de Traslado entre Bodegas 
+
+¿Quién aprueba el traslado? la creacion la hace el empleado con permisos de hacerlo y solo el empleado de la otra bodega con permisos revisar y aceptar el traslado puede aceptarlo devolverlo o aceptarlo con novedad 
+
+-¿El traslado reserva stock en origen mientras se aprueba? , se debe tener los datos de los productos y cantidades que estan en transicion (traslado) para poder hacer control de las cantidades en bodegas y en traslados, movimientos entre bodegas, para saber siempre donde esstan los productos 
+-¿Hay prioridad/SLA?, si al momento de crear el traslado, integremos una check box que indique si el traslado es prioritario, y si se marca debemos indcar el traslado con estado prioritario 
+-¿El SELLER puede ver el estado del traslado solicitado?, el empleado* y si si tiene permisos  si, la operacion en fundamental no va sobre el rol, seller bodegero ect,va acorde a los permisos  con los que cuenta este susuario, sin imoprtar su rol, asi a cualquier empleado de la compani podemos administrarle los permisos a gusto al 100%
+-¿Qué pasa si el stock en origen desaparece antes del despacho?, si el traslado se crea debe separar cantidades al crear el traslado para evitar esto y la bodega queda trabajando con las unidades fisicas tinendo claro las que salienton en traslado, tambien acorde a la que primero ingrese 
+
+ACTOR 4: CASHIER
+*¿Qué pasa si ya hay un turno abierto?solo puede haver un turno de caja abierto por rol, y solo lo puede cerrar el que tenga permisos para esto, y el admin ¿Bloqueo? no bloqueo, notificacion ya que por caja abierta debe tener su cierre ¿Quién lo cerró? siempre se debe tenr la auditoria por quien abre y cierra caja y todos los procesos dentro de este tiempo de funcioanmiento de la caja
+*¿Se puede abrir turno sin haber cerrado el anterior? no, turno abierto turno cerrado, no multiples cajas abiertas para el mismo empleado
+*¿Puede haber múltiples cajeros en la misma bodega?, si si el empleado que abre caja tiene permisos para haverlo si puieden havber multiples cajas dentro de una bodega 
+*¿Se puede abrir turno sin haber cerrado el anterior? no turno abierto turno cerrado un empleado solo puede abrir una caja y no varias, caja abierta caja cerrada
+*Hay validación de que el monto inicial coincida con el cierre anterior, no, la base de inicio puede  variar 
+*¿Quién puede abrir turno? el empleado con el permiso de hacerlo, el permiso de abrir caja va ligado a el de cerrarla 
+
+
+*  CU-CA02 · Verificación de Pagos 
+-¿Qué pasa si el pago no coincide con el total del pedido? el pago ddebe ser igual a el de el valor de el pedido, solo se hacen pagos parciales a los pagos de creditos (abonos creados a  creditos creados que tiene el cliente) 
+
+*¿Se puede rechazar un pago?, de un credito unicamente, de pagos realizadon en caja en efectivo o trasnferencia,  si es pagoa credito de el cliente si(se crea en estado de verificacion ) el pago se rechaza en creditos, por comprobante no legible, pago no reflejado en la entidad bancaria, o por comprobante falso
+
+*ajustemos esto correctametn acorede a el contexto de todo este mensaje_
+¿La transferencia queda en review hasta conciliación bancaria (CU-FA04)? Se menciona en CU-FA04, pero no se declara aquí el estado intermedio. Ambigüedad de estados.
+
+
+*¿Qué pasa con pedidos a crédito? ¿Pasan por caja o directo a bodega?  
+siguen el flujo de un pedido normal 
+
+*¿El cajero puede editar el pedido?  el pedido puede ser editado por el empleado que cuente con este permiso 
+
+*¿Hay timeout para pedidos en verification? no, en la lista de pedidos debe salir las rows acorde a su creacion 
+
+*¿Hay límite de monto por gasto o por turno? no
+*¿Requiere aprobación de ADMIN?no 
+*Se adjunta foto del recibo? no el registro queda y se puede imprimir tambien para firmar, ecvidencias son fisicas deben quedar registrdas 
+*¿Los gastos por transferencia afectan el arqueo de efectivo? la caja no registra gastos en trasferencia, la caja paga en efectivo siempre
+*¿Se puede anular un gasto registrado?  no, si se creo es que se gasto luego de creado no se elimina 
+
+**CU-CA04 · Cierre y Arqueo
+¿Qué pasa si hay faltante?el cierre debe registrar montos recibidos en efectivo y transferencia, se valida contra los registrods de la bodega en esa caja, ¿Se descuenta al cajero? se deja el registro de el descuadre a favor o en contra  ¿Requiere justificación? no
+
+*¿Se puede reabrir un turno cerrado? si el mismo empleado desea volver a abrir se reabre una caja nueva  y se debe cerrar, todo acorde a el empleado y sus permisos
+
+*¿El cierre bloquea nuevas ventas en efectivo en esa bodega?si, debe notificar que debe abrir turno de caja
+*¿Los pedidos en verification pendientes qué pasa con el cierre? la caja solo puede cerrar si no cuenta con pedidos creados, hasta que los pedidos creados sean 0 no se puede cerrar el turno y se debe notificar el motivo 
+
+*¿La fórmula incluye abonos de cartera en efectivo (CU-FA03)? No se menciona, pero un cajero podría recibirlos. Hueco de integración., si el empleado con permiso de gestionar la caja puede tambien crear abonos a nombre de clientes y los crea con estado de verificacion,y tambien los entrefa en el cierre de la caja junto con lo que es en efectivo y transferencia y los que son abosnos a creditos  
+
+*¿Los gastos por transferencia se excluyen del arqueo?  no, se dejan registaados, luego en cartera se concilian con las entradas a el banco 
+
+*¿Se genera un reporte de cierre imprimible? si
+
+
+*CU-BO01 · Alistamiento y Despacho
+-¿Qué pasa si la cantidad física recogida (picked_qty) es menor que la pedida?  este error de debe evitar con los manejos de estado de cantidades fisicas, en bodega , cantidades virtuales o cantidades en otras bodegas, entonces todo debe dentro d estos puntos debe evitar este error
+-¿Se puede reversar un paso (ej. de packing_ok a picking)? no, el pedido puede salir e indicar que cuenta con novedades y dentro de este dejar la novedad registrada que ocurrio
+-
+ Contexto declarado: Tubería picking → picking_ok → packing → packing_ok → dispatch → sent, con picked_qty, packed_qty, dispatched_qty.falta el verifi y verify ok 
+
+-¿Quién asigna el pedido a un bodeguero específico? no se crea y deja listado 
+-¿El despacho requiere transportadora asignada (CU-AD05)? no las creadas pueden elegirse 
+-¿Se imprime guía de despacho o etiqueta?si, Rotulos y facturas
+- ¿Se imprime guía de despacho o etiqueta? si 
+-¿Hay notificación al SELLER/cliente cuando el pedido se despacha?, no, su estado se sigue desde la lista de el pedido 
+¿El picking inmediato (CU-VE05) salta estos pasos o los recorre igual? los recorre igual, solo es un indicador para los empleados que debe salir primero 
+
+*Órdenes de Compra y Recepción
+la orden de compra no requiere aprovacion, se crea  y queda listada, esta misla lista es la que se muestra en la receptciopnk de mercancia y desde alli se reciben las compras y se valida que llegaran completas, ya creadas se pueedn descargar para enviarle a el proveedor ese listado de productos que se desean comprar 
+
+*la receocion parcial cierra la recepcion y deja notas sobre la recepcion (un motivo) que puede indicar novedades en la recepcion de la mercancia, luego pasa a estado de "RECIBIDA" EN LOS DATALLES DE LA TABLA DE RECEPCION PODEMOS INTEFRAR LOS DETALLES DE LA RECEPCION (NOVEDADES) 
+*¿Se valida calidad en recepción? NO, SE VALIDA ALINEAMIENTO CON LOS ITEMS DE LA ORDEN DE COMPRA CREADA CON LOS LISTADO EN LA FACTURA FOISICA DE EL QUE ENTREGA LA MERCANCIA A LABODEGA 
+
+*¿Se registra el número de factura del proveedor para conciliación de cuentas por pagar? SI, TODO LOS DATOS DE EL PROVEEDOR DEBEN CUMPLOIR ESTE ASPECTO 
+
+*¿Quién aprueba el traslado: el bodeguero origen, el destino, o ADMIN?  
+EL TRASLADO LO CREA Y APRUEBA SU RECEPCION EL EMPLEDO QUE CUENTE CON ESTOS PERMISOS 
+
+*¿Qué pasa si hay discrepancia en recepción? NO DIGAMOS DISCREPANCIAS,  DIGAMOS NOVEDADES SOBRE EL TRASLADO, SI LOS PRODUCTOS CONINCIDEN EN CANDIDAES Y PRODUCTOS CON LOS CREADOS EN EL TRASLADO EL TRALADO PASO A RECIBIDO, SI E TRASLADO TIENE UN ITEM MENOS Y UNA CANTIDAD DE ESE ITEM DIFERENTE A LA DE LA CREACION SE ACEPTA CON NOVEDAD Y SE INGRESA LA NOVEDAD (FALTARON X PRODUCTOS, ENVIARON DEMAS X PRODUCTO O CANTIDADES) 
+
+*¿El traslado en in_transit bloquea el stock para venta?
+COMO TAL EL TRASLADO NO LO BLOQUEA PERO SI EL TRASLADO SE PIDIO CON LOS ULTIMOS ITEMS DE ESE PRODUCTO, ENTONCES ESE PRODUCTO NO SE BLOQUEA POR EL TRASLADO SI NO POR EL STOCK AGOTADO, NO QUE BLOQUEARIA SERIA EL STOCK NO LOS PRODUCTOS EN TRASLADO 
+
+*¿Hay timeout para traslados no recibidos? NO, DEBEN PERMANECER TODOS LOS TRASLADOS CREADOS DEBEN SER RESUELTOS 
+
+*¿Se puede cancelar un traslado en tránsito? DEPENDE DE EL ESTADO, SI EL TRASLADO NO HA PASADO DE SU PRIMER ESTADO SI, SI YA EL TRASLADO ESTA EN PROCESO ENTONCES NO, EH INDICAR EL ERROR SOBRE ESTE 
+
+*¿El costo del flete del traslado se registra? DE MOMENTO NO, A FUTURO PUEDE CAMBIAR
+
+CU-BO04 · Conteos Físicos y Ajustes 
+-¿El conteo bloquea la venta/despacho de los ítems contados?NO, EL CONTENO NO DEBE BLOQUEAR EL FLUJO, EL CONTEO ES MUY RARA VEZ QUE SE HACE Y SI EL DESARROLLO SE APLICA CORRECTAMETNE LUEGO DE HACER UN PRIMER CONTEO NO CREO VOLVER A REPETIRLO, YA QUE LA LOGICA CONTROLARIA TODO EL MOVIMIENTO DE PRODUCTOS Y EXISTENCIAS
+
+-¿Qué pasa con las reservas (stock.reserved) durante el conteo?, RESERVAS NO ES ALGO QUE REQUIERA EN ESTE PROYECTO, EL RESERVADO ES SOBRE PRODUCTOS QUE TIENEN LOS EMPLEADOS EN ESE MOEMNTO EN OPERACOIN DE RESTO TODO DEBE SERGUIR LOS FLUJOS, LO RESERVADO SOLO SE TIENE EN OPERACION POR LOS EMPLEADOS, SI SE CREA EL PEDIDO PUES EL ITEM QUEDA YA RESERVADO A ESTE PEDIDO, SI SE CREA EL TRASLADO LO MISMO, EN EL CONTEO NO MOVEMOS EL RESERVCED STOCK YA ESTE DEPENDE DE LOS EPDIDOS CREADOS A LA BODEGA, EN EL CONTENO FISICO SOLO IMPORTAN ESTOS MISOS, LAS EXISTENCIAS FISICAS 
+
+*¿Hay conteo ciego (el bodeguero no ve la cantidad del sistema) o abierto? NO
+
+*Se pueden contar parcialmente (por estante, por categoría)?  NO SI SE CUENTA DEBE SER CONTEO TOTAL DE LAS UNIDADES FISICAS EN UBICACIONES DE CADA BODEGA
+
+*¿La reubicación entre estantes actualiza el kardex? DEBE HACERLO DE FORMA QUE SIGA LA LGICA DE LOS STOCK Y CONTROL SOBRE LOS PRODUCTOS 
+
+*¿Hay histórico de conteos y diferencias por bodeguero? NO
+
+
+
+*CU-FA01 · Facturación de Pedidos, DEBE SOLICITAR ACTUALIZAR LOS  DATOS PARA PROCEGUIR Y PODER HACER EL PEDIDO A NOMBRE DE EL CLIENTE, QUE USE EL CLIENTE DE LINEA EN ESE CASO HASTA QUE SE ACTUALICEN LOS DATOS O PUEDE PAGAR EN EFECTIVO  
+
+*¿La factura se genera en PDF/XML para DIAN? LA FACTURA DE CADA VENTA REGISTRADA DEBE LLEVAR SU PDF CON TODA LA INFOMRACION DE ESE PEDIDO 
+
+* ¿Qué pasa si la resolución está agotada o vencida (CU-AD02)?  SE DEBE NOTIFICAR NO BLOQUEAR 
+
+*¿Se puede anular una factura? NO, PUEDE MODIFICARSE MAS NO, ELIMINARSE, O SE PUEDE CAMBIAR SE ESTADO A  ANULADO CON MOTIVO Y SOLO PARA  EMPLEADOS CON ESTE PERMISO 
+
+*¿Qué pasa si el pedido es contado y ya fue pagado en caja? ¿Se factura igual? , SI PAGON EN EFECTIVO SON ACEPTADOS SIEMPRE SIN ERRORES, NO DEBE PERMITIR NINGUN BLOQUEO PARA PAGOS EN EFECTIVO, Y DEBE QUEDAR A NOMBRE DE UN CLIENTE O CLIENTE DE LINEA
+
+*¿Se factura antes o después del despacho? ANTES DE EL DESPACHO 
+
+*¿Hay facturación parcial de un pedido?  NO, NADA DE PARCIAL 
+*¿Qué pasa cuando un cliente excede el cupo? SI ES MENOR A EL 70% NOTIFICA SI ES MAYOR A ESTE DEBE SOLICITAR QUE HAGA UN PAGO PARA NO ALTERAR SUS METRICAS DE CREDITO ¿Se bloquea el pedido a crédito automáticamente?  NO SE BLOQUEA SI EL VALOR DE EL CREDITO DISPONIBLE ES DE EL 100 DE EL QUEESTA USADO, 
+
+*¿La mora se calcula por días o por saldo?
+POR DIAS DE DURACION DE SU CREDITO PERO TAMBIEN POR EL SALGO 
+
+*¿Se puede ampliar cupo temporalmente?  NO, EL CUPO ES FIJO Y SUJETO A LA GESTION QUE SE LE DE A EL CREDITO DE EL CLIENTE 
+
+*¿Hay histórico de cambios de cupo? NO 
+
+*¿El "pedido abierto reservado" (mencionado en la vista) cómo se calcula? No se define la fórmula de cupo disponible,,, SI ES EN CARRITO POR EL EMPLEADO NO RESERVA HASTA DEFINIR QUE RUTA TOMAN LOS PRODUCOS EN CARRITO 
+
+*¿Quién puede habilitar crédito: BILLING o ADMIN?  EL EMPLEADO CON PERMISOS DE HACERLO 
+
+
+CU-FA03 · Abonos y Recibos
+
+*¿El abono se aplica a una factura específica o al saldo global del cliente? A EL REGISTRO DE ESE PEDIDO/VENTA CREADO CON CREDITO 
+*¿Qué pasa si el abono excede la deuda? NO DEBE PASAR LOS ABONOS PUEDEN SER DE EL TOTAL COMPLETO DE EL PEDIDO, NO MAYORES A EL VALOR DE ESTE, O PUEDE HACER UN PAGO A OTRO PEDIDO CREADO CON EL CREDITO 
+
+*¿El abono en efectivo pasa por caja (CU-CA04)?  SI
+
+*¿Se puede reversar un abono? NO RECERSAR CAMBIA SU ESTADO A RECHAZADO 
+*¿El comprobante incluye datos fiscales? DE LA EMPRESA COMO TAL (COMPANY) 
+
+
+CU-FA04 · Conciliación Bancaria
+*¿La importación es manual (CSV) o automática (API bancaria)? MANUAL ES UN drag and drop 
+
+*¿Cómo se matchea un movimiento con un pago? los pagos que registra la caja cuando es trasferencia deja el comprobante de pago, este comprobante se carea con el pdf de la entidad bancaria donde estan los ingresos a la cuenta y cada comprobante de pago sacado de el archivo subido entonces se relaciona con el pago  el abono o venta
+
+*¿Qué pasa con movimientos no conciliados al cierre del mes?, se deja el registro de que este ingreso no se relaciona con ninguna venta  o abono en los registros de el  sistema
+
+*¿Se pueden conciliar egresos (pagos a proveedores)? SI, todo el control de estos gastos hechos con el proveedor (compras que se le ralizaron)
+*¿Qué pasa si un pago review nunca aparece en el extracto? queda como no conciliado con las entradas de el banco 
+*¿Se registra quién concilió y cuándo?  no directametne, queda la auditoria con los registros de estas acciones generadas 
+*¿Hay conciliación parcial (un movimiento cubre varias facturas)?  NO 
+
+ya te respondi todo en este mensaje 
+ 
+
+recrea el plan denuevo siiguiento estas respuestas 
+y recrea el plan de nuevo
+
+

@@ -17,6 +17,7 @@ export const toInvoice = (dto: InvoiceDto): Invoice => ({
   employeeName: text(dto.employeeName) || '—',
   issuedAt: dayOf(dto.issuedAt),
   pdfUrl: text(dto.pdfUrl),
+  warnings: dto.warnings ?? [],
 })
 
 export const toBillingConfig = (dto: BillingConfigDto): BillingConfig => ({
@@ -37,6 +38,7 @@ export const toBillingConfig = (dto: BillingConfigDto): BillingConfig => ({
   invoicePrefix: text(dto.invoicePrefix),
   resolutionNumber: text(dto.resolutionNumber),
   resolutionDate: dayOf(dto.resolutionDate),
+  resolutionValidUntil: dayOf(dto.resolutionValidUntil),
   rangeFrom: typeof dto.rangeFrom === 'number' ? dto.rangeFrom : null,
   rangeTo: typeof dto.rangeTo === 'number' ? dto.rangeTo : null,
   isActive: dto.isActive !== false,

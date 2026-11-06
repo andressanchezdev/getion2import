@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"importadoraApi/src/core/types"
 	inventoryrepos "importadoraApi/src/features/inventory/repositories"
@@ -58,6 +59,13 @@ func (s *ReturnService) Create(ctx context.Context, actorCompanyID *int64, actor
 	}
 	if req.ResolutionType != types.ReturnResolutionExchange && req.ResolutionType != types.ReturnResolutionCredit {
 		return nil, errors.New("el tipo de resolución debe ser 'exchange' (cambio de repuesto) o 'credit_balance' (saldo a favor)")
+	}
+
+	if req.ReasonType == types.ReturnReasonWarranty {
+		if req.EvidenceURL == nil || strings.TrimSpace(*req.EvidenceURL) == "" ||
+			req.ReceiptURL == nil || strings.TrimSpace(*req.ReceiptURL) == "" {
+			return nil, errors.New("para garantías por defecto o falla técnica, la evidencia fotográfica y la factura/recibo son obligatorias")
+		}
 	}
 
 	tx, err := s.pool.Begin(ctx)
@@ -122,9 +130,14 @@ func (s *ReturnService) Create(ctx context.Context, actorCompanyID *int64, actor
 			return nil, fmt.Errorf("la cantidad devuelta (%d) no puede superar la cantidad vendida (%d) para '%s'", itReq.Quantity, si.Quantity, si.ProductName)
 		}
 
-		restock := true
-		if itReq.Restock != nil {
-			restock = *itReq.Restock
+		// Regla de blindaje: Si es garantía por defecto, NUNCA vuelve a stock físico vendible.
+		// Si es error de despacho (wrong_item), sí reingresa a la ubicación de origen.
+		restock := false
+		if req.ReasonType == types.ReturnReasonWrongItem {
+			restock = true
+			if itReq.Restock != nil {
+				restock = *itReq.Restock
+			}
 		}
 
 		grandTotal += float64(itReq.Quantity) * si.UnitPrice
@@ -162,6 +175,8 @@ func (s *ReturnService) Create(ctx context.Context, actorCompanyID *int64, actor
 		ResolutionType:       req.ResolutionType,
 		ReplacementProductID: replacementProductID,
 		ReplacementStockID:   replacementStockID,
+		EvidenceURL:          req.EvidenceURL,
+		ReceiptURL:           req.ReceiptURL,
 		Status:               types.ReturnPending,
 		Total:                grandTotal,
 	}
@@ -240,6 +255,8 @@ func (s *ReturnService) FindByID(ctx context.Context, id int64) (*dtos.ReturnRes
 		ReplacementStockID:     ret.ReplacementStockID,
 		ReplacementProductCode: ret.ReplacementProductCode,
 		ReplacementProductName: ret.ReplacementProductName,
+		EvidenceURL:            ret.EvidenceURL,
+		ReceiptURL:             ret.ReceiptURL,
 		Status:                 ret.Status,
 		Total:                  ret.Total,
 		ApprovedAt:             ret.ApprovedAt,
@@ -277,6 +294,8 @@ func (s *ReturnService) List(ctx context.Context, f dtos.ReturnFilterQuery) ([]d
 			ReplacementStockID:     ret.ReplacementStockID,
 			ReplacementProductCode: ret.ReplacementProductCode,
 			ReplacementProductName: ret.ReplacementProductName,
+			EvidenceURL:            ret.EvidenceURL,
+			ReceiptURL:             ret.ReceiptURL,
 			Status:                 ret.Status,
 			Total:                  ret.Total,
 			ApprovedAt:             ret.ApprovedAt,

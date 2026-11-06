@@ -26,7 +26,7 @@ export interface SettingsState {
   company: CompanyProfile | null
   companyLoading: boolean
   companySaving: boolean
-  screensaverImage: string // vacío = el logo por defecto de la app
+  screensaverImage: string // vacío = no hay imagen configurada y el protector no se activa
   screensaverLoading: boolean
   screensaverSaving: boolean
 }

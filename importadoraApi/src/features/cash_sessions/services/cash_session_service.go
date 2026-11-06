@@ -41,7 +41,7 @@ func (s *CashSessionService) GetActive(ctx context.Context, actor *middlewares.A
 		companyID = *actor.CompanyID
 	}
 
-	entity, err := s.repo.FindActiveByWarehouse(ctx, s.pool, companyID, warehouseID)
+	entity, err := s.repo.FindActiveByActor(ctx, s.pool, companyID, warehouseID, string(actor.ActorType), actor.ActorID)
 	if err != nil {
 		return nil, utils.Internal("Error al consultar el turno de caja.", err)
 	}
@@ -81,16 +81,17 @@ func (s *CashSessionService) Open(ctx context.Context, actor *middlewares.ActorC
 		companyID = whCompanyID
 	}
 
-	existing, err := s.repo.FindActiveByWarehouse(ctx, s.pool, companyID, req.WarehouseID)
+	actorType := string(actor.ActorType)
+	actorID := actor.ActorID
+
+	existing, err := s.repo.FindActiveByActor(ctx, s.pool, companyID, req.WarehouseID, actorType, actorID)
 	if err != nil {
 		return nil, utils.Internal("Error al verificar turno existente.", err)
 	}
 	if existing != nil {
-		return nil, utils.Conflict("SESSION_ALREADY_OPEN", "Ya existe un turno de caja abierto en esta bodega.")
+		return nil, utils.Conflict("SESSION_ALREADY_OPEN", "Ya tienes un turno de caja abierto en esta bodega.")
 	}
 
-	actorType := string(actor.ActorType)
-	actorID := actor.ActorID
 	actorName := s.authRepo.ResolveActorDisplayName(ctx, s.pool, actor)
 
 	entity := &repositories.CashSessionEntity{
@@ -132,12 +133,21 @@ func (s *CashSessionService) Close(ctx context.Context, actor *middlewares.Actor
 		return nil, err
 	}
 
-	existing, err := s.repo.FindActiveByWarehouse(ctx, s.pool, companyID, req.WarehouseID)
+	existing, err := s.repo.FindActiveByActor(ctx, s.pool, companyID, req.WarehouseID, string(actor.ActorType), actor.ActorID)
 	if err != nil {
 		return nil, utils.Internal("Error al verificar turno existente.", err)
 	}
 	if existing == nil {
-		return nil, utils.NotFound("NO_ACTIVE_SESSION", "No hay un turno de caja abierto para cerrar en esta bodega.")
+		return nil, utils.NotFound("NO_ACTIVE_SESSION", "No tienes un turno de caja abierto para cerrar en esta bodega.")
+	}
+
+	// Regla estricta: la caja no puede cerrar si existen pedidos en verificación pendientes
+	pendingCount, err := s.repo.CountPendingVerificationSales(ctx, s.pool, companyID, req.WarehouseID)
+	if err != nil {
+		return nil, utils.Internal("Error al verificar pedidos pendientes.", err)
+	}
+	if pendingCount > 0 {
+		return nil, utils.Conflict("PENDING_VERIFICATION_SALES", fmt.Sprintf("No se puede cerrar la caja: hay %d pedido(s) en verificación pendiente(s) en esta sede. Deben verificarse o cancelarse antes del cierre.", pendingCount))
 	}
 
 	cash, transfer, count, err := s.repo.SessionTotals(ctx, s.pool, existing.ID)
@@ -182,7 +192,8 @@ func (s *CashSessionService) Close(ctx context.Context, actor *middlewares.Actor
 	return res, nil
 }
 
-// cleanExpenses valida los gastos declarados al cerrar (concepto y algún monto) y suma lo pagado en efectivo.
+// cleanExpenses valida los gastos declarados al cerrar (concepto y monto en efectivo) y suma lo pagado en efectivo.
+// La caja solo desembolsa efectivo: transferencias se concilian por extracto bancario en cartera.
 func cleanExpenses(items []dtos.CashExpenseRequest) ([]repositories.CashExpenseEntity, float64, error) {
 	list := make([]repositories.CashExpenseEntity, 0, len(items))
 	var cashTotal float64
@@ -191,10 +202,13 @@ func cleanExpenses(items []dtos.CashExpenseRequest) ([]repositories.CashExpenseE
 		if concept == "" {
 			return nil, 0, utils.BadRequest("INVALID_EXPENSE", "Cada gasto necesita un concepto.")
 		}
-		if item.CashAmount < 0 || item.TransferAmount < 0 || item.CashAmount+item.TransferAmount <= 0 {
-			return nil, 0, utils.BadRequest("INVALID_EXPENSE", fmt.Sprintf("El gasto '%s' necesita un monto mayor a cero.", concept))
+		if item.TransferAmount > 0 {
+			return nil, 0, utils.BadRequest("CASH_ONLY_EXPENSE", "La caja solo registra gastos pagados en efectivo. Los egresos por transferencia se concilian en bancos/cartera.")
 		}
-		list = append(list, repositories.CashExpenseEntity{ReceiptNumber: strings.TrimSpace(item.ReceiptNumber), Concept: concept, CashAmount: item.CashAmount, TransferAmount: item.TransferAmount})
+		if item.CashAmount <= 0 {
+			return nil, 0, utils.BadRequest("INVALID_EXPENSE", fmt.Sprintf("El gasto '%s' necesita un monto en efectivo mayor a cero.", concept))
+		}
+		list = append(list, repositories.CashExpenseEntity{ReceiptNumber: strings.TrimSpace(item.ReceiptNumber), Concept: concept, CashAmount: item.CashAmount, TransferAmount: 0})
 		cashTotal += item.CashAmount
 	}
 	return list, cashTotal, nil

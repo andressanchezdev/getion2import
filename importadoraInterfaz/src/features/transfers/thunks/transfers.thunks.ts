@@ -49,9 +49,9 @@ export const searchTransferProductsThunk = createAsyncThunk<ProductStockMatrix[]
 
 // envía el pedido de traslado: crea un traslado por cada bodega de origen (todos hacia la misma bodega destino) y avisa qué pasó con cada una
 // ojo: si una bodega falla las demás se crean igual; el resultado dice cuáles salieron y cuáles no
-export const createTransferRequestThunk = createAsyncThunk<TransferRequestResult[], { destWarehouseId: number; lines: TransferRequestLine[]; notes?: string }, ThunkConfig>(
+export const createTransferRequestThunk = createAsyncThunk<TransferRequestResult[], { destWarehouseId: number; lines: TransferRequestLine[]; notes?: string; isPriority?: boolean }, ThunkConfig>(
   'transfers/createRequest',
-  async ({ destWarehouseId, lines, notes }, { getState, dispatch, rejectWithValue }) => {
+  async ({ destWarehouseId, lines, notes, isPriority }, { getState, dispatch, rejectWithValue }) => {
     const ctx = selectRequestContext(getState())
     if (!ctx) return rejectWithValue(NO_SESSION)
     const problem = validateRequest(lines, destWarehouseId)
@@ -65,6 +65,7 @@ export const createTransferRequestThunk = createAsyncThunk<TransferRequestResult
           originWarehouseId: group.originWarehouseId,
           destWarehouseId,
           notes,
+          isPriority,
           items: group.lines.map((line) => ({ productId: line.productId, quantity: line.quantity })),
         })
         results.push({ ...base, transfer })

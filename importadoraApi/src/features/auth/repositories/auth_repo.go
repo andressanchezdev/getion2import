@@ -19,35 +19,36 @@ type PermissionRecord = middlewares.PermissionRecord
 
 // ActorAccount contiene los datos completos de autenticación y contexto de cualquiera de los 3 actores.
 type ActorAccount struct {
-	ID               int64
-	ActorType        types.ActorType
-	Email            string
-	Username         string
-	PasswordHash     string
-	FirstName        string
-	LastName         string
-	FullName         string
-	Phone            string
-	DocumentType     string
-	Document         string
-	Address          string
-	PhotoURL         string
-	AccessLevel      string
-	LinkedEmployeeID *int64
-	CompanyID        *int64
-	CompanyName      string
-	CompanyIsActive  bool
-	WarehouseID      *int64
-	WarehouseCode    string
-	WarehouseName    string
-	RoleID           *int64
-	RoleCode         string
-	RoleName         string
-	WorkModality     string
-	EmploymentStatus string
-	Status           string
-	IsActive         bool
-	LastLoginAt      *time.Time
+	ID                int64
+	ActorType         types.ActorType
+	Email             string
+	Username          string
+	PasswordHash      string
+	FirstName         string
+	LastName          string
+	FullName          string
+	Phone             string
+	DocumentType      string
+	Document          string
+	Address           string
+	PhotoURL          string
+	AccessLevel       string
+	LinkedEmployeeID  *int64
+	CompanyID         *int64
+	CompanyName       string
+	CompanyIsActive   bool
+	WarehouseID       *int64
+	WarehouseCode     string
+	WarehouseName     string
+	WarehouseIsActive bool
+	RoleID            *int64
+	RoleCode          string
+	RoleName          string
+	WorkModality      string
+	EmploymentStatus  string
+	Status            string
+	IsActive          bool
+	LastLoginAt       *time.Time
 }
 
 type AuthRepository struct{}

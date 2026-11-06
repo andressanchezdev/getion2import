@@ -23,6 +23,7 @@ type CompanyService struct {
 	pool        *pgxpool.Pool
 	companyRepo *repositories.CompanyRepository
 	auditRepo   *authRepos.AuditRepository
+	authRepo    *authRepos.AuthRepository
 }
 
 // NewCompanyService crea el servicio con las piezas que necesita para funcionar.
@@ -31,12 +32,14 @@ func NewCompanyService(
 	pool *pgxpool.Pool,
 	companyRepo *repositories.CompanyRepository,
 	auditRepo *authRepos.AuditRepository,
+	authRepo *authRepos.AuthRepository,
 ) *CompanyService {
 	return &CompanyService{
 		cfg:         cfg,
 		pool:        pool,
 		companyRepo: companyRepo,
 		auditRepo:   auditRepo,
+		authRepo:    authRepo,
 	}
 }
 
@@ -300,6 +303,11 @@ func (s *CompanyService) Update(ctx context.Context, actor *middlewares.ActorCon
 	if err != nil {
 		return nil, utils.Internal("Error al actualizar la compañía.", err)
 	}
+	if req.IsActive != nil && !*req.IsActive {
+		if err := s.authRepo.RevokeTokensByCompany(ctx, s.pool, id); err != nil {
+			return nil, utils.Internal("La compañía fue suspendida, pero no se pudieron revocar todas las sesiones.", err)
+		}
+	}
 
 	// Registro en auditoría
 	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
@@ -335,6 +343,13 @@ func (s *CompanyService) Delete(ctx context.Context, actor *middlewares.ActorCon
 		return utils.Internal("Error al retirar la compañía de la operación.", err)
 	}
 
+	// Revocar inmediatamente todas las sesiones de administradores y empleados de esta compañía
+	if s.authRepo != nil {
+		if err := s.authRepo.RevokeTokensByCompany(ctx, s.pool, id); err != nil {
+			return utils.Internal("La compañía fue suspendida, pero no se pudieron revocar todas las sesiones.", err)
+		}
+	}
+
 	// Registro en auditoría
 	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
 		CompanyID: &id,
@@ -342,8 +357,8 @@ func (s *CompanyService) Delete(ctx context.Context, actor *middlewares.ActorCon
 		ActorID:   actor.ActorID,
 		Entity:    "companies",
 		EntityID:  &id,
-		Action:    "COMPANY_DEACTIVATED",
-		Reason:    "Retiro de compañía de la operación",
+		Action:    "COMPANY_SUSPENDED",
+		Reason:    "Suspensión corporativa e invalidación de sesiones de usuarios",
 		IPAddress: ip,
 		UserAgent: ua,
 	})

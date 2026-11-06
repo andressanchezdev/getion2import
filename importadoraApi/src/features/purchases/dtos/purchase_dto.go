@@ -70,7 +70,9 @@ type ReceivePurchaseItemRequest struct {
 }
 
 type ReceivePurchaseRequest struct {
-	Items []ReceivePurchaseItemRequest `json:"items" validate:"required,min=1"`
+	SupplierRef *string                      `json:"supplierRef"` // Número de factura física del proveedor (obligatorio para recepción)
+	Notes       *string                      `json:"notes"`
+	Items       []ReceivePurchaseItemRequest `json:"items" validate:"required,min=1"`
 }
 
 type PurchaseFilterQuery struct {

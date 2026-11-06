@@ -6,10 +6,10 @@ import { loadBillingSettingsThunk, loadInvoicesThunk, saveBillingConfigThunk, sa
 import { billingReducer } from './billing.slice'
 import type { BillingConfig, DocSeries, Invoice } from '../types/billing.types'
 
-const invoice: Invoice = { id: 1, number: 'FE-000001', kind: 'invoice', status: 'issued', saleId: 4, saleSerial: 'PED-0004', warehouseName: 'Principal', employeeName: 'Ana', issuedAt: '2026-11-01', pdfUrl: '' }
+const invoice: Invoice = { id: 1, number: 'FE-000001', kind: 'invoice', status: 'issued', saleId: 4, saleSerial: 'PED-0004', warehouseName: 'Principal', employeeName: 'Ana', issuedAt: '2026-11-01', pdfUrl: '', warnings: [] }
 const config: BillingConfig = {
   id: 1, warehouseId: 1, typeFacturation: 'juridica', documentType: 'NIT', nit: '900', legalName: 'Premium', tradeName: '', billingEmail: '', billingPhone: '', billingAddress: '', billingCity: '', vatWithholder: false, incomeWithholder: false, selfWithholder: false,
-  invoicePrefix: 'FE', resolutionNumber: '', resolutionDate: '', rangeFrom: 1, rangeTo: 5000, isActive: true,
+  invoicePrefix: 'FE', resolutionNumber: '', resolutionDate: '', resolutionValidUntil: '', rangeFrom: 1, rangeTo: 5000, isActive: true,
 }
 const series = (id: number, nextNumber: number): DocSeries => ({ id, warehouseId: 1, docType: 'invoice', prefix: 'FE-', nextNumber })
 

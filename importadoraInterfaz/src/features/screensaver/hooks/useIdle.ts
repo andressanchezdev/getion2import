@@ -8,7 +8,7 @@ import { SCREENSAVER_ACTIVITY_EVENTS, SCREENSAVER_CLICK_SWALLOW_MS, SCREENSAVER_
 
 const WAKE_EVENTS: readonly string[] = SCREENSAVER_WAKE_EVENTS
 
-export const useIdle = (idleMs: number = SCREENSAVER_TIMING.IDLE_MS): boolean => {
+export const useIdle = (idleMs: number = SCREENSAVER_TIMING.IDLE_MS, enabled = true): boolean => {
   const [idle, setIdle] = useState(false)
   // ojo: viven en refs y no dentro del efecto para que, si el efecto se vuelve a montar (recarga en caliente, StrictMode), la pantalla dormida no pierda su estado y siga cerrándose solo con clic o tecla
   const lastActivityRef = useRef(0)
@@ -16,6 +16,13 @@ export const useIdle = (idleMs: number = SCREENSAVER_TIMING.IDLE_MS): boolean =>
   const wokeAtRef = useRef(0) // hora en que despertó (para tragarse el clic que sigue a soltar)
 
   useEffect(() => {
+    if (!enabled) {
+      lastActivityRef.current = 0
+      sleepingSinceRef.current = 0
+      setIdle(false)
+      return
+    }
+
     const { CHECK_MS, WAKE_GRACE_MS } = SCREENSAVER_TIMING
     const lastActivity = lastActivityRef
     const sleepingSince = sleepingSinceRef
@@ -60,7 +67,7 @@ export const useIdle = (idleMs: number = SCREENSAVER_TIMING.IDLE_MS): boolean =>
       window.clearInterval(timer)
       SCREENSAVER_ACTIVITY_EVENTS.forEach((name) => window.removeEventListener(name, onActivity, true))
     }
-  }, [idleMs])
+  }, [enabled, idleMs])
 
   return idle
 }

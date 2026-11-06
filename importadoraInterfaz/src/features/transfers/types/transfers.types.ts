@@ -64,6 +64,7 @@ export interface CreateTransferBatchInput {
   items: Array<{ productId: number; quantity: number }>
   type?: TransferType
   notes?: string
+  isPriority?: boolean
 }
 
 export interface TransferRequestOriginOption {

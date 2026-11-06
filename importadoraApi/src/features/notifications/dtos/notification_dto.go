@@ -7,8 +7,9 @@ import "time"
 
 type NotificationResponse struct {
 	ID         int64      `json:"id"`
-	EmployeeID int64      `json:"employeeId"`
-	Kind       string     `json:"kind"` // 'info' | 'success' | 'warning' | 'error'
+	EmployeeID *int64     `json:"employeeId,omitempty"`
+	AdminID    *int64     `json:"adminId,omitempty"`
+	Kind       string     `json:"kind"`
 	Title      string     `json:"title"`
 	Body       *string    `json:"body,omitempty"`
 	Entity     *string    `json:"entity,omitempty"`
@@ -18,9 +19,9 @@ type NotificationResponse struct {
 }
 
 type NotificationFilterQuery struct {
-	EmployeeID int64
+	ActorType  string
+	ActorID    int64
 	UnreadOnly bool
 	Page       int
 	PageSize   int
 }
-

@@ -23,6 +23,7 @@ export interface BillingFormValues {
   invoicePrefix: string
   resolutionNumber: string
   resolutionDate: string
+  resolutionValidUntil: string
   rangeFrom: string
   rangeTo: string
   vatWithholder: boolean
@@ -49,6 +50,7 @@ export const useBillingConfigForm = () => {
     invoicePrefix: config?.invoicePrefix ?? '',
     resolutionNumber: config?.resolutionNumber ?? '',
     resolutionDate: config?.resolutionDate ?? '',
+    resolutionValidUntil: config?.resolutionValidUntil ?? '',
     rangeFrom: config?.rangeFrom !== null && config?.rangeFrom !== undefined ? String(config.rangeFrom) : '',
     rangeTo: config?.rangeTo !== null && config?.rangeTo !== undefined ? String(config.rangeTo) : '',
     vatWithholder: config?.vatWithholder ?? false,
@@ -72,6 +74,7 @@ export const useBillingConfigForm = () => {
     invoicePrefix: values.invoicePrefix.trim(),
     resolutionNumber: values.resolutionNumber.trim(),
     ...(values.resolutionDate ? { resolutionDate: values.resolutionDate } : {}),
+    ...(values.resolutionValidUntil ? { resolutionValidUntil: values.resolutionValidUntil } : {}),
     ...(numberOf(values.rangeFrom) !== undefined ? { rangeFrom: numberOf(values.rangeFrom) } : {}),
     ...(numberOf(values.rangeTo) !== undefined ? { rangeTo: numberOf(values.rangeTo) } : {}),
     vatWithholder: values.vatWithholder,

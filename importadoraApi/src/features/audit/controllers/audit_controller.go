@@ -5,6 +5,7 @@ package controllers
 
 import (
 	"importadoraApi/src/core/middlewares"
+	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
 	"importadoraApi/src/features/audit/dtos"
 	"importadoraApi/src/features/audit/services"
@@ -42,4 +43,19 @@ func (ctrl *AuditController) List(c echo.Context) error {
 	}
 
 	return utils.RespondPaginated(c, "Trazabilidad de auditoría obtenida", list, *meta)
+}
+
+func (ctrl *AuditController) LogContextChange(c echo.Context) error {
+	actor := middlewares.GetActor(c)
+	if actor == nil || actor.ActorType != types.ActorSuperadmin {
+		return utils.Forbidden("FORBIDDEN_SUPERADMIN", "Solo el SUPERADMIN puede registrar cambios de contexto.")
+	}
+	var req dtos.ContextChangeRequest
+	if err := c.Bind(&req); err != nil {
+		return utils.BadRequest("INVALID_BODY", "Cuerpo de petición inválido.")
+	}
+	if err := ctrl.service.LogContextChange(c.Request().Context(), actor, req, c.RealIP(), c.Request().UserAgent()); err != nil {
+		return err
+	}
+	return utils.RespondOK[any](c, "Cambio de contexto auditado exitosamente", nil)
 }

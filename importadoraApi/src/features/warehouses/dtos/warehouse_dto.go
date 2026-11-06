@@ -30,6 +30,7 @@ type WarehouseFacturationResponse struct {
 	InvoicePrefix    string                `json:"invoicePrefix,omitempty"`
 	ResolutionNumber string                `json:"resolutionNumber,omitempty"`
 	ResolutionDate   *string               `json:"resolutionDate,omitempty"`
+	ResolutionValidUntil *string           `json:"resolutionValidUntil,omitempty"`
 	RangeFrom        *int64                `json:"rangeFrom,omitempty"`
 	RangeTo          *int64                `json:"rangeTo,omitempty"`
 	IsActive         bool                  `json:"isActive"`
@@ -100,6 +101,7 @@ type UpdateFacturationRequest struct {
 	InvoicePrefix    *string                `json:"invoicePrefix,omitempty"`
 	ResolutionNumber *string                `json:"resolutionNumber,omitempty"`
 	ResolutionDate   *string                `json:"resolutionDate,omitempty"` // Formato YYYY-MM-DD
+	ResolutionValidUntil *string            `json:"resolutionValidUntil,omitempty"` // Formato YYYY-MM-DD
 	RangeFrom        *int64                 `json:"rangeFrom,omitempty"`
 	RangeTo          *int64                 `json:"rangeTo,omitempty"`
 	IsActive         *bool                  `json:"isActive,omitempty"`

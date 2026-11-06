@@ -32,6 +32,7 @@ type TransferEntity struct {
 	ReceivedByEmployeeID   *int64
 	ReceivedByName         *string
 	Status                 types.TransferStatus
+	IsPriority             bool
 	Notes                  *string
 	CancelReason           *string
 	DispatchedAt           *time.Time
@@ -64,7 +65,7 @@ func (r *InventoryRepository) FindTransferByID(ctx context.Context, q db.DBExecu
 			t.employee_id, COALESCE(emp.full_name, ''),
 			t.dispatched_by_employee_id, disp.full_name,
 			t.received_by_employee_id, recv.full_name,
-			t.status, t.notes, t.cancel_reason,
+			t.status, t.is_priority, t.notes, t.cancel_reason,
 			t.dispatched_at, t.received_at, t.created_at, t.updated_at
 		FROM transfers t
 		LEFT JOIN warehouses ow ON ow.id = t.origin_warehouse_id
@@ -82,7 +83,7 @@ func (r *InventoryRepository) FindTransferByID(ctx context.Context, q db.DBExecu
 		&t.EmployeeID, &t.EmployeeName,
 		&t.DispatchedByEmployeeID, &t.DispatchedByName,
 		&t.ReceivedByEmployeeID, &t.ReceivedByName,
-		&t.Status, &t.Notes, &t.CancelReason,
+		&t.Status, &t.IsPriority, &t.Notes, &t.CancelReason,
 		&t.DispatchedAt, &t.ReceivedAt, &t.CreatedAt, &t.UpdatedAt,
 	)
 	if err != nil {
@@ -159,7 +160,7 @@ func (r *InventoryRepository) ListTransfers(ctx context.Context, q db.DBExecutor
 			t.employee_id, COALESCE(emp.full_name, ''),
 			t.dispatched_by_employee_id, disp.full_name,
 			t.received_by_employee_id, recv.full_name,
-			t.status, t.notes, t.cancel_reason,
+			t.status, t.is_priority, t.notes, t.cancel_reason,
 			t.dispatched_at, t.received_at, t.created_at, t.updated_at
 		FROM transfers t
 		LEFT JOIN warehouses ow ON ow.id = t.origin_warehouse_id
@@ -168,7 +169,7 @@ func (r *InventoryRepository) ListTransfers(ctx context.Context, q db.DBExecutor
 		LEFT JOIN employees disp ON disp.id = t.dispatched_by_employee_id
 		LEFT JOIN employees recv ON recv.id = t.received_by_employee_id
 		%s
-		ORDER BY t.created_at DESC
+		ORDER BY t.is_priority DESC, t.created_at DESC
 		LIMIT $%d OFFSET $%d
 	`, whereClause, argIdx, argIdx+1)
 
@@ -190,7 +191,7 @@ func (r *InventoryRepository) ListTransfers(ctx context.Context, q db.DBExecutor
 			&t.EmployeeID, &t.EmployeeName,
 			&t.DispatchedByEmployeeID, &t.DispatchedByName,
 			&t.ReceivedByEmployeeID, &t.ReceivedByName,
-			&t.Status, &t.Notes, &t.CancelReason,
+			&t.Status, &t.IsPriority, &t.Notes, &t.CancelReason,
 			&t.DispatchedAt, &t.ReceivedAt, &t.CreatedAt, &t.UpdatedAt,
 		); err != nil {
 			return nil, 0, err
@@ -206,16 +207,16 @@ func (r *InventoryRepository) CreateTransfer(ctx context.Context, q db.DBExecuto
 	const sql = `
 		INSERT INTO transfers (
 			company_id, serial_code, origin_warehouse_id, destination_warehouse_id,
-			employee_id, status, notes
+			employee_id, status, is_priority, notes
 		) VALUES (
 			$1, $2, $3, $4,
-			$5, $6, $7
+			$5, $6, $7, $8
 		)
 		RETURNING id, created_at, updated_at
 	`
 	err := q.QueryRow(ctx, sql,
 		t.CompanyID, t.SerialCode, t.OriginWarehouseID, t.DestinationWarehouseID,
-		t.EmployeeID, t.Status, t.Notes,
+		t.EmployeeID, t.Status, t.IsPriority, t.Notes,
 	).Scan(&t.ID, &t.CreatedAt, &t.UpdatedAt)
 	if err != nil {
 		return nil, err

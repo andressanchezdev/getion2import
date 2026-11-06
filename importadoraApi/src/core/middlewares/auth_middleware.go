@@ -26,6 +26,7 @@ type PermissionRecord struct {
 // SessionValidator desacopla el middleware del repositorio de autenticación
 type SessionValidator interface {
 	IsSessionActive(ctx context.Context, db db.DBExecutor, sessionID int64) (bool, error)
+	IsActorAvailable(ctx context.Context, db db.DBExecutor, actorType types.ActorType, actorID int64) (bool, error)
 	LoadPermissionsForActor(ctx context.Context, db db.DBExecutor, actorType types.ActorType, actorID int64) ([]PermissionRecord, error)
 }
 
@@ -86,6 +87,15 @@ func Authenticate(jwtSecret string, validator SessionValidator, db db.DBExecutor
 					return utils.Unauthorized("SESSION_REVOKED", "La sesión ha expirado o fue cerrada.")
 				}
 			}
+			if validator != nil {
+				available, err := validator.IsActorAvailable(c.Request().Context(), db, claims.ActorType, claims.ActorID)
+				if err != nil {
+					return utils.Internal("No se pudo validar el estado de la cuenta.", err)
+				}
+				if !available {
+					return utils.Unauthorized("ACCOUNT_UNAVAILABLE", "La compañía o bodega asociada no está disponible. Comunícate con el área de desarrollo.")
+				}
+			}
 
 			// Cargar permisos habilitados si el actor es un empleado
 			permMap := make(map[string]bool)
@@ -137,7 +147,8 @@ func RequireActors(allowed ...types.ActorType) echo.MiddlewareFunc {
 }
 
 // RequirePermission verifica dinámicamente si el actor tiene el permiso 'modulo:accion'.
-// Superadmins y Admins (dentro de su compañía) tienen acceso completo por diseño.
+// Admins (dentro de su compañía) tienen acceso completo por diseño.
+// Superadmins tienen acceso de solo lectura/monitoreo general, y solo pueden mutar módulos de gobernanza.
 func RequirePermission(module, action string) echo.MiddlewareFunc {
 	requiredKey := module + ":" + action
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
@@ -147,8 +158,21 @@ func RequirePermission(module, action string) echo.MiddlewareFunc {
 				return utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
 			}
 
-			// Superadmin y Admin tienen acceso a todas las acciones de su alcance
-			if actor.ActorType == types.ActorSuperadmin || actor.ActorType == types.ActorAdmin {
+			// Superadmin: lectura total en cualquier módulo.
+			// En mutación (create, edit, delete, change_status, etc.) solo puede operar en gobernanza.
+			if actor.ActorType == types.ActorSuperadmin {
+				if action == "view" || action == "view_detail" {
+					return next(c)
+				}
+				// Módulos de gobernanza permitidos para mutación por Superadmin
+				if module == "companies" || module == "admins" || module == "superadmin" || module == "screensaver" || module == "recyclebin" || module == "audit" {
+					return next(c)
+				}
+				return utils.Forbidden("SUPERADMIN_READ_ONLY", "El Superadministrador opera en modo solo lectura para módulos operativos.")
+			}
+
+			// Admin de compañía tiene acceso total en su alcance
+			if actor.ActorType == types.ActorAdmin {
 				return next(c)
 			}
 
@@ -161,4 +185,3 @@ func RequirePermission(module, action string) echo.MiddlewareFunc {
 		}
 	}
 }
-

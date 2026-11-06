@@ -43,7 +43,12 @@ export const usePermissions = () => {
     screenKey: string,
     action: 'create' | 'update' | 'delete' | 'editPrices'
   ): boolean => {
-    if (isAdmin) return true
+    // El Superadministrador solo tiene permisos de mutación en gobernanza
+    if (level === 'superadmin') {
+      const governanceModules: string[] = ['superadmin', 'screensaver', 'audit']
+      return governanceModules.includes(moduleKey)
+    }
+    if (level === 'admin') return true
     if (!permissions?.modules || permissions.modules.length === 0) return true
     const mod = permissions.modules.find((m) => m.moduleKey === moduleKey)
     if (!mod) return false
@@ -57,7 +62,7 @@ export const usePermissions = () => {
     return false
   }
 
-  const canEditPrices = isAdmin || canPerformAction('inventory', 'products', 'editPrices') || canPerformAction('shop', 'catalog', 'editPrices')
+  const canEditPrices = (level === 'admin') || canPerformAction('inventory', 'products', 'editPrices') || canPerformAction('shop', 'catalog', 'editPrices')
 
   return {
     level,

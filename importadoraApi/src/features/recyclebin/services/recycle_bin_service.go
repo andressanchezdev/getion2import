@@ -12,6 +12,7 @@ import (
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
 	authRepos "importadoraApi/src/features/auth/repositories"
+	notificationRepos "importadoraApi/src/features/notifications/repositories"
 	"importadoraApi/src/features/recyclebin/dtos"
 	"importadoraApi/src/features/recyclebin/repositories"
 
@@ -19,9 +20,10 @@ import (
 )
 
 type RecycleBinService struct {
-	pool           *pgxpool.Pool
-	recycleBinRepo *repositories.RecycleBinRepository
-	auditRepo      *authRepos.AuditRepository
+	pool             *pgxpool.Pool
+	recycleBinRepo   *repositories.RecycleBinRepository
+	auditRepo        *authRepos.AuditRepository
+	notificationRepo *notificationRepos.NotificationRepository
 }
 
 // NewRecycleBinService crea el servicio con las piezas que necesita para funcionar.
@@ -29,11 +31,13 @@ func NewRecycleBinService(
 	pool *pgxpool.Pool,
 	recycleBinRepo *repositories.RecycleBinRepository,
 	auditRepo *authRepos.AuditRepository,
+	notificationRepo *notificationRepos.NotificationRepository,
 ) *RecycleBinService {
 	return &RecycleBinService{
-		pool:           pool,
-		recycleBinRepo: recycleBinRepo,
-		auditRepo:      auditRepo,
+		pool:             pool,
+		recycleBinRepo:   recycleBinRepo,
+		auditRepo:        auditRepo,
+		notificationRepo: notificationRepo,
 	}
 }
 
@@ -114,7 +118,7 @@ func (s *RecycleBinService) Restore(ctx context.Context, actor *middlewares.Acto
 		return utils.Internal("Error al restaurar elemento.", err)
 	}
 
-	_ = s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
+	if err := s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
 		CompanyID: item.CompanyID,
 		ActorType: actor.ActorType,
 		ActorID:   actor.ActorID,
@@ -124,8 +128,15 @@ func (s *RecycleBinService) Restore(ctx context.Context, actor *middlewares.Acto
 		Reason:    fmt.Sprintf("Restauración de '%s' (ID %d) desde papelera de reciclaje", item.EntityLabel, item.EntityID),
 		IPAddress: ip,
 		UserAgent: ua,
-	})
+	}); err != nil {
+		return utils.Internal("Error al registrar la restauración en auditoría.", err)
+	}
+	if item.CompanyID != nil {
+		body := fmt.Sprintf("El SUPERADMIN restauró el registro '%s'.", item.EntityLabel)
+		if err := s.notificationRepo.CreateCompanyAdminNotification(ctx, tx, *item.CompanyID, "Registro restaurado", body, item.EntityTable, item.EntityID); err != nil {
+			return utils.Internal("El registro se restauró, pero no se pudo notificar al administrador.", err)
+		}
+	}
 
 	return tx.Commit(ctx)
 }
-

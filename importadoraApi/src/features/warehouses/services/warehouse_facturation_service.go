@@ -129,9 +129,17 @@ func (s *WarehouseService) UpdateFacturation(ctx context.Context, actor *middlew
 	}
 	if req.ResolutionDate != nil {
 		parsedDate, err := time.Parse("2006-01-02", strings.TrimSpace(*req.ResolutionDate))
-		if err == nil {
-			current.ResolutionDate = &parsedDate
+		if err != nil {
+			return nil, utils.BadRequest("INVALID_RESOLUTION_DATE", "La fecha de la resolución debe tener formato AAAA-MM-DD.")
 		}
+		current.ResolutionDate = &parsedDate
+	}
+	if req.ResolutionValidUntil != nil {
+		parsedDate, err := time.Parse("2006-01-02", strings.TrimSpace(*req.ResolutionValidUntil))
+		if err != nil {
+			return nil, utils.BadRequest("INVALID_RESOLUTION_VALID_UNTIL", "La fecha de vencimiento de la resolución debe tener formato AAAA-MM-DD.")
+		}
+		current.ResolutionValidUntil = &parsedDate
 	}
 	if req.RangeFrom != nil {
 		current.RangeFrom = req.RangeFrom
@@ -144,6 +152,20 @@ func (s *WarehouseService) UpdateFacturation(ctx context.Context, actor *middlew
 	}
 	if req.IsActive != nil {
 		current.IsActive = *req.IsActive
+	}
+	if current.DocumentType == types.DocNIT && current.NIT != "0" && (req.NIT != nil || req.DocumentType != nil) {
+		normalizedNIT, err := utils.NormalizeColombianNIT(current.NIT)
+		if err != nil {
+			return nil, utils.BadRequest("ERR_INVALID_NIT", err.Error())
+		}
+		duplicate, err := s.warehouseRepo.HasNITInAnotherCompany(ctx, s.pool, wh.CompanyID, warehouseID, normalizedNIT)
+		if err != nil {
+			return nil, utils.Internal("No se pudo validar la unicidad del NIT.", err)
+		}
+		if duplicate {
+			return nil, utils.Conflict("ERR_DUPLICATE_NIT", "El NIT ya está registrado en otra compañía.")
+		}
+		current.NIT = normalizedNIT
 	}
 
 	saved, err := s.warehouseRepo.UpsertFacturation(ctx, s.pool, current)
@@ -268,36 +290,41 @@ func (s *WarehouseService) mapFacturationToDTO(f *repositories.FacturationEntity
 		resNum = *f.ResolutionNumber
 	}
 
-	var resDateStr *string
+	var resDateStr, resValidUntilStr *string
 	if f.ResolutionDate != nil {
 		formatted := f.ResolutionDate.Format("2006-01-02")
 		resDateStr = &formatted
 	}
+	if f.ResolutionValidUntil != nil {
+		formatted := f.ResolutionValidUntil.Format("2006-01-02")
+		resValidUntilStr = &formatted
+	}
 
 	return &dtos.WarehouseFacturationResponse{
-		ID:               f.ID,
-		CompanyID:        f.CompanyID,
-		WarehouseID:      f.WarehouseID,
-		TypeFacturation:  f.TypeFacturation,
-		DocumentType:     f.DocumentType,
-		NIT:              f.NIT,
-		LegalName:        f.LegalName,
-		TradeName:        trade,
-		BillingEmail:     email,
-		BillingPhone:     phone,
-		BillingAddress:   addr,
-		BillingCity:      city,
-		LogoURL:          logo,
-		VatWithholder:    f.VatWithholder,
-		IncomeWithholder: f.IncomeWithholder,
-		SelfWithholder:   f.SelfWithholder,
-		InvoicePrefix:    invPrefix,
-		ResolutionNumber: resNum,
-		ResolutionDate:   resDateStr,
-		RangeFrom:        f.RangeFrom,
-		RangeTo:          f.RangeTo,
-		IsActive:         f.IsActive,
-		CreatedAt:        f.CreatedAt,
-		UpdatedAt:        f.UpdatedAt,
+		ID:                   f.ID,
+		CompanyID:            f.CompanyID,
+		WarehouseID:          f.WarehouseID,
+		TypeFacturation:      f.TypeFacturation,
+		DocumentType:         f.DocumentType,
+		NIT:                  f.NIT,
+		LegalName:            f.LegalName,
+		TradeName:            trade,
+		BillingEmail:         email,
+		BillingPhone:         phone,
+		BillingAddress:       addr,
+		BillingCity:          city,
+		LogoURL:              logo,
+		VatWithholder:        f.VatWithholder,
+		IncomeWithholder:     f.IncomeWithholder,
+		SelfWithholder:       f.SelfWithholder,
+		InvoicePrefix:        invPrefix,
+		ResolutionNumber:     resNum,
+		ResolutionDate:       resDateStr,
+		ResolutionValidUntil: resValidUntilStr,
+		RangeFrom:            f.RangeFrom,
+		RangeTo:              f.RangeTo,
+		IsActive:             f.IsActive,
+		CreatedAt:            f.CreatedAt,
+		UpdatedAt:            f.UpdatedAt,
 	}
 }

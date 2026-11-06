@@ -23,6 +23,7 @@ type WarehouseService struct {
 	pool          *pgxpool.Pool
 	warehouseRepo *repositories.WarehouseRepository
 	auditRepo     *authRepos.AuditRepository
+	authRepo      *authRepos.AuthRepository
 }
 
 // NewWarehouseService crea el servicio con las piezas que necesita para funcionar.
@@ -31,12 +32,14 @@ func NewWarehouseService(
 	pool *pgxpool.Pool,
 	warehouseRepo *repositories.WarehouseRepository,
 	auditRepo *authRepos.AuditRepository,
+	authRepo *authRepos.AuthRepository,
 ) *WarehouseService {
 	return &WarehouseService{
 		cfg:           cfg,
 		pool:          pool,
 		warehouseRepo: warehouseRepo,
 		auditRepo:     auditRepo,
+		authRepo:      authRepo,
 	}
 }
 

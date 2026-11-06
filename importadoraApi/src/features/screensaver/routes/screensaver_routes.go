@@ -1,6 +1,6 @@
 package routes
 
-// screensaver_routes.go · rutas de /settings/screensaver: GET público (el protector lo lee antes de iniciar sesión); POST y PUT exigen settings.edit
+// screensaver_routes.go · rutas autenticadas de /settings/screensaver; la imagen corresponde a la compañía de la sesión
 // conecta con: screensaver_controller y core/bootstrap
 
 import (
@@ -11,12 +11,9 @@ import (
 )
 
 func RegisterRoutes(e *echo.Echo, authMiddleware *middlewares.AuthMiddleware, ctrl *controllers.ScreensaverController) {
-	// Lectura pública/autenticada
-	e.GET("/settings/screensaver", ctrl.Get)
-
-	// Modificación autenticada para administrador
 	protected := e.Group("/settings/screensaver", authMiddleware.Authenticate())
 	{
+		protected.GET("", ctrl.Get)
 		protected.POST("", ctrl.Update, authMiddleware.RequirePermission("settings", "edit"))
 		protected.PUT("", ctrl.Update, authMiddleware.RequirePermission("settings", "edit"))
 	}

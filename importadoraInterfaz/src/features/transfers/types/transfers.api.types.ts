@@ -28,6 +28,7 @@ export interface TransferDto {
   receivedByEmployeeName?: string
   status: TransferApiStatus | string
   priority?: string
+  isPriority?: boolean
   notes?: string | null
   noveltyNotes?: string | null
   cancelReason?: string | null
@@ -59,6 +60,7 @@ export interface CreateTransferBody {
   destinationWarehouseId: number
   transferType?: string
   notes?: string
+  isPriority?: boolean
   items: Array<{ productId: number; originStockId: number; quantity: number; destinationLocation?: string }>
 }
 

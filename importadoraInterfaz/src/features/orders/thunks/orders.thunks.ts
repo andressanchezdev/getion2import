@@ -71,8 +71,12 @@ const ADVANCE_DONE = { pick: 'Pedido en alistamiento.', pack: 'Pedido en empaque
 // lleva el pedido a la siguiente etapa y recarga la bandeja y los conteos; el mensaje de Go (409, 400) llega tal cual
 export const advanceOrderThunk = createAsyncThunk<void, { saleId: number; action: keyof typeof ADVANCE_DONE }, Config>('orders/advance', async ({ saleId, action }, { dispatch, rejectWithValue }) => {
   try {
-    await advanceSale(saleId, action)
-    toast.success(ADVANCE_DONE[action])
+    const warnings = await advanceSale(saleId, action)
+    if (warnings.length > 0) {
+      toast.warning(`${ADVANCE_DONE[action]} ${warnings.join(' ')}`)
+    } else {
+      toast.success(ADVANCE_DONE[action])
+    }
     dispatch(loadOrdersThunk())
     dispatch(loadOrderCountsThunk())
   } catch (error) {

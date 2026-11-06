@@ -67,6 +67,16 @@
   color: var(--color-text-secondary);
 }
 
+.billing-resolution-warning {
+  margin: 0 var(--space-4) var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--c-amber-200);
+  border-radius: var(--radius-md);
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  font-size: var(--text-sm);
+}
+
 .billing-table-responsive {
   width: 100%;
 }

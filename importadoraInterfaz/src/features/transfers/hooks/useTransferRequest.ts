@@ -64,6 +64,7 @@ export const useTransferRequest = (initial?: CreateTransferInitialPayload) => {
     : 0
 
   const [search, setSearch] = useState('')
+  const [isPriority, setIsPriority] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [results, setResults] = useState<TransferRequestResult[] | null>(null)
@@ -190,7 +191,7 @@ export const useTransferRequest = (initial?: CreateTransferInitialPayload) => {
     setSubmitting(true)
     setError(null)
     try {
-      const outcome = await dispatch(createTransferRequestThunk({ destWarehouseId, lines })).unwrap()
+      const outcome = await dispatch(createTransferRequestThunk({ destWarehouseId, lines, isPriority })).unwrap()
       setResults(outcome)
       const created = outcome.filter((result) => result.transfer).length
       if (created > 0) {
@@ -241,6 +242,8 @@ export const useTransferRequest = (initial?: CreateTransferInitialPayload) => {
     changeQuantity,
     remove,
     clear,
+    isPriority,
+    setIsPriority,
     submitting,
     error,
     results,

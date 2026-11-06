@@ -18,30 +18,31 @@ import (
 )
 
 type FacturationEntity struct {
-	ID               int64
-	CompanyID        int64
-	WarehouseID      int64
-	TypeFacturation  types.TypeFacturation
-	DocumentType     types.DocumentType
-	NIT              string
-	LegalName        string
-	TradeName        *string
-	BillingEmail     *string
-	BillingPhone     *string
-	BillingAddress   *string
-	BillingCity      *string
-	LogoURL          *string
-	VatWithholder    bool
-	IncomeWithholder bool
-	SelfWithholder   bool
-	InvoicePrefix    *string
-	ResolutionNumber *string
-	ResolutionDate   *time.Time
-	RangeFrom        *int64
-	RangeTo          *int64
-	IsActive         bool
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	ID                   int64
+	CompanyID            int64
+	WarehouseID          int64
+	TypeFacturation      types.TypeFacturation
+	DocumentType         types.DocumentType
+	NIT                  string
+	LegalName            string
+	TradeName            *string
+	BillingEmail         *string
+	BillingPhone         *string
+	BillingAddress       *string
+	BillingCity          *string
+	LogoURL              *string
+	VatWithholder        bool
+	IncomeWithholder     bool
+	SelfWithholder       bool
+	InvoicePrefix        *string
+	ResolutionNumber     *string
+	ResolutionDate       *time.Time
+	ResolutionValidUntil *time.Time
+	RangeFrom            *int64
+	RangeTo              *int64
+	IsActive             bool
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
 }
 
 type DocSeriesEntity struct {
@@ -61,7 +62,7 @@ func (r *WarehouseRepository) FindFacturationByWarehouseID(ctx context.Context, 
 			nit, legal_name, trade_name, billing_email, billing_phone,
 			billing_address, billing_city, logo_url,
 			vat_withholder, income_withholder, self_withholder,
-			invoice_prefix, resolution_number, resolution_date,
+			invoice_prefix, resolution_number, resolution_date, resolution_valid_until,
 			range_from, range_to, is_active, created_at, updated_at
 		FROM warehouse_facturation
 		WHERE warehouse_id = $1
@@ -72,7 +73,7 @@ func (r *WarehouseRepository) FindFacturationByWarehouseID(ctx context.Context, 
 		&f.NIT, &f.LegalName, &f.TradeName, &f.BillingEmail, &f.BillingPhone,
 		&f.BillingAddress, &f.BillingCity, &f.LogoURL,
 		&f.VatWithholder, &f.IncomeWithholder, &f.SelfWithholder,
-		&f.InvoicePrefix, &f.ResolutionNumber, &f.ResolutionDate,
+		&f.InvoicePrefix, &f.ResolutionNumber, &f.ResolutionDate, &f.ResolutionValidUntil,
 		&f.RangeFrom, &f.RangeTo, &f.IsActive, &f.CreatedAt, &f.UpdatedAt,
 	)
 	if err != nil {
@@ -84,6 +85,21 @@ func (r *WarehouseRepository) FindFacturationByWarehouseID(ctx context.Context, 
 	return &f, nil
 }
 
+func (r *WarehouseRepository) HasNITInAnotherCompany(ctx context.Context, q db.DBExecutor, companyID, warehouseID int64, nit string) (bool, error) {
+	const sql = `
+		SELECT EXISTS (
+			SELECT 1
+			FROM warehouse_facturation
+			WHERE company_id <> $1
+			  AND warehouse_id <> $2
+			  AND regexp_replace(nit, '[^0-9]', '', 'g') = regexp_replace($3, '[^0-9]', '', 'g')
+		)
+	`
+	var exists bool
+	err := q.QueryRow(ctx, sql, companyID, warehouseID, nit).Scan(&exists)
+	return exists, err
+}
+
 // UpsertFacturation guarda la configuración de facturación de una bodega: la crea o la actualiza.
 func (r *WarehouseRepository) UpsertFacturation(ctx context.Context, q db.DBExecutor, f *FacturationEntity) (*FacturationEntity, error) {
 	const sql = `
@@ -92,10 +108,10 @@ func (r *WarehouseRepository) UpsertFacturation(ctx context.Context, q db.DBExec
 			nit, legal_name, trade_name, billing_email, billing_phone,
 			billing_address, billing_city, logo_url,
 			vat_withholder, income_withholder, self_withholder,
-			invoice_prefix, resolution_number, resolution_date,
+			invoice_prefix, resolution_number, resolution_date, resolution_valid_until,
 			range_from, range_to, is_active
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22
 		)
 		ON CONFLICT (warehouse_id) DO UPDATE SET
 			type_facturation = EXCLUDED.type_facturation,
@@ -114,6 +130,7 @@ func (r *WarehouseRepository) UpsertFacturation(ctx context.Context, q db.DBExec
 			invoice_prefix = EXCLUDED.invoice_prefix,
 			resolution_number = EXCLUDED.resolution_number,
 			resolution_date = EXCLUDED.resolution_date,
+			resolution_valid_until = EXCLUDED.resolution_valid_until,
 			range_from = EXCLUDED.range_from,
 			range_to = EXCLUDED.range_to,
 			is_active = EXCLUDED.is_active,
@@ -126,7 +143,7 @@ func (r *WarehouseRepository) UpsertFacturation(ctx context.Context, q db.DBExec
 		f.NIT, f.LegalName, f.TradeName, f.BillingEmail, f.BillingPhone,
 		f.BillingAddress, f.BillingCity, f.LogoURL,
 		f.VatWithholder, f.IncomeWithholder, f.SelfWithholder,
-		f.InvoicePrefix, f.ResolutionNumber, f.ResolutionDate,
+		f.InvoicePrefix, f.ResolutionNumber, f.ResolutionDate, f.ResolutionValidUntil,
 		f.RangeFrom, f.RangeTo, f.IsActive,
 	).Scan(&f.ID, &f.CreatedAt, &f.UpdatedAt)
 	if err != nil {

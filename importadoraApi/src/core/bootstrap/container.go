@@ -154,11 +154,11 @@ func NewContainer(cfg *config.Config, database *db.Database) *AppContainer {
 
 	// Companies & Warehouses
 	companyRepo := companyRepos.NewCompanyRepository()
-	companyService := companyServices.NewCompanyService(cfg, database.Pool, companyRepo, auditRepo)
+	companyService := companyServices.NewCompanyService(cfg, database.Pool, companyRepo, auditRepo, authRepo)
 	companyCtrl := companyControllers.NewCompanyController(companyService)
 
 	warehouseRepo := warehouseRepos.NewWarehouseRepository()
-	warehouseService := warehouseServices.NewWarehouseService(cfg, database.Pool, warehouseRepo, auditRepo)
+	warehouseService := warehouseServices.NewWarehouseService(cfg, database.Pool, warehouseRepo, auditRepo, authRepo)
 	warehouseCtrl := warehouseControllers.NewWarehouseController(warehouseService)
 
 	// Staff
@@ -166,7 +166,7 @@ func NewContainer(cfg *config.Config, database *db.Database) *AppContainer {
 	roleRepo := staffRepos.NewRoleRepository()
 	permissionRepo := staffRepos.NewPermissionRepository()
 	employeeRepo := staffRepos.NewEmployeeRepository()
-	staffService := staffServices.NewStaffService(cfg, database.Pool, adminRepo, roleRepo, permissionRepo, employeeRepo, auditRepo)
+	staffService := staffServices.NewStaffService(cfg, database.Pool, adminRepo, roleRepo, permissionRepo, employeeRepo, auditRepo, authRepo)
 	staffCtrl := staffControllers.NewStaffController(staffService)
 
 	// Customers & Externals
@@ -231,14 +231,15 @@ func NewContainer(cfg *config.Config, database *db.Database) *AppContainer {
 	notificationCtrl := notificationControllers.NewNotificationController(notificationService)
 
 	auditQueryRepo := auditQueryRepos.NewAuditLogQueryRepository()
-	auditService := auditServices.NewAuditService(database.Pool, auditQueryRepo)
+	auditContextRepo := auditQueryRepos.NewAuditContextChangeRepo()
+	auditService := auditServices.NewAuditService(database.Pool, auditQueryRepo, auditContextRepo, auditRepo)
 	auditCtrl := auditControllers.NewAuditController(auditService)
 
 	reportRepo := reportRepos.NewReportRepository()
 	reportService := reportServices.NewReportService(database.Pool, reportRepo)
 	reportCtrl := reportControllers.NewReportController(reportService)
 
-	recycleBinService := recycleBinServices.NewRecycleBinService(database.Pool, recycleBinRepo, auditRepo)
+	recycleBinService := recycleBinServices.NewRecycleBinService(database.Pool, recycleBinRepo, auditRepo, notificationRepo)
 	recycleBinCtrl := recycleBinControllers.NewRecycleBinController(recycleBinService)
 
 	bankStatementRepo := bankStatementRepos.NewBankStatementRepository()

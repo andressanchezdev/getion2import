@@ -13,6 +13,7 @@ export const ADMIN_ENDPOINTS = {
   },
   AUDIT: {
     LIST: '/audit-logs',
+    CONTEXT_CHANGE: '/audit-logs/context-change',
   },
   STAFF_ADMINS: {
     LIST: '/admins',
