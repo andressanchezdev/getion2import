@@ -249,6 +249,28 @@ func (r *AuthRepository) FindActorByID(ctx context.Context, q db.DBExecutor, act
 	}
 }
 
+// ResolveActorDisplayName obtiene el nombre legible del actor autenticado (superadmin, admin o empleado) usando FindActorByID.
+func (r *AuthRepository) ResolveActorDisplayName(ctx context.Context, q db.DBExecutor, actor *middlewares.ActorContext) string {
+	if actor == nil {
+		return "Desconocido"
+	}
+	if actor.ActorType == types.ActorSuperadmin {
+		return "Super Administrador"
+	}
+	if acc, err := r.FindActorByID(ctx, q, actor.ActorType, actor.ActorID); err == nil && acc != nil {
+		if acc.FullName != "" {
+			return acc.FullName
+		}
+		if acc.FirstName != "" || acc.LastName != "" {
+			return acc.FirstName + " " + acc.LastName
+		}
+	}
+	if actor.Email != "" {
+		return actor.Email
+	}
+	return "Usuario"
+}
+
 // TouchLastLogin guarda la fecha y hora del último ingreso del actor.
 func (r *AuthRepository) TouchLastLogin(ctx context.Context, q db.DBExecutor, actorType types.ActorType, actorID int64) error {
 	var sqlQuery string
@@ -305,4 +327,3 @@ func (r *AuthRepository) LoadPermissionsForActor(ctx context.Context, q db.DBExe
 	}
 	return list, rows.Err()
 }
-

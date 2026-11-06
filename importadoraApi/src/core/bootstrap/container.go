@@ -246,7 +246,7 @@ func NewContainer(cfg *config.Config, database *db.Database) *AppContainer {
 	bankStatementCtrl := bankStatementControllers.NewBankStatementController(bankStatementService)
 
 	cashSessionRepo := cashSessionRepos.NewCashSessionRepository()
-	cashSessionService := cashSessionServices.NewCashSessionService(database.Pool, cashSessionRepo)
+	cashSessionService := cashSessionServices.NewCashSessionService(database.Pool, cashSessionRepo, authRepo)
 	cashSessionCtrl := cashSessionControllers.NewCashSessionController(cashSessionService)
 
 	screensaverRepo := screensaverRepos.NewScreensaverRepository(database.Pool)

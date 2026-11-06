@@ -11,8 +11,8 @@ import (
 
 	"importadoraApi/src/core/db"
 	"importadoraApi/src/core/middlewares"
-	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
+	authRepos "importadoraApi/src/features/auth/repositories"
 	"importadoraApi/src/features/cash_sessions/dtos"
 	"importadoraApi/src/features/cash_sessions/repositories"
 
@@ -22,14 +22,16 @@ import (
 )
 
 type CashSessionService struct {
-	pool *pgxpool.Pool
-	repo *repositories.CashSessionRepository
+	pool     *pgxpool.Pool
+	repo     *repositories.CashSessionRepository
+	authRepo *authRepos.AuthRepository
 }
 
-func NewCashSessionService(pool *pgxpool.Pool, repo *repositories.CashSessionRepository) *CashSessionService {
+func NewCashSessionService(pool *pgxpool.Pool, repo *repositories.CashSessionRepository, authRepo *authRepos.AuthRepository) *CashSessionService {
 	return &CashSessionService{
-		pool: pool,
-		repo: repo,
+		pool:     pool,
+		repo:     repo,
+		authRepo: authRepo,
 	}
 }
 
@@ -89,7 +91,7 @@ func (s *CashSessionService) Open(ctx context.Context, actor *middlewares.ActorC
 
 	actorType := string(actor.ActorType)
 	actorID := actor.ActorID
-	actorName := s.resolveActorName(ctx, actor)
+	actorName := s.authRepo.ResolveActorDisplayName(ctx, s.pool, actor)
 
 	entity := &repositories.CashSessionEntity{
 		CompanyID:         companyID,
@@ -149,7 +151,7 @@ func (s *CashSessionService) Close(ctx context.Context, actor *middlewares.Actor
 
 	actorType := string(actor.ActorType)
 	actorID := actor.ActorID
-	actorName := s.resolveActorName(ctx, actor)
+	actorName := s.authRepo.ResolveActorDisplayName(ctx, s.pool, actor)
 
 	existing.ClosedByActorType = &actorType
 	existing.ClosedByActorID = &actorID
@@ -247,26 +249,4 @@ func toResponse(e *repositories.CashSessionEntity) *dtos.CashSessionResponse {
 		Difference:        e.Difference,
 		Notes:             e.Notes,
 	}
-}
-
-func (s *CashSessionService) resolveActorName(ctx context.Context, actor *middlewares.ActorContext) string {
-	if actor == nil {
-		return "Desconocido"
-	}
-	if actor.ActorType == types.ActorSuperadmin {
-		return "Super Administrador"
-	}
-	if actor.ActorType == types.ActorEmployee {
-		if full, err := s.repo.ResolveActorName(ctx, s.pool, "employees", actor.ActorID); err == nil && full != "" {
-			return full
-		}
-	} else if actor.ActorType == types.ActorAdmin {
-		if full, err := s.repo.ResolveActorName(ctx, s.pool, "admins", actor.ActorID); err == nil && full != "" {
-			return full
-		}
-	}
-	if actor.Email != "" {
-		return actor.Email
-	}
-	return fmt.Sprintf("Usuario #%d", actor.ActorID)
 }

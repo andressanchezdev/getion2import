@@ -19,5 +19,4 @@ export default function App() {
     </>
   )
 }
-
 // ojo: el montaje en el DOM (createRoot) y la importación de App.css ahora viven en main.tsx
