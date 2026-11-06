@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { closeDrawerForm } from '@/features/navigation'
 import { toast } from '@/global/helpers/feedback/toast'
 import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
-import { billingProblem } from '../helpers/billing.rules'
+import { billingProblem, colombianNITProblem } from '../helpers/billing.rules'
 import { selectBilling } from '../selectors/billing.selectors'
 import { saveBillingConfigThunk } from '../thunks/billing.thunks'
 import type { BillingConfigInput, FiscalDocumentType, TypeFacturation } from '../types/billing.types'
@@ -84,6 +84,7 @@ export const useBillingConfigForm = () => {
 
   const input = toInput()
   const problem = warehouseId <= 0 ? 'Elige una bodega' : billingProblem(input)
+  const nitProblem = colombianNITProblem(values.nit, values.documentType)
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -98,5 +99,5 @@ export const useBillingConfigForm = () => {
     }
   }
 
-  return { values, set, problem, saving, error, submit, hasConfig: config !== null, cancel: () => dispatch(closeDrawerForm()) }
+  return { values, set, problem, nitProblem, saving, error, submit, hasConfig: config !== null, cancel: () => dispatch(closeDrawerForm()) }
 }

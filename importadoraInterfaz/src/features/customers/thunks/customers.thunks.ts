@@ -44,11 +44,11 @@ export const loadCustomerDetailThunk = createAsyncThunk<CustomerDetail, number, 
 )
 
 // elimina un cliente y devuelve su id (el slice cierra su panel si estaba abierto y la pantalla vuelve a pedir la lista)
-export const deleteCustomerThunk = createAsyncThunk<number, number, { rejectValue: string }>(
+export const deleteCustomerThunk = createAsyncThunk<number, { customerId: number; reason: string }, { rejectValue: string }>(
   'customers/delete',
-  async (customerId, { rejectWithValue }) => {
+  async ({ customerId, reason }, { rejectWithValue }) => {
     try {
-      await deleteCustomer(customerId)
+      await deleteCustomer(customerId, reason)
       return customerId
     } catch (error) {
       return rejectWithValue(getErrorMessage(error, 'No se pudo eliminar el cliente.'))

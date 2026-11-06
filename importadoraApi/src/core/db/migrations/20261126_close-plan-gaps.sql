@@ -1,3 +1,5 @@
+-- Incremental migration for existing databases; do not run startdb.pgsql on production data.
+-- Resolve duplicate screensaver rows and cross-company NITs before applying.
 BEGIN;
 
 ALTER TABLE warehouse_facturation
@@ -64,6 +66,19 @@ END $$;
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_screensaver_settings_company_unique
     ON screensaver_settings (company_id);
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT regexp_replace(nit, '[^0-9]', '', 'g')
+        FROM warehouse_facturation
+        WHERE regexp_replace(nit, '[^0-9]', '', 'g') NOT IN ('', '0')
+        GROUP BY regexp_replace(nit, '[^0-9]', '', 'g')
+        HAVING COUNT(DISTINCT company_id) > 1
+    ) THEN
+        RAISE EXCEPTION 'Duplicate NITs exist across companies; resolve them before applying this migration';
+    END IF;
+END $$;
 
 CREATE OR REPLACE FUNCTION prevent_cross_company_nit_duplicate() RETURNS trigger AS $$
 DECLARE

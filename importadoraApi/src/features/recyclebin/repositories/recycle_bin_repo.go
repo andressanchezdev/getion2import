@@ -91,6 +91,11 @@ func (r *RecycleBinRepository) FindByID(ctx context.Context, q db.DBExecutor, id
 	return &e, nil
 }
 
+func (r *RecycleBinRepository) LockByID(ctx context.Context, q db.DBExecutor, id int64) error {
+	var lockedID int64
+	return q.QueryRow(ctx, `SELECT id FROM recycle_bin WHERE id = $1 FOR UPDATE`, id).Scan(&lockedID)
+}
+
 // List lista los elementos de la papelera según los filtros, con su total para paginar.
 func (r *RecycleBinRepository) List(ctx context.Context, q db.DBExecutor, f dtos.RecycleBinFilterQuery) ([]RecycleBinEntity, int, error) {
 	where := make([]string, 0)
@@ -211,6 +216,8 @@ func (r *RecycleBinRepository) Restore(ctx context.Context, q db.DBExecutor, ite
 		restoreSQL = `UPDATE categories SET is_active = TRUE WHERE id = $1`
 	case "warehouses":
 		restoreSQL = `UPDATE warehouses SET is_active = TRUE WHERE id = $1`
+	case "companies":
+		restoreSQL = `UPDATE companies SET is_active = TRUE, deleted_at = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $1`
 	case "warehouse_locations":
 		restoreSQL = `UPDATE warehouse_locations SET is_active = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = $1`
 	case "externals":
@@ -219,8 +226,12 @@ func (r *RecycleBinRepository) Restore(ctx context.Context, q db.DBExecutor, ite
 		return fmt.Errorf("la tabla '%s' no soporta restauración automática", item.EntityTable)
 	}
 
-	if _, err := q.Exec(ctx, restoreSQL, item.EntityID); err != nil {
+	tag, err := q.Exec(ctx, restoreSQL, item.EntityID)
+	if err != nil {
 		return fmt.Errorf("error al reactivar registro en '%s': %w", item.EntityTable, err)
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("el registro %d no existe en '%s' y no se puede restaurar", item.EntityID, item.EntityTable)
 	}
 
 	const updateRecycleSQL = `
@@ -228,9 +239,14 @@ func (r *RecycleBinRepository) Restore(ctx context.Context, q db.DBExecutor, ite
 		SET is_restored = TRUE,
 		    restored_at = CURRENT_TIMESTAMP,
 		    restored_by_actor_id = $1
-		WHERE id = $2
+		WHERE id = $2 AND is_restored = FALSE
 	`
-	_, err := q.Exec(ctx, updateRecycleSQL, restoredByActorID, item.ID)
-	return err
+	tag, err = q.Exec(ctx, updateRecycleSQL, restoredByActorID, item.ID)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return errors.New("el elemento ya fue restaurado por otra solicitud")
+	}
+	return nil
 }
-

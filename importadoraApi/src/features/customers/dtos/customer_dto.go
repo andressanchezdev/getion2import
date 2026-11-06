@@ -101,6 +101,10 @@ type UpdateCustomerRequest struct {
 	Status              *types.CustomerStatus  `json:"status"`
 }
 
+type DeleteCustomerRequest struct {
+	Reason string `json:"reason"`
+}
+
 type CustomerFilterQuery struct {
 	CompanyID     *int64
 	Status        *types.CustomerStatus
@@ -176,4 +180,3 @@ type CustomerSelectorResponse struct {
 	AvailableCredit float64 `json:"availableCredit"`
 	IsDefault       bool    `json:"isDefault"`
 }
-

@@ -1,7 +1,8 @@
 // useNotifications.ts · hook de estado para listar y marcar notificaciones como leídas
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useAppSelector } from '@/global/hooks/store/useRedux'
 import { selectCurrentUser } from '@/features/auth'
+import { toast } from '@/global/helpers/feedback/toast'
 import type { AppNotification } from '../types/notifications.types'
 import {
   fetchNotifications,
@@ -14,13 +15,28 @@ export const useNotifications = () => {
   const [notifications, setNotifications] = useState<AppNotification[]>([])
   const [loading, setLoading] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
+  const seenNotificationIds = useRef(new Set<number>())
+  const hasLoadedNotifications = useRef(false)
 
   const loadNotifications = useCallback(async () => {
-    if (!user) return
+    if (!user) {
+      setNotifications([])
+      seenNotificationIds.current.clear()
+      hasLoadedNotifications.current = false
+      return
+    }
     setLoading(true)
     try {
       const res = await fetchNotifications(false)
-      setNotifications(res.data ?? [])
+      const current = res.data ?? []
+      if (hasLoadedNotifications.current) {
+        current
+          .filter((notification) => notification.kind === 'restore_record' && !notification.readAt && !seenNotificationIds.current.has(notification.id))
+          .forEach((notification) => toast.warning(notification.title, { description: notification.body ?? 'El SUPERADMIN restauró un registro.' }))
+      }
+      current.forEach((notification) => seenNotificationIds.current.add(notification.id))
+      hasLoadedNotifications.current = true
+      setNotifications(current)
     } catch {
       // silencioso para no interrumpir el flujo si la sesión expira
     } finally {
@@ -33,8 +49,12 @@ export const useNotifications = () => {
     void Promise.resolve().then(() => {
       if (!cancelled) void loadNotifications()
     })
+    const intervalId = window.setInterval(() => {
+      if (!cancelled) void loadNotifications()
+    }, 30_000)
     return () => {
       cancelled = true
+      window.clearInterval(intervalId)
     }
   }, [loadNotifications])
 
@@ -73,4 +93,3 @@ export const useNotifications = () => {
     handleMarkAllAsRead,
   }
 }
-

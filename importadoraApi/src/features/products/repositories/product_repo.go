@@ -325,6 +325,12 @@ func (r *ProductRepository) SoftDelete(ctx context.Context, q db.DBExecutor, id 
 			updated_at = CURRENT_TIMESTAMP
 		WHERE id = $1 AND deleted_at IS NULL
 	`
-	_, err := q.Exec(ctx, sql, id)
-	return err
+	tag, err := q.Exec(ctx, sql, id)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return errors.New("producto no encontrado o ya eliminado")
+	}
+	return nil
 }

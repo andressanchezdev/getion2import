@@ -1,18 +1,20 @@
 Plan Detallado para Cerrar Brechas y Completar Solución
 1. Resumen de Brechas Identificadas
 ID	Brecha	Área Afectada	Impacto	Estado Actual
-D-03	Auditoría del cambio de contexto y acciones del SUPERADMIN	Seguridad / Auditoría	Falta de trazabilidad completa	Pendiente
-D-04	Impacto de cambio de resolución DIAN a mitad de operación	Facturación	Posibles inconsistencias en numeración	Pendiente
-D-08	Integridad referencial al eliminar definitivamente registros	Base de datos	Riesgo de datos huérfanos	Pendiente
-D-09	Canal de notificación cuando SUPERADMIN restaura registro	UI / Notificaciones	No hay feedback al admin	Pendiente
-B-01	Validación de NIT (formato, unicidad, dígito verificación)	Registro de compañía	Posibles datos inválidos	Pendiente
-B-02	Política de expiración de contraseñas y tokens	Seguridad	Tokens pueden quedar válidos indefinidamente	Pendiente
-B-03	Configuración de intervalo de inactividad del protector de pantalla por compañía	UX	Intervalo está hard‑coded, impide personalización	Pendiente
-B-04	Cobertura de papelera para todas las entidades (pedidos, facturas, empleados, bodegas)	Gestión de datos	Restauraciones imposibles para ciertos objetos	Pendiente
+D-03	Auditoría del cambio de contexto y acciones del SUPERADMIN	Seguridad / Auditoría	Falta de trazabilidad completa	Parcial: endpoint y selector integrados; falta migración aplicada y prueba de integración
+D-04	Impacto de cambio de resolución DIAN a mitad de operación	Facturación	Posibles inconsistencias en numeración	Parcial: vencimiento/rango alertan sin bloquear y el consecutivo no se reinicia; falta historial de resoluciones y prueba de integración
+D-08	Integridad referencial al eliminar definitivamente registros	Base de datos	Riesgo de datos huérfanos	Pendiente: no se implementó purga física autorizada ni validación integral de dependencias
+D-09	Canal de notificación cuando SUPERADMIN restaura registro	UI / Notificaciones	No hay feedback al admin	Parcial: notificación, toast por sondeo e historial; falta migración aplicada y prueba de integración
+B-01	Validación de NIT (formato, unicidad, dígito verificación)	Facturación por bodega	Posibles datos inválidos	Parcial: validador y unicidad entre compañías; falta migración aplicada y prueba con PostgreSQL
+B-02	Política de expiración de contraseñas y tokens	Seguridad	Tokens pueden quedar válidos indefinidamente	Parcial: expiración/renovación de tokens existentes; no se fuerza vencimiento de contraseña por decisión acordada
+B-03	Configuración de intervalo de inactividad del protector de pantalla por compañía	UX	Intervalo está hard‑coded, impide personalización	Implementado según decisión: cinco minutos fijos y comunes a todas las compañías
+B-04	Cobertura de papelera para todas las entidades (pedidos, facturas, empleados, bodegas)	Gestión de datos	Restauraciones imposibles para ciertos objetos	Parcial: restauración ampliada; solo clientes/productos se registran al retirarlos y facturas se anulan, no se borran
 2. Prioridades y Orden de Ejecución
 Seguridad y Auditoría (D‑03, D‑09, B‑02) – prioridad alta para cumplimiento regulatorio.
 Integridad de datos (D‑08, B‑01, B‑04) – evitar pérdidas de información.
 Operatividad de negocio (D‑04, B‑03) – garantizar fluidez en facturación y experiencia de usuario.
+
+Estado revisado tras la implementación: prevalecen los casos de uso y decisiones confirmadas. La expiración de contraseñas queda excluida; los tokens sí vencen. El protector queda fijo en cinco minutos para todas las compañías. Una resolución DIAN vencida, ausente o agotada genera alerta, pero no bloquea la facturación. La validación del NIT se aplica a la facturación de bodega, no al registro de compañía. Las facturas se anulan con motivo y permisos; no se tratan como registros borrables ordinarios. La migración incremental está preparada en `importadoraApi/src/core/db/migrations/20261126_close-plan-gaps.sql`, pero aún no se ha aplicado ni validado en staging. No ejecutar `startdb.pgsql` en bases existentes: es un inicializador destructivo.
 3. Plan de Acción Detallado
 3.1. Auditoría del Cambio de Contexto (D‑03)
 Backend: Añadir registro en tabla audit_context_change con campos user_id, from_company_id, to_company_id, timestamp.
@@ -391,5 +393,4 @@ ya te respondi todo en este mensaje
 
 recrea el plan denuevo siiguiento estas respuestas 
 y recrea el plan de nuevo
-
 

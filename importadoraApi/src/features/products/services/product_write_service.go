@@ -335,9 +335,13 @@ func (s *ProductService) Update(ctx context.Context, actor *middlewares.ActorCon
 }
 
 // Delete retira de la operación al producto (soft-delete).
-func (s *ProductService) Delete(ctx context.Context, actor *middlewares.ActorContext, id int64, ip, ua string) error {
+func (s *ProductService) Delete(ctx context.Context, actor *middlewares.ActorContext, id int64, reason, ip, ua string) error {
 	if actor == nil {
 		return utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
+	}
+	reason = strings.TrimSpace(reason)
+	if len([]rune(reason)) < 10 || len([]rune(reason)) > 100 {
+		return utils.BadRequest("INVALID_REASON", "El motivo debe tener entre 10 y 100 caracteres.")
 	}
 
 	current, err := s.productRepo.FindByID(ctx, s.pool, id)
@@ -354,24 +358,36 @@ func (s *ProductService) Delete(ctx context.Context, actor *middlewares.ActorCon
 		}
 	}
 
-	if err := s.productRepo.SoftDelete(ctx, s.pool, id); err != nil {
+	currentBytes, err := json.Marshal(current)
+	if err != nil {
+		return utils.Internal("No se pudo preparar el registro del producto para la papelera.", err)
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return utils.Internal("No se pudo iniciar la eliminación del producto.", err)
+	}
+	defer tx.Rollback(ctx)
+	if _, err := s.recycleBinRepo.Insert(ctx, tx, &current.CompanyID, "products", current.ID, fmt.Sprintf("%s (%s)", current.Name, current.Code), currentBytes, string(actor.ActorType), actor.ActorID); err != nil {
+		return utils.Internal("No se pudo guardar el producto en la papelera.", err)
+	}
+	if err := s.productRepo.SoftDelete(ctx, tx, id); err != nil {
 		return utils.Internal("Error al eliminar producto.", err)
 	}
-
-	currentBytes, _ := json.Marshal(current)
-	_, _ = s.recycleBinRepo.Insert(ctx, s.pool, &current.CompanyID, "products", current.ID, fmt.Sprintf("%s (%s)", current.Name, current.Code), currentBytes, string(actor.ActorType), actor.ActorID)
-
-	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
+	if err := s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
 		CompanyID: &current.CompanyID,
 		ActorType: actor.ActorType,
 		ActorID:   actor.ActorID,
 		Entity:    "products",
 		EntityID:  &current.ID,
 		Action:    "PRODUCT_DEACTIVATED",
-		Reason:    "Retiro de la operación (soft-delete)",
+		Reason:    reason,
 		IPAddress: ip,
 		UserAgent: ua,
-	})
-
+	}); err != nil {
+		return utils.Internal("No se pudo registrar la eliminación del producto en auditoría.", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return utils.Internal("No se pudo completar la eliminación del producto.", err)
+	}
 	return nil
 }

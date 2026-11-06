@@ -289,9 +289,13 @@ func (s *CustomerService) Update(ctx context.Context, actor *middlewares.ActorCo
 }
 
 // Delete retira de la operación al cliente (soft-delete).
-func (s *CustomerService) Delete(ctx context.Context, actor *middlewares.ActorContext, id int64, ip, ua string) error {
+func (s *CustomerService) Delete(ctx context.Context, actor *middlewares.ActorContext, id int64, reason, ip, ua string) error {
 	if actor == nil {
 		return utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
+	}
+	reason = strings.TrimSpace(reason)
+	if len([]rune(reason)) < 10 || len([]rune(reason)) > 100 {
+		return utils.BadRequest("INVALID_REASON", "El motivo debe tener entre 10 y 100 caracteres.")
 	}
 
 	current, err := s.customerRepo.FindByID(ctx, s.pool, id)
@@ -308,25 +312,37 @@ func (s *CustomerService) Delete(ctx context.Context, actor *middlewares.ActorCo
 		}
 	}
 
-	if err := s.customerRepo.SoftDelete(ctx, s.pool, id); err != nil {
+	currentBytes, err := json.Marshal(current)
+	if err != nil {
+		return utils.Internal("No se pudo preparar el registro del cliente para la papelera.", err)
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return utils.Internal("No se pudo iniciar la eliminación del cliente.", err)
+	}
+	defer tx.Rollback(ctx)
+	if _, err := s.recycleBinRepo.Insert(ctx, tx, &current.CompanyID, "customers", current.ID, fmt.Sprintf("%s (%s)", current.Name, current.Document), currentBytes, string(actor.ActorType), actor.ActorID); err != nil {
+		return utils.Internal("No se pudo guardar el cliente en la papelera.", err)
+	}
+	if err := s.customerRepo.SoftDelete(ctx, tx, id); err != nil {
 		return utils.Internal("Error al eliminar cliente.", err)
 	}
-
-	currentBytes, _ := json.Marshal(current)
-	_, _ = s.recycleBinRepo.Insert(ctx, s.pool, &current.CompanyID, "customers", current.ID, fmt.Sprintf("%s (%s)", current.Name, current.Document), currentBytes, string(actor.ActorType), actor.ActorID)
-
-	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
+	if err := s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
 		CompanyID: &current.CompanyID,
 		ActorType: actor.ActorType,
 		ActorID:   actor.ActorID,
 		Entity:    "customers",
 		EntityID:  &current.ID,
 		Action:    "CUSTOMER_DEACTIVATED",
-		Reason:    "Retiro de la operación (soft-delete)",
+		Reason:    reason,
 		IPAddress: ip,
 		UserAgent: ua,
-	})
-
+	}); err != nil {
+		return utils.Internal("No se pudo registrar la eliminación del cliente en auditoría.", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return utils.Internal("No se pudo completar la eliminación del cliente.", err)
+	}
 	return nil
 }
 

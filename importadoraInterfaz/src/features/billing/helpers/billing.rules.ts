@@ -14,8 +14,22 @@ export const seriesProblem = (prefix: string, nextNumber: number): string | null
 }
 
 // por qué los datos fiscales no se pueden guardar (null si está bien)
-export const billingProblem = (input: Pick<BillingConfigInput, 'nit' | 'legalName'> & { rangeFrom?: number; rangeTo?: number }): string | null => {
+export const colombianNITProblem = (value: string, documentType = 'NIT'): string | null => {
+  const nit = value.trim().replace(/[.\s]/g, '')
+  if (documentType !== 'NIT' || nit === '0') return null
+  const match = /^([0-9]{9})-?([0-9])$/.exec(nit)
+  if (!match) return 'El NIT debe contener nueve dígitos y un dígito de verificación.'
+  const weights = [41, 37, 29, 23, 19, 17, 13, 7, 3]
+  const sum = [...match[1]].reduce((total, digit, index) => total + Number(digit) * weights[index], 0)
+  const remainder = sum % 11
+  const checkDigit = remainder > 1 ? 11 - remainder : remainder
+  return Number(match[2]) === checkDigit ? null : 'El dígito de verificación del NIT no es válido.'
+}
+
+export const billingProblem = (input: Pick<BillingConfigInput, 'nit' | 'legalName'> & { documentType?: string; rangeFrom?: number; rangeTo?: number }): string | null => {
   if (!input.nit || input.nit.trim() === '') return 'El NIT o documento es obligatorio'
+  const nitProblem = colombianNITProblem(input.nit, input.documentType)
+  if (nitProblem) return nitProblem
   if (!input.legalName || input.legalName.trim() === '') return 'La razón social es obligatoria'
   if (input.rangeFrom !== undefined && input.rangeTo !== undefined && input.rangeTo < input.rangeFrom) return 'El rango final no puede ser menor al inicial'
   return null

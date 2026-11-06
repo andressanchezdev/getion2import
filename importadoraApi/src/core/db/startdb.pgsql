@@ -2010,7 +2010,7 @@ WHERE p.id = x.id;
 
 -- 2) Facturación por bodega (sin esto no se puede facturar) y series de consecutivos
 INSERT INTO warehouse_facturation (company_id, warehouse_id, type_facturation, document_type, nit, legal_name, trade_name, billing_email, billing_phone, billing_address, billing_city, invoice_prefix, resolution_number, resolution_date, range_from, range_to)
-SELECT w.company_id, w.id, 'juridica', 'NIT', '900111222-' || w.id, 'IMPORTADORA PREMIUM S.A.S.', w.name, 'facturacion@importadora.com', '3000000000', COALESCE(w.address, 'Sin dirección'), COALESCE(w.city, 'Cali'), 'FE', '18760000' || LPAD(w.id::text, 4, '0'), DATE '2026-01-15', 1, 5000
+SELECT w.company_id, w.id, 'juridica', 'NIT', '900111222-1', 'IMPORTADORA PREMIUM S.A.S.', w.name, 'facturacion@importadora.com', '3000000000', COALESCE(w.address, 'Sin dirección'), COALESCE(w.city, 'Cali'), 'FE', '18760000' || LPAD(w.id::text, 4, '0'), DATE '2026-01-15', 1, 5000
 FROM warehouses w
 WHERE NOT EXISTS (SELECT 1 FROM warehouse_facturation f WHERE f.warehouse_id = w.id);
 

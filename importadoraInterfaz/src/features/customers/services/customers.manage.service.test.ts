@@ -20,10 +20,10 @@ describe('updateCustomer y deleteCustomer', () => {
     expect(apiClient.put).toHaveBeenCalledWith('/customers/7', { name: 'Taller Nuevo', phone: '3001234567' })
   })
 
-  it('deleteCustomer: DELETE /customers/:id', async () => {
+  it('deleteCustomer: DELETE /customers/:id con motivo', async () => {
     vi.mocked(apiClient.delete).mockResolvedValue({ data: { success: true } })
-    await deleteCustomer(7)
-    expect(apiClient.delete).toHaveBeenCalledWith('/customers/7')
+    await deleteCustomer(7, 'Solicitud del titular')
+    expect(apiClient.delete).toHaveBeenCalledWith('/customers/7', { data: { reason: 'Solicitud del titular' } })
   })
 })
 
@@ -32,14 +32,14 @@ describe('deleteCustomerThunk', () => {
 
   it('devuelve el id del cliente eliminado', async () => {
     vi.mocked(apiClient.delete).mockResolvedValue({ data: { success: true } })
-    const result = await store().dispatch(deleteCustomerThunk(7))
+    const result = await store().dispatch(deleteCustomerThunk({ customerId: 7, reason: 'Solicitud del titular' }))
     expect(result.type).toBe('customers/delete/fulfilled')
     expect(result.payload).toBe(7)
   })
 
   it('si la API falla devuelve el mensaje para el usuario', async () => {
     vi.mocked(apiClient.delete).mockRejectedValue({ userFriendlyMessage: 'No tienes permiso para eliminar este cliente.' })
-    const result = await store().dispatch(deleteCustomerThunk(7))
+    const result = await store().dispatch(deleteCustomerThunk({ customerId: 7, reason: 'Solicitud del titular' }))
     expect(result.type).toBe('customers/delete/rejected')
     expect(result.payload).toBe('No tienes permiso para eliminar este cliente.')
   })

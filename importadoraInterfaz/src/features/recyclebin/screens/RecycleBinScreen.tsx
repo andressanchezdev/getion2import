@@ -16,6 +16,15 @@ const TABLE_LABELS: Record<string, string> = {
   suppliers: 'Proveedores',
   warehouses: 'Bodegas',
   roles: 'Roles',
+  companies: 'Compañías',
+  admins: 'Administradores',
+  brands: 'Marcas',
+  vehicle_brands: 'Marcas de vehículos',
+  models: 'Modelos',
+  vehicle_models: 'Modelos de vehículos',
+  categories: 'Categorías',
+  warehouse_locations: 'Ubicaciones de bodega',
+  externals: 'Proveedores y transportadores',
 }
 
 export const RecycleBinScreen: React.FC = () => {
@@ -49,6 +58,9 @@ export const RecycleBinScreen: React.FC = () => {
           </div>
 
           <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center' }}>
+            <button type="button" className="btn-secondary" onClick={() => setStatusFilter(statusFilter === 'restored' ? 'all' : 'restored')}>
+              {statusFilter === 'restored' ? 'Volver a la papelera' : 'Ver historial de restauraciones'}
+            </button>
             <select
               value={tableFilter}
               onChange={(e) => setTableFilter(e.target.value)}
@@ -66,6 +78,15 @@ export const RecycleBinScreen: React.FC = () => {
               <option value="employees">Empleados</option>
               <option value="suppliers">Proveedores</option>
               <option value="warehouses">Bodegas</option>
+              <option value="companies">Compañías</option>
+              <option value="employees">Empleados</option>
+              <option value="admins">Administradores</option>
+              <option value="roles">Roles</option>
+              <option value="brands">Marcas</option>
+              <option value="models">Modelos</option>
+              <option value="categories">Categorías</option>
+              <option value="warehouse_locations">Ubicaciones de bodega</option>
+              <option value="externals">Proveedores y transportadores</option>
             </select>
 
             <select
@@ -173,4 +194,3 @@ export const RecycleBinScreen: React.FC = () => {
 }
 
 export default RecycleBinScreen
-

@@ -43,6 +43,6 @@ export const updateCustomer = async (id: number, body: UpdateCustomerBody): Prom
 }
 
 // elimina un cliente (DELETE /customers/:id): la API lo manda a la papelera de reciclaje, no lo borra del todo
-export const deleteCustomer = async (id: number): Promise<void> => {
-  await apiClient.delete(CUSTOMERS.BY_ID(id))
+export const deleteCustomer = async (id: number, reason: string): Promise<void> => {
+  await apiClient.delete(CUSTOMERS.BY_ID(id), { data: { reason } })
 }

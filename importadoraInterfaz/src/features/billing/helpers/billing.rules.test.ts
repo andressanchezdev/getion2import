@@ -2,7 +2,7 @@
 // conecta con: billing.rules y billing.adapter; se corre con npm test
 import { describe, expect, it } from 'vitest'
 import { filterInvoices, toBillingConfig, toDocSeries, toInvoice } from './billing.adapter'
-import { billingProblem, nextNumberLabel, rangeRemaining, seriesProblem } from './billing.rules'
+import { billingProblem, colombianNITProblem, nextNumberLabel, rangeRemaining, seriesProblem } from './billing.rules'
 
 describe('series y rango', () => {
   it('arma el próximo número con prefijo y 6 dígitos', () => {
@@ -25,9 +25,15 @@ describe('series y rango', () => {
 
   it('los datos fiscales piden NIT, razón social y un rango en orden', () => {
     expect(billingProblem({ nit: '', legalName: 'X' })).toMatch(/NIT/)
-    expect(billingProblem({ nit: '900', legalName: ' ' })).toMatch(/razón social/)
-    expect(billingProblem({ nit: '900', legalName: 'X', rangeFrom: 10, rangeTo: 5 })).toMatch(/rango/)
-    expect(billingProblem({ nit: '900', legalName: 'X', rangeFrom: 1, rangeTo: 5 })).toBeNull()
+    expect(billingProblem({ nit: '900373913-4', legalName: ' ' })).toMatch(/razón social/)
+    expect(billingProblem({ nit: '900373913-4', legalName: 'X', rangeFrom: 10, rangeTo: 5 })).toMatch(/rango/)
+    expect(billingProblem({ nit: '900373913-4', legalName: 'X', rangeFrom: 1, rangeTo: 5 })).toBeNull()
+  })
+
+  it('valida formato y dígito de verificación del NIT colombiano', () => {
+    expect(colombianNITProblem('900.373.913-4')).toBeNull()
+    expect(colombianNITProblem('900373913-5')).toMatch(/verificación/)
+    expect(colombianNITProblem('123', 'CC')).toBeNull()
   })
 })
 

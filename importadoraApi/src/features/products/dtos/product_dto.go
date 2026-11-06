@@ -101,6 +101,10 @@ type UpdateProductRequest struct {
 	Status      *types.ProductStatus `json:"status"`
 }
 
+type DeleteProductRequest struct {
+	Reason string `json:"reason"`
+}
+
 type ProductFilterQuery struct {
 	CompanyID   *int64
 	CategoryID  *int64

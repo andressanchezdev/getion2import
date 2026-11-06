@@ -47,6 +47,7 @@ export const BillingConfigPanel: React.FC = () => {
             </div>
           </div>
           {text('nit', 'NIT o documento', 'Ej: 900111222-1', 'text', true)}
+          {form.nitProblem && <span className="form-field-error-msg">{form.nitProblem}</span>}
           {text('legalName', 'Razón social', 'Ej: Importadora Premium S.A.S.', 'text', true)}
           {text('tradeName', 'Nombre comercial')}
         </section>

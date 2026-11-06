@@ -6,6 +6,7 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"importadoraApi/src/core/middlewares"
@@ -16,6 +17,7 @@ import (
 	"importadoraApi/src/features/recyclebin/dtos"
 	"importadoraApi/src/features/recyclebin/repositories"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -90,29 +92,33 @@ func (s *RecycleBinService) Restore(ctx context.Context, actor *middlewares.Acto
 		return utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
 	}
 
-	item, err := s.recycleBinRepo.FindByID(ctx, s.pool, id)
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return utils.Internal("Error al iniciar transacción de restauración.", err)
+	}
+	defer tx.Rollback(ctx)
+
+	if err := s.recycleBinRepo.LockByID(ctx, tx, id); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return utils.NotFound("NOT_FOUND", "El elemento no se encuentra en la papelera de reciclaje.")
+		}
+		return utils.Internal("Error al bloquear el elemento en papelera.", err)
+	}
+	item, err := s.recycleBinRepo.FindByID(ctx, tx, id)
 	if err != nil {
 		return utils.Internal("Error al consultar elemento en papelera.", err)
 	}
 	if item == nil {
 		return utils.NotFound("NOT_FOUND", "El elemento no se encuentra en la papelera de reciclaje.")
 	}
-
 	if actor.ActorType != types.ActorSuperadmin {
 		if actor.CompanyID == nil || item.CompanyID == nil || *actor.CompanyID != *item.CompanyID {
 			return utils.Forbidden("FORBIDDEN_COMPANY_ACCESS", "No tienes permiso para restaurar elementos de esta compañía.")
 		}
 	}
-
 	if item.IsRestored {
 		return utils.BadRequest("ALREADY_RESTORED", "Este elemento ya fue restaurado previamente.")
 	}
-
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		return utils.Internal("Error al iniciar transacción de restauración.", err)
-	}
-	defer tx.Rollback(ctx)
 
 	if err := s.recycleBinRepo.Restore(ctx, tx, item, actor.ActorID); err != nil {
 		return utils.Internal("Error al restaurar elemento.", err)
@@ -134,7 +140,7 @@ func (s *RecycleBinService) Restore(ctx context.Context, actor *middlewares.Acto
 	if item.CompanyID != nil {
 		body := fmt.Sprintf("El SUPERADMIN restauró el registro '%s'.", item.EntityLabel)
 		if err := s.notificationRepo.CreateCompanyAdminNotification(ctx, tx, *item.CompanyID, "Registro restaurado", body, item.EntityTable, item.EntityID); err != nil {
-			return utils.Internal("El registro se restauró, pero no se pudo notificar al administrador.", err)
+			return utils.Internal("No se pudo completar la restauración ni notificar al administrador.", err)
 		}
 	}
 

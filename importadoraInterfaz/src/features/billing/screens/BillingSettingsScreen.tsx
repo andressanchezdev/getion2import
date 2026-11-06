@@ -15,12 +15,14 @@ export const BillingSettingsScreen: React.FC = () => {
   const { config } = billing
   const invoiceSeries = billing.series.find((series) => series.docType === 'invoice')
   const remaining = config && invoiceSeries ? rangeRemaining(config, invoiceSeries.nextNumber) : null
-  const today = new Date().toISOString().slice(0, 10)
+  const date = new Date()
+  const today = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
   const resolutionWarnings = config
     ? [
         !config.resolutionNumber.trim() ? 'No hay una resolución DIAN configurada; la facturación permanece habilitada.' : '',
         config.resolutionValidUntil && config.resolutionValidUntil < today ? 'La resolución DIAN está vencida; la facturación permanece habilitada.' : '',
         remaining === 0 ? 'El rango autorizado está agotado; la facturación permanece habilitada.' : '',
+        config.rangeFrom !== null && invoiceSeries && invoiceSeries.nextNumber < config.rangeFrom ? 'El próximo consecutivo está por debajo del rango autorizado.' : '',
       ].filter(Boolean)
     : []
 

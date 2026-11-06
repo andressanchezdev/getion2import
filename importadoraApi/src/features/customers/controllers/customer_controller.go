@@ -164,11 +164,15 @@ func (c *CustomerController) Delete(ctx echo.Context) error {
 	if err != nil {
 		return err
 	}
+	var req dtos.DeleteCustomerRequest
+	if err := utils.BindJSON(ctx, &req); err != nil {
+		return err
+	}
 
 	ip := utils.EchoClientIP(ctx)
 	ua := ctx.Request().UserAgent()
 
-	if err := c.service.Delete(ctx.Request().Context(), actor, id, ip, ua); err != nil {
+	if err := c.service.Delete(ctx.Request().Context(), actor, id, req.Reason, ip, ua); err != nil {
 		return err
 	}
 

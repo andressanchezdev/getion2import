@@ -56,10 +56,10 @@ export const CustomersTable: React.FC = () => {
   }
 
   const handleConfirmDelete = async () => {
-    if (!customerToDelete || deleteReason.trim().length < 3) return
+    if (!customerToDelete || deleteReason.trim().length < 10 || deleteReason.trim().length > 100) return
     setIsDeleting(true)
     try {
-      await dispatch(deleteCustomerThunk(customerToDelete.id)).unwrap()
+      await dispatch(deleteCustomerThunk({ customerId: customerToDelete.id, reason: deleteReason.trim() })).unwrap()
       toast.success(`Cliente ${customerToDelete.fullName} eliminado correctamente.`)
       setCustomerToDelete(null)
       setDeleteReason('')
@@ -193,7 +193,7 @@ export const CustomersTable: React.FC = () => {
         title="Eliminar cliente"
         message={`¿Estás seguro de eliminar a "${customerToDelete?.fullName}"? Esta acción lo enviará a la papelera.`}
         confirmLabel={isDeleting ? 'Eliminando…' : 'Eliminar'}
-        confirmDisabled={deleteReason.trim().length < 3 || isDeleting}
+        confirmDisabled={deleteReason.trim().length < 10 || deleteReason.trim().length > 100 || isDeleting}
         onConfirm={handleConfirmDelete}
         onCancel={() => {
           setCustomerToDelete(null)
@@ -207,8 +207,9 @@ export const CustomersTable: React.FC = () => {
           <textarea
             value={deleteReason}
             onChange={(e) => setDeleteReason(e.target.value)}
-            placeholder="Indica el motivo (mínimo 3 caracteres)..."
+            placeholder="Indica el motivo (10 a 100 caracteres)..."
             rows={3}
+            maxLength={100}
             style={{
               width: '100%',
               padding: '8px 10px',
@@ -219,6 +220,7 @@ export const CustomersTable: React.FC = () => {
               resize: 'vertical',
             }}
           />
+          <small>{deleteReason.trim().length}/100 (mínimo 10)</small>
         </div>
       </ConfirmDialog>
     </div>
