@@ -10,6 +10,7 @@ python flow_company_admin.py        # superadmin crea compañía y admin; el adm
 python flow_sale_annul.py           # venta completa hasta factura y anulación real con auditoría
 python flow_deactivation_reason.py  # desactivar por PUT exige motivo (10 a 100)
 python flow_payments_transfers.py   # rechazar/reabrir abonos, regla de destino en traslados y miniaturas
+python flow_transfers_scope.py      # quién ve y quién despacha, recibe o cancela un traslado
 ```
 
 Ojo: cada corrida **crea datos nuevos** (compañías «Compania … E2E», admins `…@e2e.com`). Úsalas solo en bases locales o de pruebas.

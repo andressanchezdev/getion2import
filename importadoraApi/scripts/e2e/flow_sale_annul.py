@@ -1,19 +1,7 @@
 import json, time
 from e2e import call, check, d
 import e2e
-from e2e_flow_lib import tok, items_of
-
-
-def perm_ids(token, wanted):
-    # ids de los permisos pedidos: modulo -> lista de acciones (None = todas las del modulo)
-    ids = []
-    for p in items_of(call('GET', '/permissions', token)):
-        acts = wanted.get(p.get('module'), False)
-        if acts is False:
-            continue
-        if acts is None or p.get('action') in acts:
-            ids.append(p['id'])
-    return ids
+from e2e_flow_lib import tok, items_of, perm_ids
 
 
 def main():

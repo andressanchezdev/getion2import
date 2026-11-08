@@ -2,8 +2,7 @@
 import json, time
 from e2e import call, check, d
 import e2e
-from e2e_flow_lib import tok, items_of
-from flow_sale_annul import perm_ids
+from e2e_flow_lib import tok, items_of, perm_ids
 
 
 def main():

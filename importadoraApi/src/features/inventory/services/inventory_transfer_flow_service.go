@@ -35,6 +35,10 @@ func (s *InventoryService) DispatchTransfer(ctx context.Context, actor *middlewa
 			return utils.Forbidden("FORBIDDEN_COMPANY_ACCESS", "No tienes permiso para despachar este traslado.")
 		}
 	}
+	// despacha quien trabaja en la bodega de donde salen los repuestos
+	if actor.ActorType == types.ActorEmployee && !employeeInWarehouse(actor, transfer.OriginWarehouseID) {
+		return utils.Forbidden("FORBIDDEN_TRANSFER_WAREHOUSE", "Solo la bodega de origen puede despachar este traslado.")
+	}
 
 	if transfer.Status != types.TransferPending {
 		return utils.BadRequest("INVALID_STATUS", fmt.Sprintf("El traslado está en estado '%s', solo se puede despachar si está 'pending'.", transfer.Status))
@@ -119,6 +123,10 @@ func (s *InventoryService) ReceiveTransfer(ctx context.Context, actor *middlewar
 		if actor.CompanyID == nil || *actor.CompanyID != transfer.CompanyID {
 			return utils.Forbidden("FORBIDDEN_COMPANY_ACCESS", "No tienes permiso para recibir este traslado.")
 		}
+	}
+	// recibe quien trabaja en la bodega que pidió los repuestos
+	if actor.ActorType == types.ActorEmployee && !employeeInWarehouse(actor, transfer.DestinationWarehouseID) {
+		return utils.Forbidden("FORBIDDEN_TRANSFER_WAREHOUSE", "Solo la bodega de destino puede recibir este traslado.")
 	}
 
 	if transfer.Status != types.TransferInTransit {
@@ -225,6 +233,10 @@ func (s *InventoryService) CancelTransfer(ctx context.Context, actor *middleware
 		if actor.CompanyID == nil || *actor.CompanyID != transfer.CompanyID {
 			return utils.Forbidden("FORBIDDEN_COMPANY_ACCESS", "No tienes permiso para cancelar este traslado.")
 		}
+	}
+	// cancela quien trabaja en la bodega de origen (libera su reserva) o en la que lo pidió
+	if actor.ActorType == types.ActorEmployee && !employeeInWarehouse(actor, transfer.OriginWarehouseID, transfer.DestinationWarehouseID) {
+		return utils.Forbidden("FORBIDDEN_TRANSFER_WAREHOUSE", "Este traslado no es de tu bodega.")
 	}
 
 	if transfer.Status != types.TransferPending {
