@@ -90,9 +90,13 @@ func (s *RecycleBinService) List(ctx context.Context, actor *middlewares.ActorCo
 }
 
 // Restore restaura un elemento de la papelera validando que sea de la compañía del usuario y deja el cambio en auditoría.
-func (s *RecycleBinService) Restore(ctx context.Context, actor *middlewares.ActorContext, id int64, ip, ua string) error {
+func (s *RecycleBinService) Restore(ctx context.Context, actor *middlewares.ActorContext, id int64, reason, ip, ua string) error {
 	if actor == nil {
 		return utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
+	}
+	reason, verr := utils.ValidateReason(reason)
+	if verr != nil {
+		return verr
 	}
 
 	tx, err := s.pool.Begin(ctx)
@@ -134,7 +138,7 @@ func (s *RecycleBinService) Restore(ctx context.Context, actor *middlewares.Acto
 		Entity:    item.EntityTable,
 		EntityID:  &item.EntityID,
 		Action:    "RECORD_RESTORED_FROM_TRASH",
-		Reason:    fmt.Sprintf("Restauración de '%s' (ID %d) desde papelera de reciclaje", item.EntityLabel, item.EntityID),
+		Reason:    fmt.Sprintf("Restauración de '%s' (ID %d) desde papelera de reciclaje: %s", item.EntityLabel, item.EntityID, reason),
 		IPAddress: ip,
 		UserAgent: ua,
 	}); err != nil {

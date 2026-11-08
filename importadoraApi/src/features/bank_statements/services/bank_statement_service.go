@@ -164,7 +164,17 @@ func (s *BankStatementService) IgnoreRecord(
 		return utils.NotFound("BANK_RECORD_NOT_FOUND", "Registro bancario no encontrado.")
 	}
 
-	return s.repo.UpdateStatus(ctx, s.pool, companyID, recordID, "ignored", &actor.ActorID, notes)
+	// ignorar un movimiento (no corresponde a ningún pago) deja constancia del motivo en sus notas
+	given := ""
+	if notes != nil {
+		given = *notes
+	}
+	reason, verr := utils.ValidateReason(given)
+	if verr != nil {
+		return verr
+	}
+
+	return s.repo.UpdateStatus(ctx, s.pool, companyID, recordID, "ignored", &actor.ActorID, &reason)
 }
 
 // mapEntityToDTO convierte el registro bancario de la base en la respuesta que sale por la API.

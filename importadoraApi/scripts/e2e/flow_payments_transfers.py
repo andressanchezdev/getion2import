@@ -26,6 +26,8 @@ def main():
     perms = perm_ids(ad, {'orders': None, 'payments': ['view', 'edit'], 'transfers': None, 'quotations': ['view']})
     r = call('POST', '/employees', ad, {'roleId': rid, 'warehouseId': wb, 'email': f'p{sfx}@e2e.com', 'password': 'Emp12345678', 'firstName': 'Pedro', 'lastName': 'Vende', 'documentType': 'CC', 'document': '6' + sfx, 'initialPermissions': perms})
     emp = d(r)['id']
+    # el vendedor de una venta debe ser de la bodega de la venta (la A)
+    seller = d(call('POST', '/employees', ad, {'roleId': rid, 'warehouseId': wa, 'email': f's{sfx}@e2e.com', 'password': 'Emp12345678', 'firstName': 'Sara', 'lastName': 'Vende', 'documentType': 'CC', 'document': '8' + sfx, 'initialPermissions': perms}))['id']
     et = tok(call('POST', '/auth/login', body={'email': f'p{sfx}@e2e.com', 'password': 'Emp12345678', 'actorType': 'employee'}))
 
     print('== Miniaturas')
@@ -37,7 +39,7 @@ def main():
     check('thumbnails sin sesion 401', r[0] == 401, r)
 
     print('== Rechazar y reabrir abonos')
-    r = call('POST', '/sales', ad, {'salespersonEmployeeId': emp, 'customerId': cust, 'warehouseId': wa, 'paymentMethod': 'transfer', 'paymentReference': 'REF-P-1', 'items': [{'stockId': stock_id, 'quantity': 2}]})
+    r = call('POST', '/sales', ad, {'salespersonEmployeeId': seller, 'customerId': cust, 'warehouseId': wa, 'paymentMethod': 'transfer', 'paymentReference': 'REF-P-1', 'items': [{'stockId': stock_id, 'quantity': 2}]})
     check('crear venta', r[0] in (200, 201), r)
     sid = d(r)['id']
     pay = items_of(call('GET', f'/payments?saleId={sid}', ad))[0]['id']

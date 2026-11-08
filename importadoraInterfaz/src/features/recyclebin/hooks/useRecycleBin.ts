@@ -50,10 +50,10 @@ export const useRecycleBin = () => {
     }
   }, [loadItems])
 
-  const handleRestore = async (item: RecycleBinItem) => {
+  const handleRestore = async (item: RecycleBinItem, reason: string) => {
     setRestoringId(item.id)
     try {
-      await restoreRecycleBinItem(item.id)
+      await restoreRecycleBinItem(item.id, reason)
       toast.success(`"${item.entityLabel || item.entityTable}" restaurado exitosamente.`)
       await loadItems()
     } catch {

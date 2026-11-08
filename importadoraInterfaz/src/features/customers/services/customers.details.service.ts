@@ -15,8 +15,9 @@ export const fetchDirections = async (customerId: number): Promise<Direction[]> 
 }
 
 // guarda la lista completa de direcciones del cliente
-const saveDirections = async (customerId: number, directions: Direction[]): Promise<void> => {
-  await apiClient.put(CUSTOMERS.BY_ID(customerId), { addresses: toAddressList(directions) })
+// reason solo va cuando se quita una dirección (la API lo exige para dejar constancia)
+const saveDirections = async (customerId: number, directions: Direction[], reason?: string): Promise<void> => {
+  await apiClient.put(CUSTOMERS.BY_ID(customerId), { addresses: toAddressList(directions), ...(reason ? { reason } : {}) })
 }
 
 // agrega una dirección de entrega al cliente
@@ -24,9 +25,9 @@ export const addDirection = async (customerId: number, input: DirectionInput): P
   await saveDirections(customerId, withNewDirection(await fetchDirections(customerId), input))
 }
 
-// elimina una dirección de entrega del cliente
-export const deleteDirection = async (customerId: number, directionId: number): Promise<void> => {
-  await saveDirections(customerId, (await fetchDirections(customerId)).filter((item) => item.id !== directionId))
+// elimina una dirección de entrega del cliente, con su motivo (de 10 a 100 caracteres)
+export const deleteDirection = async (customerId: number, directionId: number, reason: string): Promise<void> => {
+  await saveDirections(customerId, (await fetchDirections(customerId)).filter((item) => item.id !== directionId), reason)
 }
 
 // la API todavía no tiene descuentos por cliente: devuelve una lista vacía

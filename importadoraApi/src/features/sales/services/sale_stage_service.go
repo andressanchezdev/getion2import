@@ -6,7 +6,6 @@ package services
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
@@ -211,8 +210,9 @@ func (s *SaleService) AdvanceToSend(ctx context.Context, companyID, saleID, empl
 
 // CancelSale cancela el pedido y libera el stock que tenía reservado.
 func (s *SaleService) CancelSale(ctx context.Context, companyID, saleID, employeeID int64, req dtos.CancelSaleRequest) error {
-	if strings.TrimSpace(req.Reason) == "" {
-		return utils.BadRequest("REASON_REQUIRED", "El motivo de cancelación es obligatorio.")
+	reason, verr := utils.ValidateReason(req.Reason)
+	if verr != nil {
+		return verr
 	}
 
 	tx, err := s.pool.Begin(ctx)
@@ -256,7 +256,7 @@ func (s *SaleService) CancelSale(ctx context.Context, companyID, saleID, employe
 		}
 	}
 
-	if err := s.saleRepo.Cancel(ctx, tx, saleID, employeeID, req.Reason); err != nil {
+	if err := s.saleRepo.Cancel(ctx, tx, saleID, employeeID, reason); err != nil {
 		return err
 	}
 

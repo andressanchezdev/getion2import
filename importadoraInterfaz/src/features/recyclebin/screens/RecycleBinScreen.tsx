@@ -1,5 +1,5 @@
 // RecycleBinScreen.tsx · pantalla de Papelera de Reciclaje y Restauración de Registros
-import React from 'react'
+import React, { useState } from 'react'
 import './RecycleBinScreen.css'
 import { Pill } from '@/global/components/UI/atoms/Pill'
 import { formatDate } from '@/global/helpers/formatting/format'
@@ -8,6 +8,7 @@ import { Pagination } from '@/global/components/UI/molecules/table/Pagination'
 import refreshIcon from '@/assets/icons/refresh.svg?raw'
 import { RowActions } from '@/global/components/UI/molecules/table/RowActions'
 import { usePermissions } from '@/global/hooks/access/usePermissions'
+import { ReasonPrompt } from '@/features/reasonPrompt'
 import { useRecycleBin } from '../hooks/useRecycleBin'
 import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
 
@@ -32,6 +33,8 @@ const TABLE_LABELS: Record<string, string> = {
 export const RecycleBinScreen: React.FC = () => {
   // la API solo deja restaurar al superadmin: a los demás ni se les ofrece el botón
   const canRestore = usePermissions().level === 'superadmin'
+  // restaurar pide el motivo (se abre el formulario en el panel derecho)
+  const [toRestore, setToRestore] = useState<{ id: number; label: string } | null>(null)
   const {
     items,
     meta,
@@ -169,7 +172,7 @@ export const RecycleBinScreen: React.FC = () => {
                               key: 'restore',
                               label: restoringId === item.id ? 'Restaurando…' : 'Restaurar registro',
                               icon: refreshIcon,
-                              onClick: () => handleRestore(item),
+                              onClick: () => setToRestore({ id: item.id, label: item.entityLabel || item.entityTable }),
                             },
                           ]}
                         />
@@ -190,6 +193,19 @@ export const RecycleBinScreen: React.FC = () => {
           onPageChange={setPage}
         />
       )}
+
+      <ReasonPrompt
+        open={toRestore !== null}
+        title="Restaurar registro"
+        message={`¿Restaurar «${toRestore?.label ?? ''}»? Vuelve a la lista de donde se eliminó; indica el motivo para dejar constancia.`}
+        confirmLabel="Restaurar"
+        onConfirm={(reason) => {
+          const item = items.find((candidate) => candidate.id === toRestore?.id)
+          setToRestore(null)
+          if (item) void handleRestore(item, reason)
+        }}
+        onCancel={() => setToRestore(null)}
+      />
     </div>
   )
 }

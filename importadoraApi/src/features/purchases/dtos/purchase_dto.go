@@ -31,7 +31,7 @@ type PurchaseResponse struct {
 	SupplierName  string                 `json:"supplierName"`
 	WarehouseID   int64                  `json:"warehouseId"`
 	WarehouseName string                 `json:"warehouseName"`
-	EmployeeID    int64                  `json:"employeeId"`
+	EmployeeID    *int64                 `json:"employeeId,omitempty"`
 	EmployeeName  string                 `json:"employeeName"`
 	Status        types.PurchaseStatus   `json:"status"`
 	SupplierRef   *string                `json:"supplierRef,omitempty"`
@@ -108,6 +108,11 @@ type SupplierCatalogUploadResponse struct {
 	ProductsMatched int      `json:"productsMatched"`
 	ProductsUpdated int      `json:"productsUpdated"`
 	Warnings        []string `json:"warnings,omitempty"`
+}
+
+// VoidPurchaseRequest es el motivo (10 a 100 caracteres) con que se anula una orden de compra.
+type VoidPurchaseRequest struct {
+	Reason string `json:"reason"`
 }
 
 // PayPurchaseRequest es el pago de una recepción de compra desde la caja: la caja solo desembolsa efectivo.

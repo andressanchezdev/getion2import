@@ -152,11 +152,16 @@ func (ctrl *PurchaseController) Void(c echo.Context) error {
 		return err
 	}
 
+	var req dtos.VoidPurchaseRequest
+	if err := utils.BindJSON(c, &req); err != nil {
+		return err
+	}
+
 	actor := middlewares.GetActor(c)
 	ip := c.RealIP()
 	ua := c.Request().UserAgent()
 
-	if err := ctrl.service.Void(c.Request().Context(), actor, id, ip, ua); err != nil {
+	if err := ctrl.service.Void(c.Request().Context(), actor, id, req.Reason, ip, ua); err != nil {
 		return err
 	}
 

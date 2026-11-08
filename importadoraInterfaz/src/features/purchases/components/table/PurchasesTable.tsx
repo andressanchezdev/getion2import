@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import './PurchasesTable.css'
 import { Pill } from '@/global/components/UI/atoms/Pill'
-import { ConfirmPrompt } from '@/features/reasonPrompt'
+import { ReasonPrompt } from '@/features/reasonPrompt'
 import { SearchBar } from '@/global/components/UI/molecules/filters/SearchBar'
 import { Pagination } from '@/global/components/UI/molecules/table/Pagination'
 import { RowActions } from '@/global/components/UI/molecules/table/RowActions'
@@ -53,10 +53,10 @@ export const PurchasesTable: React.FC<{ mode: PurchasesMode }> = ({ mode }) => {
       : 'Todavía no hay órdenes de compra registradas.'
     : null
 
-  const confirmVoid = async () => {
+  const confirmVoid = async (reason: string) => {
     const target = toVoid
     setToVoid(null)
-    if (target) await actions.voidOrder(target)
+    if (target) await actions.voidOrder(target, reason)
   }
 
   return (
@@ -170,16 +170,14 @@ export const PurchasesTable: React.FC<{ mode: PurchasesMode }> = ({ mode }) => {
         </DataTable>
       <Pagination meta={meta} label="Paginación de compras" onPageChange={setPage} />
 
-      {toVoid && (
-        <ConfirmPrompt
-          open={Boolean(toVoid)}
-          title={`¿Anular la orden ${toVoid.serial}?`}
-          message="Esta orden quedará anulada y no podrá recibir mercancía. El consecutivo se conservará como anulado."
-          confirmLabel="Sí, anular orden"
-          onConfirm={confirmVoid}
-          onCancel={() => setToVoid(null)}
-        />
-      )}
+      <ReasonPrompt
+        open={toVoid !== null}
+        title={`Anular la orden ${toVoid?.serial ?? ''}`}
+        message="Esta orden quedará anulada y no podrá recibir mercancía. El consecutivo se conservará como anulado. Indica el motivo para dejar constancia."
+        confirmLabel="Anular orden"
+        onConfirm={confirmVoid}
+        onCancel={() => setToVoid(null)}
+      />
     </div>
   )
 }

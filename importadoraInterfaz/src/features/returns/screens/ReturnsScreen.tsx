@@ -1,16 +1,20 @@
 // ReturnsScreen · historial de devoluciones y garantías: KPIs, una tarjeta con barra de filtros y tabla, y el drawer para crear
 // conecta con: useReturnsList (datos y filtros) y los componentes de la feature; no habla con el API
 import React, { useState } from 'react'
+import { ReasonPrompt } from '@/features/reasonPrompt'
 import { CreateReturnDrawer } from '../components/CreateReturnDrawer'
 import { ReturnsKpis } from '../components/ReturnsKpis'
 import { ReturnsTable } from '../components/ReturnsTable'
 import { ReturnsToolbar } from '../components/ReturnsToolbar'
 import { useReturnsList } from '../hooks/useReturnsList'
+import type { ReturnDto } from '../types/returns.types'
 import './ReturnsScreen.css'
 
 export const ReturnsScreen: React.FC = () => {
   const list = useReturnsList()
   const [drawerOpen, setDrawerOpen] = useState(false)
+  // rechazar pide el motivo (se abre el formulario en el panel derecho)
+  const [toReject, setToReject] = useState<ReturnDto | null>(null)
   return (
     <div className="returns-screen-container">
       <ReturnsKpis counts={list.counts} />
@@ -32,10 +36,22 @@ export const ReturnsScreen: React.FC = () => {
           loading={list.loading}
           resetKey={`${list.query}|${list.status}|${list.warehouseId}`}
           onApprove={list.approve}
-          onReject={list.reject}
+          onReject={setToReject}
         />
       </div>
       <CreateReturnDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      <ReasonPrompt
+        open={toReject !== null}
+        title={`Rechazar el caso #${toReject?.id ?? ''}`}
+        message="La solicitud quedará rechazada. Indica el motivo para dejar constancia."
+        confirmLabel="Rechazar"
+        onConfirm={(reason) => {
+          const target = toReject
+          setToReject(null)
+          if (target) void list.reject(target, reason)
+        }}
+        onCancel={() => setToReject(null)}
+      />
     </div>
   )
 }

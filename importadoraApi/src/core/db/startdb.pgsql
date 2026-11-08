@@ -949,6 +949,7 @@ CREATE TABLE returns (
     replacement_stock_id        BIGINT REFERENCES stock(id) ON DELETE SET NULL,
     status                      VARCHAR(20) NOT NULL DEFAULT 'pending'
         CHECK (status IN ('pending', 'approved', 'rejected')),
+    reject_reason               TEXT,
     total                       NUMERIC(14,2) NOT NULL CHECK (total > 0),
     evidence_url                TEXT,
     receipt_url                 TEXT,
@@ -1119,7 +1120,7 @@ CREATE TABLE purchases (
     serial_code     VARCHAR(40) NOT NULL,
     supplier_id     BIGINT NOT NULL REFERENCES externals(id) ON DELETE RESTRICT,
     warehouse_id    BIGINT NOT NULL REFERENCES warehouses(id) ON DELETE RESTRICT,
-    employee_id     BIGINT NOT NULL REFERENCES employees(id) ON DELETE RESTRICT,
+    employee_id     BIGINT REFERENCES employees(id) ON DELETE RESTRICT,
     status          VARCHAR(20) NOT NULL DEFAULT 'draft'
         CHECK (status IN ('draft', 'ordered', 'partial', 'received', 'voided')),
     supplier_ref    VARCHAR(80),

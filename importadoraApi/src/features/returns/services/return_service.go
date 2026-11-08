@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"importadoraApi/src/core/types"
+	"importadoraApi/src/core/utils"
 	inventoryrepos "importadoraApi/src/features/inventory/repositories"
 	"importadoraApi/src/features/returns/dtos"
 	"importadoraApi/src/features/returns/repositories"
@@ -402,6 +403,10 @@ func (s *ReturnService) Approve(ctx context.Context, returnID, approverEmployeeI
 }
 
 // Reject rechaza la devolución sin modificar el stock
-func (s *ReturnService) Reject(ctx context.Context, returnID, approverEmployeeID int64) error {
-	return s.returnRepo.Reject(ctx, s.pool, returnID, approverEmployeeID)
+func (s *ReturnService) Reject(ctx context.Context, returnID, approverEmployeeID int64, reason string) error {
+	reason, verr := utils.ValidateReason(reason)
+	if verr != nil {
+		return verr
+	}
+	return s.returnRepo.Reject(ctx, s.pool, returnID, approverEmployeeID, reason)
 }

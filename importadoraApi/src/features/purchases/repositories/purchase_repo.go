@@ -25,7 +25,7 @@ type PurchaseEntity struct {
 	SupplierName  string
 	WarehouseID   int64
 	WarehouseName string
-	EmployeeID    int64
+	EmployeeID    *int64 // quien la creó; vacío si la creó un administrador sin empleado
 	EmployeeName  string
 	Status        types.PurchaseStatus
 	SupplierRef   *string
@@ -102,13 +102,13 @@ func (r *PurchaseRepository) FindByID(ctx context.Context, q db.DBExecutor, id i
 	const sql = `
 		SELECT
 			p.id, p.company_id, p.serial_code, p.supplier_id, s.name,
-			p.warehouse_id, w.name, p.employee_id, e.full_name,
+			p.warehouse_id, w.name, p.employee_id, COALESCE(e.full_name, ''),
 			p.status, p.supplier_ref, p.expected_date, p.subtotal, p.iva_total, p.total, p.paid_total,
 			p.notes, p.received_at, p.created_at, p.updated_at
 		FROM purchases p
 		JOIN externals s ON s.id = p.supplier_id
 		JOIN warehouses w ON w.id = p.warehouse_id
-		JOIN employees e ON e.id = p.employee_id
+		LEFT JOIN employees e ON e.id = p.employee_id
 		WHERE p.id = $1
 	`
 	var entity PurchaseEntity
@@ -226,13 +226,13 @@ func (r *PurchaseRepository) List(ctx context.Context, q db.DBExecutor, f dtos.P
 	selectSQL := fmt.Sprintf(`
 		SELECT
 			p.id, p.company_id, p.serial_code, p.supplier_id, s.name,
-			p.warehouse_id, w.name, p.employee_id, e.full_name,
+			p.warehouse_id, w.name, p.employee_id, COALESCE(e.full_name, ''),
 			p.status, p.supplier_ref, p.expected_date, p.subtotal, p.iva_total, p.total, p.paid_total,
 			p.notes, p.received_at, p.created_at, p.updated_at
 		FROM purchases p
 		JOIN externals s ON s.id = p.supplier_id
 		JOIN warehouses w ON w.id = p.warehouse_id
-		JOIN employees e ON e.id = p.employee_id
+		LEFT JOIN employees e ON e.id = p.employee_id
 		%s
 		ORDER BY p.created_at DESC
 		LIMIT $%d OFFSET $%d

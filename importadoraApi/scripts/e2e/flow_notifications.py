@@ -57,7 +57,7 @@ def main():
     r = call('GET', '/recycle-bin?table=customers&pageSize=50', sa, company=A['cid'])
     item = next((i for i in items_of(r) if i.get('entityId') == cust), None)
     check('el cliente aparece en la papelera', item is not None, r)
-    r = call('POST', f"/recycle-bin/{item['id']}/restore", sa, {}, company=A['cid'])
+    r = call('POST', f"/recycle-bin/{item['id']}/restore", sa, {'reason': 'Se eliminó por error en la prueba'}, company=A['cid'])
     check('el superadmin restaura el registro', r[0] == 200, r)
 
     print('== Quién recibe el aviso de restauración')

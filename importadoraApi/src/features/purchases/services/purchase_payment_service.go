@@ -84,3 +84,12 @@ func (s *PurchaseService) Pay(ctx context.Context, actor *middlewares.ActorConte
 func employeeInWarehouse(actor *middlewares.ActorContext, warehouseID int64) bool {
 	return actor.WarehouseID != nil && *actor.WarehouseID == warehouseID
 }
+
+// creatorEmployeeID es el empleado que crea la orden: el propio si es empleado; un administrador no es empleado, así que queda vacío (la auditoría guarda quién fue)
+func creatorEmployeeID(actor *middlewares.ActorContext) *int64 {
+	if actor.ActorType != types.ActorEmployee {
+		return nil
+	}
+	id := actor.ActorID
+	return &id
+}

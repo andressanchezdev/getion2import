@@ -2,7 +2,7 @@
 // conecta con: BankReconciliationScreen (la usa), RowActions (acciones con íconos de línea), Pill (estado), ConfirmDialog (ignorar), useBankActions y navigation (abre el panel de confirmar)
 // ojo: solo las entradas pendientes tienen acciones; las salidas se ven atenuadas porque no se concilian; la paginación es la del servidor (la pinta la pantalla)
 import React, { useState } from 'react'
-import { ConfirmPrompt } from '@/features/reasonPrompt'
+import { ReasonPrompt } from '@/features/reasonPrompt'
 import { Pill, type PillTone } from '@/global/components/UI/atoms/Pill'
 import { RowActions } from '@/global/components/UI/molecules/table/RowActions'
 import { formatPesos } from '@/global/helpers/formatting/format'
@@ -29,10 +29,10 @@ export const BankRecordsTable: React.FC<Props> = ({ records, message }) => {
   const actions = useBankActions()
   const [toIgnore, setToIgnore] = useState<BankRecord | null>(null)
 
-  const confirmIgnore = async () => {
+  const confirmIgnore = async (reason: string) => {
     const target = toIgnore
     setToIgnore(null)
-    if (target) await actions.ignore(target.id)
+    if (target) await actions.ignore(target.id, reason)
   }
 
   return (
@@ -96,10 +96,10 @@ export const BankRecordsTable: React.FC<Props> = ({ records, message }) => {
           </tbody>
         </DataTable>
 
-      <ConfirmPrompt
+      <ReasonPrompt
         open={toIgnore !== null}
         title="Ignorar movimiento"
-        message={`¿Ignorar el movimiento de ${toIgnore ? formatPesos(toIgnore.amount) : ''}? Quedará marcado como que no corresponde a ningún pago.`}
+        message={`¿Ignorar el movimiento de ${toIgnore ? formatPesos(toIgnore.amount) : ''}? Quedará marcado como que no corresponde a ningún pago; indica el motivo.`}
         confirmLabel="Ignorar"
         onConfirm={confirmIgnore}
         onCancel={() => setToIgnore(null)}

@@ -230,6 +230,7 @@ func (s *CustomerService) Update(ctx context.Context, actor *middlewares.ActorCo
 	if req.City != nil {
 		current.City = req.City
 	}
+	updateReason := "" // motivo de lo que se inactiva o se quita (queda en la auditoría)
 	if req.VATResponsible != nil {
 		current.VATResponsible = *req.VATResponsible
 	}
@@ -237,6 +238,13 @@ func (s *CustomerService) Update(ctx context.Context, actor *middlewares.ActorCo
 		current.FiscalRespCodes = req.FiscalRespCodes
 	}
 	if len(req.Addresses) > 0 {
+		// quitar una dirección de entrega es eliminar un dato del cliente: pide motivo como cualquier borrado
+		if jsonItems(req.Addresses) < jsonItems(current.Addresses) {
+			var verr error
+			if updateReason, verr = utils.ValidateReason(req.Reason); verr != nil {
+				return nil, verr
+			}
+		}
 		current.Addresses = req.Addresses
 	}
 	if len(req.Contacts) > 0 {
@@ -264,6 +272,13 @@ func (s *CustomerService) Update(ctx context.Context, actor *middlewares.ActorCo
 		current.DocsValidityMonths = *req.DocsValidityMonths
 	}
 	if req.Status != nil {
+		// inactivar por edición también pide el motivo (si no, sería un atajo para saltarse el del borrado)
+		if *req.Status == types.CustomerInactive && current.Status != types.CustomerInactive {
+			var verr error
+			if updateReason, verr = utils.ValidateReason(req.Reason); verr != nil {
+				return nil, verr
+			}
+		}
 		current.Status = *req.Status
 	}
 
@@ -279,7 +294,7 @@ func (s *CustomerService) Update(ctx context.Context, actor *middlewares.ActorCo
 		Entity:    "customers",
 		EntityID:  &current.ID,
 		Action:    "CUSTOMER_UPDATED",
-		Reason:    "Actualización de datos del cliente",
+		Reason:    utils.ReasonOrDefault(updateReason, "Actualización de datos del cliente"),
 		IPAddress: ip,
 		UserAgent: ua,
 	})
@@ -395,4 +410,13 @@ func (s *CustomerService) mapCustomerToDTO(c *repositories.CustomerEntity, docs 
 		UpdatedAt:           c.UpdatedAt,
 		Documents:           docsDTO,
 	}
+}
+
+// jsonItems cuenta los elementos de un arreglo JSON (0 si no es un arreglo)
+func jsonItems(raw []byte) int {
+	var items []json.RawMessage
+	if err := json.Unmarshal(raw, &items); err != nil {
+		return 0
+	}
+	return len(items)
 }

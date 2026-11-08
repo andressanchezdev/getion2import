@@ -248,8 +248,9 @@ func (s *PaymentService) Void(ctx context.Context, actor *middlewares.ActorConte
 	if actor == nil {
 		return utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
 	}
-	if req.VoidReason == "" {
-		return utils.BadRequest("MISSING_REASON", "El motivo de anulación es obligatorio.")
+	voidReason, verr := utils.ValidateReason(req.VoidReason)
+	if verr != nil {
+		return verr
 	}
 
 	p, err := s.paymentRepo.FindByID(ctx, s.pool, id)
@@ -280,7 +281,7 @@ func (s *PaymentService) Void(ctx context.Context, actor *middlewares.ActorConte
 	if aerr != nil {
 		return aerr
 	}
-	if err := s.paymentRepo.Void(ctx, tx, id, voiderID, req.VoidReason); err != nil {
+	if err := s.paymentRepo.Void(ctx, tx, id, voiderID, voidReason); err != nil {
 		return utils.Internal("Error al anular pago.", err)
 	}
 	if err := s.syncVerificationStage(ctx, tx, p.SaleID, voiderID); err != nil {

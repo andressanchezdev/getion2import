@@ -78,9 +78,10 @@ describe('customers.details.service', () => {
   it('deleteDirection: guarda la lista sin la dirección borrada', async () => {
     vi.mocked(apiClient.get).mockResolvedValue(customerWith([{ id: 1, address: 'A' }, { id: 2, address: 'B' }]))
     vi.mocked(apiClient.put).mockResolvedValue({ data: {} })
-    await deleteDirection(5, 1)
-    const body = vi.mocked(apiClient.put).mock.calls[0][1] as { addresses: { id: number }[] }
+    await deleteDirection(5, 1, 'Dirección repetida en la ficha')
+    const body = vi.mocked(apiClient.put).mock.calls[0][1] as { addresses: { id: number }[]; reason: string }
     expect(body.addresses.map((a) => a.id)).toEqual([2])
+    expect(body.reason).toBe('Dirección repetida en la ficha')
   })
 
   it('descuentos: la API todavía no los tiene; la lista queda vacía y borrar avisa', async () => {

@@ -5,7 +5,7 @@ import React, { useState } from 'react'
 import '@/global/components/UI/molecules/form/DrawerFormShell.css'
 import './PurchasePanels.css'
 import { Pill } from '@/global/components/UI/atoms/Pill'
-import { InlineConfirm } from '@/global/components/UI/molecules/dialogs/InlineConfirm'
+import { InlineReason } from '@/global/components/UI/molecules/dialogs/InlineReason'
 import { ProductLine, ProductLineList } from '@/global/components/UI/molecules/product/ProductLine'
 import { useProductImages } from '@/features/shop'
 import { formatCOP } from '@/global/helpers/formatting/format'
@@ -40,9 +40,9 @@ export const PurchaseDetailPanel: React.FC<{ payload: PurchasePanelPayload }> = 
   }
 
   const status = PURCHASE_STATUS[purchase.status]
-  const doVoid = async () => {
+  const doVoid = async (reason: string) => {
     setConfirmVoid(false)
-    if (await actions.voidOrder(purchase)) dispatch(closeDrawerForm())
+    if (await actions.voidOrder(purchase, reason)) dispatch(closeDrawerForm())
   }
 
   return (
@@ -89,7 +89,7 @@ export const PurchaseDetailPanel: React.FC<{ payload: PurchasePanelPayload }> = 
         {canReceive(purchase) && <button type="button" className="btn-primary" onClick={() => dispatch(openDrawerForm({ kind: 'purchaseReceive', payload: { id: purchase.id } }))}>Recibir mercancía</button>}
       </div>
 
-      <InlineConfirm open={confirmVoid} title="Anular orden de compra" message={`¿Anular la orden ${purchase.serial}? No se puede deshacer.`} confirmLabel="Anular" onConfirm={doVoid} onCancel={() => setConfirmVoid(false)} />
+      <InlineReason open={confirmVoid} title="Anular orden de compra" message={`¿Anular la orden ${purchase.serial}? No se puede deshacer; indica el motivo.`} confirmLabel="Anular" onConfirm={doVoid} onCancel={() => setConfirmVoid(false)} />
     </div>
   )
 }

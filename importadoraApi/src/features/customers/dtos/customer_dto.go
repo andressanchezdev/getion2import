@@ -99,6 +99,7 @@ type UpdateCustomerRequest struct {
 	CreditWarningPct    *float64              `json:"creditWarningPct"`
 	DocsValidityMonths  *int                  `json:"docsValidityMonths"`
 	Status              *types.CustomerStatus `json:"status"`
+	Reason              string                `json:"reason,omitempty"` // obligatorio (10 a 100) si el cliente pasa a inactivo
 }
 
 type DeleteCustomerRequest struct {

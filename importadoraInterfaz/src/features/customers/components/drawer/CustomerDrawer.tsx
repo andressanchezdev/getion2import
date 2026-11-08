@@ -4,7 +4,7 @@
 import React, { useState } from 'react'
 import './CustomerDrawer.css'
 import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
-import { InlineConfirm } from '@/global/components/UI/molecules/dialogs/InlineConfirm'
+import { InlineReason } from '@/global/components/UI/molecules/dialogs/InlineReason'
 import { selectCartCustomer, setCartCustomerThunk } from '@/features/shop'
 import { useLoadCatalogs } from '@/features/catalogs'
 import { useSelectedCustomerData } from '../../hooks/useSelectedCustomerData'
@@ -37,8 +37,8 @@ export const CustomerDrawer: React.FC = () => {
     else if (customer) dispatch(setCartCustomerThunk({ id: customer.id, name: customer.fullName, priceType: customer.priceType }))
   }
 
-  const handleConfirmDelete = () => {
-    if (pending?.kind === 'direction') dispatch(deleteDirectionThunk({ customerId, directionId: pending.id }))
+  const handleConfirmDelete = (reason: string) => {
+    if (pending?.kind === 'direction') dispatch(deleteDirectionThunk({ customerId, directionId: pending.id, reason }))
     if (pending?.kind === 'discount') dispatch(deleteDiscountThunk({ customerId, discountId: pending.id }))
     setPending(null)
   }
@@ -59,10 +59,10 @@ export const CustomerDrawer: React.FC = () => {
       <CustomerDocumentsSection customerId={customerId} />
       <CustomerDiscountsSection onRequestDelete={(id) => setPending({ kind: 'discount', id })} />
 
-      <InlineConfirm
+      <InlineReason
         open={pending !== null}
         title={pending?.kind === 'direction' ? '¿Borrar la dirección?' : '¿Borrar el descuento?'}
-        message="Esta acción no se puede deshacer."
+        message="Esta acción no se puede deshacer; indica el motivo."
         confirmLabel="Borrar"
         onConfirm={handleConfirmDelete}
         onCancel={() => setPending(null)}

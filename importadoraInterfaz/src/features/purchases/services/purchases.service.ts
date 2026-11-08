@@ -36,8 +36,9 @@ export const receivePurchase = async (id: number, lines: ReceiveLineInput[]): Pr
   return toPurchase(data.data!)
 }
 
-export const voidPurchase = async (id: number): Promise<void> => {
-  await apiClient.post(PURCHASES.VOID(id))
+// anula la orden con su motivo (de 10 a 100 caracteres); la API lo deja en la auditoría
+export const voidPurchase = async (id: number, reason: string): Promise<void> => {
+  await apiClient.post(PURCHASES.VOID(id), { reason })
 }
 
 // baja el Excel de la orden y lo guarda en el equipo; devuelve el nombre del archivo

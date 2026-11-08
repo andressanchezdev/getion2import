@@ -59,11 +59,18 @@ func (ctrl *RecycleBinController) Restore(c echo.Context) error {
 		return err
 	}
 
+	var req struct {
+		Reason string `json:"reason"`
+	}
+	if err := utils.BindJSON(c, &req); err != nil {
+		return err
+	}
+
 	actor := middlewares.GetActor(c)
 	ip := c.RealIP()
 	ua := c.Request().UserAgent()
 
-	if err := ctrl.service.Restore(c.Request().Context(), actor, id, ip, ua); err != nil {
+	if err := ctrl.service.Restore(c.Request().Context(), actor, id, req.Reason, ip, ua); err != nil {
 		return err
 	}
 

@@ -313,4 +313,10 @@ SELECT 'invoices', a.action, 'Facturas de las cajas · ' || a.label
 FROM (VALUES ('view', 'ver'), ('view_detail', 'ver detalle'), ('create', 'crear'), ('edit', 'editar'), ('change_status', 'cambiar estado'), ('delete', 'borrar')) AS a(action, label)
 ON CONFLICT (module, action) DO NOTHING;
 
+-- lo mismo con las órdenes de compra: un administrador puede crearlas sin ser empleado
+ALTER TABLE purchases ALTER COLUMN employee_id DROP NOT NULL;
+
+-- rechazar una devolución deja el motivo
+ALTER TABLE returns ADD COLUMN IF NOT EXISTS reject_reason TEXT;
+
 COMMIT;

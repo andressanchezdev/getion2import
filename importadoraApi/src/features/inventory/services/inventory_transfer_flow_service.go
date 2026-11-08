@@ -242,6 +242,10 @@ func (s *InventoryService) CancelTransfer(ctx context.Context, actor *middleware
 	if transfer.Status != types.TransferPending {
 		return utils.BadRequest("INVALID_STATUS", "Solo se pueden cancelar traslados en estado 'pending'.")
 	}
+	cancelReason, verr := utils.ValidateReason(req.Reason)
+	if verr != nil {
+		return verr
+	}
 
 	items, err := s.inventoryRepo.ListTransferItems(ctx, s.pool, transferID)
 	if err != nil {
@@ -256,7 +260,7 @@ func (s *InventoryService) CancelTransfer(ctx context.Context, actor *middleware
 			}
 		}
 
-		return s.inventoryRepo.CancelTransfer(ctx, tx, transferID, req.Reason)
+		return s.inventoryRepo.CancelTransfer(ctx, tx, transferID, cancelReason)
 	})
 
 	if err != nil {

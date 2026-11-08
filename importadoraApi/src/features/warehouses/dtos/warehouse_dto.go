@@ -81,6 +81,7 @@ type UpdateWarehouseRequest struct {
 	Description       *string `json:"description,omitempty"`
 	ManagerEmployeeID *int64  `json:"managerEmployeeId,omitempty"`
 	IsActive          *bool   `json:"isActive,omitempty"`
+	Reason            string  `json:"reason,omitempty"` // obligatorio (10 a 100) si la bodega se inactiva
 }
 
 // UpdateFacturationRequest entrada para PUT /warehouses/:id/facturation.

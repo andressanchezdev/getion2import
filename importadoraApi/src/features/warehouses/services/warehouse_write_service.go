@@ -222,6 +222,10 @@ func (s *WarehouseService) Update(ctx context.Context, actor *middlewares.ActorC
 		}
 	}
 
+	updateReason, rerr := utils.ReasonOnDeactivation(current.IsActive, req.IsActive, req.Reason)
+	if rerr != nil {
+		return nil, rerr
+	}
 	if req.IsActive != nil {
 		current.IsActive = *req.IsActive
 	}
@@ -238,7 +242,7 @@ func (s *WarehouseService) Update(ctx context.Context, actor *middlewares.ActorC
 		Entity:    "warehouses",
 		EntityID:  &updated.ID,
 		Action:    "WAREHOUSE_UPDATED",
-		Reason:    "Actualización de datos de bodega",
+		Reason:    utils.ReasonOrDefault(updateReason, "Actualización de datos de bodega"),
 		IPAddress: ip,
 		UserAgent: ua,
 	})

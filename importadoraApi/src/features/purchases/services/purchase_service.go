@@ -157,7 +157,7 @@ func (s *PurchaseService) Create(ctx context.Context, actor *middlewares.ActorCo
 		SerialCode:   serialCode,
 		SupplierID:   req.SupplierID,
 		WarehouseID:  req.WarehouseID,
-		EmployeeID:   actor.ActorID,
+		EmployeeID:   creatorEmployeeID(actor),
 		Status:       types.PurchaseOrdered, // Nace lista para enviar a proveedor
 		SupplierRef:  req.SupplierRef,
 		ExpectedDate: expectedDate,

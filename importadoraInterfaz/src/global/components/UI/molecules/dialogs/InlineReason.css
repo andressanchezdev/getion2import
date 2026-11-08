@@ -1,5 +1,5 @@
-/* InlineConfirm.css · confirmación al pie del panel lateral · solo usa tokens de styles/tokens.css */
-.inline-confirm {
+/* InlineReason.css · motivo al pie del panel lateral · solo usa tokens de styles/tokens.css */
+.inline-reason {
   position: sticky;
   bottom: 0;
   display: flex;
@@ -10,19 +10,19 @@
   background-color: var(--bg-drawer);
 }
 
-.inline-confirm-title {
+.inline-reason-title {
   font-size: var(--text-sm);
   color: var(--color-text-primary);
 }
 
-.inline-confirm-message {
+.inline-reason-message {
   margin: 0;
   font-size: var(--text-xs);
   color: var(--color-text-secondary);
   line-height: var(--leading-normal);
 }
 
-.inline-confirm-actions {
+.inline-reason-actions {
   display: flex;
   justify-content: flex-end;
   gap: var(--space-3);

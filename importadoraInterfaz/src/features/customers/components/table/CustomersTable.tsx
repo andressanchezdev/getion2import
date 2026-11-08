@@ -33,6 +33,7 @@ export const CustomersTable: React.FC = () => {
   const docAlerts = useDocumentAlerts()
 
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null)
+  const [toDeactivate, setToDeactivate] = useState<Customer | null>(null)
 
   const empty =
     status === 'loading'
@@ -43,14 +44,26 @@ export const CustomersTable: React.FC = () => {
       ? 'No hay clientes que coincidan con la búsqueda.'
       : null
 
-  const handleToggleStatus = async (customer: Customer, nextStatusStr: string) => {
+  // inactivar pide motivo (se abre el formulario); reactivar no
+  const handleToggleStatus = (customer: Customer, nextStatusStr: string) => {
+    if (nextStatusStr === 'inactive') setToDeactivate(customer)
+    else void changeStatus(customer, nextStatusStr)
+  }
+
+  const changeStatus = async (customer: Customer, nextStatusStr: string, reason?: string) => {
     try {
-      await dispatch(updateCustomerThunk({ id: customer.id, body: { status: nextStatusStr } })).unwrap()
+      await dispatch(updateCustomerThunk({ id: customer.id, body: { status: nextStatusStr, ...(reason ? { reason } : {}) } })).unwrap()
       toast.success(`Estado de ${customer.fullName} actualizado a ${nextStatusStr === 'active' ? 'Activo' : 'Inactivo'}.`)
       dispatch(loadCustomersThunk())
     } catch {
       toast.error('No se pudo actualizar el estado del cliente.')
     }
+  }
+
+  const handleConfirmDeactivate = async (reason: string) => {
+    const target = toDeactivate
+    setToDeactivate(null)
+    if (target) await changeStatus(target, 'inactive', reason)
   }
 
   const handleConfirmDelete = async (reason: string) => {
@@ -175,6 +188,14 @@ export const CustomersTable: React.FC = () => {
           </tbody>
         </DataTable>
 
+      <ReasonPrompt
+        open={toDeactivate !== null}
+        title="Inactivar cliente"
+        message={`¿Inactivar a "${toDeactivate?.fullName ?? ''}"? Indica el motivo para dejar constancia.`}
+        confirmLabel="Inactivar"
+        onConfirm={handleConfirmDeactivate}
+        onCancel={() => setToDeactivate(null)}
+      />
       <ReasonPrompt
         open={customerToDelete !== null}
         title="Eliminar cliente"

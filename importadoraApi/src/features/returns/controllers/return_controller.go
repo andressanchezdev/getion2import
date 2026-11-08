@@ -133,13 +133,20 @@ func (ctrl *ReturnController) Reject(c echo.Context) error {
 		return err
 	}
 
+	var req struct {
+		Reason string `json:"reason"`
+	}
+	if err := utils.BindJSON(c, &req); err != nil {
+		return err
+	}
+
 	actor := middlewares.GetActor(c)
 	empID := int64(1)
 	if actor != nil && actor.ActorID > 0 {
 		empID = actor.ActorID
 	}
 
-	if err := ctrl.returnService.Reject(c.Request().Context(), id, empID); err != nil {
+	if err := ctrl.returnService.Reject(c.Request().Context(), id, empID, req.Reason); err != nil {
 		return err
 	}
 

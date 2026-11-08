@@ -95,11 +95,11 @@ export const payPurchaseThunk = createAsyncThunk<Purchase, { id: number; input: 
   { condition: notSaving }
 )
 
-export const voidPurchaseThunk = createAsyncThunk<number, number, Config>(
+export const voidPurchaseThunk = createAsyncThunk<number, { id: number; reason: string }, Config>(
   'purchases/void',
-  async (id, { rejectWithValue }) => {
+  async ({ id, reason }, { rejectWithValue }) => {
     try {
-      await voidPurchase(id)
+      await voidPurchase(id, reason)
       return id
     } catch (error) {
       return rejectWithValue(getErrorMessage(error, 'No se pudo anular la orden de compra.'))
