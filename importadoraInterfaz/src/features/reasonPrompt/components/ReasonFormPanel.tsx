@@ -15,12 +15,12 @@ interface ReasonFormPanelProps {
 
 export const ReasonFormPanel: React.FC<ReasonFormPanelProps> = ({ payload }) => {
   const dispatch = useAppDispatch()
-  const { requestId, message, confirmLabel = 'Confirmar', fieldLabel = 'Motivo', placeholder, minLength = REASON_MIN, maxLength = REASON_MAX } = payload
+  const { requestId, message, confirmLabel = 'Confirmar', fieldLabel = 'Motivo', placeholder, minLength = REASON_MIN, maxLength = REASON_MAX, field = true } = payload
   const [text, setText] = useState('')
   const alive = useRef(true)
   const length = text.trim().length
-  const valid = length >= minLength && length <= maxLength
-  const required = minLength > 0
+  const valid = !field || (length >= minLength && length <= maxLength)
+  const required = field && minLength > 0
 
   // al desmontarse sin haber confirmado, quien esperaba recibe null; el microtask evita que el doble montaje de desarrollo lo cancele por error
   useEffect(() => {
@@ -44,6 +44,7 @@ export const ReasonFormPanel: React.FC<ReasonFormPanelProps> = ({ payload }) => 
     <form className="reason-form-panel" onSubmit={submit}>
       <div className="reason-form-body">
         <p className="reason-form-message">{message}</p>
+        {field && (
         <div className="reason-form-field">
           <label htmlFor="reason-form-input">{fieldLabel}{required ? ' *' : ''}</label>
           <textarea
@@ -58,6 +59,7 @@ export const ReasonFormPanel: React.FC<ReasonFormPanelProps> = ({ payload }) => 
           />
           <span className="reason-form-hint">{length}/{maxLength}{required ? ` (mínimo ${minLength})` : ''}</span>
         </div>
+        )}
       </div>
 
       <div className="reason-form-footer">

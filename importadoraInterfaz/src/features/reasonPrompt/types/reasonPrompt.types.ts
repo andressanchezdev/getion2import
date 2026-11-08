@@ -7,6 +7,7 @@ export interface ReasonPromptOptions {
   placeholder?: string
   minLength?: number // por defecto 10; con 0 el campo es opcional
   maxLength?: number // por defecto 100
+  field?: boolean // false = solo confirmar, sin campo de texto (por defecto true)
 }
 
 // lo que viaja al panel por el estado de navegación (solo datos serializables: el resultado se devuelve por requestId)

@@ -11,7 +11,7 @@ interface ReasonPromptProps extends ReasonPromptOptions {
   onCancel: () => void
 }
 
-export const ReasonPrompt = ({ open, onConfirm, onCancel, title, message, confirmLabel, fieldLabel, placeholder, minLength, maxLength }: ReasonPromptProps): null => {
+export const ReasonPrompt = ({ open, onConfirm, onCancel, title, message, confirmLabel, fieldLabel, placeholder, minLength, maxLength, field }: ReasonPromptProps): null => {
   const askReason = useReasonPrompt()
   const handlers = useRef({ onConfirm, onCancel })
 
@@ -23,7 +23,7 @@ export const ReasonPrompt = ({ open, onConfirm, onCancel, title, message, confir
   useEffect(() => {
     if (!open) return
     let ignored = false
-    void askReason({ title, message, confirmLabel, fieldLabel, placeholder, minLength, maxLength }).then((reason) => {
+    void askReason({ title, message, confirmLabel, fieldLabel, placeholder, minLength, maxLength, field }).then((reason) => {
       if (ignored) return
       if (reason === null) handlers.current.onCancel()
       else handlers.current.onConfirm(reason)

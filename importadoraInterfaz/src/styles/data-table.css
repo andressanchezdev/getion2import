@@ -1,0 +1,152 @@
+/* data-table.css · diseño único de tarjeta, barra de herramientas y tabla del ERP · solo usa tokens de styles/tokens.css */
+/* ojo: es el diseño de Abonos tomado al pie de la letra; todas las pantallas con tabla lo usan (data-card, data-toolbar, data-table); lo propio de cada pantalla (anchos, alineación) va en su css, nunca colores ni rellenos */
+
+.data-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-rest);
+  overflow: hidden;
+}
+
+.data-toolbar {
+  background: var(--bg-card);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.data-toolbar-search {
+  flex: 0 1 40%;
+  width: 40%;
+  max-width: 40%;
+  min-width: 240px;
+}
+
+.data-toolbar-end {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.data-toolbar-total {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.data-toolbar-total strong {
+  color: var(--color-text-primary);
+}
+
+.data-table-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: var(--text-sm);
+}
+
+.data-table th {
+  position: relative;
+  background: var(--c-slate-50);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-semibold);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: 0.875rem var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+  overflow-wrap: anywhere;
+}
+
+/* el contenido se adapta al ancho de la columna: tras ajustar un ancho, el texto largo se corta con puntos suspensivos */
+.data-table.is-resized {
+  table-layout: fixed;
+}
+
+.data-table.is-resized td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.data-table.is-resized td:has(.row-actions) {
+  overflow: visible;
+}
+
+.data-num {
+  text-align: right;
+}
+
+.data-empty {
+  padding: 3rem var(--space-4);
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+/* el número o código principal de la fila: negro y en seminegrita (no azul) */
+.data-key {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* tirador para ajustar el ancho de la columna (lo agrega useColumnResize en cada encabezado) */
+.col-resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: col-resize;
+  user-select: none;
+  touch-action: none;
+}
+
+.col-resizer::after {
+  content: '';
+  position: absolute;
+  top: 25%;
+  bottom: 25%;
+  right: 3px;
+  width: 1px;
+  background: var(--color-border);
+  transition: background-color var(--motion-fast);
+}
+
+.col-resizer:hover::after {
+  width: 2px;
+  background: var(--c-blue-600);
+}
+
+@media (max-width: 900px) {
+  .data-toolbar {
+    gap: var(--space-3);
+  }
+
+  .data-toolbar-search {
+    flex: 1 1 100%;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .data-toolbar-end {
+    margin-left: 0;
+    width: 100%;
+  }
+}
