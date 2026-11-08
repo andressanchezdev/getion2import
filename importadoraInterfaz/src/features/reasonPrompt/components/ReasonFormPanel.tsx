@@ -1,6 +1,6 @@
 // ReasonFormPanel · formulario del panel derecho que pide un motivo (o nota): mensaje, campo con contador y botones Cancelar y Confirmar
 // conecta con: formRegistry (reasonForm), reasonRequests (entrega la respuesta) y navigation (closeDrawerForm); sigue el mismo diseño de los demás formularios laterales
-// ojo: si el panel se cierra sin confirmar (Cancelar, Esc, clic fuera o abrir otro) la petición se resuelve con null
+// ojo: si el panel se cierra sin confirmar (Cancelar, la ✕ o abrir otro) la petición se resuelve con null
 import React, { useEffect, useRef, useState } from 'react'
 import './ReasonFormPanel.css'
 import { useAppDispatch } from '@/global/hooks/store/useRedux'

@@ -1,6 +1,6 @@
 // PermissionsHubPanel · contenido de cada opción de Roles y permisos dentro del panel derecho (ancho): la lista y, al elegir algo, su detalle anidado con «Volver»
 // conecta con: formRegistry (permissionsHub), EmployeePicker, RolesView, EmployeePermissionsPanel, EmployeeDetailPanel y RoleForm; las tarjetas de PermissionsHub lo abren
-// ojo: lo anidado se cierra con «Volver» (o al guardar) sin cerrar el panel; el panel solo se cierra con su ✕, Esc o un clic fuera
+// ojo: lo anidado se cierra con «Volver» (o al guardar) sin cerrar el panel; el panel solo se cierra con su ✕
 import React, { useState } from 'react'
 import './PermissionsHub.css'
 import { EmployeeDetailPanel } from '../detail/EmployeeDetailPanel'

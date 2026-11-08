@@ -1,9 +1,7 @@
-// DrawerRight · panel derecho contextual: carrito en el catálogo, detalle del objeto seleccionado o formulario de la acción abierta; se cierra con un clic fuera de él o con Esc
-import React, { useRef, useState } from 'react'
+// DrawerRight · panel derecho contextual: carrito en el catálogo, detalle del objeto seleccionado o formulario de la acción abierta; se cierra únicamente con la ✕ de su encabezado (ni con clic fuera ni con Esc)
+import React, { useState } from 'react'
 import './DrawerRight.css'
 import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
-import { useEscapeKey } from '@/global/hooks/ui/useEscapeKey'
-import { useClickOutside } from '@/global/hooks/ui/useClickOutside'
 import { useVerticalDrag } from '@/global/hooks/ui/useVerticalDrag'
 import { closeDrawerForm, openDrawerForm, setRightDrawerOpen } from '@/features/navigation'
 import { selectCartTotals, useCartMenuActions } from '@/features/shop'
@@ -15,8 +13,6 @@ import { DrawerHeader } from './parts/DrawerHeader'
 import { DrawerTab } from './parts/DrawerTab'
 import shippingIcon from '@/assets/icons/shipping.svg'
 
-// los clics en ventanas de confirmación y alertas no cuentan como «fuera» del panel (si no, confirmar algo lo cerraría)
-const KEEP_OPEN_SELECTOR = '[role="dialog"], [role="alertdialog"], [data-sonner-toaster]'
 const TAB_HEIGHT_OFFSET = 68 // Altura de pestaña más margen de separación para no sobreponerse
 
 export const DrawerRight: React.FC = () => {
@@ -30,7 +26,6 @@ export const DrawerRight: React.FC = () => {
   const [isCartCollapsed, setIsCartCollapsed] = useState(false)
   const saleCartMenu = useCartMenuActions()
   const quotationCartMenu = useQuotationCartMenuActions()
-  const panelRef = useRef<HTMLDivElement>(null)
 
   // Detección de módulo de catálogo
   // ojo: hay dos carritos con el mismo diseño: el de ventas (catálogo) y el de cotizaciones (Cotizar)
@@ -68,11 +63,7 @@ export const DrawerRight: React.FC = () => {
     if (entry?.close) entry.close(dispatch)
     else setIsCartCollapsed(true)
   }
-  useEscapeKey(handleClose, isOpen)
-  // el carrito se cierra exclusivamente con su botón de cerrar (✕) o Esc; no por clic afuera
-  // la solicitud de traslado se comporta igual: solo se cierra con su ✕ o Esc (el borrador se conserva)
-  const shouldCloseOnClickOutside = isOpen && !isCartMode(shownMode) && !isTransferFormOpen
-  useClickOutside(panelRef, handleClose, shouldCloseOnClickOutside, KEEP_OPEN_SELECTOR)
+  // ojo: ningún panel se cierra con clic fuera ni con Esc; solo con la ✕ del encabezado (el carrito se contrae y el borrador de traslado se conserva)
 
   // Posiciones verticales calculadas para que NUNCA se sobrepongan entre ellas
   const cartTabTop = isCartTabVisible ? dragCoord.top : null
@@ -134,7 +125,7 @@ export const DrawerRight: React.FC = () => {
 
       {isMounted && entry && meta && (
         <aside className={`drawer-right ${isOpen ? 'drawer-right-open' : ''}`} aria-label={meta.title} style={widthStyle}>
-          <div ref={panelRef} className={`drawer-right-panel ${isCartMode(shownMode) ? 'drawer-right-panel-lite' : ''}`}>
+          <div className={`drawer-right-panel ${isCartMode(shownMode) ? 'drawer-right-panel-lite' : ''}`}>
             <DrawerHeader icon={entry.icon} meta={meta} onClose={handleClose} menu={shownMode === 'cart' ? saleCartMenu : shownMode === 'quotationCart' ? quotationCartMenu : undefined} />
             <div className="drawer-right-body">
               <entry.Body />

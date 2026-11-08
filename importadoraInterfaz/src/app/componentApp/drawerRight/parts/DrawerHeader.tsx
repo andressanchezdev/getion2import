@@ -1,6 +1,6 @@
 // DrawerHeader · encabezado único del panel derecho: botón cerrar a la izquierda (al límite con contentMain), ícono, título, detalle y menú opcional
 // conecta con: DrawerRight (le pasa el ícono, los textos de la feature, la acción de cerrar y, si el panel tiene opciones, el menú)
-// ojo: el botón de cierre se ubica al pie izquierdo del drawer; el panel también se cierra con clic fuera o Esc
+// ojo: el botón de cierre se ubica al pie izquierdo del drawer; el panel solo se cierra con este botón (✕)
 import React, { useRef, useState } from 'react'
 import { useClickOutside } from '@/global/hooks/ui/useClickOutside'
 import type { DrawerMenuAction } from '@/global/types/drawerMenu.types'
@@ -26,7 +26,7 @@ export const DrawerHeader: React.FC<DrawerHeaderProps> = ({ icon, meta, onClose,
         onClick={onClose}
         className="drawer-header-close"
         aria-label="Cerrar panel"
-        title="Cerrar panel (Esc)"
+        title="Cerrar panel"
       >
         ✕
       </button>
