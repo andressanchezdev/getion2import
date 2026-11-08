@@ -133,7 +133,7 @@ func (s *InventoryService) CreateTransfer(ctx context.Context, actor *middleware
 			SerialCode:             serialCode,
 			OriginWarehouseID:      req.OriginWarehouseID,
 			DestinationWarehouseID: req.DestinationWarehouseID,
-			EmployeeID:             actor.ActorID,
+			EmployeeID:             requesterEmployeeID(actor),
 			Status:                 types.TransferPending,
 			IsPriority:             req.IsPriority,
 			Notes:                  req.Notes,
@@ -247,4 +247,13 @@ func (s *InventoryService) mapTransferToDTO(t *repositories.TransferEntity, item
 		UpdatedAt:                t.UpdatedAt,
 		Items:                    itemsDTO,
 	}
+}
+
+// requesterEmployeeID es el empleado que pide el traslado: el propio si es empleado; un administrador no es empleado, así que queda vacío
+func requesterEmployeeID(actor *middlewares.ActorContext) *int64 {
+	if actor.ActorType != types.ActorEmployee {
+		return nil
+	}
+	id := actor.ActorID
+	return &id
 }

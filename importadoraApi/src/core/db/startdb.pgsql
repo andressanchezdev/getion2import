@@ -640,7 +640,7 @@ CREATE TABLE transfers (
     transfer_type               VARCHAR(40) NOT NULL DEFAULT 'standard',
     origin_warehouse_id         BIGINT NOT NULL REFERENCES warehouses(id) ON DELETE RESTRICT,
     destination_warehouse_id    BIGINT NOT NULL REFERENCES warehouses(id) ON DELETE RESTRICT,
-    employee_id                 BIGINT NOT NULL REFERENCES employees(id) ON DELETE RESTRICT,
+    employee_id                 BIGINT REFERENCES employees(id) ON DELETE RESTRICT,
     dispatched_by_employee_id   BIGINT REFERENCES employees(id) ON DELETE SET NULL,
     received_by_employee_id     BIGINT REFERENCES employees(id) ON DELETE SET NULL,
     status                      VARCHAR(20) NOT NULL DEFAULT 'pending'

@@ -107,7 +107,7 @@ type TransferResponse struct {
 	OriginWarehouseName      string                 `json:"originWarehouseName"`
 	DestinationWarehouseID   int64                  `json:"destinationWarehouseId"`
 	DestinationWarehouseName string                 `json:"destinationWarehouseName"`
-	EmployeeID               int64                  `json:"employeeId"`
+	EmployeeID               *int64                 `json:"employeeId,omitempty"`
 	EmployeeName             string                 `json:"employeeName"`
 	DispatchedByEmployeeID   *int64                 `json:"dispatchedByEmployeeId,omitempty"`
 	DispatchedByName         *string                `json:"dispatchedByName,omitempty"`

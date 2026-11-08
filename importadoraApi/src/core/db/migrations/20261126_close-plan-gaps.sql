@@ -291,4 +291,7 @@ BEGIN
 END
 $sync_seq$;
 
+-- un administrador puede pedir traslados sin ser empleado: el solicitante queda vacío (la auditoría guarda quién fue)
+ALTER TABLE transfers ALTER COLUMN employee_id DROP NOT NULL;
+
 COMMIT;
