@@ -25,7 +25,7 @@ def main():
 
     # empleados: la caja de A (con detalle de caja), la de B y uno sin detalle de caja
     rid = d(call('POST', '/roles', ad, {'code': 'CJ' + sfx, 'name': 'Cajero'}))['id']
-    full = perm_ids(ad, {'purchases': None, 'cash': None, 'stock': ['view']})
+    full = perm_ids(ad, {'purchases': None, 'cash': None, 'stock': ['view'], 'invoices': ['view']})
     basic = perm_ids(ad, {'purchases': ['view'], 'cash': ['view', 'create', 'edit']})
     E = {}
     for key, wh, perms in (('A', wa, full), ('B', wb, full), ('N', wa, basic)):
@@ -77,7 +77,7 @@ def main():
     check('Facturas lista los dos gastos de la caja cerrada', len(rows) == 2, rows)
     rec = next((x for x in rows if x.get('purchaseId') == pid), None)
     check('el pago de la recepción muestra la orden, el proveedor y la bodega', bool(rec) and rec['supplierName'] == 'Proveedor ' + sfx and rec['warehouseName'] == 'Bodega A' and rec['cashAmount'] == 20000, rec)
-    check('quien no tiene el detalle de caja no entra a Facturas', call('GET', '/cash/expenses', E['N'])[0] == 403)
+    check('quien no tiene el permiso de Facturas no entra', call('GET', '/cash/expenses', E['N'])[0] == 403)
     check('la caja de otra bodega no ve los gastos de A', items_of(call('GET', '/cash/expenses', E['B'])) == [])
     check('el filtro por bodega funciona', len(items_of(call('GET', f'/cash/expenses?warehouseId={wb}', ad))) == 0 and len(items_of(call('GET', f'/cash/expenses?warehouseId={wa}', ad))) == 2)
     check('la búsqueda encuentra por proveedor', len(items_of(call('GET', '/cash/expenses?q=Proveedor', ad))) == 1)

@@ -2,11 +2,10 @@
 // conecta con: billing.slice y billing.thunks; se corre con npm test
 import { describe, expect, it } from 'vitest'
 import { INITIAL_BILLING_STATE } from '../constants/billing.constants'
-import { loadBillingSettingsThunk, loadInvoicesThunk, saveBillingConfigThunk, saveDocSeriesThunk } from '../thunks/billing.thunks'
+import { loadBillingSettingsThunk, saveBillingConfigThunk, saveDocSeriesThunk } from '../thunks/billing.thunks'
 import { billingReducer } from './billing.slice'
-import type { BillingConfig, DocSeries, Invoice } from '../types/billing.types'
+import type { BillingConfig, DocSeries } from '../types/billing.types'
 
-const invoice: Invoice = { id: 1, number: 'FE-000001', kind: 'invoice', status: 'issued', saleId: 4, saleSerial: 'PED-0004', warehouseName: 'Principal', employeeName: 'Ana', issuedAt: '2026-11-01', pdfUrl: '', warnings: [] }
 const config: BillingConfig = {
   id: 1, warehouseId: 1, typeFacturation: 'juridica', documentType: 'NIT', nit: '900', legalName: 'Premium', tradeName: '', billingEmail: '', billingPhone: '', billingAddress: '', billingCity: '', vatWithholder: false, incomeWithholder: false, selfWithholder: false,
   invoicePrefix: 'FE', resolutionNumber: '', resolutionDate: '', resolutionValidUntil: '', rangeFrom: 1, rangeTo: 5000, isActive: true,
@@ -14,20 +13,20 @@ const config: BillingConfig = {
 const series = (id: number, nextNumber: number): DocSeries => ({ id, warehouseId: 1, docType: 'invoice', prefix: 'FE-', nextNumber })
 
 describe('billing.slice', () => {
-  it('carga las facturas y descarta una respuesta vieja', () => {
-    let state = billingReducer(INITIAL_BILLING_STATE, loadInvoicesThunk.pending('a', 1))
-    state = billingReducer(state, loadInvoicesThunk.pending('b', 1))
-    state = billingReducer(state, loadInvoicesThunk.fulfilled([invoice], 'a', 1))
-    expect(state.invoices).toEqual([])
-    state = billingReducer(state, loadInvoicesThunk.fulfilled([invoice], 'b', 1))
-    expect(state).toMatchObject({ invoicesStatus: 'succeeded', warehouseId: 1 })
+  it('carga los datos fiscales y descarta una respuesta vieja', () => {
+    let state = billingReducer(INITIAL_BILLING_STATE, loadBillingSettingsThunk.pending('a', 1))
+    state = billingReducer(state, loadBillingSettingsThunk.pending('b', 1))
+    state = billingReducer(state, loadBillingSettingsThunk.fulfilled({ config, series: [] }, 'a', 1))
+    expect(state.config).toBeNull()
+    state = billingReducer(state, loadBillingSettingsThunk.fulfilled({ config, series: [] }, 'b', 1))
+    expect(state).toMatchObject({ settingsStatus: 'succeeded', warehouseId: 1, config })
   })
 
   it('al cambiar de bodega se vacían facturas, datos fiscales y series', () => {
     let state = billingReducer(INITIAL_BILLING_STATE, loadBillingSettingsThunk.pending('a', 1))
     state = billingReducer(state, loadBillingSettingsThunk.fulfilled({ config, series: [series(1, 2)] }, 'a', 1))
     expect(state.config).toEqual(config)
-    state = billingReducer(state, loadInvoicesThunk.pending('b', 2))
+    state = billingReducer(state, loadBillingSettingsThunk.pending('b', 2))
     expect(state).toMatchObject({ config: null, series: [], warehouseId: 2 })
   })
 

@@ -1,38 +1,6 @@
-// billing.types · contratos de facturación: facturas emitidas, datos fiscales de la bodega, series de consecutivos y el estado del slice
+// billing.types · contratos de facturación: datos fiscales de la bodega, series de consecutivos y el estado del slice
 // conecta con: billing.adapter, billing.rules, billing.service, billing.slice, los hooks y los componentes de facturación
 import type { LoadStatus } from '@/api'
-
-// ---- facturas ----
-export type InvoiceStatus = 'pending' | 'issued' | 'annulled'
-export type InvoiceKind = 'invoice' | 'credit_note' | 'expense'
-
-export interface Invoice {
-  id: number
-  number: string
-  kind: InvoiceKind
-  status: InvoiceStatus
-  saleId: number
-  saleSerial: string
-  warehouseName: string
-  employeeName: string
-  issuedAt: string // AAAA-MM-DD
-  pdfUrl: string // '' si no hay
-  warnings: string[]
-}
-
-export interface InvoiceDto {
-  id: number
-  number: string
-  kind: string
-  status: string
-  saleId: number
-  saleSerial?: string
-  warehouseName?: string
-  employeeName?: string | null
-  issuedAt?: string
-  pdfUrl?: string | null
-  warnings?: string[] | null
-}
 
 // ---- datos fiscales de la bodega ----
 export type TypeFacturation = 'natural' | 'juridica'
@@ -111,9 +79,6 @@ export interface DocSeriesDto {
 // ---- estado del slice (no se guarda en el navegador) ----
 export interface BillingState {
   warehouseId: number | null // de qué bodega son los datos cargados (null = todas)
-  invoices: Invoice[]
-  invoicesStatus: LoadStatus
-  invoicesError: string | null
   config: BillingConfig | null // null = la bodega aún no tiene datos fiscales
   series: DocSeries[]
   settingsStatus: LoadStatus

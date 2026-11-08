@@ -6,7 +6,7 @@ import { AuditDetailPanel, type AuditEntry } from '@/features/audit'
 import { QuotationDetailPanel } from '@/features/quotations'
 import { CheckoutPanel, type CheckoutPayload } from '@/features/checkout'
 import { CompanyWarehousesPanel } from '@/features/warehouses'
-import { BillingConfigPanel, DocSeriesPanel, InvoiceDetailPanel, type DocSeries } from '@/features/billing'
+import { BillingConfigPanel, DocSeriesPanel, type DocSeries } from '@/features/billing'
 import { PurchaseDetailPanel, PurchaseFormPanel, PurchaseReceivePanel, type PurchasePanelPayload } from '@/features/purchases'
 import { CashClosePanel, CashCollectPanel, CashOpenPanel, VerifyGoodsPanel, type CashCollectPayload, type VerifyGoodsPayload } from '@/features/cashRegister'
 import { CountDetailPanel, type CountDetailPayload } from '@/features/inventory'
@@ -23,12 +23,6 @@ import type { DrawerFormKind } from '@/features/navigation'
 import type { FormEntry } from './formEntry.types'
 
 export const OPERATIONS_ENTRIES: Partial<Record<DrawerFormKind, FormEntry>> = {
-  invoiceDetail: {
-    icon: fileIcon,
-    title: () => 'Detalle de factura',
-    subtitle: 'Datos de la factura emitida',
-    render: (payload) => createElement(InvoiceDetailPanel, { key: String(payload), invoiceId: Number(payload) }),
-  },
   verifyGoods: {
     icon: fileIcon,
     title: (payload) => `Cotejar ${(payload as VerifyGoodsPayload).serial}`,

@@ -1674,7 +1674,7 @@ FROM (VALUES
     ('transfers', 'Traslados entre bodegas'), ('brands', 'Marcas'), ('categories', 'Categorías'), ('models', 'Modelos'),
     ('stock', 'Inventario, conteos y ubicaciones'), ('credits', 'Créditos y cartera'), ('payments', 'Pagos y conciliación bancaria'),
     ('customers', 'Clientes'), ('employees', 'Empleados'), ('roles', 'Roles y permisos'), ('reports', 'Reportes'),
-    ('audit', 'Auditoría y papelera'), ('warehouses', 'Sedes y series de documentos')
+    ('audit', 'Auditoría y papelera'), ('warehouses', 'Sedes y series de documentos'), ('invoices', 'Facturas de las cajas')
 ) AS m(module, label)
 CROSS JOIN (VALUES
     ('view', 'ver'), ('view_detail', 'ver detalle'), ('create', 'crear'), ('edit', 'editar'), ('change_status', 'cambiar estado'), ('delete', 'borrar')

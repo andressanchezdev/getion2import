@@ -1,7 +1,7 @@
-// billing.rules.test · pruebas de las reglas de facturación y del adaptador de la API
+// billing.rules.test · pruebas de las reglas de facturación y del adaptador de la API (datos fiscales y series)
 // conecta con: billing.rules y billing.adapter; se corre con npm test
 import { describe, expect, it } from 'vitest'
-import { filterInvoices, toBillingConfig, toDocSeries, toInvoice } from './billing.adapter'
+import { toBillingConfig, toDocSeries } from './billing.adapter'
 import { billingProblem, colombianNITProblem, nextNumberLabel, rangeRemaining, seriesProblem } from './billing.rules'
 
 describe('series y rango', () => {
@@ -39,11 +39,6 @@ describe('series y rango', () => {
 })
 
 describe('adaptador', () => {
-  it('convierte la factura y deja neutro lo que falta', () => {
-    expect(toInvoice({ id: 1, number: ' FE-000001 ', kind: 'invoice', status: 'issued', saleId: 4, issuedAt: '2026-11-01T10:00:00Z' })).toMatchObject({ number: 'FE-000001', saleSerial: 'Venta 4', employeeName: '—', issuedAt: '2026-11-01', pdfUrl: '' })
-    expect(toInvoice({ id: 2, number: 'NC-1', kind: 'credit_note', status: 'raro', saleId: 4 })).toMatchObject({ kind: 'credit_note', status: 'issued' })
-  })
-
   it('convierte los datos fiscales con valores por defecto', () => {
     const config = toBillingConfig({ id: 1, warehouseId: 2, typeFacturation: 'x', documentType: 'CC', nit: '900', legalName: 'Premium', rangeFrom: 1, rangeTo: 99 })
     expect(config).toMatchObject({ typeFacturation: 'juridica', documentType: 'CC', rangeTo: 99, resolutionDate: '', isActive: true, vatWithholder: false })
@@ -51,12 +46,5 @@ describe('adaptador', () => {
 
   it('convierte una serie', () => {
     expect(toDocSeries({ id: 3, warehouseId: 1, docType: 'invoice', prefix: ' FE-', nextNumber: 2 })).toEqual({ id: 3, warehouseId: 1, docType: 'invoice', prefix: 'FE-', nextNumber: 2 })
-  })
-
-  it('filtra facturas por texto y estado', () => {
-    const a = toInvoice({ id: 1, number: 'FE-000001', kind: 'invoice', status: 'issued', saleId: 4, saleSerial: 'PED-0004' })
-    const b = toInvoice({ id: 2, number: 'FE-000002', kind: 'invoice', status: 'annulled', saleId: 5, saleSerial: 'PED-0005' })
-    expect(filterInvoices([a, b], 'ped-0005', 'all').map((i) => i.id)).toEqual([2])
-    expect(filterInvoices([a, b], '', 'issued').map((i) => i.id)).toEqual([1])
   })
 })

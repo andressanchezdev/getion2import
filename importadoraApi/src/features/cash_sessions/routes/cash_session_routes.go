@@ -18,6 +18,6 @@ func RegisterRoutes(e *echo.Echo, authMiddleware *middlewares.AuthMiddleware, ct
 		g.POST("/close", ctrl.Close, authMiddleware.RequirePermission("cash", "edit"))
 	}
 
-	// los gastos de todas las cajas cerradas (Facturas): solo quien tiene el permiso de ver el detalle de caja
-	e.GET("/cash/expenses", ctrl.ListExpenses, authMiddleware.Authenticate(), authMiddleware.RequirePermission("cash", "view_detail"))
+	// los gastos de todas las cajas cerradas (Facturas): solo quien tiene el permiso de Facturas
+	e.GET("/cash/expenses", ctrl.ListExpenses, authMiddleware.Authenticate(), authMiddleware.RequirePermission("invoices", "view"))
 }

@@ -307,4 +307,10 @@ ALTER TABLE purchases ADD COLUMN IF NOT EXISTS paid_total NUMERIC(14,2) NOT NULL
 ALTER TABLE cash_session_expenses ADD COLUMN IF NOT EXISTS purchase_id BIGINT REFERENCES purchases(id) ON DELETE SET NULL;
 CREATE INDEX IF NOT EXISTS idx_cash_session_expenses_purchase ON cash_session_expenses (purchase_id);
 
+-- Facturas = lo que pagan las cajas de todas las bodegas: tiene su propio permiso para que solo lo vea quien lo necesita
+INSERT INTO permissions (module, action, description)
+SELECT 'invoices', a.action, 'Facturas de las cajas · ' || a.label
+FROM (VALUES ('view', 'ver'), ('view_detail', 'ver detalle'), ('create', 'crear'), ('edit', 'editar'), ('change_status', 'cambiar estado'), ('delete', 'borrar')) AS a(action, label)
+ON CONFLICT (module, action) DO NOTHING;
+
 COMMIT;

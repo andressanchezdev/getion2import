@@ -30,7 +30,7 @@ const SettingsScreen = lazy(() => import('@/features/settings/screens/SettingsSc
 const PurchaseOrdersScreen = lazy(() => import('@/features/purchases/screens/PurchaseOrdersScreen').then((m) => ({ default: m.PurchaseOrdersScreen })))
 const ReceivingScreen = lazy(() => import('@/features/purchases/screens/ReceivingScreen').then((m) => ({ default: m.ReceivingScreen })))
 const BillingSettingsScreen = lazy(() => import('@/features/billing/screens/BillingSettingsScreen').then((m) => ({ default: m.BillingSettingsScreen })))
-const InvoicesScreen = lazy(() => import('@/features/billing/screens/InvoicesScreen').then((m) => ({ default: m.InvoicesScreen })))
+const CashExpensesScreen = lazy(() => import('@/features/cashExpenses/screens/CashExpensesScreen').then((m) => ({ default: m.CashExpensesScreen })))
 const SuppliersScreen = lazy(() => import('@/features/externals/screens/SuppliersScreen').then((m) => ({ default: m.SuppliersScreen })))
 const CarriersScreen = lazy(() => import('@/features/externals/screens/CarriersScreen').then((m) => ({ default: m.CarriersScreen })))
 const GeneralReportScreen = lazy(() => import('@/features/reports/screens/GeneralReportScreen').then((m) => ({ default: m.GeneralReportScreen })))
@@ -60,7 +60,7 @@ export const SCREEN_REGISTRY: Partial<Record<ERPModule, ScreenEntry>> = {
   cashRegister: {
     subitems: {
       billingHistory: OrdersScreen,
-      invoices: InvoicesScreen,
+      invoices: CashExpensesScreen,
       purchaseOrders: PurchaseOrdersScreen,
       returns: ReturnsScreen,
     },

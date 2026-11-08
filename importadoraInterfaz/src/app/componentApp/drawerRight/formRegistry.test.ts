@@ -61,7 +61,6 @@ const SAMPLES: Record<DrawerFormKind, unknown> = {
   adminForm: undefined,
   registerExpense: undefined,
   reasonForm: { requestId: 'reason-1', title: 'Desactivar', message: 'Motivo requerido' },
-  invoiceDetail: 7,
   verifyGoods: { orderId: 1, serial: 'PD-1', customerName: 'Cliente', total: 0, onVerified: () => undefined },
   countDetail: { count: { id: 1 } },
   permissionsHub: 'viewRoles',

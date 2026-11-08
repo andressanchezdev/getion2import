@@ -36,11 +36,9 @@ export const SALES_ENDPOINTS = {
     OPEN: '/cash/sessions/open',
     CLOSE: '/cash/sessions/close',
   },
-  // Facturación fiscal
-  INVOICES: {
-    LIST: '/invoices',
-    BY_ID: (id: number | string) => `/invoices/${id}`,
-    ANNUL: (id: number | string) => `/invoices/${id}/annul`,
+  // gastos de las cajas ya cerradas (lo que lista «Facturas»)
+  CASH_EXPENSES: {
+    LIST: '/cash/expenses',
   },
   // Devoluciones y garantías
   RETURNS: {

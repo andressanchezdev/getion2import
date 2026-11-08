@@ -13,7 +13,7 @@ export const SCREEN_API_MODULE: Record<string, string | null> = {
   'shop.cashRegister': 'cash',
   'cashRegister.billingHistory': 'orders',
   'cashRegister.returns': 'returns',
-  'cashRegister.invoices': 'orders', // las facturas salen de los pedidos: quien ve pedidos ve facturas
+  'cashRegister.invoices': 'invoices', // Facturas = lo que pagan las cajas: tiene su propio permiso
   'inventory.stock': 'stock', // existencias por ubicación
   'settings.billing': 'warehouses', // datos fiscales y series de cada bodega
   'purchases.purchaseOrders': 'purchases',
