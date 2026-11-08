@@ -70,7 +70,8 @@ export const DrawerRight: React.FC = () => {
   }
   useEscapeKey(handleClose, isOpen)
   // el carrito se cierra exclusivamente con su botón de cerrar (✕) o Esc; no por clic afuera
-  const shouldCloseOnClickOutside = isOpen && !isCartMode(shownMode)
+  // la solicitud de traslado se comporta igual: solo se cierra con su ✕ o Esc (el borrador se conserva)
+  const shouldCloseOnClickOutside = isOpen && !isCartMode(shownMode) && !isTransferFormOpen
   useClickOutside(panelRef, handleClose, shouldCloseOnClickOutside, KEEP_OPEN_SELECTOR)
 
   // Posiciones verticales calculadas para que NUNCA se sobrepongan entre ellas
