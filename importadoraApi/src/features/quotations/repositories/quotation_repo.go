@@ -233,13 +233,6 @@ func (r *QuotationRepository) Update(ctx context.Context, q db.DBExecutor, qe *Q
 	return err
 }
 
-// SetSaleID liga la cotización al pedido en que se convirtió y la marca como convertida.
-func (r *QuotationRepository) SetSaleID(ctx context.Context, q db.DBExecutor, id, saleID int64) error {
-	const sql = `UPDATE quotations SET sale_id = $1, status = 'converted', updated_at = CURRENT_TIMESTAMP WHERE id = $2`
-	_, err := q.Exec(ctx, sql, saleID, id)
-	return err
-}
-
 // CreateItem inserta un renglón.
 func (r *QuotationRepository) CreateItem(ctx context.Context, q db.DBExecutor, item *QuotationItemEntity) error {
 	const sql = `

@@ -132,21 +132,6 @@ func (r *CartRepository) Create(ctx context.Context, q db.DBExecutor, c *CartEnt
 	return c, nil
 }
 
-// Update actualiza los datos de el carrito.
-func (r *CartRepository) Update(ctx context.Context, q db.DBExecutor, c *CartEntity) error {
-	const sql = `
-		UPDATE carts SET
-			customer_id = $1,
-			warehouse_id = $2,
-			price_tier = $3,
-			status = $4,
-			updated_at = CURRENT_TIMESTAMP
-		WHERE id = $5
-	`
-	_, err := q.Exec(ctx, sql, c.CustomerID, c.WarehouseID, c.PriceTier, c.Status, c.ID)
-	return err
-}
-
 // SetStatus cambia el estado del carrito.
 func (r *CartRepository) SetStatus(ctx context.Context, q db.DBExecutor, id int64, status types.CartStatus) error {
 	const sql = `UPDATE carts SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`

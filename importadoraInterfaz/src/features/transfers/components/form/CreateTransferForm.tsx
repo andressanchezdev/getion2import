@@ -48,7 +48,7 @@ export const CreateTransferForm: React.FC<CreateTransferFormProps> = ({ initialP
           <section className="transfer-header-dest-card is-admin" aria-label="Ruta del traslado para administradores">
             <div className="transfer-admin-route">
               <div className="transfer-admin-route-field">
-                <label htmlFor="transfer-admin-origin" className="transfer-admin-label">Bodega de origen (de donde salen los ítems)</label>
+                <label htmlFor="transfer-admin-origin" className="transfer-admin-label">Bodega de donde salen los ítems</label>
                 <select id="transfer-admin-origin" className="transfer-select-control" value={request.originWarehouseId} onChange={(e) => request.setOriginWarehouseId(Number(e.target.value))}>
                   <option value={0}>Seleccionar bodega de origen…</option>
                   {request.warehouses.filter((wh) => Number(wh.id) !== request.destWarehouseId).map((wh) => (
@@ -57,7 +57,7 @@ export const CreateTransferForm: React.FC<CreateTransferFormProps> = ({ initialP
                 </select>
               </div>
               <div className="transfer-admin-route-field">
-                <label htmlFor="transfer-admin-dest" className="transfer-admin-label">Bodega de destino (donde reciben los ítems)</label>
+                <label htmlFor="transfer-admin-dest" className="transfer-admin-label">Bodega destino</label>
                 <select id="transfer-admin-dest" className="transfer-select-control" value={request.destWarehouseId} onChange={(e) => request.setDestWarehouseId(Number(e.target.value))}>
                   <option value={0}>Seleccionar bodega de destino…</option>
                   {request.warehouses.filter((wh) => Number(wh.id) !== request.originWarehouseId).map((wh) => (
@@ -95,7 +95,6 @@ export const CreateTransferForm: React.FC<CreateTransferFormProps> = ({ initialP
               <TransferWarehouseStockList
                 warehouses={request.warehouses}
                 destWarehouseId={request.destWarehouseId}
-                onlyWarehouseId={request.originWarehouseId || undefined}
                 focusedProduct={focusedProduct}
                 getOriginQty={request.getOriginQty}
                 setOriginQty={request.setOriginQty}

@@ -101,49 +101,6 @@ func (r *CashSessionRepository) CountPendingVerificationSales(ctx context.Contex
 	return count, err
 }
 
-// HasAnyOpenSessionInWarehouse verifica si hay al menos una caja abierta en la bodega.
-func (r *CashSessionRepository) HasAnyOpenSessionInWarehouse(ctx context.Context, q db.DBExecutor, companyID, warehouseID int64) (bool, error) {
-	const sql = `
-		SELECT EXISTS (
-			SELECT 1 FROM cash_sessions
-			WHERE company_id = $1 AND warehouse_id = $2 AND status = 'open'
-		)
-	`
-	var exists bool
-	err := q.QueryRow(ctx, sql, companyID, warehouseID).Scan(&exists)
-	return exists, err
-}
-
-func (r *CashSessionRepository) FindActiveByWarehouse(ctx context.Context, q db.DBExecutor, companyID, warehouseID int64) (*CashSessionEntity, error) {
-	const sql = `
-		SELECT
-			cs.id, cs.company_id, cs.warehouse_id, COALESCE(w.name, ''),
-			cs.status, cs.opened_by_actor_type, cs.opened_by_actor_id, cs.opened_by_name,
-			cs.opened_at, cs.opening_amount, cs.closed_by_actor_type, cs.closed_by_actor_id,
-			cs.closed_by_name, cs.closed_at, cs.cash_total, cs.transfer_total,
-			cs.payments_count, cs.expected_cash, cs.counted_cash, cs.difference, cs.notes
-		FROM cash_sessions cs
-		LEFT JOIN warehouses w ON cs.warehouse_id = w.id
-		WHERE cs.company_id = $1 AND cs.warehouse_id = $2 AND cs.status = 'open'
-		LIMIT 1
-	`
-	var s CashSessionEntity
-	err := q.QueryRow(ctx, sql, companyID, warehouseID).Scan(
-		&s.ID, &s.CompanyID, &s.WarehouseID, &s.WarehouseName,
-		&s.Status, &s.OpenedByActorType, &s.OpenedByActorID, &s.OpenedByName,
-		&s.OpenedAt, &s.OpeningAmount, &s.ClosedByActorType, &s.ClosedByActorID,
-		&s.ClosedByName, &s.ClosedAt, &s.CashTotal, &s.TransferTotal,
-		&s.PaymentsCount, &s.ExpectedCash, &s.CountedCash, &s.Difference, &s.Notes,
-	)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) || isMissingSchemaElement(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return &s, nil
-}
-
 func (r *CashSessionRepository) OpenSession(ctx context.Context, q db.DBExecutor, s *CashSessionEntity) (*CashSessionEntity, error) {
 	const sql = `
 		INSERT INTO cash_sessions (
@@ -233,34 +190,6 @@ func (r *CashSessionRepository) InsertExpense(ctx context.Context, q db.DBExecut
 	`
 	_, err := q.Exec(ctx, sql, sessionID, e.ReceiptNumber, e.Concept, e.CashAmount, e.TransferAmount)
 	return err
-}
-
-// ListExpenses lista los gastos de un turno en el orden en que se declararon.
-func (r *CashSessionRepository) ListExpenses(ctx context.Context, q db.DBExecutor, sessionID int64) ([]CashExpenseEntity, error) {
-	const sql = `
-		SELECT COALESCE(receipt_number, ''), concept, cash_amount, transfer_amount
-		FROM cash_session_expenses
-		WHERE cash_session_id = $1
-		ORDER BY id ASC
-	`
-	rows, err := q.Query(ctx, sql, sessionID)
-	if err != nil {
-		if isMissingSchemaElement(err) {
-			return []CashExpenseEntity{}, nil
-		}
-		return nil, err
-	}
-	defer rows.Close()
-
-	items := make([]CashExpenseEntity, 0)
-	for rows.Next() {
-		var e CashExpenseEntity
-		if err := rows.Scan(&e.ReceiptNumber, &e.Concept, &e.CashAmount, &e.TransferAmount); err != nil {
-			return nil, err
-		}
-		items = append(items, e)
-	}
-	return items, rows.Err()
 }
 
 // FindWarehouseCompanyID obtiene el company_id de una bodega para asociar el turno de caja.

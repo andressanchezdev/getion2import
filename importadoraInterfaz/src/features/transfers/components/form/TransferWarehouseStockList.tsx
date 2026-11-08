@@ -1,4 +1,4 @@
-// TransferWarehouseStockList · desglose de bodegas activas con stock físico disponible y selector de cantidades a pedir
+// TransferWarehouseStockList · desglose de todas las bodegas activas (con unidades o agotadas) con stock físico disponible y selector de cantidades a pedir
 // conecta con: CreateTransferForm y useTransferRequest
 import React from 'react'
 import type { Warehouse } from '@/features/warehouses'
@@ -7,7 +7,6 @@ import type { CreateTransferInitialPayload } from '../../hooks/useTransferReques
 interface Props {
   warehouses: Warehouse[]
   destWarehouseId: number
-  onlyWarehouseId?: number // administrador: solo la bodega de origen elegida
   focusedProduct: NonNullable<CreateTransferInitialPayload['product']>
   getOriginQty: (originWarehouseId: number) => number
   setOriginQty: (originWarehouseId: number, originWarehouseName: string, maxStock: number, quantity: number) => void
@@ -16,13 +15,12 @@ interface Props {
 export const TransferWarehouseStockList: React.FC<Props> = ({
   warehouses,
   destWarehouseId,
-  onlyWarehouseId,
   focusedProduct,
   getOriginQty,
   setOriginQty,
 }) => {
   // Bodegas activas disponibles como origen (excluyendo la bodega de destino)
-  const originWarehouses = warehouses.filter((wh) => Number(wh.id) !== destWarehouseId && wh.isActive !== false && (!onlyWarehouseId || Number(wh.id) === onlyWarehouseId))
+  const originWarehouses = warehouses.filter((wh) => Number(wh.id) !== destWarehouseId && wh.isActive !== false)
 
   if (originWarehouses.length === 0) {
     return (
@@ -63,7 +61,7 @@ export const TransferWarehouseStockList: React.FC<Props> = ({
                       {physicalStock} {physicalStock === 1 ? 'ud disponible' : 'uds disponibles'}
                     </span>
                   ) : (
-                    <span className="transfer-stock-badge empty">Sin existencias (0)</span>
+                    <span className="transfer-stock-badge empty">Agotado</span>
                   )}
                 </div>
               </div>
