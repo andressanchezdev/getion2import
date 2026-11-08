@@ -229,7 +229,7 @@ func (s *QuotationService) Create(ctx context.Context, actor *middlewares.ActorC
 			CompanyID:     *companyID,
 			SerialCode:    serialCode,
 			CustomerID:    req.CustomerID,
-			EmployeeID:    actor.ActorID,
+			EmployeeID:    creatorEmployeeID(actor),
 			CartID:        req.CartID,
 			Status:        types.QuotationDraft,
 			ValidUntil:    validUntil,
@@ -366,4 +366,13 @@ func (s *QuotationService) mapQuotationToDTO(q *repositories.QuotationEntity, it
 		UpdatedAt:     q.UpdatedAt,
 		Items:         items,
 	}
+}
+
+// creatorEmployeeID es el empleado que crea la cotización: el propio si es empleado; un administrador no es empleado, así que queda vacío (la auditoría guarda quién fue)
+func creatorEmployeeID(actor *middlewares.ActorContext) *int64 {
+	if actor.ActorType != types.ActorEmployee {
+		return nil
+	}
+	id := actor.ActorID
+	return &id
 }

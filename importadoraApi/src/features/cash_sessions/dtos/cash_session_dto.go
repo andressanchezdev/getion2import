@@ -22,11 +22,16 @@ type CashSessionResponse struct {
 	ClosedAt          *time.Time           `json:"closedAt,omitempty"`
 	CashTotal         float64              `json:"cashTotal"`     // ventas en efectivo verificadas del turno
 	TransferTotal     float64              `json:"transferTotal"` // ventas por transferencia recibidas en el turno (verificadas o en revisión)
+	AbonosTotal       float64              `json:"abonosTotal"`   // pagos de ventas a crédito recibidos en el turno
 	PaymentsCount     int                  `json:"paymentsCount"`
 	ExpensesCash      float64              `json:"expensesCash"` // gastos pagados en efectivo (solo al cerrar)
 	ExpectedCash      float64              `json:"expectedCash"` // fondo + ventas en efectivo - gastos en efectivo
 	CountedCash       *float64             `json:"countedCash,omitempty"`
-	Difference        *float64             `json:"difference,omitempty"` // contado - esperado
+	Difference        *float64             `json:"difference,omitempty"`         // contado - esperado
+	CountedTransfer   *float64             `json:"countedTransfer,omitempty"`    // transferencias declaradas al cerrar
+	TransferDiff      *float64             `json:"transferDifference,omitempty"` // declaradas - recibidas
+	CountedAbonos     *float64             `json:"countedAbonos,omitempty"`      // abonos declarados al cerrar
+	AbonosDiff        *float64             `json:"abonosDifference,omitempty"`   // declarados - recibidos
 	Notes             *string              `json:"notes,omitempty"`
 	Expenses          []CashExpenseRequest `json:"expenses,omitempty"`
 }
@@ -45,8 +50,10 @@ type CashExpenseRequest struct {
 }
 
 type CloseCashSessionRequest struct {
-	WarehouseID int64                `json:"warehouseId"`
-	CountedCash float64              `json:"countedCash"`
-	Notes       *string              `json:"notes,omitempty"`
-	Expenses    []CashExpenseRequest `json:"expenses,omitempty"`
+	WarehouseID     int64                `json:"warehouseId"`
+	CountedCash     float64              `json:"countedCash"`
+	CountedTransfer *float64             `json:"countedTransfer,omitempty"` // transferencias que declara el cajero
+	CountedAbonos   *float64             `json:"countedAbonos,omitempty"`   // abonos que declara el cajero (solo si hubo)
+	Notes           *string              `json:"notes,omitempty"`
+	Expenses        []CashExpenseRequest `json:"expenses,omitempty"`
 }

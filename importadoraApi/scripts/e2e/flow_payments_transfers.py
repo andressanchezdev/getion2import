@@ -24,7 +24,7 @@ def main():
     cust = d(call('POST', '/customers', ad, {'documentType': 'CC', 'document': '7' + sfx, 'personType': 'natural', 'name': 'Cliente Abonos'}))['id']
     stock_id = items_of(call('GET', f'/stock?productId={pid}&warehouseId={wa}', ad))[0].get('stockId')
     rid = d(call('POST', '/roles', ad, {'code': 'VP' + sfx, 'name': 'Vendedor'}))['id']
-    perms = perm_ids(ad, {'orders': None, 'payments': ['view', 'edit'], 'transfers': None})
+    perms = perm_ids(ad, {'orders': None, 'payments': ['view', 'edit'], 'transfers': None, 'quotations': ['view']})
     r = call('POST', '/employees', ad, {'roleId': rid, 'warehouseId': wb, 'email': f'p{sfx}@e2e.com', 'password': 'Emp12345678', 'firstName': 'Pedro', 'lastName': 'Vende', 'documentType': 'CC', 'document': '6' + sfx, 'initialPermissions': perms})
     emp = d(r)['id']
     et = tok(call('POST', '/auth/login', body={'email': f'p{sfx}@e2e.com', 'password': 'Emp12345678', 'actorType': 'employee'}))
@@ -74,6 +74,38 @@ def main():
     check('empleado de B pide traslado hacia su sede -> creado', r[0] in (200, 201), r)
     r = call('POST', '/transfers', ad, body(wa, wb))
     check('administrador mueve entre dos bodegas cualquiera', r[0] in (200, 201), r)
+    print('== Cotizaciones y datos de la compania (no son de una bodega)')
+    qty_before = [x.get('quantity') for x in items_of(call('GET', f'/stock?productId={pid}&warehouseId={wa}', ad))]
+    r = call('POST', '/quotations', ad, {'customerId': cust, 'items': [{'productId': pid, 'quantity': 3, 'unitPrice': 10000, 'ivaPercent': 19}]})
+    check('crear cotizacion', r[0] in (200, 201), r)
+    qid = (d(r) or {}).get('id')
+    qty_after = [x.get('quantity') for x in items_of(call('GET', f'/stock?productId={pid}&warehouseId={wa}', ad))]
+    check('la cotizacion NO altera las unidades de la bodega', qty_before == qty_after, (qty_before, qty_after))
+    r = call('GET', f'/quotations/{qid}', et)
+    check('un empleado de otra bodega (B) ve la cotizacion', r[0] == 200, r)
+    r = call('GET', '/quotations?pageSize=50', et)
+    check('la lista de cotizaciones del empleado de B incluye la de la bodega A', f'"id": {qid}' in json.dumps(r[1]), r[0])
+    r = call('GET', f'/customers/{cust}', et)
+    check('el cliente de la compania es accesible desde cualquier bodega', r[0] == 200, r)
+    r = call('GET', f'/products/{pid}', et)
+    check('el producto de la compania es accesible desde cualquier bodega', r[0] == 200, r)
+    r = call('GET', '/employees?pageSize=50', ad)
+    check('los empleados se listan por compania (sin filtrar por bodega)', r[0] == 200, r)
+
+    print('== Cierre de caja con transferencias y abonos declarados')
+    wc = d(call('POST', '/warehouses', ad, {'code': 'PC' + sfx, 'name': 'Bodega Caja', 'city': 'Cali'}))['id']
+    r = call('POST', '/cash/sessions/open', ad, {'warehouseId': wc, 'openingAmount': 50000})
+    check('abrir turno', r[0] in (200, 201), r)
+    r = call('GET', f'/cash/sessions/active?warehouseId={wc}', ad)
+    act = d(r) or {}
+    check('el turno activo trae abonosTotal', 'abonosTotal' in act, act)
+    r = call('POST', '/cash/sessions/close', ad, {'warehouseId': wc, 'countedCash': 50000, 'countedAbonos': -5})
+    check('abonos declarados negativos -> 400', r[0] == 400, r)
+    r = call('POST', '/cash/sessions/close', ad, {'warehouseId': wc, 'countedCash': 50000, 'countedTransfer': 0, 'countedAbonos': 0})
+    check('cerrar con montos declarados', r[0] == 200, r)
+    closed = d(r) or {}
+    check('el cierre guarda transferencias y abonos declarados con su diferencia', closed.get('countedTransfer') == 0 and closed.get('transferDifference') == 0 and closed.get('abonosDifference') == 0 and closed.get('difference') == 0, closed)
+
 
     print(f'\nRESULTADO abonos/traslados: {e2e.ok_count} ok, {e2e.fail_count} fallas (compania {cid})')
 

@@ -294,4 +294,12 @@ $sync_seq$;
 -- un administrador puede pedir traslados sin ser empleado: el solicitante queda vacío (la auditoría guarda quién fue)
 ALTER TABLE transfers ALTER COLUMN employee_id DROP NOT NULL;
 
+-- el cierre de caja declara también las transferencias y los abonos (pagos de ventas a crédito) del turno
+ALTER TABLE cash_sessions ADD COLUMN IF NOT EXISTS abonos_total NUMERIC(14,2);
+ALTER TABLE cash_sessions ADD COLUMN IF NOT EXISTS counted_transfer NUMERIC(14,2) CHECK (counted_transfer IS NULL OR counted_transfer >= 0);
+ALTER TABLE cash_sessions ADD COLUMN IF NOT EXISTS counted_abonos NUMERIC(14,2) CHECK (counted_abonos IS NULL OR counted_abonos >= 0);
+
+-- lo mismo con las cotizaciones: un administrador puede crearlas sin ser empleado
+ALTER TABLE quotations ALTER COLUMN employee_id DROP NOT NULL;
+
 COMMIT;

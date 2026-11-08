@@ -30,7 +30,7 @@ export const SALES_ENDPOINTS = {
     CONFIRM: (id: number | string) => `/bank-statements/records/${id}/confirm`,
     IGNORE: (id: number | string) => `/bank-statements/records/${id}/ignore`,
   },
-  // Turnos de caja y arqueos
+  // Turnos de caja y cierres
   CASH_SESSIONS: {
     ACTIVE: '/cash/sessions/active',
     OPEN: '/cash/sessions/open',

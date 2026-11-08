@@ -1,6 +1,6 @@
-// useCashClose · estado y guardado del arqueo y cierre del turno: efectivo contado, gastos de caja, notas y el cálculo en vivo de lo esperado y la diferencia
+// useCashClose · estado y guardado del cierre del turno: monto en efectivo, transferencias y abonos declarados, gastos de caja, notas y el cálculo en vivo de lo esperado y las diferencias
 // conecta con: CashClosePanel (lo usa), cash.helpers (computeClosing y cleanExpenses), cash.thunks (closeCashSessionThunk), cash.selectors y navigation (cierra el panel)
-// ojo: el efectivo contado es obligatorio; una fila de gasto vacía se ignora, pero una a medias (sin concepto o sin monto) frena el cierre y se avisa
+// ojo: el efectivo es obligatorio; las transferencias lo son si el turno recibió alguna y los abonos si hubo abonos (si no, no se piden); una fila de gasto vacía se ignora, pero una a medias (sin concepto o sin monto) frena el cierre y se avisa
 import { useMemo, useState } from 'react'
 import { closeDrawerForm } from '@/features/navigation'
 import { toast } from '@/global/helpers/feedback/toast'
@@ -17,12 +17,17 @@ export const useCashClose = () => {
   const dispatch = useAppDispatch()
   const { session, saving } = useAppSelector(selectCash)
   const [counted, setCounted] = useState('')
+  const [countedTransfer, setCountedTransfer] = useState('')
+  const [countedAbonos, setCountedAbonos] = useState('')
   const [notes, setNotes] = useState('')
   const [expenses, setExpenses] = useState<CashExpense[]>([])
   const [error, setError] = useState<string | null>(null)
 
-  const closing = useMemo(() => (session ? computeClosing(session, expenses, Number(counted) || 0) : null), [session, expenses, counted])
-  const hasCounted = counted !== ''
+  const closing = useMemo(() => (session ? computeClosing(session, expenses, { cash: Number(counted) || 0, transfer: Number(countedTransfer) || 0, abonos: Number(countedAbonos) || 0 }) : null), [session, expenses, counted, countedTransfer, countedAbonos])
+  const needsTransfer = (session?.transferTotal ?? 0) > 0
+  const needsAbonos = (session?.abonosTotal ?? 0) > 0
+  // se puede cerrar cuando está declarado todo lo que el turno recibió
+  const hasCounted = counted !== '' && (!needsTransfer || countedTransfer !== '') && (!needsAbonos || countedAbonos !== '')
   const half = expenses.some((expense) => !isBlank(expense) && !isExpenseFilled(expense))
 
   const addExpense = () => setExpenses((prev) => [...prev, EMPTY_EXPENSE])
@@ -37,14 +42,14 @@ export const useCashClose = () => {
       return
     }
     setError(null)
-    const result = await dispatch(closeCashSessionThunk({ warehouseId: session.warehouseId, countedCash: Number(counted), notes: notes.trim() || undefined, expenses: cleanExpenses(expenses) }))
+    const result = await dispatch(closeCashSessionThunk({ warehouseId: session.warehouseId, countedCash: Number(counted), countedTransfer: countedTransfer === '' ? undefined : Number(countedTransfer), countedAbonos: countedAbonos === '' ? undefined : Number(countedAbonos), notes: notes.trim() || undefined, expenses: cleanExpenses(expenses) }))
     if (closeCashSessionThunk.fulfilled.match(result)) {
-      toast.success('Turno de caja cerrado', { description: 'El arqueo quedó guardado.' })
+      toast.success('Turno de caja cerrado', { description: 'El cierre quedó guardado.' })
       dispatch(closeDrawerForm())
     } else {
       setError(result.payload ?? 'No se pudo cerrar el turno de caja.')
     }
   }
 
-  return { session, closing, counted, setCounted, notes, setNotes, expenses, addExpense, removeExpense, changeExpense, hasCounted, saving, error, submit, cancel: () => dispatch(closeDrawerForm()) }
+  return { session, closing, counted, setCounted, countedTransfer, setCountedTransfer, countedAbonos, setCountedAbonos, needsTransfer, needsAbonos, notes, setNotes, expenses, addExpense, removeExpense, changeExpense, hasCounted, saving, error, submit, cancel: () => dispatch(closeDrawerForm()) }
 }

@@ -44,6 +44,9 @@ type CashSessionEntity struct {
 	ClosedAt          *time.Time
 	CashTotal         *float64
 	TransferTotal     *float64
+	AbonosTotal       *float64 // pagos de ventas a crédito recibidos en el turno
+	CountedTransfer   *float64 // transferencias que el cajero declara al cerrar
+	CountedAbonos     *float64 // abonos que el cajero declara al cerrar
 	PaymentsCount     *int
 	ExpectedCash      *float64
 	CountedCash       *float64
@@ -64,7 +67,8 @@ func (r *CashSessionRepository) FindActiveByActor(ctx context.Context, q db.DBEx
 			cs.status, cs.opened_by_actor_type, cs.opened_by_actor_id, cs.opened_by_name,
 			cs.opened_at, cs.opening_amount, cs.closed_by_actor_type, cs.closed_by_actor_id,
 			cs.closed_by_name, cs.closed_at, cs.cash_total, cs.transfer_total,
-			cs.payments_count, cs.expected_cash, cs.counted_cash, cs.difference, cs.notes
+			cs.payments_count, cs.expected_cash, cs.counted_cash, cs.difference, cs.notes,
+			cs.abonos_total, cs.counted_transfer, cs.counted_abonos
 		FROM cash_sessions cs
 		LEFT JOIN warehouses w ON cs.warehouse_id = w.id
 		WHERE cs.company_id = $1 AND cs.warehouse_id = $2 
@@ -79,6 +83,7 @@ func (r *CashSessionRepository) FindActiveByActor(ctx context.Context, q db.DBEx
 		&s.OpenedAt, &s.OpeningAmount, &s.ClosedByActorType, &s.ClosedByActorID,
 		&s.ClosedByName, &s.ClosedAt, &s.CashTotal, &s.TransferTotal,
 		&s.PaymentsCount, &s.ExpectedCash, &s.CountedCash, &s.Difference, &s.Notes,
+		&s.AbonosTotal, &s.CountedTransfer, &s.CountedAbonos,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) || isMissingSchemaElement(err) {
@@ -136,8 +141,11 @@ func (r *CashSessionRepository) CloseSession(ctx context.Context, q db.DBExecuto
 			expected_cash = $7,
 			counted_cash = $8,
 			difference = $9,
-			notes = $10
-		WHERE id = $11
+			notes = $10,
+			abonos_total = $11,
+			counted_transfer = $12,
+			counted_abonos = $13
+		WHERE id = $14
 		RETURNING closed_at
 	`
 	var closedAt time.Time
@@ -146,6 +154,7 @@ func (r *CashSessionRepository) CloseSession(ctx context.Context, q db.DBExecuto
 		s.ClosedByActorType, s.ClosedByActorID, s.ClosedByName,
 		s.CashTotal, s.TransferTotal, s.PaymentsCount,
 		s.ExpectedCash, s.CountedCash, s.Difference, s.Notes,
+		s.AbonosTotal, s.CountedTransfer, s.CountedAbonos,
 		s.ID,
 	).Scan(&closedAt)
 	if err != nil {
@@ -156,22 +165,34 @@ func (r *CashSessionRepository) CloseSession(ctx context.Context, q db.DBExecuto
 	return nil
 }
 
-// SessionTotals suma lo recibido en un turno: efectivo verificado, transferencias recibidas (verificadas o en revisión) y cuántos pagos hubo.
-// ojo: los pagos se ligan al turno abierto de la bodega de la venta cuando se crean (payments.cash_session_id); los anulados no cuentan
-func (r *CashSessionRepository) SessionTotals(ctx context.Context, q db.DBExecutor, sessionID int64) (cashTotal float64, transferTotal float64, count int, err error) {
+// SessionSums es lo recibido en un turno, separado por tipo de venta: las de contado (efectivo y transferencia) y los abonos de ventas a crédito
+type SessionSums struct {
+	Cash       float64 // efectivo verificado de ventas de contado
+	Transfer   float64 // transferencias de ventas de contado (verificadas o en revisión)
+	Abonos     float64 // pagos de ventas a crédito (en cualquier método, sin los anulados)
+	AbonosCash float64 // de los abonos, lo recibido en efectivo y verificado (entra a la gaveta)
+	Count      int
+}
+
+// SessionTotals suma lo recibido en un turno; los pagos se ligan al turno abierto de la bodega de la venta cuando se crean (payments.cash_session_id) y los anulados no cuentan
+func (r *CashSessionRepository) SessionTotals(ctx context.Context, q db.DBExecutor, sessionID int64) (SessionSums, error) {
 	const sql = `
 		SELECT
-			COALESCE(SUM(amount) FILTER (WHERE method = 'cash' AND status = 'verified'), 0),
-			COALESCE(SUM(amount) FILTER (WHERE method = 'transfer' AND status <> 'voided'), 0),
-			COUNT(*) FILTER (WHERE status <> 'voided')
-		FROM payments
-		WHERE cash_session_id = $1
+			COALESCE(SUM(p.amount) FILTER (WHERE s.payment_method <> 'credit' AND p.method = 'cash' AND p.status = 'verified'), 0),
+			COALESCE(SUM(p.amount) FILTER (WHERE s.payment_method <> 'credit' AND p.method = 'transfer' AND p.status <> 'voided'), 0),
+			COALESCE(SUM(p.amount) FILTER (WHERE s.payment_method = 'credit' AND p.status <> 'voided'), 0),
+			COALESCE(SUM(p.amount) FILTER (WHERE s.payment_method = 'credit' AND p.method = 'cash' AND p.status = 'verified'), 0),
+			COUNT(*) FILTER (WHERE p.status <> 'voided')
+		FROM payments p
+		JOIN sales s ON s.id = p.sale_id
+		WHERE p.cash_session_id = $1
 	`
-	err = q.QueryRow(ctx, sql, sessionID).Scan(&cashTotal, &transferTotal, &count)
+	var sums SessionSums
+	err := q.QueryRow(ctx, sql, sessionID).Scan(&sums.Cash, &sums.Transfer, &sums.Abonos, &sums.AbonosCash, &sums.Count)
 	if err != nil && isMissingSchemaElement(err) {
-		return 0, 0, 0, nil
+		return SessionSums{}, nil
 	}
-	return
+	return sums, err
 }
 
 // CashExpenseEntity es un gasto menor pagado desde la caja durante el turno.

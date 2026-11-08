@@ -1,6 +1,6 @@
 // CashShiftSlider · interruptor del turno de caja: izquierda = Abierta, derecha = Cerrada; se arrastra con mouse o dedo y se opera con el teclado
 // conecta con: CashRegisterScreen (lo pinta) y useCashSession (pide abrir o cerrar); CashShiftSlider.css para el aspecto
-// ojo: arrastrar a «Cerrada» NO cierra por sí solo: pide el arqueo (abre el panel) y el interruptor vuelve a «Abierta» hasta que el turno de verdad se cierre; lo mismo al revés con «Abrir»
+// ojo: arrastrar a «Cerrada» NO cierra por sí solo: pide el cierre de caja (abre el panel) y el interruptor vuelve a «Abierta» hasta que el turno de verdad se cierre; lo mismo al revés con «Abrir»
 import React, { useRef, useState } from 'react'
 import './CashShiftSlider.css'
 
@@ -64,7 +64,7 @@ export const CashShiftSlider: React.FC<Props> = ({ isOpen, loading, disabled = f
   }
 
   return (
-    <div className={`cash-slider ${blocked ? 'is-blocked' : ''}`} title={disabled ? disabledReason : isOpen ? 'Arrastra a «Cerrada» para hacer el arqueo' : 'Arrastra a «Abierta» para abrir el turno'}>
+    <div className={`cash-slider ${blocked ? 'is-blocked' : ''}`} title={disabled ? disabledReason : isOpen ? 'Arrastra a «Cerrada» para cerrar la caja' : 'Arrastra a «Abierta» para abrir el turno'}>
       <span className={`cash-slider-label ${isOpen ? 'is-on' : ''}`}>Abierta</span>
       <div
         ref={trackRef}

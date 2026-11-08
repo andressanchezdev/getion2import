@@ -899,7 +899,7 @@ CREATE TABLE quotations (
     company_id      BIGINT NOT NULL REFERENCES companies(id) ON DELETE RESTRICT,
     serial_code     VARCHAR(40) NOT NULL,
     customer_id     BIGINT NOT NULL REFERENCES customers(id) ON DELETE RESTRICT,
-    employee_id     BIGINT NOT NULL REFERENCES employees(id) ON DELETE RESTRICT,
+    employee_id     BIGINT REFERENCES employees(id) ON DELETE RESTRICT,
     cart_id         BIGINT REFERENCES carts(id) ON DELETE SET NULL,
     sale_id         BIGINT REFERENCES sales(id) ON DELETE SET NULL,
     status          VARCHAR(20) NOT NULL DEFAULT 'draft'
@@ -998,6 +998,9 @@ CREATE TABLE cash_sessions (
     counted_cash            NUMERIC(14,2) CHECK (counted_cash IS NULL OR counted_cash >= 0),
     difference              NUMERIC(14,2),
     notes                   TEXT,
+    abonos_total            NUMERIC(14,2),
+    counted_transfer        NUMERIC(14,2) CHECK (counted_transfer IS NULL OR counted_transfer >= 0),
+    counted_abonos          NUMERIC(14,2) CHECK (counted_abonos IS NULL OR counted_abonos >= 0),
     CHECK (status = 'open' OR closed_at IS NOT NULL)
 );
 

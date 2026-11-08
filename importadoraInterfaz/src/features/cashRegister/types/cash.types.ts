@@ -13,9 +13,10 @@ export interface CashSession {
   openingAmount: number // fondo inicial de cambio
   cashTotal: number // ventas en efectivo verificadas
   transferTotal: number // ventas por transferencia recibidas
+  abonosTotal: number // pagos de ventas a crédito recibidos en el turno
   paymentsCount: number
   expensesCash: number // gastos pagados en efectivo (solo cuando ya cerró)
-  expectedCash: number // fondo + ventas en efectivo - gastos en efectivo
+  expectedCash: number // fondo + ventas en efectivo + abonos en efectivo (el cierre le resta los gastos)
   countedCash?: number
   difference?: number // contado - esperado
   closedByName?: string
@@ -43,6 +44,7 @@ export interface CashSessionDto {
   closedAt?: string
   cashTotal?: number
   transferTotal?: number
+  abonosTotal?: number
   paymentsCount?: number
   expensesCash?: number
   expectedCash?: number
@@ -53,6 +55,8 @@ export interface CashSessionDto {
 export interface CloseCashInput {
   warehouseId: number
   countedCash: number
+  countedTransfer?: number // transferencias que declara el cajero
+  countedAbonos?: number // abonos que declara el cajero (solo si hubo)
   notes?: string
   expenses: CashExpense[]
 }
@@ -66,7 +70,7 @@ export interface CashState {
   requestId: string | null // la última carga lanzada: una respuesta anterior se descarta
 }
 
-// el resultado del arqueo: lo que debería haber en la gaveta contra lo contado
+// el resultado del cierre: lo que debería haber en la gaveta contra lo contado
 export type CashBalanceTone = 'balanced' | 'short' | 'over'
 
 export interface CashClosing {
@@ -75,6 +79,8 @@ export interface CashClosing {
   expectedCash: number
   difference: number
   tone: CashBalanceTone
+  transferDifference: number // transferencias declaradas - recibidas
+  abonosDifference: number // abonos declarados - recibidos
 }
 
 // ---- cobro mixto de un pedido en Caja ----

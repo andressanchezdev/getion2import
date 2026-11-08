@@ -1,38 +1,73 @@
-/* CashClosePanel.css · arqueo y cierre del turno: contexto, totales, filas de gastos y resultado del arqueo · solo usa tokens de styles/tokens.css */
+/* CashClosePanel.css · cierre de caja: contexto, tarjetas de monto, filas de gastos y etiquetas de diferencia · solo usa tokens de styles/tokens.css */
 .cash-close-context {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--c-slate-50);
+  font-size: var(--text-sm);
+}
+
+.cash-close-context > div {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  font-size: var(--text-sm);
+}
+
+.cash-close-context-fund {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.cash-close-context-label {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: var(--color-text-secondary);
 }
 
-.cash-close-context strong {
+.cash-close-context small {
+  color: var(--color-text-secondary);
+}
+
+.cash-close-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+}
+
+.cash-close-card-title {
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
 }
 
-.cash-close-totals {
+.cash-close-card-foot {
   display: flex;
-  flex-direction: column;
-  margin: 0;
-}
-
-.cash-close-totals div {
-  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: space-between;
-  gap: var(--space-3);
-  padding: var(--space-1) 0;
+  gap: var(--space-2);
   font-size: var(--text-sm);
-}
-
-.cash-close-totals dt {
   color: var(--color-text-secondary);
 }
 
-.cash-close-totals dd {
-  margin: 0;
-  font-weight: var(--font-weight-semibold);
+.cash-close-card-foot strong {
+  color: var(--color-text-primary);
   font-variant-numeric: tabular-nums;
+}
+
+.cash-close-breakdown {
+  margin: calc(-1 * var(--space-2)) 0 0;
+  padding: 0 var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
 }
 
 .cash-close-expenses-head {
@@ -57,29 +92,27 @@
   justify-self: end;
 }
 
-.cash-close-result {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding: var(--space-3);
+.cash-close-chip {
+  padding: 2px var(--space-2);
   border: 1px solid transparent;
-  border-radius: var(--radius-md);
-  font-size: var(--text-sm);
+  border-radius: var(--radius-pill, 999px);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
 }
 
-.cash-close-result.is-balanced {
+.cash-close-chip.is-balanced {
   background: var(--color-success-bg);
   border-color: var(--c-green-200);
   color: var(--color-success);
 }
 
-.cash-close-result.is-short {
+.cash-close-chip.is-short {
   background: var(--color-danger-bg);
   border-color: var(--c-red-200);
   color: var(--color-danger);
 }
 
-.cash-close-result.is-over {
+.cash-close-chip.is-over {
   background: var(--c-blue-50);
   border-color: var(--c-blue-300);
   color: var(--c-blue-600);

@@ -1,4 +1,4 @@
-// cash.service · llamadas a la API de turnos de caja: ver el turno abierto, abrirlo con un fondo y cerrarlo con el arqueo y los gastos
+// cash.service · llamadas a la API de turnos de caja: ver el turno abierto, abrirlo con un fondo y cerrarlo con los montos declarados y los gastos
 // conecta con: api/client y api/config (CASH_SESSIONS), cash.helpers (convierte); las usa cash.thunks
 // ojo: si el turno no se pudo consultar el error sube (antes se tragaba y la caja parecía cerrada); «no hay turno abierto» es null, no un error
 import { apiClient, API_CONFIG, type APIResponse } from '@/api'

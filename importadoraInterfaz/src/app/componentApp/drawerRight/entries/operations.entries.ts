@@ -146,8 +146,8 @@ export const OPERATIONS_ENTRIES: Partial<Record<DrawerFormKind, FormEntry>> = {
   },
   cashClose: {
     icon: cartIcon,
-    title: () => 'Arqueo y cierre de caja',
-    subtitle: 'Efectivo contado y balance del turno',
+    title: () => 'Cierre de caja',
+    subtitle: 'Efectivo, transferencias y abonos del turno',
     render: () => createElement(CashClosePanel),
   },
   cashCollect: {

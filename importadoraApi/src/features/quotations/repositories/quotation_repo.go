@@ -23,7 +23,7 @@ type QuotationEntity struct {
 	SerialCode    string
 	CustomerID    int64
 	CustomerName  string
-	EmployeeID    int64
+	EmployeeID    *int64 // quien la creó; vacío si la creó un administrador sin empleado
 	EmployeeName  string
 	CartID        *int64
 	SaleID        *int64
