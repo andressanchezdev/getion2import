@@ -2,12 +2,13 @@
 // conecta con: CreateTransferForm y useTransferRequest
 import React from 'react'
 import type { Warehouse } from '@/features/warehouses'
-import type { CreateTransferInitialPayload } from '../../hooks/useTransferRequest'
 
 interface Props {
   warehouses: Warehouse[]
   destWarehouseId: number
-  focusedProduct: NonNullable<CreateTransferInitialPayload['product']>
+  stockByWarehouse: Record<string, number> // lo vendible real en cada bodega de la compañía (no el mapa de la tarjeta, que solo conoce la bodega activa)
+  loading: boolean
+  error: string | null
   getOriginQty: (originWarehouseId: number) => number
   setOriginQty: (originWarehouseId: number, originWarehouseName: string, maxStock: number, quantity: number) => void
 }
@@ -15,7 +16,9 @@ interface Props {
 export const TransferWarehouseStockList: React.FC<Props> = ({
   warehouses,
   destWarehouseId,
-  focusedProduct,
+  stockByWarehouse,
+  loading,
+  error,
   getOriginQty,
   setOriginQty,
 }) => {
@@ -37,12 +40,14 @@ export const TransferWarehouseStockList: React.FC<Props> = ({
         <small>Elige de qué bodega(s) vas a pedir este repuesto</small>
       </div>
 
+      {error && <div className="form-field-error-msg">{error}</div>}
+
       <div className="transfer-wh-cards">
         {originWarehouses.map((wh) => {
           const originId = Number(wh.id)
-          const physicalStock = Number(focusedProduct.stockByWarehouse?.[String(originId)] ?? 0)
+          const physicalStock = Number(stockByWarehouse[String(originId)] ?? 0)
           const requestedQty = getOriginQty(originId)
-          const hasStock = physicalStock > 0
+          const hasStock = !loading && physicalStock > 0
 
           return (
             <div
@@ -56,7 +61,9 @@ export const TransferWarehouseStockList: React.FC<Props> = ({
                 </div>
 
                 <div className="transfer-wh-stock-indicator">
-                  {hasStock ? (
+                  {loading ? (
+                    <span className="transfer-stock-badge">Consultando…</span>
+                  ) : hasStock ? (
                     <span className="transfer-stock-badge available">
                       {physicalStock} {physicalStock === 1 ? 'ud disponible' : 'uds disponibles'}
                     </span>

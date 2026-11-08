@@ -95,7 +95,9 @@ export const CreateTransferForm: React.FC<CreateTransferFormProps> = ({ initialP
               <TransferWarehouseStockList
                 warehouses={request.warehouses}
                 destWarehouseId={request.destWarehouseId}
-                focusedProduct={focusedProduct}
+                stockByWarehouse={request.stockByWarehouse}
+                loading={request.stockLoading}
+                error={request.stockError}
                 getOriginQty={request.getOriginQty}
                 setOriginQty={request.setOriginQty}
               />

@@ -11,3 +11,11 @@
   color: var(--color-text-secondary);
 }
 
+/* buscador de la barra: crece hasta 400 px y en pantallas angostas se encoge en vez de pasarse del ancho */
+.recycle-toolbar-search {
+  display: flex;
+  gap: var(--space-3);
+  flex: 1 1 280px;
+  min-width: 0;
+  max-width: 400px;
+}

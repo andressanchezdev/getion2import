@@ -16,6 +16,7 @@ import {
 } from '../slices/transfers.slice'
 import { createTransferRequestThunk } from '../thunks/transfers.thunks'
 import type { ProductStockMatrix, TransferRequestLine, TransferRequestResult } from '../types/transfers.types'
+import { useProductStockByWarehouse } from './useProductStockByWarehouse'
 import { useTransferProductSearch } from './useTransferProductSearch'
 
 export interface CreateTransferInitialPayload {
@@ -53,15 +54,15 @@ export const useTransferRequest = (initial?: CreateTransferInitialPayload) => {
   // Producto activo pasado al abrir el drawer desde el catálogo
   const focusedProduct = initial?.product
 
+  // existencias reales del producto en cada bodega de la compañía (el mapa que trae la tarjeta del catálogo solo conoce la bodega activa)
+  const productStock = useProductStockByWarehouse(focusedProduct ? Number(focusedProduct.id) : undefined, focusedProduct?.stockByWarehouse)
+  const stockByWarehouse = productStock.stockByWarehouse
+
   // Stock físico actual de este producto en la sede de destino
-  const localStockInDest = focusedProduct?.stockByWarehouse
-    ? Number(focusedProduct.stockByWarehouse[String(destWarehouseId)] ?? 0)
-    : 0
+  const localStockInDest = Number(stockByWarehouse[String(destWarehouseId)] ?? 0)
 
   // Total consolidado en toda la red para el producto enfocado
-  const totalRedStock = focusedProduct?.stockByWarehouse
-    ? Object.values(focusedProduct.stockByWarehouse).reduce((acc, q) => acc + (Number(q) > 0 ? Number(q) : 0), 0)
-    : 0
+  const totalRedStock = Object.values(stockByWarehouse).reduce((acc, q) => acc + (Number(q) > 0 ? Number(q) : 0), 0)
 
   const [search, setSearch] = useState('')
   const [isPriority, setIsPriority] = useState(false)
@@ -219,6 +220,9 @@ export const useTransferRequest = (initial?: CreateTransferInitialPayload) => {
     originWarehouseId,
     setOriginWarehouseId,
     focusedProduct,
+    stockByWarehouse,
+    stockLoading: productStock.loading,
+    stockError: productStock.error,
     localStockInDest,
     totalRedStock,
     search,

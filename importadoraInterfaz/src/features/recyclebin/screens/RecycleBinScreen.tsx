@@ -53,7 +53,7 @@ export const RecycleBinScreen: React.FC = () => {
     <div className="recycle-bin-screen">
       <div className="data-card">
         <div className="data-toolbar">
-          <div style={{ display: 'flex', gap: 'var(--space-3)', flex: 1, minWidth: '280px', maxWidth: '400px' }}>
+          <div className="recycle-toolbar-search">
             <SearchBar
               value={search}
               onChange={setSearch}

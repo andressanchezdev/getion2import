@@ -15,15 +15,31 @@
   background: var(--bg-card);
   display: flex;
   align-items: center;
+  flex-direction: row;
   flex-wrap: wrap;
   gap: var(--space-4);
   padding: var(--space-4);
   border-bottom: 1px solid var(--color-border);
 }
 
-.data-toolbar > [class*="toolbar-actions"],
-.data-toolbar > [class*="toolbar-right"] {
+.data-toolbar>[class*="toolbar-actions"],
+.data-toolbar>[class*="toolbar-right"] {
   margin-left: auto;
+}
+
+/* los botones de acción (crear, registrar, actualizar...) nunca se achican ni se cortan: si falta espacio, su grupo baja a otra fila */
+.data-toolbar>[class*="toolbar-actions"],
+.data-toolbar>[class*="toolbar-right"] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  max-width: 100%;
+}
+
+.data-toolbar button {
+  white-space: nowrap;
 }
 
 .data-table-wrap {
@@ -101,6 +117,57 @@
 @media (max-width: 900px) {
   .data-toolbar {
     gap: var(--space-3);
+  }
+}
+
+/* vista móvil: cada parte de la barra (buscador, filtros, acciones) ocupa su propia fila y los botones de acción quedan completos y visibles */
+@media (max-width: 700px) {
+  .data-toolbar {
+    padding: var(--space-3);
+  }
+
+  .data-toolbar.data-toolbar>* {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .data-toolbar.data-toolbar>[class*="toolbar-actions"],
+  .data-toolbar.data-toolbar>[class*="toolbar-right"] {
+    margin-left: 0;
+    justify-content: flex-end;
+  }
+
+  .data-toolbar.data-toolbar>[class*="toolbar-actions"]>button,
+  .data-toolbar.data-toolbar>[class*="toolbar-right"]>button {
+    flex: 1 1 auto;
+  }
+
+  .data-toolbar.data-toolbar>button {
+    flex: 1 1 auto;
+    width: auto;
+  }
+
+  /* filtros y campos de dentro (etiqueta + selector, fechas, buscador): ninguno se pasa del ancho de la barra */
+  .data-toolbar.data-toolbar [class*="toolbar-middle"],
+  .data-toolbar.data-toolbar [class*="toolbar-filter"],
+  .data-toolbar.data-toolbar [class*="-filter"] {
+    flex-wrap: wrap;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .data-toolbar.data-toolbar label,
+  .data-toolbar.data-toolbar select,
+  .data-toolbar.data-toolbar input,
+  .data-toolbar.data-toolbar .global-search-bar {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .data-toolbar.data-toolbar select {
+    width: 100%;
   }
 }
 
