@@ -3,8 +3,8 @@
 // ojo: la lista y el detalle llevan su requestId y el slice descarta respuestas viejas; crear, recibir y anular no se aceptan a la vez (condition) y devuelven la orden que dejó el backend
 import { createAsyncThunk } from '@reduxjs/toolkit'
 import { getErrorMessage } from '@/api'
-import { createPurchase, downloadPurchaseExcel, fetchPurchase, fetchPurchases, fetchSuppliers, receivePurchase, voidPurchase } from '../services/purchases.service'
-import type { CreatePurchaseInput, Purchase, PurchasesState, ReceiveLineInput, SupplierOption } from '../types/purchases.types'
+import { createPurchase, deleteSupplierProduct, downloadPurchaseExcel, fetchPurchase, fetchPurchases, fetchSupplierProducts, fetchSuppliers, payPurchase, receivePurchase, saveSupplierProduct, voidPurchase } from '../services/purchases.service'
+import type { CreatePurchaseInput, PayPurchaseInput, Purchase, PurchasesState, ReceiveLineInput, SupplierOption, SupplierProduct } from '../types/purchases.types'
 
 type Config = { state: { purchases: PurchasesState }; rejectValue: string }
 const notSaving = (_: unknown, { getState }: { getState: () => { purchases: PurchasesState } }) => !getState().purchases.saving
@@ -33,6 +33,32 @@ export const loadSuppliersThunk = createAsyncThunk<SupplierOption[], void, Confi
   }
 })
 
+// el catálogo de un proveedor (no se guarda en el store: lo usan el formulario de la orden y el panel del catálogo)
+export const loadSupplierProductsThunk = createAsyncThunk<SupplierProduct[], number, Config>('purchases/loadSupplierProducts', async (supplierId, { rejectWithValue }) => {
+  try {
+    return await fetchSupplierProducts(supplierId)
+  } catch (error) {
+    return rejectWithValue(getErrorMessage(error, 'No se pudo cargar el catálogo del proveedor.'))
+  }
+})
+
+export const saveSupplierProductThunk = createAsyncThunk<SupplierProduct[], { supplierId: number; productId: number; cost: number; supplierCode: string }, Config>('purchases/saveSupplierProduct', async ({ supplierId, ...input }, { rejectWithValue }) => {
+  try {
+    return await saveSupplierProduct(supplierId, input)
+  } catch (error) {
+    return rejectWithValue(getErrorMessage(error, 'No se pudo guardar el producto del proveedor.'))
+  }
+})
+
+export const deleteSupplierProductThunk = createAsyncThunk<number, { supplierId: number; productId: number }, Config>('purchases/deleteSupplierProduct', async ({ supplierId, productId }, { rejectWithValue }) => {
+  try {
+    await deleteSupplierProduct(supplierId, productId)
+    return productId
+  } catch (error) {
+    return rejectWithValue(getErrorMessage(error, 'No se pudo quitar el producto del catálogo.'))
+  }
+})
+
 export const createPurchaseThunk = createAsyncThunk<Purchase, CreatePurchaseInput, Config>(
   'purchases/create',
   async (input, { rejectWithValue }) => {
@@ -52,6 +78,18 @@ export const receivePurchaseThunk = createAsyncThunk<Purchase, { id: number; lin
       return await receivePurchase(id, lines)
     } catch (error) {
       return rejectWithValue(getErrorMessage(error, 'No se pudo registrar la recepción.'))
+    }
+  },
+  { condition: notSaving }
+)
+
+export const payPurchaseThunk = createAsyncThunk<Purchase, { id: number; input: PayPurchaseInput }, Config>(
+  'purchases/pay',
+  async ({ id, input }, { rejectWithValue }) => {
+    try {
+      return await payPurchase(id, input)
+    } catch (error) {
+      return rejectWithValue(getErrorMessage(error, 'No se pudo registrar el pago de la recepción.'))
     }
   },
   { condition: notSaving }

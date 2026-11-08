@@ -8,6 +8,7 @@ import {
   createPurchaseThunk,
   loadPurchaseDetailThunk,
   loadPurchasesThunk,
+  payPurchaseThunk,
   receivePurchaseThunk,
   voidPurchaseThunk,
 } from '../thunks/purchases.thunks'
@@ -65,6 +66,18 @@ export const purchasesSlice = createSlice({
         state.items.unshift({ ...action.payload, items: [] })
       })
       .addCase(createPurchaseThunk.rejected, (state) => {
+        state.saving = false
+      })
+      .addCase(payPurchaseThunk.pending, (state) => {
+        state.saving = true
+      })
+      .addCase(payPurchaseThunk.fulfilled, (state, action) => {
+        state.saving = false
+        const index = state.items.findIndex((item) => item.id === action.payload.id)
+        if (index !== -1) state.items[index] = { ...state.items[index], paidTotal: action.payload.paidTotal }
+        if (state.detail.data?.id === action.payload.id) state.detail.data = action.payload
+      })
+      .addCase(payPurchaseThunk.rejected, (state) => {
         state.saving = false
       })
       .addCase(receivePurchaseThunk.pending, (state) => {

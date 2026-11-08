@@ -10,13 +10,15 @@ import { RowActions } from '@/global/components/UI/molecules/table/RowActions'
 import { formatCOP } from '@/global/helpers/formatting/format'
 import { usePagedList } from '@/global/hooks/data/usePagedList'
 import { useAppDispatch } from '@/global/hooks/store/useRedux'
+import { usePermissions } from '@/global/hooks/access/usePermissions'
 import { openDrawerForm } from '@/features/navigation'
 import eyeIcon from '@/assets/icons/eye.svg?raw'
 import fileIcon from '@/assets/icons/file-text.svg?raw'
 import receiveIcon from '@/assets/icons/shipping.svg?raw'
 import banIcon from '@/assets/icons/ban.svg?raw'
+import walletIcon from '@/assets/icons/wallet.svg?raw'
 import { PURCHASE_STATUS, PURCHASE_STATUS_OPTIONS } from '../../constants/purchases.constants'
-import { canReceive } from '../../helpers/purchases.rules'
+import { canPay, canReceive, pendingToPay } from '../../helpers/purchases.rules'
 import { usePurchaseActions } from '../../hooks/usePurchaseActions'
 import { usePurchases, type PurchasesMode } from '../../hooks/usePurchases'
 import type { Purchase, PurchaseStatus } from '../../types/purchases.types'
@@ -31,6 +33,8 @@ export const PurchasesTable: React.FC<{ mode: PurchasesMode }> = ({ mode }) => {
   const [toVoid, setToVoid] = useState<Purchase | null>(null)
   const { pageItems, meta, setPage } = usePagedList(list.items, `${list.search}|${list.status}|${list.selectedWarehouseId}|${mode}`)
   const receiving = mode === 'receiving'
+  // pagar la recepción es de la caja: lo hace quien puede editar en Caja
+  const canPayFromCash = usePermissions().canPerformAction('shop', 'cashRegister', 'update')
 
   const warehouseOptions = [
     { value: 'all', label: 'Todas las bodegas' },
@@ -119,13 +123,14 @@ export const PurchasesTable: React.FC<{ mode: PurchasesMode }> = ({ mode }) => {
               <th>Referencia</th>
               <th className="purchases-num">Total</th>
               <th>Estado</th>
+              {receiving && <th>Pago</th>}
               <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
             {message ? (
               <tr>
-                <td colSpan={9} className="purchases-empty">{message}</td>
+                <td colSpan={receiving ? 10 : 9} className="purchases-empty">{message}</td>
               </tr>
             ) : (
               pageItems.map((purchase) => (
@@ -140,11 +145,19 @@ export const PurchasesTable: React.FC<{ mode: PurchasesMode }> = ({ mode }) => {
                   <td>{purchase.supplierRef || '—'}</td>
                   <td className="purchases-num table-amount">{formatCOP(purchase.total)}</td>
                   <td><Pill tone={PURCHASE_STATUS[purchase.status].tone}>{PURCHASE_STATUS[purchase.status].label}</Pill></td>
+                  {receiving && (
+                    <td>
+                      <Pill tone={purchase.paidTotal <= 0 ? 'gray' : pendingToPay(purchase) > 0 ? 'amber' : 'green'}>
+                        {purchase.paidTotal <= 0 ? 'Sin pagar' : pendingToPay(purchase) > 0 ? `Pagado ${formatCOP(purchase.paidTotal)}` : 'Pagada'}
+                      </Pill>
+                    </td>
+                  )}
                   <td>
                     <RowActions
                       actions={[
                         { key: 'detail', label: `Ver la orden ${purchase.serial}`, icon: eyeIcon, onClick: () => dispatch(openDrawerForm({ kind: 'purchaseDetail', payload: { id: purchase.id } })) },
                         { key: 'receive', label: `Recibir mercancía de ${purchase.serial}`, icon: receiveIcon, tone: 'success', visible: canReceive(purchase), onClick: () => dispatch(openDrawerForm({ kind: 'purchaseReceive', payload: { id: purchase.id } })) },
+                        { key: 'pay', label: `Pagar la recepción de ${purchase.serial} desde la caja`, icon: walletIcon, tone: 'success', visible: receiving && canPayFromCash && canPay(purchase), onClick: () => dispatch(openDrawerForm({ kind: 'purchasePay', payload: { id: purchase.id } })) },
                         { key: 'excel', label: `Bajar el Excel de ${purchase.serial}`, icon: fileIcon, onClick: () => actions.exportExcel(purchase) },
                         { key: 'void', label: `Anular la orden ${purchase.serial}`, icon: banIcon, tone: 'danger', visible: purchase.status === 'ordered', onClick: () => setToVoid(purchase) },
                       ]}

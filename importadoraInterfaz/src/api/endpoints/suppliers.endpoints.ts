@@ -15,7 +15,9 @@ export const SUPPLIERS_ENDPOINTS = {
     EXPORT_EXCEL: (id: number | string) => `/purchases/${id}/export/excel`,
     RECEIVE: (id: number | string) => `/purchases/${id}/receive`,
     VOID: (id: number | string) => `/purchases/${id}/void`,
+    PAY: (id: number | string) => `/purchases/${id}/pay`,
     SUPPLIER_PRODUCTS: (supplierId: number | string) => `/purchases/suppliers/${supplierId}/products`,
+    SUPPLIER_PRODUCT: (supplierId: number | string, productId: number | string) => `/purchases/suppliers/${supplierId}/products/${productId}`,
     SUPPLIER_CATALOG_UPLOAD: (supplierId: number | string) => `/purchases/suppliers/${supplierId}/catalog/upload`,
   },
 } as const

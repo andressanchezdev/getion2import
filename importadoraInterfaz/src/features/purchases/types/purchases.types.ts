@@ -32,6 +32,7 @@ export interface Purchase {
   subtotal: number
   ivaTotal: number
   total: number
+  paidTotal: number // lo que la caja ya pagó de la recepción
   notes: string
   receivedAt: string // '' si no se ha recibido del todo
   createdAt: string
@@ -66,10 +67,28 @@ export interface PurchaseDto {
   subtotal?: number
   ivaTotal?: number
   total?: number
+  paidTotal?: number
   notes?: string | null
   receivedAt?: string | null
   createdAt?: string
   items?: PurchaseItemDto[] | null
+}
+
+// un producto del catálogo de un proveedor (lo que él nos vende y a qué costo)
+export interface SupplierProduct {
+  productId: number
+  code: string
+  name: string
+  supplierCode: string // el código con que el proveedor conoce el producto
+  cost: number
+}
+
+export interface SupplierProductDto {
+  productId: number
+  productCode: string
+  productName: string
+  supplierCode?: string | null
+  cost: number
 }
 
 // ---- lo que se envía ----
@@ -80,6 +99,12 @@ export interface CreatePurchaseInput {
   expectedDate?: string
   notes?: string
   items: Array<{ productId: number; quantity: number; unitCost: number; ivaPercent?: number }>
+}
+
+// pago de una recepción desde la caja: solo efectivo
+export interface PayPurchaseInput {
+  cashAmount: number
+  receiptNumber?: string
 }
 
 export interface ReceiveLineInput {

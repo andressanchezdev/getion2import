@@ -15,6 +15,7 @@ import { useAppDispatch } from '@/global/hooks/store/useRedux'
 import { openDrawerForm } from '@/features/navigation'
 import editIcon from '@/assets/icons/edit.svg?raw'
 import trashIcon from '@/assets/icons/trash.svg?raw'
+import listIcon from '@/assets/icons/list.svg?raw'
 import { EXTERNAL_STATUS_OPTIONS, labelsOf } from '../constants/externals.constants'
 import { useExternalActions } from '../hooks/useExternalActions'
 import { useExternals } from '../hooks/useExternals'
@@ -137,6 +138,7 @@ export const ExternalsTable: React.FC<{ kind: ExternalKind }> = ({ kind }) => {
                     <td>
                       <RowActions
                         actions={[
+                          { key: 'catalog', label: `Catálogo de productos de ${item.name}`, icon: listIcon, visible: isSupplier, onClick: () => dispatch(openDrawerForm({ kind: 'supplierCatalog', payload: { id: item.id, name: item.name } })) },
                           { key: 'edit', label: `Editar ${labels.article}`, icon: editIcon, onClick: () => openForm(item) },
                           { key: 'delete', label: `Eliminar ${labels.article}`, icon: trashIcon, tone: 'danger', onClick: () => setToDelete(item) },
                         ]}

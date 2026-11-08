@@ -7,7 +7,7 @@ import { openPurchase, purchasesReducer } from './purchases.slice'
 import type { Purchase } from '../types/purchases.types'
 
 const purchase = (over: Partial<Purchase> = {}): Purchase => ({
-  id: 1, serial: 'OC-1', supplierId: 1, supplierName: 'Bajaj', warehouseId: 1, warehouseName: 'Principal', employeeName: 'Ana', status: 'ordered', supplierRef: '', expectedDate: '', subtotal: 100, ivaTotal: 19, total: 119, notes: '', receivedAt: '', createdAt: '2026-11-01',
+  id: 1, serial: 'OC-1', supplierId: 1, supplierName: 'Bajaj', warehouseId: 1, warehouseName: 'Principal', employeeName: 'Ana', status: 'ordered', supplierRef: '', expectedDate: '', subtotal: 100, ivaTotal: 19, total: 119, paidTotal: 0, notes: '', receivedAt: '', createdAt: '2026-11-01',
   items: [{ id: 5, productId: 9, productCode: 'A', productName: 'Pastillas', supplierCode: '', quantity: 10, receivedQty: 0, unitCost: 10, ivaPercent: 19, subtotal: 100 }],
   ...over,
 })

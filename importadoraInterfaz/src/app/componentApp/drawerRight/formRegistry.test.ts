@@ -38,6 +38,8 @@ const SAMPLES: Record<DrawerFormKind, unknown> = {
   cashClose: undefined,
   purchaseDetail: { id: 1 },
   purchaseReceive: { id: 1 },
+  purchasePay: { id: 1 },
+  supplierCatalog: { id: 1, name: 'Proveedor' },
   purchaseForm: undefined,
   billingConfig: undefined,
   docSeriesForm: { id: 1, warehouseId: 1, docType: 'invoice', prefix: 'FE-', nextNumber: 2 },

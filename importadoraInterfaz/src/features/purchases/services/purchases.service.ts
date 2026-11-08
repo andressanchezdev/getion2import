@@ -5,8 +5,8 @@ import { apiClient, API_CONFIG, toPaginated, type APIResponse } from '@/api'
 import { getExternals } from '@/features/externals'
 import { filenameFromDisposition, saveBlob } from '@/global/helpers/files/saveBlob'
 import { PURCHASES_LOAD_SIZE } from '../constants/purchases.constants'
-import { toPurchase } from '../helpers/purchases.adapter'
-import type { CreatePurchaseInput, Purchase, PurchaseDto, ReceiveLineInput, SupplierOption } from '../types/purchases.types'
+import { toPurchase, toSupplierProduct } from '../helpers/purchases.adapter'
+import type { CreatePurchaseInput, PayPurchaseInput, Purchase, PurchaseDto, ReceiveLineInput, SupplierOption, SupplierProduct, SupplierProductDto } from '../types/purchases.types'
 
 const { PURCHASES } = API_CONFIG.ENDPOINTS
 
@@ -50,3 +50,25 @@ export const downloadPurchaseExcel = async (id: number, fallbackName: string): P
 
 // los proveedores activos para elegir al crear una orden
 export const fetchSuppliers = async (): Promise<SupplierOption[]> => (await getExternals('supplier')).filter((supplier) => supplier.isActive).map((supplier) => ({ id: supplier.id, name: supplier.name }))
+
+// la caja de la bodega paga (en efectivo) la recepción de una orden; devuelve la orden con lo pagado
+export const payPurchase = async (id: number, input: PayPurchaseInput): Promise<Purchase> => {
+  const { data } = await apiClient.post<APIResponse<PurchaseDto>>(PURCHASES.PAY(id), input)
+  return toPurchase(data.data!)
+}
+
+// los productos que vende un proveedor (su catálogo)
+export const fetchSupplierProducts = async (supplierId: number): Promise<SupplierProduct[]> => {
+  const { data } = await apiClient.get<APIResponse<SupplierProductDto[] | null>>(PURCHASES.SUPPLIER_PRODUCTS(supplierId))
+  return (data.data ?? []).map(toSupplierProduct)
+}
+
+// agrega un producto al catálogo del proveedor o cambia su costo y código; devuelve el catálogo completo
+export const saveSupplierProduct = async (supplierId: number, input: { productId: number; cost: number; supplierCode: string }): Promise<SupplierProduct[]> => {
+  const { data } = await apiClient.put<APIResponse<SupplierProductDto[] | null>>(PURCHASES.SUPPLIER_PRODUCTS(supplierId), input)
+  return (data.data ?? []).map(toSupplierProduct)
+}
+
+export const deleteSupplierProduct = async (supplierId: number, productId: number): Promise<void> => {
+  await apiClient.delete(PURCHASES.SUPPLIER_PRODUCT(supplierId, productId))
+}

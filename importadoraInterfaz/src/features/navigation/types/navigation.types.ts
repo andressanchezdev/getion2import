@@ -69,6 +69,8 @@ export type DrawerFormKind =
   | 'cashCollect'
   | 'purchaseDetail'
   | 'purchaseReceive'
+  | 'purchasePay'
+  | 'supplierCatalog'
   | 'purchaseForm'
   | 'billingConfig'
   | 'docSeriesForm'
