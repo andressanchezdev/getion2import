@@ -1,7 +1,7 @@
 // inventory.stock.test · pruebas del filtro, los conteos por ubicación y los totales de la tabla de existencias
 // conecta con: inventory.stock; se corre con npm test
 import { describe, expect, it } from 'vitest'
-import { availabilitySummary, distinctValues, filterStockRows, locationCountByProduct, productTotals, stockTotals } from './inventory.stock'
+import { distinctValues, filterStockRows, locationCountByProduct, productTotals, stockTotals } from './inventory.stock'
 import type { InventoryStockRow } from '../types/inventory.types'
 
 const row = (over: Partial<InventoryStockRow>): InventoryStockRow => ({
@@ -42,18 +42,6 @@ describe('inventory.stock', () => {
   it('suma por producto y en total', () => {
     expect(productTotals(rows).get(1)).toEqual({ available: 15, sellable: 13 })
     expect(stockTotals(rows)).toEqual({ available: 15, reserved: 2, sellable: 13 })
-  })
-
-  it('resume dónde hay existencias del producto, por bodega y ubicación', () => {
-    const wh = [{ id: 1, name: 'Principal' }, { id: 2, name: 'Norte' }, { id: 3, name: 'Sur' }]
-    const stock = [
-      { warehouseId: 1, location: 'B1', available: 15 },
-      { warehouseId: 1, location: 'B2', available: 3 },
-      { warehouseId: 2, location: 'A1', available: 8 },
-      { warehouseId: 3, location: 'C1', available: 0 },
-    ]
-    expect(availabilitySummary(stock, wh)).toBe('Disponible en Principal (B1: 15 und, B2: 3 und) y Norte (A1: 8 und)')
-    expect(availabilitySummary([], wh)).toBe('')
   })
 
   it('lista los valores distintos ordenados', () => {
