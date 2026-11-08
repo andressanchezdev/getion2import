@@ -18,6 +18,11 @@ export const fetchInvoices = async (warehouseId?: number): Promise<Invoice[]> =>
 }
 
 // trae el detalle completo de una factura por su ID (GET /invoices/:id)
+// anula una factura emitida con su motivo (de 10 a 100 caracteres); la API lo deja en la auditoría
+export const annulInvoice = async (invoiceId: number, reason: string): Promise<void> => {
+  await apiClient.post(INVOICES.ANNUL(invoiceId), { reason })
+}
+
 export const fetchInvoiceById = async (invoiceId: number): Promise<Invoice> => {
   const { data } = await apiClient.get<APIResponse<InvoiceDto>>(INVOICES.BY_ID(invoiceId))
   return toInvoice(data.data)

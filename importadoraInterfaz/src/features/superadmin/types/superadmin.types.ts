@@ -45,6 +45,7 @@ export interface UpdateAdminPayload {
   document?: string
   phone?: string
   isActive?: boolean
+  reason?: string // obligatorio (10 a 100) al desactivar
   password?: string
 }
 

@@ -14,6 +14,7 @@ import {
 import storage from '@/global/helpers/storage/storage'
 import { setUnauthorizedHandler } from '@/api'
 import { logoutThunk, selectIsAuthenticated } from '@/features/auth'
+import { isAccountUnavailable } from '@/features/auth/types/auth.types'
 
 import { rootReducer } from './rootReducer'
 
@@ -41,9 +42,9 @@ export const store = configureStore({
 export const persistor = persistStore(store)
 
 // ojo: si el backend responde 401 (token vencido) se cierra la sesión; la alerta "Tu sesión expiró" la muestra logoutThunk (antes se mostraba aquí)
-setUnauthorizedHandler(() => {
+setUnauthorizedHandler((details) => {
   if (selectIsAuthenticated(store.getState())) {
-    store.dispatch(logoutThunk('expired') as unknown as UnknownAction)
+    store.dispatch(logoutThunk(isAccountUnavailable(details) ? 'suspended' : 'expired') as unknown as UnknownAction)
   }
 })
 

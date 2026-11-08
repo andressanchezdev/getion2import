@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/utils"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/features/customers/dtos"
 
@@ -119,7 +120,16 @@ func (r *CustomerRepository) FindByCompanyAndDocument(ctx context.Context, q db.
 }
 
 // List lista los clientes según los filtros, con su total para paginar.
+// List lista con búsqueda exacta; si el texto buscado no encuentra nada, reintenta tolerando errores de ortografía.
 func (r *CustomerRepository) List(ctx context.Context, q db.DBExecutor, f dtos.CustomerFilterQuery) ([]CustomerEntity, int, error) {
+	items, total, err := r.list(ctx, q, f, false)
+	if err == nil && total == 0 && strings.TrimSpace(f.Search) != "" {
+		return r.list(ctx, q, f, true)
+	}
+	return items, total, err
+}
+
+func (r *CustomerRepository) list(ctx context.Context, q db.DBExecutor, f dtos.CustomerFilterQuery, fuzzy bool) ([]CustomerEntity, int, error) {
 	where := []string{"deleted_at IS NULL"}
 	args := make([]interface{}, 0)
 	argIdx := 1
@@ -149,7 +159,7 @@ func (r *CustomerRepository) List(ctx context.Context, q db.DBExecutor, f dtos.C
 	}
 
 	if f.Search != "" {
-		where = append(where, fmt.Sprintf("(name ILIKE $%d OR COALESCE(last_name, '') ILIKE $%d OR COALESCE(trade_name, '') ILIKE $%d OR document ILIKE $%d OR COALESCE(email::text, '') ILIKE $%d OR COALESCE(phone, '') ILIKE $%d OR COALESCE(mobile, '') ILIKE $%d)", argIdx, argIdx, argIdx, argIdx, argIdx, argIdx, argIdx))
+		where = append(where, fmt.Sprintf("(name ILIKE $%d OR last_name ILIKE $%d OR trade_name ILIKE $%d OR document ILIKE $%d OR email::text ILIKE $%d OR phone ILIKE $%d OR mobile ILIKE $%d)%s", argIdx, argIdx, argIdx, argIdx, argIdx, argIdx, argIdx, utils.FuzzyOr(fuzzy, argIdx, "name", "trade_name")))
 		args = append(args, "%"+f.Search+"%")
 		argIdx++
 	}

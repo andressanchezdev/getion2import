@@ -19,7 +19,6 @@ export const useIdle = (idleMs: number = SCREENSAVER_TIMING.IDLE_MS, enabled = t
     if (!enabled) {
       lastActivityRef.current = 0
       sleepingSinceRef.current = 0
-      setIdle(false)
       return
     }
 
@@ -65,9 +64,10 @@ export const useIdle = (idleMs: number = SCREENSAVER_TIMING.IDLE_MS, enabled = t
     SCREENSAVER_ACTIVITY_EVENTS.forEach((name) => window.addEventListener(name, onActivity, true))
     return () => {
       window.clearInterval(timer)
+      setIdle(false) // al apagarse o cambiar el tiempo, la pantalla despierta
       SCREENSAVER_ACTIVITY_EVENTS.forEach((name) => window.removeEventListener(name, onActivity, true))
     }
   }, [enabled, idleMs])
 
-  return idle
+  return enabled && idle
 }

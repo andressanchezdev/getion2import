@@ -181,7 +181,8 @@ CREATE TABLE companies (
     logo_url                    TEXT,
     is_active                   BOOLEAN NOT NULL DEFAULT TRUE,
     created_at                  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at                  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    updated_at                  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at                  TIMESTAMPTZ
 );
 
 -- 3. TABLA: warehouses (Bodegas únicas por compañía, todas al mismo nivel, sin is_main)
@@ -1524,6 +1525,32 @@ LEFT JOIN stock s ON s.warehouse_id = l.warehouse_id AND s.location = l.code
 GROUP BY l.id, l.company_id, l.warehouse_id, w.code, w.name, l.code, l.description, l.qr_code, l.is_active;
 
 
+-- Busquedas instantaneas y tolerantes a errores (pg_trgm): un indice GIN por columna que se consulta con ILIKE o con el operador <%
+CREATE INDEX IF NOT EXISTS idx_customers_name_trgm ON customers USING gin (name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_customers_last_name_trgm ON customers USING gin (last_name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_customers_trade_name_trgm ON customers USING gin (trade_name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_customers_document_trgm ON customers USING gin (document gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_customers_email_trgm ON customers USING gin ((email::text) gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_customers_phone_trgm ON customers USING gin (phone gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_customers_mobile_trgm ON customers USING gin (mobile gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_products_name_trgm ON products USING gin (name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_products_easysearch_trgm ON products USING gin (easysearch gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_products_code_trgm ON products USING gin (code gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_employees_full_name_trgm ON employees USING gin (full_name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_employees_email_trgm ON employees USING gin ((email::text) gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_employees_document_trgm ON employees USING gin (document gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_externals_name_trgm ON externals USING gin (name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_externals_document_trgm ON externals USING gin (document gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_externals_contact_trgm ON externals USING gin (contact_name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_externals_email_trgm ON externals USING gin ((email::text) gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_externals_phone_trgm ON externals USING gin (phone gin_trgm_ops);
+
+-- Umbral de parecido para el operador <% (0.4 tolera errores de ortografia; solo se usa como respaldo cuando la busqueda exacta no encuentra nada)
+DO $$
+BEGIN
+    EXECUTE format('ALTER DATABASE %I SET pg_trgm.word_similarity_threshold = 0.4', current_database());
+END $$;
+
 -- ============================================================
 -- PARTE 4: DATOS SEMILLA LIMPIOS DE OPERACIÓN (SEED DEMO)
 -- ============================================================
@@ -1534,7 +1561,7 @@ GROUP BY l.id, l.company_id, l.warehouse_id, w.code, w.name, l.code, l.descripti
 -- Compatible con PostgreSQL V4 (Esquema Limpio)
 -- ============================================================================
 
-BEGIN;
+-- (sigue en la misma transaccion abierta al inicio del script)
 
 -- 1. COMPAÑÍA PRINCIPAL
 INSERT INTO companies (id, name, address, city, phone, email, is_active)
@@ -1894,8 +1921,6 @@ VALUES
     (1, 'Bancolombia', '01400000369', '2026-10-28', 'IMPTO GOBIERNO 4X1000', 'LA PLAYA', NULL, NULL, NULL, -114.54, FALSE, 'ignored'),
     (1, 'Bancolombia', '01400000369', '2026-10-28', 'COMISION REC CORRESPONSAL', 'LA PLAYA', NULL, NULL, NULL, -24064.45, FALSE, 'ignored'),
     (1, 'Bancolombia', '01400000369', '2026-10-28', 'IVA COMISION REC CORRESPONSAL', 'LA PLAYA', NULL, NULL, NULL, -4572.25, FALSE, 'ignored');
-
-COMMIT;
 
 -- ============================================================================
 -- FIN DE SCRIPT DE SEMILLAS

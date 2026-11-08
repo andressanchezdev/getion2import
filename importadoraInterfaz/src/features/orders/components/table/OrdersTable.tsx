@@ -115,7 +115,7 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({ onCancel, extraActions
                   <td>
                     {order.paymentMethod.toLowerCase() === 'transfer' ? (
                       <span className={`orders-badge-transfer ${order.paymentVerified ? 'is-verified' : 'is-pending'}`}>
-                        {order.paymentVerified ? '✓ Transf. verificada' : '📸 Transf. por verificar'}
+                        {order.paymentVerified ? 'Verificada' : 'Por verificar'}
                       </span>
                     ) : (
                       paymentLabel(order.paymentMethod)

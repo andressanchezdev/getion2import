@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/utils"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/features/staff/dtos"
 
@@ -117,7 +118,16 @@ func (r *EmployeeRepository) FindByEmail(ctx context.Context, q db.DBExecutor, e
 }
 
 // List lista los empleados según los filtros, con su total para paginar.
+// List lista con búsqueda exacta; si el texto buscado no encuentra nada, reintenta tolerando errores de ortografía.
 func (r *EmployeeRepository) List(ctx context.Context, q db.DBExecutor, f dtos.EmployeeFilterQuery) ([]EmployeeEntity, int, error) {
+	items, total, err := r.list(ctx, q, f, false)
+	if err == nil && total == 0 && strings.TrimSpace(f.Search) != "" {
+		return r.list(ctx, q, f, true)
+	}
+	return items, total, err
+}
+
+func (r *EmployeeRepository) list(ctx context.Context, q db.DBExecutor, f dtos.EmployeeFilterQuery, fuzzy bool) ([]EmployeeEntity, int, error) {
 	where := []string{"e.deleted_at IS NULL"}
 	args := make([]interface{}, 0)
 	argIdx := 1
@@ -147,7 +157,7 @@ func (r *EmployeeRepository) List(ctx context.Context, q db.DBExecutor, f dtos.E
 	}
 
 	if f.Search != "" {
-		where = append(where, fmt.Sprintf("(e.first_name ILIKE $%d OR e.last_name ILIKE $%d OR e.email ILIKE $%d OR e.document ILIKE $%d)", argIdx, argIdx, argIdx, argIdx))
+		where = append(where, fmt.Sprintf("(e.full_name ILIKE $%d OR e.email::text ILIKE $%d OR e.document ILIKE $%d)%s", argIdx, argIdx, argIdx, utils.FuzzyOr(fuzzy, argIdx, "e.full_name")))
 		args = append(args, "%"+f.Search+"%")
 		argIdx++
 	}

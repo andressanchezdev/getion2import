@@ -94,10 +94,17 @@ func (c *WarehouseController) DeleteLocation(ctx echo.Context) error {
 		return err
 	}
 
+	var req struct {
+		Reason string `json:"reason"`
+	}
+	if err := utils.BindJSON(ctx, &req); err != nil {
+		return err
+	}
+
 	ip := utils.EchoClientIP(ctx)
 	ua := ctx.Request().UserAgent()
 
-	if err := c.service.DeleteLocation(ctx.Request().Context(), actor, warehouseID, locID, ip, ua); err != nil {
+	if err := c.service.DeleteLocation(ctx.Request().Context(), actor, warehouseID, locID, req.Reason, ip, ua); err != nil {
 		return err
 	}
 

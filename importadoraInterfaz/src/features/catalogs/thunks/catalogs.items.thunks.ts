@@ -48,11 +48,11 @@ export const saveCatalogItemThunk = createAsyncThunk<void, CatalogItemInput, Thu
 )
 
 // elimina un registro y recarga el catálogo
-export const deleteCatalogItemThunk = createAsyncThunk<void, { type: CatalogType; id: number }, ThunkConfig>(
+export const deleteCatalogItemThunk = createAsyncThunk<void, { type: CatalogType; id: number; reason: string }, ThunkConfig>(
   'catalogs/deleteItem',
-  async ({ type, id }, { dispatch, rejectWithValue }) => {
+  async ({ type, id, reason }, { dispatch, rejectWithValue }) => {
     try {
-      await (type === 'brand' ? deleteBrand(id) : type === 'category' ? deleteCategory(id) : deleteModel(id))
+      await (type === 'brand' ? deleteBrand(id, reason) : type === 'category' ? deleteCategory(id, reason) : deleteModel(id, reason))
       dispatch(reloadFor(type))
     } catch (error) {
       return rejectWithValue(getErrorMessage(error, 'Error al eliminar el registro.'))

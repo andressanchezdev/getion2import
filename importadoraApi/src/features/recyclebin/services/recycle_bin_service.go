@@ -50,7 +50,10 @@ func (s *RecycleBinService) List(ctx context.Context, actor *middlewares.ActorCo
 	}
 
 	if actor.ActorType != types.ActorSuperadmin {
-		f.CompanyID = actor.CompanyID
+		if actor.CompanyID == nil || *actor.CompanyID <= 0 {
+			return nil, nil, utils.Forbidden("FORBIDDEN_NO_COMPANY", "El usuario no pertenece a ninguna compañía activa.")
+		}
+		f.CompanyID = actor.CompanyID // solo su compañía; los registros sin compañía son del superadmin
 	}
 
 	list, total, err := s.recycleBinRepo.List(ctx, s.pool, f)

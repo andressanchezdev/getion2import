@@ -13,7 +13,7 @@ import {
 } from '../helpers/auth.session'
 import { setActiveWarehouse } from '@/features/navigation'
 import { LOGIN_MESSAGES } from '../constants/auth.constants'
-import type { AuthUser, LoginCredentials, LogoutReason } from '../types/auth.types'
+import { isAccountUnavailable, type AuthUser, type LoginCredentials, type LogoutReason } from '../types/auth.types'
 
 // inicia sesión: pide el login, guarda la sesión y devuelve el usuario; si falla devuelve el mensaje
 export const loginThunk = createAsyncThunk<AuthUser, LoginCredentials, { rejectValue: string }>(
@@ -49,6 +49,7 @@ export const fetchCurrentUserThunk = createAsyncThunk<AuthUser, void, { rejectVa
 const showLogoutToast = (reason: LogoutReason): void => {
   if (reason === 'inactivity') toast.warning(LOGIN_MESSAGES.inactiveTitle, { description: LOGIN_MESSAGES.inactiveDescription })
   else if (reason === 'expired') toast.error(LOGIN_MESSAGES.expiredTitle, { description: LOGIN_MESSAGES.expiredDescription })
+  else if (reason === 'suspended') toast.error(LOGIN_MESSAGES.suspendedTitle, { description: LOGIN_MESSAGES.suspendedDescription })
   else if (reason === 'remote') toast.info(LOGIN_MESSAGES.remoteLogoutTitle)
   else toast.success(LOGIN_MESSAGES.logoutTitle)
 }
@@ -58,7 +59,7 @@ const showLogoutToast = (reason: LogoutReason): void => {
 // ojo: si el servidor falla (sin red, 500) igual se cierra la sesión local; si el token ya venció ('expired') o la sesión se cerró en otra pestaña ('remote') no se llama al servidor
 export const logoutThunk = createAsyncThunk<void, LogoutReason | void>('auth/logout', async (reason) => {
   const why: LogoutReason = typeof reason === 'string' ? reason : 'manual'
-  if (why !== 'expired' && why !== 'remote' && getStoredAccessToken()) {
+  if (why !== 'expired' && why !== 'remote' && why !== 'suspended' && getStoredAccessToken()) {
     try {
       await logoutRequest()
     } catch {
@@ -82,7 +83,7 @@ export const refreshSessionThunk = createAsyncThunk<boolean, void>('auth/refresh
     return true
   } catch (error) {
     const status = (error as { status?: number } | null)?.status
-    if (status === 400 || status === 401 || status === 403) await dispatch(logoutThunk('expired'))
+    if (status === 400 || status === 401 || status === 403) await dispatch(logoutThunk(isAccountUnavailable((error as { details?: unknown } | null)?.details) ? 'suspended' : 'expired'))
     return false
   }
 })

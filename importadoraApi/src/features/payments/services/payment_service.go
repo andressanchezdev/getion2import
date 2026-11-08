@@ -87,7 +87,10 @@ func (s *PaymentService) Create(ctx context.Context, actor *middlewares.ActorCon
 		return nil, utils.Internal("Error al generar consecutivo de pago.", err)
 	}
 
-	empID := actor.ActorID
+	empID, aerr := s.actorEmployeeID(ctx, actor)
+	if aerr != nil {
+		return nil, aerr
+	}
 	if empID <= 0 {
 		empID = sale.EmployeeID
 	}
@@ -207,12 +210,16 @@ func (s *PaymentService) Verify(ctx context.Context, actor *middlewares.ActorCon
 		return nil, utils.BadRequest("INVALID_STATUS", fmt.Sprintf("El pago no se puede verificar porque ya está en estado '%s'.", p.Status))
 	}
 
+	verifierID, aerr := s.requireActorEmployeeID(ctx, actor)
+	if aerr != nil {
+		return nil, aerr
+	}
 	// 1-3. verificado, suma a lo pagado de la venta y, si la venta es a crédito, abono en el libro de crédito
-	if err := s.verifyInTx(ctx, tx, p, actor.ActorID, req.IssueNote); err != nil {
+	if err := s.verifyInTx(ctx, tx, p, verifierID, req.IssueNote); err != nil {
 		return nil, utils.Internal("Error al verificar el pago.", err)
 	}
 	// si con este pago el pedido queda cubierto, pasa a «verificación confirmada»
-	if err := s.syncVerificationStage(ctx, tx, p.SaleID, actor.ActorID); err != nil {
+	if err := s.syncVerificationStage(ctx, tx, p.SaleID, verifierID); err != nil {
 		return nil, utils.Internal("Error al actualizar la etapa del pedido.", err)
 	}
 
@@ -269,10 +276,14 @@ func (s *PaymentService) Void(ctx context.Context, actor *middlewares.ActorConte
 		return utils.Internal("Error al iniciar la transacción de anulación.", err)
 	}
 	defer tx.Rollback(ctx)
-	if err := s.paymentRepo.Void(ctx, tx, id, actor.ActorID, req.VoidReason); err != nil {
+	voiderID, aerr := s.requireActorEmployeeID(ctx, actor)
+	if aerr != nil {
+		return aerr
+	}
+	if err := s.paymentRepo.Void(ctx, tx, id, voiderID, req.VoidReason); err != nil {
 		return utils.Internal("Error al anular pago.", err)
 	}
-	if err := s.syncVerificationStage(ctx, tx, p.SaleID, actor.ActorID); err != nil {
+	if err := s.syncVerificationStage(ctx, tx, p.SaleID, voiderID); err != nil {
 		return utils.Internal("Error al actualizar la etapa del pedido.", err)
 	}
 	if err := tx.Commit(ctx); err != nil {

@@ -80,13 +80,13 @@ export const saveWarehouseThunk = createAsyncThunk<WarehouseChangeResult, { id?:
 )
 
 // activa (PUT isActive) o desactiva (DELETE) una bodega y devuelve la lista nueva
-export const setWarehouseActiveThunk = createAsyncThunk<WarehouseChangeResult, { id: string; isActive: boolean }, ManageConfig>(
+export const setWarehouseActiveThunk = createAsyncThunk<WarehouseChangeResult, { id: string; isActive: boolean; reason?: string }, ManageConfig>(
     'warehouses/setActive',
-    async ({ id, isActive }, { getState, dispatch, rejectWithValue }) => {
+    async ({ id, isActive, reason }, { getState, dispatch, rejectWithValue }) => {
         const ctx = selectRequestContext(getState())
         try {
             if (isActive) await updateWarehouse(id, { isActive: true })
-            else await deleteWarehouse(id)
+            else await deleteWarehouse(id, reason ?? '')
             const items = await fetchAllWarehouses(ctx?.companyId)
             dispatch(fetchWarehousesThunk())
             return { items, recent: { id, kind: 'updated' } }

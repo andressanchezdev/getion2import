@@ -15,7 +15,7 @@ import (
 )
 
 // AdvanceToVerification pasa el pedido a verificación.
-func (s *SaleService) AdvanceToVerification(ctx context.Context, saleID, employeeID int64) error {
+func (s *SaleService) AdvanceToVerification(ctx context.Context, companyID, saleID, employeeID int64) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return err
@@ -26,7 +26,7 @@ func (s *SaleService) AdvanceToVerification(ctx context.Context, saleID, employe
 	if err != nil {
 		return err
 	}
-	if sale == nil {
+	if sale == nil || (companyID > 0 && sale.CompanyID != companyID) {
 		return utils.NotFound("SALE_NOT_FOUND", "El pedido no existe.")
 	}
 	if err := ensureOpen(sale, "verificar"); err != nil {
@@ -47,7 +47,7 @@ func (s *SaleService) AdvanceToVerification(ctx context.Context, saleID, employe
 }
 
 // AdvanceToPicking pasa el pedido a alistamiento (picking).
-func (s *SaleService) AdvanceToPicking(ctx context.Context, saleID, employeeID int64) error {
+func (s *SaleService) AdvanceToPicking(ctx context.Context, companyID, saleID, employeeID int64) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return err
@@ -58,7 +58,7 @@ func (s *SaleService) AdvanceToPicking(ctx context.Context, saleID, employeeID i
 	if err != nil {
 		return err
 	}
-	if sale == nil {
+	if sale == nil || (companyID > 0 && sale.CompanyID != companyID) {
 		return utils.NotFound("SALE_NOT_FOUND", "El pedido no existe.")
 	}
 	if err := ensureOpen(sale, "alistar"); err != nil {
@@ -79,7 +79,7 @@ func (s *SaleService) AdvanceToPicking(ctx context.Context, saleID, employeeID i
 }
 
 // AdvanceToPacking pasa el pedido a empaque.
-func (s *SaleService) AdvanceToPacking(ctx context.Context, saleID, employeeID int64) error {
+func (s *SaleService) AdvanceToPacking(ctx context.Context, companyID, saleID, employeeID int64) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return err
@@ -90,7 +90,7 @@ func (s *SaleService) AdvanceToPacking(ctx context.Context, saleID, employeeID i
 	if err != nil {
 		return err
 	}
-	if sale == nil {
+	if sale == nil || (companyID > 0 && sale.CompanyID != companyID) {
 		return utils.NotFound("SALE_NOT_FOUND", "El pedido no existe.")
 	}
 	if err := ensureOpen(sale, "empacar"); err != nil {
@@ -111,7 +111,7 @@ func (s *SaleService) AdvanceToPacking(ctx context.Context, saleID, employeeID i
 }
 
 // AdvanceToDispatch despacha el pedido: descuenta el stock que estaba reservado, asienta el kardex y guarda la transportadora y la guía.
-func (s *SaleService) AdvanceToDispatch(ctx context.Context, saleID, employeeID int64, req dtos.DispatchSaleRequest) error {
+func (s *SaleService) AdvanceToDispatch(ctx context.Context, companyID, saleID, employeeID int64, req dtos.DispatchSaleRequest) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return err
@@ -122,7 +122,7 @@ func (s *SaleService) AdvanceToDispatch(ctx context.Context, saleID, employeeID 
 	if err != nil {
 		return err
 	}
-	if sale == nil {
+	if sale == nil || (companyID > 0 && sale.CompanyID != companyID) {
 		return utils.NotFound("SALE_NOT_FOUND", "El pedido no existe.")
 	}
 	if err := ensureOpen(sale, "despachar"); err != nil {
@@ -178,7 +178,7 @@ func (s *SaleService) AdvanceToDispatch(ctx context.Context, saleID, employeeID 
 }
 
 // AdvanceToSend marca el pedido como enviado.
-func (s *SaleService) AdvanceToSend(ctx context.Context, saleID, employeeID int64) error {
+func (s *SaleService) AdvanceToSend(ctx context.Context, companyID, saleID, employeeID int64) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return err
@@ -189,7 +189,7 @@ func (s *SaleService) AdvanceToSend(ctx context.Context, saleID, employeeID int6
 	if err != nil {
 		return err
 	}
-	if sale == nil {
+	if sale == nil || (companyID > 0 && sale.CompanyID != companyID) {
 		return utils.NotFound("SALE_NOT_FOUND", "El pedido no existe.")
 	}
 	if err := ensureOpen(sale, "enviar"); err != nil {
@@ -210,7 +210,7 @@ func (s *SaleService) AdvanceToSend(ctx context.Context, saleID, employeeID int6
 }
 
 // CancelSale cancela el pedido y libera el stock que tenía reservado.
-func (s *SaleService) CancelSale(ctx context.Context, saleID, employeeID int64, req dtos.CancelSaleRequest) error {
+func (s *SaleService) CancelSale(ctx context.Context, companyID, saleID, employeeID int64, req dtos.CancelSaleRequest) error {
 	if strings.TrimSpace(req.Reason) == "" {
 		return utils.BadRequest("REASON_REQUIRED", "El motivo de cancelación es obligatorio.")
 	}
@@ -225,7 +225,7 @@ func (s *SaleService) CancelSale(ctx context.Context, saleID, employeeID int64, 
 	if err != nil {
 		return err
 	}
-	if sale == nil {
+	if sale == nil || (companyID > 0 && sale.CompanyID != companyID) {
 		return utils.NotFound("SALE_NOT_FOUND", "El pedido no existe.")
 	}
 	if sale.Status == types.SaleCancelled {

@@ -21,4 +21,7 @@ type Config struct {
 	LoginBlockDuration time.Duration
 	CORSAllowedOrigins []string
 	UploadsDir         string
+	BackupsDir         string // carpeta donde se guardan los respaldos de la base
+	PgDumpPath         string // ejecutable de pg_dump (por defecto el del PATH)
+	PgRestorePath      string // ejecutable de pg_restore (por defecto el del PATH)
 }

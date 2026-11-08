@@ -292,9 +292,15 @@ func (s *CompanyService) Update(ctx context.Context, actor *middlewares.ActorCon
 	}
 
 	// Solo Superadmin puede activar o desactivar compañías
+	deactivationReason := ""
 	if req.IsActive != nil {
 		if actor.ActorType != types.ActorSuperadmin {
 			return nil, utils.Forbidden("FORBIDDEN_STATUS_CHANGE", "Solo un superadministrador puede cambiar el estado de la compañía.")
+		}
+		var rerr error
+		deactivationReason, rerr = utils.ReasonOnDeactivation(current.IsActive, req.IsActive, req.Reason)
+		if rerr != nil {
+			return nil, rerr
 		}
 		current.IsActive = *req.IsActive
 	}
@@ -317,7 +323,7 @@ func (s *CompanyService) Update(ctx context.Context, actor *middlewares.ActorCon
 		Entity:    "companies",
 		EntityID:  &updated.ID,
 		Action:    "COMPANY_UPDATED",
-		Reason:    "Actualización de datos corporativos",
+		Reason:    utils.ReasonOrDefault(deactivationReason, "Actualización de datos corporativos"),
 		IPAddress: ip,
 		UserAgent: ua,
 	})
@@ -326,7 +332,11 @@ func (s *CompanyService) Update(ctx context.Context, actor *middlewares.ActorCon
 }
 
 // Delete retira la compañía de la operación (exclusivo Superadmin).
-func (s *CompanyService) Delete(ctx context.Context, actor *middlewares.ActorContext, id int64, ip, ua string) error {
+func (s *CompanyService) Delete(ctx context.Context, actor *middlewares.ActorContext, id int64, reason, ip, ua string) error {
+	reason, verr := utils.ValidateReason(reason)
+	if verr != nil {
+		return verr
+	}
 	if actor == nil || actor.ActorType != types.ActorSuperadmin {
 		return utils.Forbidden("FORBIDDEN_SUPERADMIN", "Solo un superadministrador puede desactivar compañías.")
 	}
@@ -358,7 +368,7 @@ func (s *CompanyService) Delete(ctx context.Context, actor *middlewares.ActorCon
 		Entity:    "companies",
 		EntityID:  &id,
 		Action:    "COMPANY_SUSPENDED",
-		Reason:    "Suspensión corporativa e invalidación de sesiones de usuarios",
+		Reason:    reason,
 		IPAddress: ip,
 		UserAgent: ua,
 	})

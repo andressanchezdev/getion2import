@@ -80,6 +80,9 @@ func validateServer(cfg *Config) error {
 	if strings.TrimSpace(cfg.UploadsDir) == "" {
 		return fmt.Errorf("UploadsDir no puede estar vacío")
 	}
+	if strings.TrimSpace(cfg.BackupsDir) == "" {
+		return fmt.Errorf("BackupsDir no puede estar vacío")
+	}
 	return nil
 }
 

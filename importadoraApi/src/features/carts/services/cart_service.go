@@ -219,7 +219,6 @@ func (s *CartService) buildResponse(c *repositories.CartEntity, items []dtos.Car
 		WarehouseName: c.WarehouseName,
 		PriceTier:     c.PriceTier,
 		Status:        c.Status,
-		ExpiresAt:     c.ExpiresAt,
 		CreatedAt:     c.CreatedAt,
 		UpdatedAt:     c.UpdatedAt,
 		Items:         items,

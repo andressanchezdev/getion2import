@@ -81,7 +81,7 @@ export const WarehouseLocationsManagement: React.FC<Props> = ({ warehouses, sele
       <Pagination meta={meta} label="Paginación de ubicaciones" onPageChange={setPage} />
       <LocationDialogs
         toDeactivate={manage.toDeactivate} onConfirmDeactivate={manage.confirmDeactivate} onCancelDeactivate={manage.cancelDeactivate}
-        toDelete={manage.toDelete} reason={manage.deleteReason} onReason={manage.setDeleteReason}
+        toDelete={manage.toDelete}
         onConfirmDelete={manage.confirmDelete} onCancelDelete={manage.cancelDelete}
       />
     </div>

@@ -40,6 +40,7 @@ export const SALES_ENDPOINTS = {
   INVOICES: {
     LIST: '/invoices',
     BY_ID: (id: number | string) => `/invoices/${id}`,
+    ANNUL: (id: number | string) => `/invoices/${id}/annul`,
   },
   // Devoluciones y garantías
   RETURNS: {

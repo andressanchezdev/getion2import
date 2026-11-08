@@ -23,6 +23,8 @@ export const LOGIN_MESSAGES = {
   successTitle: 'Sesión iniciada',
   expiredTitle: 'Tu sesión expiró',
   expiredDescription: 'Ingresa de nuevo para continuar.',
+  suspendedTitle: 'Compañía o bodega no disponible',
+  suspendedDescription: 'Tu compañía o bodega no está disponible. Comunícate con el área de desarrollo.',
   inactiveTitle: 'Sesión cerrada por inactividad',
   inactiveDescription: 'Pasó 1 hora sin actividad. Ingresa de nuevo para continuar.',
   logoutTitle: 'Sesión cerrada',

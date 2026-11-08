@@ -57,7 +57,13 @@ export interface AuthResponse {
 export type AuthStatus = 'anonymous' | 'authenticating' | 'authenticated'
 
 // por qué se cierra la sesión: la pidió el usuario, por inactividad, porque venció o porque se cerró en otra pestaña
-export type LogoutReason = 'manual' | 'inactivity' | 'expired' | 'remote'
+// la API avisa con estos códigos que la cuenta, la compañía o la bodega ya no está disponible (no es una sesión vencida)
+export const isAccountUnavailable = (details: unknown): boolean => {
+  const code = (details as { code?: string } | null | undefined)?.code
+  return code === 'ACCOUNT_UNAVAILABLE' || code === 'ACCOUNT_INACTIVE' || code === 'COMPANY_INACTIVE' || code === 'WAREHOUSE_INACTIVE'
+}
+
+export type LogoutReason = 'manual' | 'inactivity' | 'expired' | 'remote' | 'suspended'
 
 import type { EmployeePermissionsResponse } from '@/features/employees'
 

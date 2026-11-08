@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/utils"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/features/externals/dtos"
 
@@ -106,7 +107,16 @@ func (r *ExternalRepository) FindByCompanyKindAndName(ctx context.Context, q db.
 }
 
 // List lista los terceros según los filtros, con su total para paginar.
+// List lista con búsqueda exacta; si el texto buscado no encuentra nada, reintenta tolerando errores de ortografía.
 func (r *ExternalRepository) List(ctx context.Context, q db.DBExecutor, f dtos.ExternalFilterQuery) ([]ExternalEntity, int, error) {
+	items, total, err := r.list(ctx, q, f, false)
+	if err == nil && total == 0 && strings.TrimSpace(f.Search) != "" {
+		return r.list(ctx, q, f, true)
+	}
+	return items, total, err
+}
+
+func (r *ExternalRepository) list(ctx context.Context, q db.DBExecutor, f dtos.ExternalFilterQuery, fuzzy bool) ([]ExternalEntity, int, error) {
 	where := make([]string, 0)
 	args := make([]interface{}, 0)
 	argIdx := 1
@@ -136,7 +146,7 @@ func (r *ExternalRepository) List(ctx context.Context, q db.DBExecutor, f dtos.E
 	}
 
 	if f.Search != "" {
-		where = append(where, fmt.Sprintf("(name ILIKE $%d OR COALESCE(document, '') ILIKE $%d OR COALESCE(contact_name, '') ILIKE $%d OR COALESCE(email::text, '') ILIKE $%d OR COALESCE(phone, '') ILIKE $%d)", argIdx, argIdx, argIdx, argIdx, argIdx))
+		where = append(where, fmt.Sprintf("(name ILIKE $%d OR document ILIKE $%d OR contact_name ILIKE $%d OR email::text ILIKE $%d OR phone ILIKE $%d)%s", argIdx, argIdx, argIdx, argIdx, argIdx, utils.FuzzyOr(fuzzy, argIdx, "name")))
 		args = append(args, "%"+f.Search+"%")
 		argIdx++
 	}

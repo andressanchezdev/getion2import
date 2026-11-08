@@ -286,7 +286,15 @@ func (s *ProductService) Update(ctx context.Context, actor *middlewares.ActorCon
 	if req.Images != nil {
 		current.Images = req.Images
 	}
+	deactivationReason := ""
 	if req.Status != nil {
+		leaving := *req.Status == types.ProductInactive || *req.Status == types.ProductDiscontinued
+		if leaving && current.Status != *req.Status {
+			var verr error
+			if deactivationReason, verr = utils.ValidateReason(req.Reason); verr != nil {
+				return nil, verr
+			}
+		}
 		current.Status = *req.Status
 	}
 
@@ -324,7 +332,7 @@ func (s *ProductService) Update(ctx context.Context, actor *middlewares.ActorCon
 		Entity:    "products",
 		EntityID:  &current.ID,
 		Action:    "PRODUCT_UPDATED",
-		Reason:    "Actualización de producto",
+		Reason:    utils.ReasonOrDefault(deactivationReason, "Actualización de producto"),
 		IPAddress: ip,
 		UserAgent: ua,
 	})

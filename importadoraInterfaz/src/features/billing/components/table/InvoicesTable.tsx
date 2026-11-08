@@ -1,5 +1,6 @@
-// InvoicesTable · tarjeta de facturas con buscador, filtros, tabla global y modal de detalle
-// conecta con: InvoicesScreen (la usa), useInvoices, Pill, Pagination, InvoiceDetailModal y billing.constants
+// InvoicesTable · tarjeta de facturas con buscador, filtros, tabla global, modal de detalle y la acción «Anular» (con motivo en el panel derecho)
+// conecta con: InvoicesScreen (la usa), useInvoices (anular), Pill, Pagination, InvoiceDetailModal, ReasonPrompt, usePermissions y billing.constants
+// ojo: «Anular» solo aparece en facturas emitidas y a quien tiene permiso de eliminar en ventas; la factura no se borra, queda anulada y auditada
 import React, { useState } from 'react'
 import './InvoicesTable.css'
 import { Pill } from '@/global/components/UI/atoms/Pill'
@@ -7,16 +8,21 @@ import { SearchBar } from '@/global/components/UI/molecules/filters/SearchBar'
 import { Pagination } from '@/global/components/UI/molecules/table/Pagination'
 import { RowActions } from '@/global/components/UI/molecules/table/RowActions'
 import { usePagedList } from '@/global/hooks/data/usePagedList'
+import { usePermissions } from '@/global/hooks/access/usePermissions'
+import { ReasonPrompt } from '@/features/reasonPrompt'
 import eyeIcon from '@/assets/icons/eye.svg?raw'
 import fileTextIcon from '@/assets/icons/file-text.svg?raw'
+import banIcon from '@/assets/icons/ban.svg?raw'
 import { INVOICE_KIND_LABELS, INVOICE_STATUS, INVOICE_STATUS_OPTIONS } from '../../constants/billing.constants'
 import { useInvoices } from '../../hooks/useInvoices'
-import type { InvoiceStatus } from '../../types/billing.types'
+import type { Invoice, InvoiceStatus } from '../../types/billing.types'
 import { InvoiceDetailModal } from '../modal/InvoiceDetailModal'
 
 export const InvoicesTable: React.FC = () => {
   const list = useInvoices()
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null)
+  const [toAnnul, setToAnnul] = useState<Invoice | null>(null)
+  const canAnnul = usePermissions().canPerformAction('sales', 'orders', 'delete')
   const { pageItems, meta, setPage } = usePagedList(list.items, `${list.search}|${list.status}|${list.selectedWarehouseId}`)
 
   const warehouseOptions = [
@@ -126,6 +132,14 @@ export const InvoicesTable: React.FC = () => {
                           onClick: () => setSelectedInvoiceId(invoice.id),
                         },
                         {
+                          key: 'annul',
+                          label: `Anular factura ${invoice.number}`,
+                          icon: banIcon,
+                          tone: 'danger',
+                          visible: invoice.status === 'issued' && canAnnul,
+                          onClick: () => setToAnnul(invoice),
+                        },
+                        {
                           key: 'pdf',
                           label: `Abrir PDF de factura ${invoice.number}`,
                           icon: fileTextIcon,
@@ -144,6 +158,19 @@ export const InvoicesTable: React.FC = () => {
         </table>
       </div>
       <Pagination meta={meta} label="Paginación de facturas" onPageChange={setPage} />
+
+      <ReasonPrompt
+        open={toAnnul !== null}
+        title="Anular factura"
+        message={`¿Anular la factura ${toAnnul?.number ?? ''}? No se borra: queda como anulada y con su motivo en la auditoría.`}
+        confirmLabel="Anular"
+        onConfirm={(reason) => {
+          const target = toAnnul
+          setToAnnul(null)
+          if (target) void list.annul(target, reason)
+        }}
+        onCancel={() => setToAnnul(null)}
+      />
 
       {/* Modal de Detalle de Factura (GET /invoices/:id) */}
       <InvoiceDetailModal

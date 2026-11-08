@@ -26,6 +26,7 @@ type UpdateBrandRequest struct {
 	Name     *string `json:"name"`
 	ImageURL *string `json:"imageUrl"`
 	IsActive *bool   `json:"isActive"`
+	Reason string `json:"reason,omitempty"` // obligatorio (10 a 100) si se desactiva
 }
 
 // ==========================================
@@ -52,6 +53,7 @@ type UpdateModelRequest struct {
 	Name        *string `json:"name"`
 	Description *string `json:"description"`
 	IsActive    *bool   `json:"isActive"`
+	Reason string `json:"reason,omitempty"` // obligatorio (10 a 100) si se desactiva
 }
 
 // ==========================================
@@ -83,5 +85,6 @@ type UpdateCategoryRequest struct {
 	Name        *string `json:"name"`
 	Description *string `json:"description"`
 	IsActive    *bool   `json:"isActive"`
+	Reason string `json:"reason,omitempty"` // obligatorio (10 a 100) si se desactiva
 }
 

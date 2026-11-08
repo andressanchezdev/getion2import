@@ -34,11 +34,11 @@ export const updateLocation = async (warehouseId: number, locationId: number, in
 }
 
 // activa o desactiva una ubicación (una inactiva no recibe productos nuevos)
-export const setLocationActive = async (warehouseId: number, locationId: number, isActive: boolean): Promise<void> => {
-  await apiClient.put(WAREHOUSES.LOCATION_BY_ID(warehouseId, locationId), { isActive })
+export const setLocationActive = async (warehouseId: number, locationId: number, isActive: boolean, reason?: string): Promise<void> => {
+  await apiClient.put(WAREHOUSES.LOCATION_BY_ID(warehouseId, locationId), { isActive, reason })
 }
 
 // borra una ubicación vacía
-export const deleteLocation = async (warehouseId: number, locationId: number): Promise<void> => {
-  await apiClient.delete(WAREHOUSES.LOCATION_BY_ID(warehouseId, locationId))
+export const deleteLocation = async (warehouseId: number, locationId: number, reason: string): Promise<void> => {
+  await apiClient.delete(WAREHOUSES.LOCATION_BY_ID(warehouseId, locationId), { data: { reason } })
 }

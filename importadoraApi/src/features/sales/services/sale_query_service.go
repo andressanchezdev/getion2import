@@ -5,19 +5,19 @@ package services
 
 import (
 	"context"
-	"errors"
 
+	"importadoraApi/src/core/utils"
 	"importadoraApi/src/features/sales/dtos"
 )
 
 // FindByID devuelve el pedido por su id, validando que sea de la compañía del usuario.
-func (s *SaleService) FindByID(ctx context.Context, id int64) (*dtos.SaleResponse, error) {
+func (s *SaleService) FindByID(ctx context.Context, companyID, id int64) (*dtos.SaleResponse, error) {
 	entity, err := s.saleRepo.FindByID(ctx, s.pool, id)
 	if err != nil {
 		return nil, err
 	}
-	if entity == nil {
-		return nil, errors.New("venta no encontrada")
+	if entity == nil || (companyID > 0 && entity.CompanyID != companyID) {
+		return nil, utils.NotFound("SALE_NOT_FOUND", "La venta no existe.")
 	}
 
 	items, err := s.saleRepo.ListItems(ctx, s.pool, id)

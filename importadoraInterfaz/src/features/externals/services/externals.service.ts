@@ -24,6 +24,6 @@ export const updateExternal = async (id: number, payload: UpdateExternalPayload)
 }
 
 // borra un registro
-export const deleteExternal = async (id: number): Promise<void> => {
-  await apiClient.delete(EXTERNALS.BY_ID(id))
+export const deleteExternal = async (id: number, reason: string): Promise<void> => {
+  await apiClient.delete(EXTERNALS.BY_ID(id), { data: { reason } })
 }

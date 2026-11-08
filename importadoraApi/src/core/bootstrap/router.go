@@ -20,6 +20,7 @@ import (
 	productRoutes "importadoraApi/src/features/products/routes"
 	purchaseRoutes "importadoraApi/src/features/purchases/routes"
 	quotationRoutes "importadoraApi/src/features/quotations/routes"
+	backupRoutes "importadoraApi/src/features/backups/routes"
 	recycleBinRoutes "importadoraApi/src/features/recyclebin/routes"
 	reportRoutes "importadoraApi/src/features/reports/routes"
 	returnRoutes "importadoraApi/src/features/returns/routes"
@@ -57,6 +58,7 @@ func RegisterAllRoutes(e *echo.Echo, c *AppContainer) {
 	auditRoutes.RegisterRoutes(e, c.AuthMiddleware, c.AuditCtrl)
 	reportRoutes.RegisterRoutes(e, c.AuthMiddleware, c.ReportCtrl)
 	recycleBinRoutes.RegisterRoutes(e, c.AuthMiddleware, c.RecycleBinCtrl)
+	backupRoutes.RegisterRoutes(e, c.AuthMiddleware, c.BackupCtrl)
 	bankStatementRoutes.RegisterRoutes(e, c.AuthMiddleware, c.BankStatementCtrl)
 	cashSessionRoutes.RegisterRoutes(e, c.AuthMiddleware, c.CashSessionCtrl)
 	screensaverRoutes.RegisterRoutes(e, c.AuthMiddleware, c.ScreensaverCtrl)

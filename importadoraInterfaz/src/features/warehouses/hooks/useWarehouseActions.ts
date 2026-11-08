@@ -13,9 +13,9 @@ export const useWarehouseActions = () => {
     const saving = useAppSelector(selectWarehousesSaving)
 
     // devuelve true si salió bien; el error ya se avisó
-    const setActive = async (warehouse: Warehouse, isActive: boolean): Promise<boolean> => {
+    const setActive = async (warehouse: Warehouse, isActive: boolean, reason?: string): Promise<boolean> => {
         try {
-            await dispatch(setWarehouseActiveThunk({ id: warehouse.id, isActive })).unwrap()
+            await dispatch(setWarehouseActiveThunk({ id: warehouse.id, isActive, reason })).unwrap()
             toast.success(`Bodega ${warehouse.name} ${isActive ? 'reactivada' : 'desactivada'}`)
             return true
         } catch (message) {

@@ -1,9 +1,9 @@
 // LocationsTable · tabla de ubicaciones de la bodega: código, descripción, productos, unidades, estado y acciones (ver, QR, editar, eliminar); el estado se cambia desde un desplegable en su columna
-// conecta con: LocationsScreen (la usa), RowActions (acciones con íconos de línea), usePagedList + Pagination (20 por página), useLocationActions (activar y eliminar), ConfirmDialog y navigation (abrir panel de detalle, formulario y QR)
+// conecta con: LocationsScreen (la usa), RowActions (acciones con íconos de línea), usePagedList + Pagination (20 por página), useLocationActions (activar y eliminar), ReasonPrompt y navigation (abrir panel de detalle, formulario y QR)
 // ojo: el estilo de tabla es el de las demás tablas de inventario (InventoryTables.css); eliminar solo funciona con la ubicación vacía (la API lo exige)
 import React, { useState } from 'react'
 import '@/features/inventory/components/InventoryTables.css'
-import { ConfirmDialog } from '@/global/components/UI/molecules/dialogs/ConfirmDialog'
+import { ReasonPrompt } from '@/features/reasonPrompt'
 import { Pagination } from '@/global/components/UI/molecules/table/Pagination'
 import { RowActions } from '@/global/components/UI/molecules/table/RowActions'
 import { usePagedList } from '@/global/hooks/data/usePagedList'
@@ -37,21 +37,21 @@ export const LocationsTable: React.FC<LocationsTableProps> = ({ locations, wareh
   const [toDelete, setToDelete] = useState<WarehouseLocation | null>(null)
   const [toDeactivate, setToDeactivate] = useState<WarehouseLocation | null>(null)
 
-  const confirmDelete = async () => {
+  const confirmDelete = async (reason: string) => {
     const target = toDelete
     setToDelete(null)
-    if (target) await actions.remove(target.id)
+    if (target) await actions.remove(target.id, reason)
   }
 
-  const confirmDeactivate = async () => {
+  const confirmDeactivate = async (reason: string) => {
     const target = toDeactivate
     setToDeactivate(null)
-    if (target) await actions.toggle(target.id, false)
+    if (target) await actions.toggle(target.id, false, reason)
   }
 
-  // desactivar una ubicación con productos pide confirmación; activarla o desactivar una vacía es directo
+  // desactivar una ubicación siempre pide el motivo; activarla es directo
   const changeStatus = (location: WarehouseLocation, active: boolean) => {
-    if (!active && hasStock(location)) setToDeactivate(location)
+    if (!active) setToDeactivate(location)
     else actions.toggle(location.id, active)
   }
 
@@ -134,16 +134,16 @@ export const LocationsTable: React.FC<LocationsTableProps> = ({ locations, wareh
       </div>
       <Pagination meta={meta} label="Paginación de ubicaciones" onPageChange={setPage} />
 
-      <ConfirmDialog
+      <ReasonPrompt
         open={toDeactivate !== null}
-        title="Desactivar ubicación con productos"
-        message={`${toDeactivate?.code ?? ''} guarda ${toDeactivate?.productCount ?? 0} producto(s) y ${toDeactivate?.units ?? 0} unidad(es). Si la desactivas, las existencias siguen ahí pero no se podrá elegir esa ubicación para nuevos productos. ¿Desactivar?`}
+        title="Desactivar ubicación"
+        message={toDeactivate && hasStock(toDeactivate) ? `${toDeactivate.code} guarda ${toDeactivate.productCount ?? 0} producto(s) y ${toDeactivate.units ?? 0} unidad(es). Si la desactivas, las existencias siguen ahí pero no se podrá elegir esa ubicación para nuevos productos. ¿Desactivar?` : `¿Desactivar la ubicación ${toDeactivate?.code ?? ''}?`}
         confirmLabel="Desactivar"
         onConfirm={confirmDeactivate}
         onCancel={() => setToDeactivate(null)}
       />
 
-      <ConfirmDialog
+      <ReasonPrompt
         open={toDelete !== null}
         title="Eliminar ubicación"
         message={`¿Eliminar la ubicación ${toDelete?.code ?? ''}? Solo se puede si no tiene productos guardados.`}

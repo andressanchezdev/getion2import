@@ -69,6 +69,7 @@ type UpdateExternalRequest struct {
 	CreditLimit  *float64            `json:"creditLimit"`
 	Coverage     *string             `json:"coverage"`
 	IsActive     *bool               `json:"isActive"`
+	Reason string `json:"reason,omitempty"` // obligatorio (10 a 100) si se desactiva
 }
 
 type ExternalFilterQuery struct {

@@ -26,7 +26,7 @@ export const useExternalActions = () => {
 
   const setActive = (item: ExternalEntity, isActive: boolean) =>
     run(() => dispatch(setExternalActiveThunk({ id: item.id, kind: item.kind, isActive })).unwrap(), `${labelsOf(item.kind).singular} ${isActive ? 'activado' : 'desactivado'}`)
-  const remove = (item: ExternalEntity) => run(() => dispatch(deleteExternalThunk({ id: item.id, kind: item.kind })).unwrap(), `${labelsOf(item.kind).singular} eliminado`)
+  const remove = (item: ExternalEntity, reason: string) => run(() => dispatch(deleteExternalThunk({ id: item.id, kind: item.kind, reason })).unwrap(), `${labelsOf(item.kind).singular} eliminado`)
 
   return { saving, setActive, remove }
 }

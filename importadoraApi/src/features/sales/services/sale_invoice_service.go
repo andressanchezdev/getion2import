@@ -5,7 +5,6 @@ package services
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -16,7 +15,7 @@ import (
 )
 
 // IssueInvoice emite la factura del pedido con la numeración de su bodega y lo pasa a la etapa de despacho.
-func (s *SaleService) IssueInvoice(ctx context.Context, saleID, employeeID int64) (*dtos.InvoiceResponse, error) {
+func (s *SaleService) IssueInvoice(ctx context.Context, companyID, saleID, employeeID int64) (*dtos.InvoiceResponse, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return nil, err
@@ -27,7 +26,7 @@ func (s *SaleService) IssueInvoice(ctx context.Context, saleID, employeeID int64
 	if err != nil {
 		return nil, err
 	}
-	if sale == nil {
+	if sale == nil || (companyID > 0 && sale.CompanyID != companyID) {
 		return nil, utils.NotFound("SALE_NOT_FOUND", "El pedido no existe.")
 	}
 	if err := ensureOpen(sale, "facturar"); err != nil {
@@ -50,7 +49,12 @@ func (s *SaleService) IssueInvoice(ctx context.Context, saleID, employeeID int64
 		return nil, utils.Unprocessable("WAREHOUSE_WITHOUT_BILLING", fmt.Sprintf("La bodega %d no tiene configuración fiscal; configúrala antes de facturar.", sale.WarehouseID))
 	}
 	whID := sale.WarehouseID
-	invNumber, err := utils.NextSerialCode(ctx, tx, sale.CompanyID, &whID, types.SeriesInvoice, "FAC-")
+	// el prefijo de la resolución DIAN de la bodega manda; "FAC-" solo si no se configuró
+	prefix := strings.TrimSpace(warehouseFacturation.InvoicePrefix)
+	if prefix == "" {
+		prefix = "FAC-"
+	}
+	invNumber, err := utils.NextSerialCode(ctx, tx, sale.CompanyID, &whID, types.SeriesInvoice, prefix)
 	if err != nil {
 		return nil, fmt.Errorf("error al obtener consecutivo de factura: %w", err)
 	}
@@ -99,12 +103,15 @@ func (s *SaleService) IssueInvoice(ctx context.Context, saleID, employeeID int64
 		return nil, err
 	}
 
-	response, err := s.FindInvoiceByID(ctx, createdInv.ID)
+	response, err := s.FindInvoiceByID(ctx, companyID, createdInv.ID)
 	if err != nil {
 		return nil, err
 	}
 	if warehouseFacturation.ResolutionNumber == nil || strings.TrimSpace(*warehouseFacturation.ResolutionNumber) == "" {
 		response.Warnings = append(response.Warnings, "La factura se emitió sin una resolución DIAN configurada.")
+	}
+	if !warehouseFacturation.IsActive {
+		response.Warnings = append(response.Warnings, "La configuración fiscal de la bodega está inactiva; la factura se emitió y debe revisarse.")
 	}
 	if warehouseFacturation.ResolutionExpired {
 		response.Warnings = append(response.Warnings, "La resolución DIAN está vencida; la factura se emitió y debe revisarse.")
@@ -122,13 +129,13 @@ func (s *SaleService) IssueInvoice(ctx context.Context, saleID, employeeID int64
 }
 
 // FindInvoiceByID devuelve una factura por su id, validando que sea de la compañía del usuario.
-func (s *SaleService) FindInvoiceByID(ctx context.Context, invoiceID int64) (*dtos.InvoiceResponse, error) {
+func (s *SaleService) FindInvoiceByID(ctx context.Context, companyID, invoiceID int64) (*dtos.InvoiceResponse, error) {
 	inv, err := s.saleRepo.FindInvoiceByID(ctx, s.pool, invoiceID)
 	if err != nil {
 		return nil, err
 	}
-	if inv == nil {
-		return nil, errors.New("factura no encontrada")
+	if inv == nil || (companyID > 0 && inv.CompanyID != companyID) {
+		return nil, utils.NotFound("INVOICE_NOT_FOUND", "La factura no existe.")
 	}
 
 	return &dtos.InvoiceResponse{

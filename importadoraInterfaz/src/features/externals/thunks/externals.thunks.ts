@@ -50,11 +50,11 @@ export const setExternalActiveThunk = createAsyncThunk<ExternalEntity[], { id: n
 )
 
 // borra un registro y devuelve la lista nueva
-export const deleteExternalThunk = createAsyncThunk<ExternalEntity[], { id: number; kind: ExternalKind }, ThunkConfig>(
+export const deleteExternalThunk = createAsyncThunk<ExternalEntity[], { id: number; kind: ExternalKind; reason: string }, ThunkConfig>(
   'externals/delete',
-  async ({ id, kind }, { rejectWithValue }) => {
+  async ({ id, kind, reason }, { rejectWithValue }) => {
     try {
-      await deleteExternal(id)
+      await deleteExternal(id, reason)
       return await getExternals(kind)
     } catch (error) {
       return rejectWithValue(getErrorMessage(error, 'No se pudo eliminar el registro.'))

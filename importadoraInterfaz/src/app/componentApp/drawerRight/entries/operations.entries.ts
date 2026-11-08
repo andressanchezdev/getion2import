@@ -11,6 +11,7 @@ import { PurchaseDetailPanel, PurchaseFormPanel, PurchaseReceivePanel, type Purc
 import { CashClosePanel, CashCollectPanel, CashOpenPanel, type CashCollectPayload } from '@/features/cashRegister'
 import { CreateAbonoPanel, AbonoDetailPanel, EnableCreditPanel, type CreateAbonoPayload, type AbonoRecord as WalletAbono, type EnableCreditPayload } from '@/features/wallet'
 import { RegisterExpenseDrawer } from '@/features/shop'
+import { ReasonFormPanel, type ReasonFormPayload } from '@/features/reasonPrompt'
 import userIcon from '@/assets/icons/user.svg'
 import shippingIcon from '@/assets/icons/shipping.svg'
 import historyIcon from '@/assets/icons/history.svg'
@@ -21,6 +22,12 @@ import type { DrawerFormKind } from '@/features/navigation'
 import type { FormEntry } from './formEntry.types'
 
 export const OPERATIONS_ENTRIES: Partial<Record<DrawerFormKind, FormEntry>> = {
+  reasonForm: {
+    icon: fileIcon,
+    title: (payload) => (payload as ReasonFormPayload).title,
+    subtitle: 'Queda registrado en la auditoría',
+    render: (payload) => createElement(ReasonFormPanel, { key: (payload as ReasonFormPayload).requestId, payload: payload as ReasonFormPayload }),
+  },
   bankConfirm: {
     icon: fileIcon,
     title: () => 'Confirmar entrada del banco',

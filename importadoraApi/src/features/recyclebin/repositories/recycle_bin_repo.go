@@ -103,7 +103,7 @@ func (r *RecycleBinRepository) List(ctx context.Context, q db.DBExecutor, f dtos
 	argIdx := 1
 
 	if f.CompanyID != nil {
-		where = append(where, fmt.Sprintf("(rb.company_id = $%d OR rb.company_id IS NULL)", argIdx))
+		where = append(where, fmt.Sprintf("rb.company_id = $%d", argIdx))
 		args = append(args, *f.CompanyID)
 		argIdx++
 	}

@@ -275,6 +275,9 @@ func (s *ExternalService) Update(ctx context.Context, actor *middlewares.ActorCo
 	if req.Coverage != nil {
 		current.Coverage = req.Coverage
 	}
+	if _, rerr := utils.ReasonOnDeactivation(current.IsActive, req.IsActive, req.Reason); rerr != nil {
+		return nil, rerr
+	}
 	if req.IsActive != nil {
 		current.IsActive = *req.IsActive
 	}
@@ -300,7 +303,11 @@ func (s *ExternalService) Update(ctx context.Context, actor *middlewares.ActorCo
 }
 
 // Delete elimina el tercero validando que sea de la compañía del usuario.
-func (s *ExternalService) Delete(ctx context.Context, actor *middlewares.ActorContext, id int64, ip, ua string) error {
+func (s *ExternalService) Delete(ctx context.Context, actor *middlewares.ActorContext, id int64, reason, ip, ua string) error {
+	reason, verr := utils.ValidateReason(reason)
+	if verr != nil {
+		return verr
+	}
 	if actor == nil {
 		return utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
 	}
@@ -330,7 +337,7 @@ func (s *ExternalService) Delete(ctx context.Context, actor *middlewares.ActorCo
 		Entity:    "externals",
 		EntityID:  &current.ID,
 		Action:    "EXTERNAL_DEACTIVATED",
-		Reason:    "Desactivación lógica de externo",
+		Reason:    reason,
 		IPAddress: ip,
 		UserAgent: ua,
 	})

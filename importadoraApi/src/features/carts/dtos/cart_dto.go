@@ -35,7 +35,6 @@ type CartResponse struct {
 	WarehouseName *string            `json:"warehouseName,omitempty"`
 	PriceTier     types.PriceTier    `json:"priceTier"`
 	Status        types.CartStatus   `json:"status"`
-	ExpiresAt     time.Time          `json:"expiresAt"`
 	CreatedAt     time.Time          `json:"createdAt"`
 	UpdatedAt     time.Time          `json:"updatedAt"`
 	Items         []CartItemResponse `json:"items"`

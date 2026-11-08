@@ -1,12 +1,15 @@
 // useInvoices · pide las facturas generales o por bodega seleccionada y maneja la búsqueda y el filtro de estado
-// conecta con: InvoicesTable (lo usa), billing.thunks (loadInvoicesThunk), billing.selectors, billing.adapter (filtrar) y auth (hay sesión)
+// conecta con: InvoicesTable (lo usa), billing.thunks (loadInvoicesThunk), billing.service (annulInvoice), billing.selectors, billing.adapter (filtrar), auth (hay sesión) y toast
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { selectCurrentUser } from '@/features/auth'
+import { getErrorMessage } from '@/api/http/errors'
+import { toast } from '@/global/helpers/feedback/toast'
 import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { filterInvoices } from '../helpers/billing.adapter'
 import { selectBilling } from '../selectors/billing.selectors'
+import { annulInvoice } from '../services/billing.service'
 import { loadInvoicesThunk } from '../thunks/billing.thunks'
-import type { InvoiceStatus } from '../types/billing.types'
+import type { Invoice, InvoiceStatus } from '../types/billing.types'
 
 export const useInvoices = () => {
   const dispatch = useAppDispatch()
@@ -24,6 +27,20 @@ export const useInvoices = () => {
   }, [dispatch, hasSession, selectedWarehouseId])
 
   useEffect(reload, [reload])
+
+  // anula una factura emitida con su motivo y recarga la lista para mostrar el nuevo estado
+  const annul = useCallback(
+    async (invoice: Invoice, reason: string) => {
+      try {
+        await annulInvoice(invoice.id, reason)
+        toast.success(`Factura ${invoice.number} anulada.`)
+        reload()
+      } catch (err) {
+        toast.error(getErrorMessage(err, 'No se pudo anular la factura.'))
+      }
+    },
+    [reload]
+  )
 
   const isCurrent = billing.warehouseId === selectedWarehouseId
   const all = useMemo(() => (isCurrent ? billing.invoices : []), [isCurrent, billing.invoices])
@@ -50,5 +67,6 @@ export const useInvoices = () => {
     hasFilters: search !== '' || status !== 'all' || selectedWarehouseId !== null,
     clearFilters,
     reload,
+    annul,
   }
 }

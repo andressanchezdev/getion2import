@@ -7,6 +7,7 @@ import { SearchBar } from '@/global/components/UI/molecules/filters/SearchBar'
 import { Pagination } from '@/global/components/UI/molecules/table/Pagination'
 import refreshIcon from '@/assets/icons/refresh.svg?raw'
 import { RowActions } from '@/global/components/UI/molecules/table/RowActions'
+import { usePermissions } from '@/global/hooks/access/usePermissions'
 import { useRecycleBin } from '../hooks/useRecycleBin'
 
 const TABLE_LABELS: Record<string, string> = {
@@ -28,6 +29,8 @@ const TABLE_LABELS: Record<string, string> = {
 }
 
 export const RecycleBinScreen: React.FC = () => {
+  // la API solo deja restaurar al superadmin: a los demás ni se les ofrece el botón
+  const canRestore = usePermissions().level === 'superadmin'
   const {
     items,
     meta,
@@ -75,7 +78,6 @@ export const RecycleBinScreen: React.FC = () => {
               <option value="">Todas las entidades</option>
               <option value="customers">Clientes</option>
               <option value="products">Productos</option>
-              <option value="employees">Empleados</option>
               <option value="suppliers">Proveedores</option>
               <option value="warehouses">Bodegas</option>
               <option value="companies">Compañías</option>
@@ -160,7 +162,7 @@ export const RecycleBinScreen: React.FC = () => {
                       </Pill>
                     </td>
                     <td style={{ textAlign: 'center' }}>
-                      {!item.isRestored && (
+                      {!item.isRestored && canRestore && (
                         <RowActions
                           actions={[
                             {

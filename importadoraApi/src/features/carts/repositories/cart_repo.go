@@ -26,7 +26,6 @@ type CartEntity struct {
 	WarehouseName *string
 	PriceTier     types.PriceTier
 	Status        types.CartStatus
-	ExpiresAt     time.Time
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 }
@@ -59,7 +58,7 @@ func (r *CartRepository) FindByID(ctx context.Context, q db.DBExecutor, id int64
 			c.employee_id, emp.full_name,
 			c.customer_id, cust.name,
 			c.warehouse_id, w.name,
-			c.price_tier, c.status, c.expires_at, c.created_at, c.updated_at
+			c.price_tier, c.status, c.created_at, c.updated_at
 		FROM carts c
 		LEFT JOIN employees emp ON emp.id = c.employee_id
 		LEFT JOIN customers cust ON cust.id = c.customer_id
@@ -72,7 +71,7 @@ func (r *CartRepository) FindByID(ctx context.Context, q db.DBExecutor, id int64
 		&c.EmployeeID, &c.EmployeeName,
 		&c.CustomerID, &c.CustomerName,
 		&c.WarehouseID, &c.WarehouseName,
-		&c.PriceTier, &c.Status, &c.ExpiresAt, &c.CreatedAt, &c.UpdatedAt,
+		&c.PriceTier, &c.Status, &c.CreatedAt, &c.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -91,12 +90,12 @@ func (r *CartRepository) FindActiveByEmployee(ctx context.Context, q db.DBExecut
 			c.employee_id, emp.full_name,
 			c.customer_id, cust.name,
 			c.warehouse_id, w.name,
-			c.price_tier, c.status, c.expires_at, c.created_at, c.updated_at
+			c.price_tier, c.status, c.created_at, c.updated_at
 		FROM carts c
 		LEFT JOIN employees emp ON emp.id = c.employee_id
 		LEFT JOIN customers cust ON cust.id = c.customer_id
 		LEFT JOIN warehouses w ON w.id = c.warehouse_id
-		WHERE c.company_id = $1 AND c.employee_id = $2 AND c.status = 'open' AND c.expires_at > CURRENT_TIMESTAMP
+		WHERE c.company_id = $1 AND c.employee_id = $2 AND c.status = 'open'
 		ORDER BY c.updated_at DESC
 		LIMIT 1
 	`
@@ -106,7 +105,7 @@ func (r *CartRepository) FindActiveByEmployee(ctx context.Context, q db.DBExecut
 		&c.EmployeeID, &c.EmployeeName,
 		&c.CustomerID, &c.CustomerName,
 		&c.WarehouseID, &c.WarehouseName,
-		&c.PriceTier, &c.Status, &c.ExpiresAt, &c.CreatedAt, &c.UpdatedAt,
+		&c.PriceTier, &c.Status, &c.CreatedAt, &c.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -122,11 +121,11 @@ func (r *CartRepository) Create(ctx context.Context, q db.DBExecutor, c *CartEnt
 	const sql = `
 		INSERT INTO carts (company_id, employee_id, customer_id, warehouse_id, price_tier, status)
 		VALUES ($1, $2, $3, $4, $5, 'open')
-		RETURNING id, uuid::text, expires_at, created_at, updated_at
+		RETURNING id, uuid::text, created_at, updated_at
 	`
 	err := q.QueryRow(ctx, sql,
 		c.CompanyID, c.EmployeeID, c.CustomerID, c.WarehouseID, c.PriceTier,
-	).Scan(&c.ID, &c.UUID, &c.ExpiresAt, &c.CreatedAt, &c.UpdatedAt)
+	).Scan(&c.ID, &c.UUID, &c.CreatedAt, &c.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +140,6 @@ func (r *CartRepository) Update(ctx context.Context, q db.DBExecutor, c *CartEnt
 			warehouse_id = $2,
 			price_tier = $3,
 			status = $4,
-			expires_at = CURRENT_TIMESTAMP + INTERVAL '1 hour',
 			updated_at = CURRENT_TIMESTAMP
 		WHERE id = $5
 	`
@@ -156,9 +154,9 @@ func (r *CartRepository) SetStatus(ctx context.Context, q db.DBExecutor, id int6
 	return err
 }
 
-// Touch renueva la actividad del carrito para que no venza.
+// Touch marca actividad en el carrito (el carrito no caduca).
 func (r *CartRepository) Touch(ctx context.Context, q db.DBExecutor, cartID int64) error {
-	const sql = `UPDATE carts SET expires_at = CURRENT_TIMESTAMP + INTERVAL '1 hour', updated_at = CURRENT_TIMESTAMP WHERE id = $1`
+	const sql = `UPDATE carts SET updated_at = CURRENT_TIMESTAMP WHERE id = $1`
 	_, err := q.Exec(ctx, sql, cartID)
 	return err
 }

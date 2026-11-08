@@ -51,8 +51,12 @@ func (ctrl *SaleController) FindByID(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+	companyID, err := middlewares.EffectiveCompanyID(c)
+	if err != nil {
+		return err
+	}
 
-	sale, err := ctrl.saleService.FindByID(c.Request().Context(), id)
+	sale, err := ctrl.saleService.FindByID(c.Request().Context(), companyID, id)
 	if err != nil {
 		return err
 	}
@@ -66,8 +70,10 @@ func (ctrl *SaleController) StageHistory(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	companyID, _ := middlewares.EffectiveCompanyID(c)
-
+	companyID, err := middlewares.EffectiveCompanyID(c)
+	if err != nil {
+		return err
+	}
 	items, err := ctrl.saleService.StageHistory(c.Request().Context(), companyID, id)
 	if err != nil {
 		return err
@@ -137,13 +143,17 @@ func (ctrl *SaleController) AdvanceToVerification(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+	companyID, err := middlewares.EffectiveCompanyID(c)
+	if err != nil {
+		return err
+	}
 
 	empID, err := ctrl.saleService.RequireActorEmployeeID(c.Request().Context(), middlewares.GetActor(c))
 	if err != nil {
 		return err
 	}
 
-	if err := ctrl.saleService.AdvanceToVerification(c.Request().Context(), id, empID); err != nil {
+	if err := ctrl.saleService.AdvanceToVerification(c.Request().Context(), companyID, id, empID); err != nil {
 		return err
 	}
 
@@ -156,13 +166,17 @@ func (ctrl *SaleController) AdvanceToPicking(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+	companyID, err := middlewares.EffectiveCompanyID(c)
+	if err != nil {
+		return err
+	}
 
 	empID, err := ctrl.saleService.RequireActorEmployeeID(c.Request().Context(), middlewares.GetActor(c))
 	if err != nil {
 		return err
 	}
 
-	if err := ctrl.saleService.AdvanceToPicking(c.Request().Context(), id, empID); err != nil {
+	if err := ctrl.saleService.AdvanceToPicking(c.Request().Context(), companyID, id, empID); err != nil {
 		return err
 	}
 
@@ -175,13 +189,17 @@ func (ctrl *SaleController) AdvanceToPacking(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+	companyID, err := middlewares.EffectiveCompanyID(c)
+	if err != nil {
+		return err
+	}
 
 	empID, err := ctrl.saleService.RequireActorEmployeeID(c.Request().Context(), middlewares.GetActor(c))
 	if err != nil {
 		return err
 	}
 
-	if err := ctrl.saleService.AdvanceToPacking(c.Request().Context(), id, empID); err != nil {
+	if err := ctrl.saleService.AdvanceToPacking(c.Request().Context(), companyID, id, empID); err != nil {
 		return err
 	}
 
@@ -194,13 +212,17 @@ func (ctrl *SaleController) IssueInvoice(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+	companyID, err := middlewares.EffectiveCompanyID(c)
+	if err != nil {
+		return err
+	}
 
 	empID, err := ctrl.saleService.RequireActorEmployeeID(c.Request().Context(), middlewares.GetActor(c))
 	if err != nil {
 		return err
 	}
 
-	invoice, err := ctrl.saleService.IssueInvoice(c.Request().Context(), id, empID)
+	invoice, err := ctrl.saleService.IssueInvoice(c.Request().Context(), companyID, id, empID)
 	if err != nil {
 		return err
 	}
@@ -214,6 +236,10 @@ func (ctrl *SaleController) AdvanceToDispatch(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+	companyID, err := middlewares.EffectiveCompanyID(c)
+	if err != nil {
+		return err
+	}
 
 	var req dtos.DispatchSaleRequest
 	_ = utils.BindOptionalJSON(c, &req)
@@ -223,7 +249,7 @@ func (ctrl *SaleController) AdvanceToDispatch(c echo.Context) error {
 		return err
 	}
 
-	if err := ctrl.saleService.AdvanceToDispatch(c.Request().Context(), id, empID, req); err != nil {
+	if err := ctrl.saleService.AdvanceToDispatch(c.Request().Context(), companyID, id, empID, req); err != nil {
 		return err
 	}
 
@@ -236,13 +262,17 @@ func (ctrl *SaleController) AdvanceToSend(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+	companyID, err := middlewares.EffectiveCompanyID(c)
+	if err != nil {
+		return err
+	}
 
 	empID, err := ctrl.saleService.RequireActorEmployeeID(c.Request().Context(), middlewares.GetActor(c))
 	if err != nil {
 		return err
 	}
 
-	if err := ctrl.saleService.AdvanceToSend(c.Request().Context(), id, empID); err != nil {
+	if err := ctrl.saleService.AdvanceToSend(c.Request().Context(), companyID, id, empID); err != nil {
 		return err
 	}
 
@@ -252,6 +282,10 @@ func (ctrl *SaleController) AdvanceToSend(c echo.Context) error {
 // CancelSale POST /sales/:id/cancel
 func (ctrl *SaleController) CancelSale(c echo.Context) error {
 	id, err := utils.ParamInt64(c, "id")
+	if err != nil {
+		return err
+	}
+	companyID, err := middlewares.EffectiveCompanyID(c)
 	if err != nil {
 		return err
 	}
@@ -266,7 +300,7 @@ func (ctrl *SaleController) CancelSale(c echo.Context) error {
 		return err
 	}
 
-	if err := ctrl.saleService.CancelSale(c.Request().Context(), id, empID, req); err != nil {
+	if err := ctrl.saleService.CancelSale(c.Request().Context(), companyID, id, empID, req); err != nil {
 		return err
 	}
 

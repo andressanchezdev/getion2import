@@ -35,6 +35,7 @@ const CarriersScreen = lazy(() => import('@/features/externals/screens/CarriersS
 const GeneralReportScreen = lazy(() => import('@/features/reports/screens/GeneralReportScreen').then((m) => ({ default: m.GeneralReportScreen })))
 const DashboardScreen = lazy(() => import('@/features/reports/screens/DashboardScreen').then((m) => ({ default: m.DashboardScreen })))
 const RecycleBinScreen = lazy(() => import('@/features/recyclebin/screens/RecycleBinScreen').then((m) => ({ default: m.RecycleBinScreen })))
+const BackupsScreen = lazy(() => import('@/features/backups/screens/BackupsScreen').then((m) => ({ default: m.BackupsScreen })))
 const SuperadminAdminsScreen = lazy(() => import('@/features/superadmin/screens/SuperadminAdminsScreen').then((m) => ({ default: m.SuperadminAdminsScreen })))
 
 export interface ScreenEntry {
@@ -103,6 +104,7 @@ export const SCREEN_REGISTRY: Partial<Record<ERPModule, ScreenEntry>> = {
   superadmin: {
     subitems: {
       admins: SuperadminAdminsScreen,
+      backups: BackupsScreen,
     },
   },
 }

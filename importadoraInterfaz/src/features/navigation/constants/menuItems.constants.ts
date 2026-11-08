@@ -97,6 +97,7 @@ export const MENU_ITEMS: NavItem[] = [
         icon: databaseIcon,
         subitems: [
             { id: 'admins', label: 'Administradores' },
+            { id: 'backups', label: 'Respaldos' },
         ],
     },
 ]

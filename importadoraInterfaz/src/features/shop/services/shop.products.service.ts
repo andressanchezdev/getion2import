@@ -120,6 +120,7 @@ export const updateProductDetails = async (
         modelId?: number
         isNew?: boolean
         iva?: number
+        reason?: string // obligatorio (10 a 100) al pasar a inactivo
     }
 ): Promise<ProductDto> => {
     const body: Record<string, unknown> = {}
@@ -132,6 +133,7 @@ export const updateProductDetails = async (
     if (updates.modelId !== undefined) body.modelId = updates.modelId
     if (updates.isNew !== undefined) body.isNew = updates.isNew
     if (updates.iva !== undefined) body.iva = updates.iva
+    if (updates.reason !== undefined) body.reason = updates.reason
     if (updates.prices) {
         const pricesBody: Record<string, number> = {}
         for (const [level, price] of Object.entries(updates.prices)) {

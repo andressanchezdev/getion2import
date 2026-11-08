@@ -99,6 +99,7 @@ type UpdateProductRequest struct {
 	IsNew       *bool                `json:"isNew"`
 	Images      []string             `json:"images"`
 	Status      *types.ProductStatus `json:"status"`
+	Reason      string               `json:"reason"` // obligatorio (10 a 100) si pasa a inactivo o descontinuado
 }
 
 type DeleteProductRequest struct {

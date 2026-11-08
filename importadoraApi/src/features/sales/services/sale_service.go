@@ -13,6 +13,7 @@ import (
 	"importadoraApi/src/core/db"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
+	authRepos "importadoraApi/src/features/auth/repositories"
 	inventoryrepos "importadoraApi/src/features/inventory/repositories"
 	"importadoraApi/src/features/sales/dtos"
 	"importadoraApi/src/features/sales/repositories"
@@ -25,14 +26,16 @@ type SaleService struct {
 	pool          *pgxpool.Pool
 	saleRepo      *repositories.SaleRepository
 	inventoryRepo *inventoryrepos.InventoryRepository
+	auditRepo     *authRepos.AuditRepository
 }
 
 // NewSaleService crea el servicio con las piezas que necesita para funcionar.
-func NewSaleService(pool *pgxpool.Pool, saleRepo *repositories.SaleRepository, inventoryRepo *inventoryrepos.InventoryRepository) *SaleService {
+func NewSaleService(pool *pgxpool.Pool, saleRepo *repositories.SaleRepository, inventoryRepo *inventoryrepos.InventoryRepository, auditRepo *authRepos.AuditRepository) *SaleService {
 	return &SaleService{
 		pool:          pool,
 		saleRepo:      saleRepo,
 		inventoryRepo: inventoryRepo,
+		auditRepo:     auditRepo,
 	}
 }
 
@@ -317,7 +320,7 @@ func (s *SaleService) Create(ctx context.Context, actorCompanyID *int64, actorEm
 		return nil, err
 	}
 
-	return s.FindByID(ctx, createdSale.ID)
+	return s.FindByID(ctx, createdSale.CompanyID, createdSale.ID)
 }
 
 // insufficientStockError arma el 400 INSUFFICIENT_STOCK con cuántas unidades quedan realmente vendibles (disponible - reservado) de esa existencia.

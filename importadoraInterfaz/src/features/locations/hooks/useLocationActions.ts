@@ -25,10 +25,10 @@ export const useLocationActions = (warehouseId: number) => {
   const create = useCallback((input: LocationInput) => run(() => dispatch(createLocationThunk({ warehouseId, input })).unwrap(), 'Ubicación creada'), [dispatch, run, warehouseId])
   const update = useCallback((locationId: number, input: LocationInput) => run(() => dispatch(updateLocationThunk({ warehouseId, locationId, input })).unwrap(), 'Ubicación guardada'), [dispatch, run, warehouseId])
   const toggle = useCallback(
-    (locationId: number, isActive: boolean) => run(() => dispatch(toggleLocationThunk({ warehouseId, locationId, isActive })).unwrap(), isActive ? 'Ubicación activada' : 'Ubicación desactivada'),
+    (locationId: number, isActive: boolean, reason?: string) => run(() => dispatch(toggleLocationThunk({ warehouseId, locationId, isActive, reason })).unwrap(), isActive ? 'Ubicación activada' : 'Ubicación desactivada'),
     [dispatch, run, warehouseId]
   )
-  const remove = useCallback((locationId: number) => run(() => dispatch(deleteLocationThunk({ warehouseId, locationId })).unwrap(), 'Ubicación eliminada'), [dispatch, run, warehouseId])
+  const remove = useCallback((locationId: number, reason: string) => run(() => dispatch(deleteLocationThunk({ warehouseId, locationId, reason })).unwrap(), 'Ubicación eliminada'), [dispatch, run, warehouseId])
 
   return { create, update, toggle, remove }
 }

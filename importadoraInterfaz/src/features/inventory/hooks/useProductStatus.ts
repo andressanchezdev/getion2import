@@ -13,10 +13,10 @@ export const useProductStatus = () => {
   const [updatingId, setUpdatingId] = useState<string | null>(null)
 
   // cambia el estado del producto en el servidor y en la tabla; avisa si falla
-  const changeStatus = async (product: Product, status: 'active' | 'inactive') => {
+  const changeStatus = async (product: Product, status: 'active' | 'inactive', reason?: string) => {
     setUpdatingId(product.id)
     try {
-      await dispatch(saveProductDetailsThunk({ id: product.id, updates: { status } })).unwrap()
+      await dispatch(saveProductDetailsThunk({ id: product.id, updates: { status, reason } })).unwrap()
       dispatch(updateProductStatusLocally({ id: product.id, status }))
       toast.success(`Estado actualizado a ${status === 'active' ? 'Activo' : 'Inactivo'}`)
     } catch (message) {

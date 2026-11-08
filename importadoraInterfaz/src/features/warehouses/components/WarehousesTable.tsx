@@ -1,11 +1,12 @@
 // WarehousesTable — una sola tarjeta con búsqueda, filtro de estado, contador, botón de crear y la tabla de bodegas (sedes)
 // conecta con: WarehousesScreen (la usa), useManagedWarehouses y useWarehouseActions, RowActions (ver detalles, editar y gestionar ubicaciones), Pill (marca y avisos), Pagination, usePermissions y navigation (abre el panel 'warehouseForm' o 'warehouseDetail')
-import React from 'react'
+import React, { useState } from 'react'
 import './WarehousesTable.css'
 import '@/features/inventory/components/InventoryTables.css'
 import { Pill } from '@/global/components/UI/atoms/Pill'
 import { FilterSelect } from '@/global/components/UI/molecules/filters/FilterSelect'
 import { SearchBar } from '@/global/components/UI/molecules/filters/SearchBar'
+import { ReasonPrompt } from '@/features/reasonPrompt'
 import { Pagination } from '@/global/components/UI/molecules/table/Pagination'
 import { RowActions } from '@/global/components/UI/molecules/table/RowActions'
 import { usePermissions } from '@/global/hooks/access/usePermissions'
@@ -33,6 +34,7 @@ export const WarehousesTable: React.FC<WarehousesTableProps> = ({ onManageLocati
     const canEdit = permissions.canPerformAction('inventory', 'warehouses', 'update')
     const list = useManagedWarehouses()
     const actions = useWarehouseActions()
+    const [toDeactivate, setToDeactivate] = useState<Warehouse | null>(null)
     const { pageItems, meta, setPage } = usePagedList(list.items, `${list.search}|${list.status}`)
 
     const message = list.failed
@@ -127,7 +129,10 @@ export const WarehousesTable: React.FC<WarehousesTableProps> = ({ onManageLocati
                                                 disabled={!canEdit || actions.saving}
                                                 aria-label={`Estado de ${warehouse.name}`}
                                                 title={canEdit ? 'Cambiar estado' : 'Requiere permiso para editar bodegas'}
-                                                onChange={(event) => actions.setActive(warehouse, event.target.value === 'active')}
+                                                onChange={(event) => {
+                                                    if (event.target.value === 'active') void actions.setActive(warehouse, true)
+                                                    else setToDeactivate(warehouse)
+                                                }}
                                             >
                                                 <option value="active">Activa</option>
                                                 <option value="inactive">Inactiva</option>
@@ -181,6 +186,17 @@ export const WarehousesTable: React.FC<WarehousesTableProps> = ({ onManageLocati
                 </table>
             </div>
             <Pagination meta={meta} label="Paginación de bodegas" onPageChange={setPage} />
+            <ReasonPrompt
+                open={Boolean(toDeactivate)}
+                title="Desactivar bodega"
+                message={`¿Desactivar la bodega "${toDeactivate?.name ?? ''}"? Se cerrarán las sesiones de sus empleados.`}
+                confirmLabel="Desactivar"
+                onConfirm={async (reason) => {
+                    if (toDeactivate) await actions.setActive(toDeactivate, false, reason)
+                    setToDeactivate(null)
+                }}
+                onCancel={() => setToDeactivate(null)}
+            />
         </div>
     )
 }

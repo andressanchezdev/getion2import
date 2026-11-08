@@ -12,8 +12,8 @@ import { normalizeError } from './errors'
 import type { APIResponse, AppApiError } from '../types/api.types'
 
 // ojo: quien necesite reaccionar a un 401 (sesión vencida) registra su función aquí; así api/ no importa el store
-let unauthorizedHandler: (() => void) | null = null
-export const setUnauthorizedHandler = (handler: () => void): void => {
+let unauthorizedHandler: ((details?: unknown) => void) | null = null
+export const setUnauthorizedHandler = (handler: (details?: unknown) => void): void => {
   unauthorizedHandler = handler
 }
 
@@ -86,7 +86,7 @@ apiClient.interceptors.response.use(
     const { LOGIN, REFRESH, LOGOUT } = API_CONFIG.ENDPOINTS.AUTH
     const isSessionCall = [LOGIN, REFRESH, LOGOUT].some((url) => url === error.config?.url)
     if (normalized.status === 401 && !isSessionCall) {
-      unauthorizedHandler?.()
+      unauthorizedHandler?.(normalized.details)
     }
 
     return Promise.reject(normalized)

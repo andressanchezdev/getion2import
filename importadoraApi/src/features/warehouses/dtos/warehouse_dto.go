@@ -148,4 +148,5 @@ type UpdateWarehouseLocationRequest struct {
 	Code        *string `json:"code,omitempty"`
 	Description *string `json:"description,omitempty"`
 	IsActive    *bool   `json:"isActive,omitempty"`
+	Reason string `json:"reason,omitempty"` // obligatorio (10 a 100) si se desactiva
 }

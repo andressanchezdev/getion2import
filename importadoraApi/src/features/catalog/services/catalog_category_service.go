@@ -216,6 +216,9 @@ func (s *CatalogService) UpdateCategory(ctx context.Context, actor *middlewares.
 	if req.Description != nil {
 		current.Description = req.Description
 	}
+	if _, rerr := utils.ReasonOnDeactivation(current.IsActive, req.IsActive, req.Reason); rerr != nil {
+		return nil, rerr
+	}
 	if req.IsActive != nil {
 		current.IsActive = *req.IsActive
 	}
@@ -250,7 +253,11 @@ func (s *CatalogService) UpdateCategory(ctx context.Context, actor *middlewares.
 }
 
 // DeleteCategory elimina la categoría validando que sea de la compañía del usuario.
-func (s *CatalogService) DeleteCategory(ctx context.Context, actor *middlewares.ActorContext, id int64, ip, ua string) error {
+func (s *CatalogService) DeleteCategory(ctx context.Context, actor *middlewares.ActorContext, id int64, reason, ip, ua string) error {
+	reason, verr := utils.ValidateReason(reason)
+	if verr != nil {
+		return verr
+	}
 	if actor == nil {
 		return utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
 	}
@@ -280,7 +287,7 @@ func (s *CatalogService) DeleteCategory(ctx context.Context, actor *middlewares.
 		Entity:    "categories",
 		EntityID:  &current.ID,
 		Action:    "CATEGORY_DEACTIVATED",
-		Reason:    "Desactivación lógica de categoría",
+		Reason:    reason,
 		IPAddress: ip,
 		UserAgent: ua,
 	})

@@ -34,6 +34,7 @@ export const useEditProductForm = (product: Product) => {
   const initialStatus: ProductStatus = product.status === 'inactive' ? 'inactive' : 'active'
   const [status, setStatus] = useState<ProductStatus>(initialStatus)
   const [iva, setIva] = useState<number>(product.iva ?? 0)
+  const [reason, setReason] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -70,9 +71,19 @@ export const useEditProductForm = (product: Product) => {
       const categoryIdNum = categoryId ? Number(categoryId) : undefined
       // ojo: un producto en borrador o descontinuado no se vuelve «activo» solo por guardar: el estado se envía únicamente si lo cambiaste
       const statusChanged = status !== initialStatus
+      // pasar a inactivo exige el motivo (10 a 100), igual que en la tabla
+      const needsReason = statusChanged && status === 'inactive'
+      if (needsReason && (reason.trim().length < 10 || reason.trim().length > 100)) {
+        const msg = 'Indica el motivo de la desactivación (de 10 a 100 caracteres).'
+        setError(msg)
+        toast.warning('Falta el motivo', { description: msg })
+        setSaving(false)
+        return
+      }
       const fields = { name: name.trim(), code: code.trim(), description: description.trim(), isNew, iva, ...(statusChanged ? { status } : {}) }
+      const reasonField = needsReason ? { reason: reason.trim() } : {}
 
-      await dispatch(saveProductDetailsThunk({ id: product.id, updates: { ...fields, categoryId: categoryIdNum, brandId: brandId || undefined, modelId: modelId || undefined } })).unwrap()
+      await dispatch(saveProductDetailsThunk({ id: product.id, updates: { ...fields, ...reasonField, categoryId: categoryIdNum, brandId: brandId || undefined, modelId: modelId || undefined } })).unwrap()
 
       dispatch(updateProductLocally({ ...product, ...fields, category: selectedCategory ? selectedCategory.name : product.category, categoryId: categoryIdNum, brand: brands.find((b) => b.id === brandId)?.name ?? product.brand, modelCompatible: models.find((m) => m.id === modelId)?.name ?? product.modelCompatible }))
       if (statusChanged) dispatch(updateProductStatusLocally({ id: product.id, status }))
@@ -85,5 +96,5 @@ export const useEditProductForm = (product: Product) => {
     }
   }
 
-  return { categories, brands, models, brandId, setBrandId, modelId, setModelId, name, setName, code, setCode, categoryId, setCategoryId, description, setDescription, isNew, setIsNew, status, setStatus, iva, setIva, saving, error, submit }
+  return { categories, brands, models, brandId, setBrandId, modelId, setModelId, name, setName, code, setCode, categoryId, setCategoryId, description, setDescription, isNew, setIsNew, status, setStatus, initialStatus, reason, setReason, iva, setIva, saving, error, submit }
 }

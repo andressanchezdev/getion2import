@@ -6,6 +6,7 @@ import { useNotifications } from '../hooks/useNotifications'
 
 export const NotificationsPopover: React.FC = () => {
   const {
+    canReceive,
     notifications,
     unreadCount,
     loading,
@@ -30,6 +31,9 @@ export const NotificationsPopover: React.FC = () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [isOpen, setIsOpen])
+
+  // el superadmin no recibe notificaciones: no se pinta la campanita
+  if (!canReceive) return null
 
   return (
     <div className="notif-wrapper" ref={dropdownRef}>

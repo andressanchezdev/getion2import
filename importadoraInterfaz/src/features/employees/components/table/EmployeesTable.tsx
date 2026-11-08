@@ -13,6 +13,7 @@ import { useAppDispatch } from '@/global/hooks/store/useRedux'
 import { setEmployeeStatusThunk, unlockEmployeeThunk } from '../../thunks/employees.thunks'
 import './EmployeesTable.css'
 import { usePagedList } from '@/global/hooks/data/usePagedList'
+import { ReasonPrompt } from '@/features/reasonPrompt'
 import { Pagination } from '@/global/components/UI/molecules/table/Pagination'
 
 interface EmployeesTableProps {
@@ -33,11 +34,19 @@ export const EmployeesTable: React.FC<EmployeesTableProps> = ({ employees, loadi
   const message = loading ? 'Cargando directorio de empleados…' : employees.length === 0 ? 'No se encontraron empleados registrados.' : null
   const { pageItems, meta, setPage } = usePagedList(employees, employees.length)
 
+  const [toDeactivate, setToDeactivate] = useState<SimpleEmployee | null>(null)
+
+  const applyStatus = async (emp: SimpleEmployee, isActive: boolean, reason?: string) => {
+    setTogglingId(emp.employeeId)
+    await dispatch(setEmployeeStatusThunk({ employeeId: emp.employeeId, isActive, reason }))
+    setTogglingId(null)
+  }
+
+  // reactivar es directo; desactivar pide el motivo (10-100 caracteres)
   const handleToggleEmployeeStatus = async (emp: SimpleEmployee) => {
     if (!canEditPermissions || togglingId === emp.employeeId) return
-    setTogglingId(emp.employeeId)
-    await dispatch(setEmployeeStatusThunk({ employeeId: emp.employeeId, isActive: !emp.isActive }))
-    setTogglingId(null)
+    if (emp.isActive) setToDeactivate(emp)
+    else await applyStatus(emp, true)
   }
 
   return (
@@ -104,6 +113,18 @@ export const EmployeesTable: React.FC<EmployeesTableProps> = ({ employees, loadi
       </table>
     </div>
     <Pagination meta={meta} label="Paginación de empleados" onPageChange={setPage} />
+    <ReasonPrompt
+      open={Boolean(toDeactivate)}
+      title="Desactivar empleado"
+      message={`¿Desactivar a "${toDeactivate?.name ?? ''}"? Se cerrarán sus sesiones.`}
+      confirmLabel="Desactivar"
+      onConfirm={async (reason) => {
+        const emp = toDeactivate
+        setToDeactivate(null)
+        if (emp) await applyStatus(emp, false, reason)
+      }}
+      onCancel={() => setToDeactivate(null)}
+    />
     </>
   )
 }

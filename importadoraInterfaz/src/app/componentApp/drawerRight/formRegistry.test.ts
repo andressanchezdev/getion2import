@@ -60,6 +60,7 @@ const SAMPLES: Record<DrawerFormKind, unknown> = {
   },
   adminForm: undefined,
   registerExpense: undefined,
+  reasonForm: { requestId: 'reason-1', title: 'Desactivar', message: 'Motivo requerido' },
 }
 
 describe('formRegistry', () => {

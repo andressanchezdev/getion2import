@@ -28,14 +28,22 @@ func NewNotificationService(pool *pgxpool.Pool, notificationRepo *repositories.N
 	}
 }
 
+// requireRecipient deja pasar solo a quien puede recibir notificaciones: empleados y administradores de compañía.
+// ojo: el superadmin no tiene destinatario en la tabla (solo employee_id o admin_id), así que se rechaza igual al listar y al marcar como leída
+func requireRecipient(actor *middlewares.ActorContext) error {
+	if actor == nil || actor.ActorID <= 0 {
+		return utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
+	}
+	if actor.ActorType != types.ActorEmployee && actor.ActorType != types.ActorAdmin {
+		return utils.Forbidden("NOTIFICATIONS_UNAVAILABLE", "Las notificaciones están disponibles para administradores y empleados.")
+	}
+	return nil
+}
+
 // List devuelve las notificaciones paginados según los filtros, limitados a lo que el usuario puede ver.
 func (s *NotificationService) List(ctx context.Context, actor *middlewares.ActorContext, unreadOnly bool, params utils.PageParams) ([]dtos.NotificationResponse, *utils.PaginatorMetadata, error) {
-	if actor == nil || actor.ActorID <= 0 {
-		return nil, nil, utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
-	}
-
-	if actor.ActorType == types.ActorSuperadmin {
-		return nil, nil, utils.Forbidden("NOTIFICATIONS_UNAVAILABLE", "Las notificaciones están disponibles para administradores y empleados.")
+	if err := requireRecipient(actor); err != nil {
+		return nil, nil, err
 	}
 	filter := dtos.NotificationFilterQuery{
 		ActorType:  string(actor.ActorType),
@@ -72,16 +80,16 @@ func (s *NotificationService) List(ctx context.Context, actor *middlewares.Actor
 
 // MarkAsRead marca una notificación como leída, validando que sea del usuario.
 func (s *NotificationService) MarkAsRead(ctx context.Context, actor *middlewares.ActorContext, id int64) error {
-	if actor == nil || actor.ActorID <= 0 {
-		return utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
+	if err := requireRecipient(actor); err != nil {
+		return err
 	}
 	return s.notificationRepo.MarkAsRead(ctx, s.pool, string(actor.ActorType), id, actor.ActorID)
 }
 
 // MarkAllAsRead marca como leídas todas las notificaciones del usuario.
 func (s *NotificationService) MarkAllAsRead(ctx context.Context, actor *middlewares.ActorContext) error {
-	if actor == nil || actor.ActorID <= 0 {
-		return utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
+	if err := requireRecipient(actor); err != nil {
+		return err
 	}
 	return s.notificationRepo.MarkAllAsRead(ctx, s.pool, string(actor.ActorType), actor.ActorID)
 }

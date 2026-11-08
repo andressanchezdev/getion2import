@@ -4,7 +4,7 @@
 import React, { useState } from 'react'
 import './ExternalsTable.css'
 import '@/features/inventory/components/InventoryTables.css'
-import { ConfirmDialog } from '@/global/components/UI/molecules/dialogs/ConfirmDialog'
+import { ReasonPrompt } from '@/features/reasonPrompt'
 import { FilterSelect } from '@/global/components/UI/molecules/filters/FilterSelect'
 import { SearchBar } from '@/global/components/UI/molecules/filters/SearchBar'
 import { Pagination } from '@/global/components/UI/molecules/table/Pagination'
@@ -42,10 +42,10 @@ export const ExternalsTable: React.FC<{ kind: ExternalKind }> = ({ kind }) => {
 
   const openForm = (item?: ExternalEntity) => dispatch(openDrawerForm({ kind: 'externalForm', payload: { kind, item } }))
 
-  const confirmDelete = async () => {
+  const confirmDelete = async (reason: string) => {
     const target = toDelete
     setToDelete(null)
-    if (target) await actions.remove(target)
+    if (target) await actions.remove(target, reason)
   }
 
   return (
@@ -149,10 +149,10 @@ export const ExternalsTable: React.FC<{ kind: ExternalKind }> = ({ kind }) => {
         <Pagination meta={meta} label={`Paginación de ${labels.plural}`} onPageChange={setPage} />
       </div>
 
-      <ConfirmDialog
+      <ReasonPrompt
         open={toDelete !== null}
         title={`Eliminar ${labels.singular.toLowerCase()}`}
-        message={`¿Eliminar ${labels.article} «${toDelete?.name ?? ''}»? Esta acción no se puede deshacer.`}
+        message={`¿Eliminar ${labels.article} «${toDelete?.name ?? ''}»? Indica el motivo para dejar constancia.`}
         confirmLabel="Eliminar"
         onConfirm={confirmDelete}
         onCancel={() => setToDelete(null)}

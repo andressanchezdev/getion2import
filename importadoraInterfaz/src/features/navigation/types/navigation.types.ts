@@ -74,6 +74,7 @@ export type DrawerFormKind =
   | 'docSeriesForm'
   | 'adminForm'
   | 'registerExpense'
+  | 'reasonForm'
 
 export interface DrawerForm {
   kind: DrawerFormKind

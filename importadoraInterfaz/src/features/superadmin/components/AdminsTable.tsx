@@ -1,6 +1,7 @@
 // AdminsTable · tabla de administradores con sus estados de carga y vacío y las acciones editar y activar / desactivar
 // conecta con: SuperadminAdminsScreen; usa RowActions (global) y formatDate; las acciones llegan por props desde la pantalla
-import React from 'react'
+import React, { useState } from 'react'
+import { ReasonPrompt } from '@/features/reasonPrompt'
 import { RowActions } from '@/global/components/UI/molecules/table/RowActions'
 import { formatDate } from '@/global/helpers/formatting/format'
 import editIcon from '@/assets/icons/edit.svg?raw'
@@ -12,12 +13,13 @@ interface Props {
   loading: boolean
   hasFilters: boolean
   onEdit: (admin: AdminUser) => void
-  onToggle: (admin: AdminUser) => void
+  onToggle: (admin: AdminUser, reason?: string) => void
 }
 
 const COLUMNS = ['ID', 'Administrador', 'Empresa', 'Documento', 'Teléfono', 'Estado', 'Registro']
 
 export const AdminsTable: React.FC<Props> = ({ admins, loading, hasFilters, onEdit, onToggle }) => {
+  const [toDeactivate, setToDeactivate] = useState<AdminUser | null>(null)
   const message = loading
     ? 'Cargando administradores…'
     : admins.length === 0
@@ -54,7 +56,7 @@ export const AdminsTable: React.FC<Props> = ({ admins, loading, hasFilters, onEd
                   <RowActions
                     actions={[
                       { key: 'edit', label: 'Editar administrador', icon: editIcon, onClick: () => onEdit(admin) },
-                      { key: 'toggle', label: admin.isActive ? 'Desactivar cuenta' : 'Activar cuenta', icon: powerIcon, onClick: () => onToggle(admin) },
+                      { key: 'toggle', label: admin.isActive ? 'Desactivar cuenta' : 'Activar cuenta', icon: powerIcon, onClick: () => (admin.isActive ? setToDeactivate(admin) : onToggle(admin)) },
                     ]}
                   />
                 </td>
@@ -63,6 +65,18 @@ export const AdminsTable: React.FC<Props> = ({ admins, loading, hasFilters, onEd
           )}
         </tbody>
       </table>
+      <ReasonPrompt
+        open={toDeactivate !== null}
+        title="Desactivar administrador"
+        message={`¿Desactivar la cuenta de ${toDeactivate?.fullName || toDeactivate?.email || ''}? Se cerrarán sus sesiones abiertas.`}
+        confirmLabel="Desactivar"
+        onConfirm={(reason) => {
+          const target = toDeactivate
+          setToDeactivate(null)
+          if (target) onToggle(target, reason)
+        }}
+        onCancel={() => setToDeactivate(null)}
+      />
     </div>
   )
 }

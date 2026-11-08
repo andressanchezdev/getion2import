@@ -128,9 +128,9 @@ func (r *WarehouseRepository) CountStockInLocation(ctx context.Context, q db.DBE
 	return count, err
 }
 
-// DeleteLocation elimina la ubicación.
+// DeleteLocation inactiva la ubicación (no se borra de la base).
 func (r *WarehouseRepository) DeleteLocation(ctx context.Context, q db.DBExecutor, id int64) error {
-	const sql = `DELETE FROM warehouse_locations WHERE id = $1`
+	const sql = `UPDATE warehouse_locations SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP WHERE id = $1`
 	_, err := q.Exec(ctx, sql, id)
 	return err
 }

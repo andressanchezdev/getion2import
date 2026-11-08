@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/utils"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/features/products/dtos"
 
@@ -126,7 +127,16 @@ func (r *ProductRepository) FindByCompanyAndCode(ctx context.Context, q db.DBExe
 }
 
 // List lista los productos según los filtros, con su total para paginar.
+// List lista con búsqueda exacta; si el texto buscado no encuentra nada, reintenta tolerando errores de ortografía.
 func (r *ProductRepository) List(ctx context.Context, q db.DBExecutor, f dtos.ProductFilterQuery) ([]ProductEntity, int, error) {
+	items, total, err := r.list(ctx, q, f, false)
+	if err == nil && total == 0 && strings.TrimSpace(f.Search) != "" {
+		return r.list(ctx, q, f, true)
+	}
+	return items, total, err
+}
+
+func (r *ProductRepository) list(ctx context.Context, q db.DBExecutor, f dtos.ProductFilterQuery, fuzzy bool) ([]ProductEntity, int, error) {
 	where := []string{"p.deleted_at IS NULL"}
 	args := make([]interface{}, 0)
 	argIdx := 1
@@ -169,7 +179,7 @@ func (r *ProductRepository) List(ctx context.Context, q db.DBExecutor, f dtos.Pr
 
 	// Búsqueda rápida sobre easysearch (o fallback a name/code)
 	if f.Search != "" {
-		where = append(where, fmt.Sprintf("(p.easysearch ILIKE $%d OR p.name ILIKE $%d OR p.code ILIKE $%d)", argIdx, argIdx, argIdx))
+		where = append(where, fmt.Sprintf("(p.easysearch ILIKE $%d OR p.name ILIKE $%d OR p.code ILIKE $%d)%s", argIdx, argIdx, argIdx, utils.FuzzyOr(fuzzy, argIdx, "p.name")))
 		args = append(args, "%"+f.Search+"%")
 		argIdx++
 	}

@@ -43,13 +43,16 @@ type WarehouseFacturationResolution struct {
 	RangeFrom            *int64
 	RangeTo              *int64
 	ResolutionExpired    bool
+	InvoicePrefix        string
+	IsActive             bool
 }
 
 // FindWarehouseFacturation busca la configuración de facturación de la bodega del pedido.
 func (r *SaleRepository) FindWarehouseFacturation(ctx context.Context, q db.DBExecutor, warehouseID int64) (*WarehouseFacturationResolution, error) {
 	const sql = `
 		SELECT id, resolution_number, resolution_valid_until, range_from, range_to,
-			COALESCE(resolution_valid_until < CURRENT_DATE, FALSE)
+			COALESCE(resolution_valid_until < CURRENT_DATE, FALSE),
+			COALESCE(invoice_prefix, ''), is_active
 		FROM warehouse_facturation
 		WHERE warehouse_id = $1
 	`
@@ -57,8 +60,12 @@ func (r *SaleRepository) FindWarehouseFacturation(ctx context.Context, q db.DBEx
 	err := q.QueryRow(ctx, sql, warehouseID).Scan(
 		&facturation.ID, &facturation.ResolutionNumber, &facturation.ResolutionValidUntil,
 		&facturation.RangeFrom, &facturation.RangeTo, &facturation.ResolutionExpired,
+		&facturation.InvoicePrefix, &facturation.IsActive,
 	)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return &facturation, nil

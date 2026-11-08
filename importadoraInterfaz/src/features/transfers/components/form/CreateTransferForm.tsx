@@ -43,10 +43,9 @@ export const CreateTransferForm: React.FC<CreateTransferFormProps> = ({ initialP
         ) : (
           <section className="transfer-header-dest-card is-admin" aria-label="Configuración de destino para administradores">
             <div className="transfer-dest-left">
-              <span className="transfer-dest-icon" aria-hidden="true">🏢</span>
               <div className="transfer-dest-details">
                 <label htmlFor="transfer-admin-dest" className="transfer-admin-label">
-                  Bodega de destino (Recepción):
+                  Bodega destino del traslado:
                 </label>
                 <select
                   id="transfer-admin-dest"

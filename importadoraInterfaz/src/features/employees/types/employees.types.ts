@@ -70,6 +70,7 @@ export interface RoleInput {
   name: string
   description: string
   isActive?: boolean // solo al editar
+  reason?: string // obligatorio (10 a 100) al desactivar
 }
 
 // estado del slice: lista de empleados (con la bodega por la que se pidió) y lista de roles

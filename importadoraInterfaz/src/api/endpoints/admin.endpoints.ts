@@ -31,6 +31,12 @@ export const ADMIN_ENDPOINTS = {
     LIST: '/recycle-bin',
     RESTORE: (id: number | string) => `/recycle-bin/${id}/restore`,
   },
+  BACKUPS: {
+    LIST: '/backups',
+    CREATE: '/backups',
+    DOWNLOAD: (id: string) => `/backups/${id}/download`,
+    RESTORE: (id: string) => `/backups/${id}/restore`,
+  },
   NOTIFICATIONS: {
     LIST: '/notifications',
     MARK_READ: (id: number | string) => `/notifications/${id}/read`,
