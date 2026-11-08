@@ -30,9 +30,10 @@ export const DrawerRight: React.FC = () => {
   // Detección de módulo de catálogo
   // ojo: hay dos carritos con el mismo diseño: el de ventas (catálogo) y el de cotizaciones (Cotizar)
   const isQuotationCatalog = activeModule === 'shop' && activeSubitem === 'quotationCatalog'
+  const isQuotationView = isQuotationCatalog || mode === 'quotationCart'
   const isCartMode = (value: typeof mode) => value === 'cart' || value === 'quotationCart'
   const isInCatalog = (activeModule === 'shop' && (activeSubitem === 'catalog' || isQuotationCatalog)) || isCartMode(mode)
-  const totalItemsCount = isQuotationCatalog || mode === 'quotationCart' ? quotationUnits : saleItemsCount
+  const totalItemsCount = isQuotationView ? quotationUnits : saleItemsCount
 
   // Borrador de traslados activos (memoria a corto plazo)
   const transferDraft = useAppSelector((state) => state.transfers.draft)
@@ -50,7 +51,8 @@ export const DrawerRight: React.FC = () => {
 
   // Visibilidad de pestañas laterales (al mismo nivel)
   const isCartTabVisible = isInCatalog && !isCartDrawerOpen
-  const isTransferTabVisible = (isInCatalog || transferUnitsCount > 0) && !isTransferFormOpen
+  // ojo: en Cotizar no hay pestaña de traslados (aunque haya un borrador de traslado): ahí solo se arma la cotización
+  const isTransferTabVisible = !isQuotationView && (isInCatalog || transferUnitsCount > 0) && !isTransferFormOpen
 
   // Arrastre vertical coordinado: si ambas pestañas están visibles, reserva el espacio para evitar solapamiento
   const bothTabsVisible = isCartTabVisible && isTransferTabVisible
