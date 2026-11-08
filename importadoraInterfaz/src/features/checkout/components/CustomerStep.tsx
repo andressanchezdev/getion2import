@@ -1,6 +1,8 @@
 // CustomerStep · primer paso: elegir el cliente (búsqueda), confirmar o editar los datos de entrega que se cargan de la base y, si lo hace un administrador, elegir el empleado al que se le entrega la venta
 // conecta con: CheckoutPanel (lo usa), useCheckoutFlow (estado), useEmployeesDirectory (empleados), ValidatedInput y CheckoutPanel.css
 // ojo: las cotizaciones solo piden el cliente (sin entrega ni empleado); la entrega pide dirección, ciudad y teléfono de 10 dígitos
+import { Icon } from '@/global/components/UI/atoms/Icon'
+import swapIcon from '@/assets/icons/swap.svg?raw'
 import React from 'react'
 import { ValidatedInput } from '@/global/components/UI/molecules/form'
 import { SANITIZERS } from '@/global/helpers/validation/validation.helpers'
@@ -22,7 +24,7 @@ export const CustomerStep: React.FC<{ flow: Flow }> = ({ flow }) => {
             <strong>{customer.name}</strong>
             <small>{customer.document}{customer.discountPercent > 0 && ` · descuento ${customer.discountPercent} %`}</small>
           </div>
-          <button type="button" className="btn-secondary" onClick={flow.clearCustomer}>Cambiar</button>
+          <button type="button" className="btn-secondary" onClick={flow.clearCustomer}><Icon svg={swapIcon} /> Cambiar</button>
         </div>
       ) : (
         <>

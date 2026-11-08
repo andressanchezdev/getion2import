@@ -46,19 +46,6 @@
   gap: var(--space-3);
 }
 
-.customers-table-avatar {
-  width: 36px;
-  height: 36px;
-  flex-shrink: 0;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--c-blue-100);
-  color: var(--c-blue-800);
-  font-size: var(--text-xs);
-  font-weight: var(--font-weight-bold);
-}
-
 .customers-table-person-text {
   display: flex;
   flex-direction: column;

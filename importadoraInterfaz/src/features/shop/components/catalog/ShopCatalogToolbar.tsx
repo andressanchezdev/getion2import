@@ -1,4 +1,4 @@
-// ShopCatalogToolbar · fila de herramientas: búsqueda, filtros de categoría y marca como chips, checkbox «con stock» y limpiar filtros
+// ShopCatalogToolbar · fila de herramientas: búsqueda, filtros de categoría y marca como chips y checkbox «con stock»; limpiar filtros vive dentro de la barra de búsqueda
 import React from 'react'
 import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { SearchBar } from '@/global/components/UI/molecules/filters/SearchBar'
@@ -30,6 +30,8 @@ export const ShopCatalogToolbar: React.FC = () => {
       <SearchBar
         value={filters.searchQuery}
         onChange={(val) => dispatch(setSearchQuery(val))}
+        hasActiveFilters={hasActiveFilters}
+        onClear={() => dispatch(resetFilters())}
         placeholder="Buscar por código, repuesto, marca o modelo de moto..."
         className="shop-catalog-search-bar"
       />
@@ -57,16 +59,6 @@ export const ShopCatalogToolbar: React.FC = () => {
         <span>Con stock en bodega</span>
       </label>
 
-      {hasActiveFilters && (
-        <button
-          type="button"
-          onClick={() => dispatch(resetFilters())}
-          className="shop-catalog-reset-btn"
-          title="Restablecer todos los filtros"
-        >
-          Limpiar filtros
-        </button>
-      )}
     </div>
   )
 }

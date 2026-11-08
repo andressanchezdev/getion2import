@@ -2,7 +2,6 @@
 // conecta con: useProductsTable (los pide), ProductsTable, inventory.slice (búsqueda y página), global SearchBar y Pagination; la monta MainContent (screenRegistry)
 import React from 'react'
 import '../components/InventoryTables.css'
-import { Pill } from '@/global/components/UI/atoms/Pill'
 import { SearchBar } from '@/global/components/UI/molecules/filters/SearchBar'
 import { Pagination } from '@/global/components/UI/molecules/table/Pagination'
 import { useAppDispatch } from '@/global/hooks/store/useRedux'
@@ -30,7 +29,6 @@ export const ProductsScreen: React.FC = () => {
             className="inv-search"
           />
           <div className="inv-toolbar-actions">
-            <Pill tone="blue">Catálogo global de la compañía</Pill>
             {meta && <span className="inv-count">{meta.totalRecords} productos</span>}
             {canCreate && (
               <button type="button" className="btn-primary" onClick={() => dispatch(openDrawerForm({ kind: 'createProduct' }))}>

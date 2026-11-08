@@ -1,8 +1,7 @@
-// EmployeesTable · tabla de empleados: avatar con iniciales, nombre y contacto, cargo, sede, modalidad, estado y acciones con ícono
+// EmployeesTable · tabla de empleados: nombre y contacto, cargo, sede, modalidad, estado y acciones con ícono
 // conecta con: EmployeesScreen (la usa), employees.types, global format (iniciales) y RowActions (acciones «Ver detalle» (datos y lista de permisos) y «Editar permisos»); estilos en EmployeesTable.css
 // ojo: carga y lista vacía se muestran dentro de la misma tabla para que no salte el diseño
 import React, { useState } from 'react'
-import { getInitials } from '@/global/helpers/formatting/format'
 import { RowActions } from '@/global/components/UI/molecules/table/RowActions'
 import { usePermissions } from '@/global/hooks/access/usePermissions'
 import eyeIcon from '@/assets/icons/eye.svg?raw'
@@ -75,7 +74,6 @@ export const EmployeesTable: React.FC<EmployeesTableProps> = ({ employees, loadi
                 <tr key={employee.employeeId} className="employees-table-row">
                   <td>
                     <div className="employees-table-person">
-                      <span className="employees-table-avatar" aria-hidden="true">{getInitials(fullName)}</span>
                       <div className="employees-table-person-text">
                         <span className="employees-table-name">{fullName}</span>
                         <span className="employees-table-contact">CC {employee.identification} · {employee.email}</span>

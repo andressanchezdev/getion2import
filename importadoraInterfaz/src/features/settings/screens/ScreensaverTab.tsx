@@ -11,7 +11,6 @@ export const ScreensaverTab: React.FC = () => {
       <div className="screensaver-header-bar">
         <div>
           <h4>Protector de Pantalla</h4>
-          <p>Personaliza y gestiona la imagen central que se dibuja mediante partículas interactivas.</p>
         </div>
       </div>
 
@@ -52,7 +51,6 @@ export const ScreensaverTab: React.FC = () => {
               disabled={s.optimizing}
             />
             <label htmlFor="screensaver-file-input" className="screensaver-dropzone">
-              <span className="screensaver-drop-icon">📁</span>
               <strong>{s.optimizing ? 'Optimizando imagen...' : 'Haz clic o arrastra una nueva imagen'}</strong>
               <small>Formatos recomendados: PNG o JPG con fondo oscuro o transparente (compresión automática WebP)</small>
               {s.fileName && <span className="screensaver-selected-file">Archivo: {s.fileName}</span>}

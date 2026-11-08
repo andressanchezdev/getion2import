@@ -43,19 +43,6 @@
   gap: var(--space-3);
 }
 
-.employees-table-avatar {
-  display: grid;
-  flex-shrink: 0;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  font-size: var(--text-xs);
-  font-weight: var(--font-weight-bold);
-  color: var(--c-blue-800);
-  background: var(--c-blue-100);
-  border-radius: 50%;
-}
-
 .employees-table-person-text {
   display: flex;
   flex-direction: column;

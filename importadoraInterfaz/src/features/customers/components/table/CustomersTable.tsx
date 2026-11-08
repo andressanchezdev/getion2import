@@ -1,8 +1,7 @@
-// CustomersTable · tabla de clientes: listado integral con badges de background, avatar con iniciales, dropdown de estado y acciones CRUD
+// CustomersTable · tabla de clientes: listado integral con badges de background, dropdown de estado y acciones CRUD
 import React, { useState } from 'react'
 import './CustomersTable.css'
 import '@/features/inventory/components/InventoryTables.css'
-import { getInitials } from '@/global/helpers/formatting/format'
 import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import type { Customer } from '../../types/customers.types'
 import { selectCustomer } from '../../slices/customers.slice'
@@ -136,9 +135,6 @@ export const CustomersTable: React.FC = () => {
                 >
                   <td>
                     <div className="customers-table-person">
-                      <span className="customers-table-avatar" aria-hidden="true">
-                        {getInitials(customer.fullName)}
-                      </span>
                       <div className="customers-table-person-text">
                         <strong className="customers-table-name">{customer.fullName}</strong>
                         {customer.businessName && <span className="customers-table-business">{customer.businessName}</span>}
