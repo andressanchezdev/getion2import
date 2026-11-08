@@ -9,7 +9,6 @@
 .audit-toolbar-filters {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
   gap: var(--space-3);
 }
 
@@ -103,5 +102,12 @@
   .audit-toolbar-actions {
     width: 100%;
     justify-content: flex-end;
+  }
+}
+
+/* vista móvil: los filtros bajan de fila (único lugar donde se permite flex-wrap) */
+@media (max-width: 900px) {
+  .audit-toolbar-filters {
+    flex-wrap: wrap;
   }
 }

@@ -10,7 +10,6 @@
   align-items: center;
   gap: var(--space-3);
   flex: 1 1 540px;
-  flex-wrap: wrap;
 }
 
 .superadmin-search-bar {
@@ -120,3 +119,9 @@
   font-size: var(--text-sm);
 }
 
+/* vista móvil: la barra baja de fila (único lugar donde se permite flex-wrap) */
+@media (max-width: 900px) {
+  .superadmin-toolbar-left {
+    flex-wrap: wrap;
+  }
+}

@@ -50,7 +50,6 @@
 
 .cash-close-card-foot {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
@@ -116,4 +115,11 @@
   background: var(--c-blue-50);
   border-color: var(--c-blue-300);
   color: var(--c-blue-600);
+}
+
+/* vista móvil: lo esperado y la etiqueta de diferencia bajan de fila (único lugar donde se permite flex-wrap) */
+@media (max-width: 900px) {
+  .cash-close-card-foot {
+    flex-wrap: wrap;
+  }
 }

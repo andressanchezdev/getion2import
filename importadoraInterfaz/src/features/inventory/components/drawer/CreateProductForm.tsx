@@ -90,7 +90,7 @@ export const CreateProductForm: React.FC = () => {
           {form.models.length > 0 && (
             <div className="drawer-form-field" style={{ marginTop: '0.75rem' }}>
               <label className="drawer-form-label">Modelos compatibles adicionales (múltiples)</label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', maxHeight: '120px', overflowY: 'auto', padding: '6px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', background: 'var(--bg-card)' }}>
+              <div className="drawer-form-chip-grid">
                 {form.models.map((model) => {
                   const isSelected = form.compatibleModelIds.includes(model.id)
                   return (

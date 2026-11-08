@@ -59,7 +59,7 @@ export const InventoryCountsScreen: React.FC = () => {
   return (
     <div className="inventory-screen" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
       <div className="inventory-card" style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)', overflow: 'hidden' }}>
-        <div style={{ padding: 'var(--space-4) var(--space-6)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--color-border)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+        <div className="data-toolbar">
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
             <span style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--color-text-secondary)' }}>
               Filtrar por estado:
