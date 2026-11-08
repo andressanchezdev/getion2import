@@ -103,13 +103,19 @@ func (c *CustomerController) Get(ctx echo.Context) error {
 	return utils.RespondPaginated(ctx, "Listado de clientes obtenido", items, *meta)
 }
 
-// Search GET /customers/search
+// Search GET /customers/search (q, y opcional creditEnabled=true para traer solo clientes con crédito)
 func (c *CustomerController) Search(ctx echo.Context) error {
 	actor := middlewares.GetActor(ctx)
 	query := ctx.QueryParam("q")
 	params := utils.ParsePagination(ctx)
 
-	items, meta, err := c.service.Search(ctx.Request().Context(), actor, query, params)
+	var creditEnabled *bool
+	if ce := ctx.QueryParam("creditEnabled"); ce != "" {
+		b := ce == "true" || ce == "1"
+		creditEnabled = &b
+	}
+
+	items, meta, err := c.service.Search(ctx.Request().Context(), actor, query, creditEnabled, params)
 	if err != nil {
 		return err
 	}

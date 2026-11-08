@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { useEmployeesDirectory } from '@/features/employees'
 import { closeDrawerForm } from '@/features/navigation'
 import { toast } from '@/global/helpers/feedback/toast'
+import { phoneProblem } from '@/global/helpers/validation/validation.helpers'
 import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { suggestWarehouseCode } from '../helpers/warehouses.manage'
 import { selectManagedWarehouses, selectWarehousesSaving } from '../selectors/warehouses.selectors'
@@ -45,6 +46,11 @@ export const useWarehouseForm = (warehouse?: Warehouse) => {
         const effectiveCode = values.code.trim() || suggestWarehouseCode(managed)
         if (!effectiveCode || !values.name.trim() || !values.city.trim() || !values.address.trim()) {
             setError(warehouse ? 'Código, nombre, ciudad y dirección son obligatorios.' : 'Nombre, ciudad y dirección son obligatorios.')
+            return
+        }
+        const phoneIssue = phoneProblem(values.phone)
+        if (phoneIssue) {
+            setError(phoneIssue)
             return
         }
         setError(null)

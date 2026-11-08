@@ -3,6 +3,7 @@
 // ojo: el cuerpo del drawer se monta solo al abrir (formulario limpio cada vez); la bodega y el rol arrancan en la primera de cada lista
 import { useState } from 'react'
 import { notify } from '@/global/helpers/feedback/toast'
+import { emailProblem, phoneProblem } from '@/global/helpers/validation/validation.helpers'
 import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { selectWarehouses } from '@/features/warehouses'
 import { createEmployeeThunk } from '../thunks/employees.thunks'
@@ -42,6 +43,8 @@ export const useCreateEmployeeForm = (onClose: () => void) => {
 
   const submit = async () => {
     if (!values.firstName.trim() || !values.email.trim() || !values.password.trim()) return notify.error('Nombre, correo y contraseña son obligatorios.')
+    const contactProblem = emailProblem(values.email, true) ?? phoneProblem(values.phone)
+    if (contactProblem) return notify.error(contactProblem)
     if (values.password.length < MIN_PASSWORD_LENGTH) return notify.error(`La contraseña debe tener mínimo ${MIN_PASSWORD_LENGTH} caracteres.`)
     if (!roleId || !warehouseId) return notify.error('Elige la sede y el rol del empleado.')
     setSubmitting(true)

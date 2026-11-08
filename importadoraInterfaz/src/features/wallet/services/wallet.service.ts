@@ -61,10 +61,10 @@ export const fetchPaymentsHistory = async (ctx: RequestContext): Promise<AbonoRe
   return (data.data ?? []).map(toAbonoRecord)
 }
 
-// busca clientes por nombre, documento o correo para habilitarles crédito (GET /customers/search)
-export const searchCreditCustomers = async (query: string): Promise<CreditCustomerOption[]> => {
+// busca clientes por nombre, documento o correo (GET /customers/search); con onlyCredit solo trae los que tienen crédito (lo filtra el backend, para que no se pierdan por la paginación)
+export const searchCreditCustomers = async (query: string, onlyCredit = false): Promise<CreditCustomerOption[]> => {
   const { data } = await apiClient.get<APIResponse<CreditCustomerDto[] | null>>(CUSTOMERS.SEARCH, {
-    params: { q: query.trim(), page: 1, pageSize: CREDIT_SEARCH_PAGE_SIZE },
+    params: { q: query.trim(), ...(onlyCredit ? { creditEnabled: true } : {}), page: 1, pageSize: CREDIT_SEARCH_PAGE_SIZE },
   })
   return (data.data ?? []).map(toCreditCustomerOption)
 }

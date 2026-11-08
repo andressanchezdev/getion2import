@@ -18,9 +18,9 @@ export const loadPaymentsHistoryThunk = createAsyncThunk<AbonoRecord[], void, Wa
   }
 })
 
-export const searchCreditCustomersThunk = createAsyncThunk<CreditCustomerOption[], string, WalletThunkConfig>('wallet/searchCreditCustomers', async (query, { rejectWithValue }) => {
+export const searchCreditCustomersThunk = createAsyncThunk<CreditCustomerOption[], { query: string; onlyCredit?: boolean }, WalletThunkConfig>('wallet/searchCreditCustomers', async ({ query, onlyCredit }, { rejectWithValue }) => {
   try {
-    return await searchCreditCustomers(query)
+    return await searchCreditCustomers(query, onlyCredit)
   } catch (error) {
     return rejectWithValue(getErrorMessage(error, 'No se pudieron buscar los clientes.'))
   }

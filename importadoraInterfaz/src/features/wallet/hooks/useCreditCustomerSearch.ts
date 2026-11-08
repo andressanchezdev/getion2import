@@ -8,15 +8,16 @@ import { CREDIT_SEARCH_DELAY_MS } from '../constants/wallet.constants'
 import { selectCreditSearch } from '../selectors/wallet.selectors'
 import { searchCreditCustomersThunk } from '../thunks/wallet.history.thunks'
 
-export const useCreditCustomerSearch = (query: string) => {
+// onlyCredit: solo clientes que ya tienen crédito (abonos); sin él trae a todos (habilitar crédito)
+export const useCreditCustomerSearch = (query: string, onlyCredit = false) => {
   const dispatch = useAppDispatch()
   const hasSession = Boolean(useAppSelector(selectCurrentUser))
   const search = useAppSelector(selectCreditSearch)
   const debounced = useDebouncedValue(query, CREDIT_SEARCH_DELAY_MS)
 
   useEffect(() => {
-    if (hasSession) dispatch(searchCreditCustomersThunk(debounced))
-  }, [dispatch, hasSession, debounced])
+    if (hasSession) dispatch(searchCreditCustomersThunk({ query: debounced, onlyCredit }))
+  }, [dispatch, hasSession, debounced, onlyCredit])
 
   return search
 }

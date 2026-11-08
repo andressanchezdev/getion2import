@@ -43,8 +43,10 @@ export const CompanyTab: React.FC = () => {
                 <input
                   id={`comp-${field.key}`}
                   type={field.type}
+                  inputMode={field.type === 'tel' ? 'tel' : undefined}
+                  maxLength={field.type === 'tel' ? 10 : 120}
                   value={form.draft[field.key]}
-                  onChange={(e) => form.setField(field.key, e.target.value)}
+                  onChange={(e) => form.setField(field.key, field.type === 'tel' ? e.target.value.replace(/\D/g, '') : e.target.value)}
                   required={field.required}
                 />
               </div>

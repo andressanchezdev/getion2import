@@ -103,3 +103,31 @@
     gap: var(--space-3);
   }
 }
+
+/* botón de recarga: solo aparece si se movió el ancho de alguna columna; queda fijo en la esquina superior derecha de la tabla */
+.data-table-reset {
+  position: sticky;
+  top: 6px;
+  right: 6px;
+  z-index: 4;
+  float: right;
+  width: 26px;
+  height: 26px;
+  margin: 6px 6px -32px 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  box-shadow: var(--shadow-card-flat);
+  transition: color var(--motion-fast), border-color var(--motion-fast);
+}
+
+.data-table-reset:hover {
+  color: var(--c-blue-600);
+  border-color: var(--c-blue-600);
+}

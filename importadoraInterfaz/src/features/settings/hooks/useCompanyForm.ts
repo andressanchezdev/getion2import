@@ -2,6 +2,8 @@
 // conecta con: CompanyTab; despacha settings.thunks y lee settings.slice
 // ojo: el borrador se copia de la ficha al pulsar «Editar» (no en un efecto); si el guardado falla se queda en edición para no perder lo escrito
 import { useEffect, useState } from 'react'
+import { toast } from '@/global/helpers/feedback/toast'
+import { emailProblem, phoneProblem } from '@/global/helpers/validation/validation.helpers'
 import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { selectCompany, selectSettings } from '../selectors/settings.selectors'
 import { loadCompanyThunk, saveCompanyThunk } from '../thunks/settings.thunks'
@@ -26,6 +28,11 @@ export const useCompanyForm = () => {
   }
   const setField = (key: keyof CompanyInput, value: string) => setDraft((prev) => ({ ...prev, [key]: value }))
   const save = async () => {
+    const problem = phoneProblem(draft.phone) ?? emailProblem(draft.email)
+    if (problem) {
+      toast.error(problem)
+      return
+    }
     const result = await dispatch(saveCompanyThunk(draft))
     if (saveCompanyThunk.fulfilled.match(result)) setEditing(false)
   }
