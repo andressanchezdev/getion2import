@@ -2,7 +2,7 @@
 // conecta con: BankReconciliationScreen (la usa), RowActions (acciones con íconos de línea), Pill (estado), ConfirmDialog (ignorar), useBankActions y navigation (abre el panel de confirmar)
 // ojo: solo las entradas pendientes tienen acciones; las salidas se ven atenuadas porque no se concilian; la paginación es la del servidor (la pinta la pantalla)
 import React, { useState } from 'react'
-import { ConfirmDialog } from '@/global/components/UI/molecules/dialogs/ConfirmDialog'
+import { ConfirmPrompt } from '@/features/reasonPrompt'
 import { Pill, type PillTone } from '@/global/components/UI/atoms/Pill'
 import { RowActions } from '@/global/components/UI/molecules/table/RowActions'
 import { formatPesos } from '@/global/helpers/formatting/format'
@@ -14,6 +14,7 @@ import banIcon from '@/assets/icons/ban.svg?raw'
 import { STATUS_LABELS } from '../../helpers/bank.adapter'
 import { useBankActions } from '../../hooks/useBankActions'
 import type { BankRecord, BankRecordStatus } from '../../types/bank.types'
+import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
 
 const STATUS_TONE: Record<BankRecordStatus, PillTone> = { pending: 'amber', confirmed: 'green', ignored: 'gray' }
 
@@ -36,8 +37,7 @@ export const BankRecordsTable: React.FC<Props> = ({ records, message }) => {
 
   return (
     <>
-      <div className="bank-table-responsive table-scroll">
-        <table className="bank-table">
+      <DataTable tableId="bank-bank-records" className="bank-table">
           <thead>
             <tr>
               <th>Fecha</th>
@@ -94,10 +94,9 @@ export const BankRecordsTable: React.FC<Props> = ({ records, message }) => {
               ))
             )}
           </tbody>
-        </table>
-      </div>
+        </DataTable>
 
-      <ConfirmDialog
+      <ConfirmPrompt
         open={toIgnore !== null}
         title="Ignorar movimiento"
         message={`¿Ignorar el movimiento de ${toIgnore ? formatPesos(toIgnore.amount) : ''}? Quedará marcado como que no corresponde a ningún pago.`}

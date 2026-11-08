@@ -13,11 +13,11 @@ export const INITIAL_RETURNS_STATE: ReturnsState = {
   query: '',
 }
 
-// resolución → texto e icono de la insignia (refund solo llega de datos viejos)
-export const RESOLUTION_LABELS: Record<string, { icon: string; text: string }> = {
-  exchange: { icon: '📦', text: 'Producto a Cambio' },
-  credit_balance: { icon: '💳', text: 'Saldo a Favor' },
-  refund: { icon: '💵', text: 'Reembolso Dinero' },
+// resolución → texto de la insignia (refund solo llega de datos viejos)
+export const RESOLUTION_LABELS: Record<string, { text: string }> = {
+  exchange: { text: 'Producto a Cambio' },
+  credit_balance: { text: 'Saldo a Favor' },
+  refund: { text: 'Reembolso Dinero' },
 }
 
 export const STATUS_LABELS: Record<string, string> = {

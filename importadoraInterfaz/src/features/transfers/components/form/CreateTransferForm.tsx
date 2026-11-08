@@ -1,9 +1,11 @@
-// CreateTransferForm · pedido de traslado en el panel derecho: cabecera con sede destino y stock local, desglose de bodegas activas y control de cantidades
+// CreateTransferForm · pedido de traslado en el panel derecho: el empleado ve su sede destino y el desglose de bodegas; el administrador elige bodega de origen y de destino
 // conecta con: useTransferRequest, TransferWarehouseStockList, TransferProductPicker, TransferRequestResults y navigation (closeDrawerForm)
 import React from 'react'
 import './TransferFormShell.css'
 import './TransferRequest.css'
 import { closeDrawerForm } from '@/features/navigation'
+import { Icon } from '@/global/components/UI/atoms/Icon'
+import mapPinIcon from '@/assets/icons/map-pin.svg?raw'
 import { useAppDispatch } from '@/global/hooks/store/useRedux'
 import { useTransferRequest, type CreateTransferInitialPayload } from '../../hooks/useTransferRequest'
 import { TransferWarehouseStockList } from './TransferWarehouseStockList'
@@ -21,6 +23,8 @@ export const CreateTransferForm: React.FC<CreateTransferFormProps> = ({ initialP
   const request = useTransferRequest(initialPayload)
   const { results, lines, units, focusedProduct } = request
   const pending = results?.some((result) => result.error) ?? false
+  // el empleado siempre tiene ruta (pide hacia su sede); el administrador necesita elegir origen y destino
+  const routeReady = request.isEmployee || (request.originWarehouseId > 0 && request.destWarehouseId > 0)
 
   return (
     <div className="transfer-form">
@@ -29,7 +33,7 @@ export const CreateTransferForm: React.FC<CreateTransferFormProps> = ({ initialP
         {request.isEmployee ? (
           <section className="transfer-header-dest-card" aria-label="Sede de destino del empleado">
             <div className="transfer-dest-left">
-              <span className="transfer-dest-icon" aria-hidden="true">📍</span>
+              <Icon svg={mapPinIcon} size="lg" className="transfer-dest-icon" />
               <div className="transfer-dest-details">
                 <strong className="transfer-dest-name">{request.destWarehouseName}</strong>
                 <span className="transfer-dest-pill">Tu sede actual (Recepción)</span>
@@ -41,30 +45,26 @@ export const CreateTransferForm: React.FC<CreateTransferFormProps> = ({ initialP
             </div>
           </section>
         ) : (
-          <section className="transfer-header-dest-card is-admin" aria-label="Configuración de destino para administradores">
-            <div className="transfer-dest-left">
-              <div className="transfer-dest-details">
-                <label htmlFor="transfer-admin-dest" className="transfer-admin-label">
-                  Bodega destino del traslado:
-                </label>
-                <select
-                  id="transfer-admin-dest"
-                  className="transfer-select-control"
-                  value={request.destWarehouseId}
-                  onChange={(e) => request.setDestWarehouseId(Number(e.target.value))}
-                >
-                  <option value={0}>Seleccionar bodega de destino…</option>
-                  {request.warehouses.map((wh) => (
-                    <option key={wh.id} value={wh.id}>
-                      {wh.name}
-                    </option>
+          <section className="transfer-header-dest-card is-admin" aria-label="Ruta del traslado para administradores">
+            <div className="transfer-admin-route">
+              <div className="transfer-admin-route-field">
+                <label htmlFor="transfer-admin-origin" className="transfer-admin-label">Bodega de origen (de donde salen los ítems)</label>
+                <select id="transfer-admin-origin" className="transfer-select-control" value={request.originWarehouseId} onChange={(e) => request.setOriginWarehouseId(Number(e.target.value))}>
+                  <option value={0}>Seleccionar bodega de origen…</option>
+                  {request.warehouses.filter((wh) => Number(wh.id) !== request.destWarehouseId).map((wh) => (
+                    <option key={wh.id} value={wh.id}>{wh.name}</option>
                   ))}
                 </select>
               </div>
-            </div>
-            <div className="transfer-dest-right">
-              <span className="transfer-dest-stock-label">Stock en destino:</span>
-              <span className="transfer-dest-stock-qty">{request.localStockInDest} uds</span>
+              <div className="transfer-admin-route-field">
+                <label htmlFor="transfer-admin-dest" className="transfer-admin-label">Bodega de destino (donde reciben los ítems)</label>
+                <select id="transfer-admin-dest" className="transfer-select-control" value={request.destWarehouseId} onChange={(e) => request.setDestWarehouseId(Number(e.target.value))}>
+                  <option value={0}>Seleccionar bodega de destino…</option>
+                  {request.warehouses.filter((wh) => Number(wh.id) !== request.originWarehouseId).map((wh) => (
+                    <option key={wh.id} value={wh.id}>{wh.name}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </section>
         )}
@@ -89,10 +89,13 @@ export const CreateTransferForm: React.FC<CreateTransferFormProps> = ({ initialP
             )}
 
             {/* Desglose de todas las bodegas activas y control de cantidades */}
-            {focusedProduct ? (
+            {!routeReady ? (
+              <p className="transfer-req-note">Elige la bodega de origen y la de destino para buscar repuestos.</p>
+            ) : focusedProduct ? (
               <TransferWarehouseStockList
                 warehouses={request.warehouses}
                 destWarehouseId={request.destWarehouseId}
+                onlyWarehouseId={request.originWarehouseId || undefined}
                 focusedProduct={focusedProduct}
                 getOriginQty={request.getOriginQty}
                 setOriginQty={request.setOriginQty}
@@ -104,6 +107,7 @@ export const CreateTransferForm: React.FC<CreateTransferFormProps> = ({ initialP
                 products={request.products}
                 searching={request.searching}
                 destWarehouseId={request.destWarehouseId}
+                originWarehouseId={request.originWarehouseId || undefined}
                 onAdd={request.addFrom}
               />
             )}

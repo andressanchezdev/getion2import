@@ -56,6 +56,8 @@ export const SALES_ENDPOINTS = {
     BY_ID: (id: number | string) => `/payments/${id}`,
     VERIFY: (id: number | string) => `/payments/${id}/verify`,
     VOID: (id: number | string) => `/payments/${id}/void`,
+    REJECT: (id: number | string) => `/payments/${id}/reject`,
+    REOPEN: (id: number | string) => `/payments/${id}/reopen`,
   },
   // Cartera y crédito
   WALLET: {

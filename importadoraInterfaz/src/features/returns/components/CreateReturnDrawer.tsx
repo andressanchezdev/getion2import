@@ -10,13 +10,13 @@ import { ReturnSalePicker } from './ReturnSalePicker'
 import './CreateReturnDrawer.css'
 
 const REASON_OPTIONS: ChoiceOption<ReturnReasonType>[] = [
-  { value: 'warranty', title: '🛡️ Garantía por Defecto o Falla', description: 'Falla técnica, daño de fábrica o mal funcionamiento del producto.' },
-  { value: 'wrong_item', title: '📦 Error en Despacho / Ítem Equivocado', description: 'El producto entregado no coincide con la referencia facturada.' },
+  { value: 'warranty', title: 'Garantía por Defecto o Falla', description: 'Falla técnica, daño de fábrica o mal funcionamiento del producto.' },
+  { value: 'wrong_item', title: 'Error en Despacho / Ítem Equivocado', description: 'El producto entregado no coincide con la referencia facturada.' },
 ]
 
 const RESOLUTION_OPTIONS: ChoiceOption<ReturnResolutionType>[] = [
-  { value: 'exchange', title: '🔄 Producto a Cambio (Garantía)', description: 'Se reemplaza físicamente el producto defectuoso por uno en perfecto estado.' },
-  { value: 'credit_balance', title: '💳 Saldo a Favor', description: 'Se acredita el valor al cupo / saldo a favor del cliente para próximas compras.' },
+  { value: 'exchange', title: 'Producto a Cambio (Garantía)', description: 'Se reemplaza físicamente el producto defectuoso por uno en perfecto estado.' },
+  { value: 'credit_balance', title: 'Saldo a Favor', description: 'Se acredita el valor al cupo / saldo a favor del cliente para próximas compras.' },
 ]
 
 const DrawerBody: React.FC<{ onClose: () => void }> = ({ onClose }) => {

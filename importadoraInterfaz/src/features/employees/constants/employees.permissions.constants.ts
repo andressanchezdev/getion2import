@@ -7,6 +7,7 @@ import type { ERPModule } from '@/features/navigation'
 // «módulo.subgestión» del menú → módulo de permisos de la API
 export const SCREEN_API_MODULE: Record<string, string | null> = {
   'shop.catalog': 'catalog',
+  'shop.quotationCatalog': 'quotations',
   'shop.quotations': 'quotations',
   'shop.orders': 'orders',
   'shop.cashRegister': 'cash',

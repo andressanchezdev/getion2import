@@ -14,7 +14,7 @@ import { ordersReducer } from '@/features/orders'
 import { returnsReducer } from '@/features/returns'
 import { settingsReducer } from '@/features/settings'
 import { superadminReducer } from '@/features/superadmin'
-import { quotationsReducer } from '@/features/quotations'
+import { quotationDraftReducer, quotationsReducer } from '@/features/quotations'
 import { employeesReducer } from '@/features/employees'
 import { inventoryReducer } from '@/features/inventory'
 import { companiesReducer } from '@/features/companies'
@@ -45,6 +45,7 @@ const appReducer = combineReducers({
     inventory: inventoryReducer, // tablas de inventario: productos y stock de la bodega activa (no se persiste)
     employees: employeesReducer, // empleados y roles del backend (no se persiste)
     quotations: quotationsReducer, // cotizaciones: lista, filtros y detalle abierto (no se persiste)
+    quotationDraft: quotationDraftReducer, // la cotización que se arma en «Cotizar», separada del carrito (no se persiste)
     audit: auditReducer, // auditoría: filtros, página y movimientos del backend (no se persiste)
     bank: bankReducer, // conciliación bancaria: movimientos del PDF del banco y pagos por verificar (no se persiste)
     locations: locationsReducer, // ubicaciones (estantes) de la bodega abierta y su contenido (no se persiste)

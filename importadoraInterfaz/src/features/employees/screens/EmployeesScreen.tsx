@@ -31,8 +31,8 @@ export const EmployeesScreen: React.FC = () => {
 
   return (
     <div className="employees-screen">
-      <div className="employees-card">
-        <div className="employees-toolbar">
+      <div className="data-card">
+        <div className="data-toolbar employees-toolbar">
           <SearchBar
             value={search}
             onChange={setSearch}

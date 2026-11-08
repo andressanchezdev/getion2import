@@ -9,6 +9,8 @@ import { CREDIT_STATUS_TABS } from '../../constants/wallet.constants'
 import { resetFilters, setSearchQuery, setStatusFilter } from '../../slices/wallet.slice'
 import type { CreditStatus } from '../../types/wallet.types'
 import './CreditClientsToolbar.css'
+import { Icon } from '@/global/components/UI/atoms/Icon'
+import plusIcon from '@/assets/icons/plus.svg?raw'
 
 const STATUS_OPTIONS = CREDIT_STATUS_TABS.filter((tab) => tab.key !== 'all').map((tab) => ({ value: tab.key, label: tab.label }))
 
@@ -18,7 +20,7 @@ export const CreditClientsToolbar: React.FC = () => {
   const hasFilters = filters.searchQuery !== '' || filters.statusFilter !== 'all'
 
   return (
-    <div className="credit-table-toolbar">
+    <div className="data-toolbar credit-table-toolbar">
       <SearchBar
         value={filters.searchQuery}
         onChange={(val) => dispatch(setSearchQuery(val))}
@@ -38,7 +40,7 @@ export const CreditClientsToolbar: React.FC = () => {
 
       <div className="credit-table-toolbar-actions">
         <button type="button" className="btn-primary" onClick={() => dispatch(openDrawerForm({ kind: 'enableCredit' }))}>
-          + Habilitar crédito
+          <Icon svg={plusIcon} /> Habilitar crédito
         </button>
       </div>
     </div>

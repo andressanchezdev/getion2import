@@ -1,5 +1,5 @@
-// InvoicesTable · tarjeta de facturas con buscador, filtros, tabla global, modal de detalle y la acción «Anular» (con motivo en el panel derecho)
-// conecta con: InvoicesScreen (la usa), useInvoices (anular), Pill, Pagination, InvoiceDetailModal, ReasonPrompt, usePermissions y billing.constants
+// InvoicesTable · tarjeta de facturas con buscador, filtros, tabla global, detalle en el panel derecho y la acción «Anular» (con motivo en el panel derecho)
+// conecta con: InvoicesScreen (la usa), useInvoices (anular), Pill, Pagination, ReasonPrompt, usePermissions y billing.constants
 // ojo: «Anular» solo aparece en facturas emitidas y a quien tiene permiso de eliminar en ventas; la factura no se borra, queda anulada y auditada
 import React, { useState } from 'react'
 import './InvoicesTable.css'
@@ -16,11 +16,13 @@ import banIcon from '@/assets/icons/ban.svg?raw'
 import { INVOICE_KIND_LABELS, INVOICE_STATUS, INVOICE_STATUS_OPTIONS } from '../../constants/billing.constants'
 import { useInvoices } from '../../hooks/useInvoices'
 import type { Invoice, InvoiceStatus } from '../../types/billing.types'
-import { InvoiceDetailModal } from '../modal/InvoiceDetailModal'
+import { openDrawerForm } from '@/features/navigation'
+import { useAppDispatch } from '@/global/hooks/store/useRedux'
+import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
 
 export const InvoicesTable: React.FC = () => {
   const list = useInvoices()
-  const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null)
+  const dispatch = useAppDispatch()
   const [toAnnul, setToAnnul] = useState<Invoice | null>(null)
   const canAnnul = usePermissions().canPerformAction('sales', 'orders', 'delete')
   const { pageItems, meta, setPage } = usePagedList(list.items, `${list.search}|${list.status}|${list.selectedWarehouseId}`)
@@ -41,8 +43,8 @@ export const InvoicesTable: React.FC = () => {
     : null
 
   return (
-    <div className="invoices-card">
-      <div className="invoices-toolbar">
+    <div className="data-card">
+      <div className="data-toolbar invoices-toolbar">
         <SearchBar
           value={list.search}
           onChange={list.setSearch}
@@ -84,8 +86,7 @@ export const InvoicesTable: React.FC = () => {
         </div>
       </div>
 
-      <div className="invoices-table-responsive table-scroll">
-        <table className="invoices-table">
+      <DataTable tableId="billing-invoices" className="invoices-table">
           <thead>
             <tr>
               <th>Número</th>
@@ -110,7 +111,7 @@ export const InvoicesTable: React.FC = () => {
                     <button
                       type="button"
                       className="invoices-number-btn"
-                      onClick={() => setSelectedInvoiceId(invoice.id)}
+                      onClick={() => dispatch(openDrawerForm({ kind: 'invoiceDetail', payload: invoice.id }))}
                       title="Ver detalle completo de la factura"
                     >
                       {invoice.number}
@@ -129,7 +130,7 @@ export const InvoicesTable: React.FC = () => {
                           key: 'detail',
                           label: `Ver detalle de factura ${invoice.number}`,
                           icon: eyeIcon,
-                          onClick: () => setSelectedInvoiceId(invoice.id),
+                          onClick: () => dispatch(openDrawerForm({ kind: 'invoiceDetail', payload: invoice.id })),
                         },
                         {
                           key: 'annul',
@@ -155,8 +156,7 @@ export const InvoicesTable: React.FC = () => {
               ))
             )}
           </tbody>
-        </table>
-      </div>
+        </DataTable>
       <Pagination meta={meta} label="Paginación de facturas" onPageChange={setPage} />
 
       <ReasonPrompt
@@ -170,12 +170,6 @@ export const InvoicesTable: React.FC = () => {
           if (target) void list.annul(target, reason)
         }}
         onCancel={() => setToAnnul(null)}
-      />
-
-      {/* Modal de Detalle de Factura (GET /invoices/:id) */}
-      <InvoiceDetailModal
-        invoiceId={selectedInvoiceId}
-        onClose={() => setSelectedInvoiceId(null)}
       />
     </div>
   )

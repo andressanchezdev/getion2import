@@ -11,6 +11,7 @@ import buildingIcon from '@/assets/icons/building.svg?raw'
 import { useCompanies } from '../hooks/useCompanies'
 import { usePagedList } from '@/global/hooks/data/usePagedList'
 import { Pagination } from '@/global/components/UI/molecules/table/Pagination'
+import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
 
 export const CompaniesScreen: React.FC = () => {
   const dispatch = useAppDispatch()
@@ -24,12 +25,11 @@ export const CompaniesScreen: React.FC = () => {
 
   return (
     <div className="companies-screen">
-      <div className="companies-card">
-        <div className="companies-toolbar">
+      <div className="data-card">
+        <div className="data-toolbar">
           <SearchBar value={search} onChange={setSearch} placeholder="Buscar por nombre, ciudad o correo..." className="companies-search" />
         </div>
-        <div className="table-scroll">
-          <table className="companies-table">
+        <DataTable tableId="companies-companies" className="companies-table">
             <thead>
               <tr><th>Compañía</th><th>Ciudad</th><th>Correo</th><th>Acciones</th></tr>
             </thead>
@@ -51,8 +51,7 @@ export const CompaniesScreen: React.FC = () => {
                 ))
               )}
             </tbody>
-          </table>
-        </div>
+          </DataTable>
       </div>
       <Pagination meta={meta} label="Paginación de compañías" onPageChange={setPage} />
     </div>

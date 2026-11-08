@@ -7,6 +7,7 @@ import type { CreateTransferInitialPayload } from '../../hooks/useTransferReques
 interface Props {
   warehouses: Warehouse[]
   destWarehouseId: number
+  onlyWarehouseId?: number // administrador: solo la bodega de origen elegida
   focusedProduct: NonNullable<CreateTransferInitialPayload['product']>
   getOriginQty: (originWarehouseId: number) => number
   setOriginQty: (originWarehouseId: number, originWarehouseName: string, maxStock: number, quantity: number) => void
@@ -15,12 +16,13 @@ interface Props {
 export const TransferWarehouseStockList: React.FC<Props> = ({
   warehouses,
   destWarehouseId,
+  onlyWarehouseId,
   focusedProduct,
   getOriginQty,
   setOriginQty,
 }) => {
   // Bodegas activas disponibles como origen (excluyendo la bodega de destino)
-  const originWarehouses = warehouses.filter((wh) => Number(wh.id) !== destWarehouseId && wh.isActive !== false)
+  const originWarehouses = warehouses.filter((wh) => Number(wh.id) !== destWarehouseId && wh.isActive !== false && (!onlyWarehouseId || Number(wh.id) === onlyWarehouseId))
 
   if (originWarehouses.length === 0) {
     return (

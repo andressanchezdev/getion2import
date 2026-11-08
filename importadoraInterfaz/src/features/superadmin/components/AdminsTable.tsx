@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import { ReasonPrompt } from '@/features/reasonPrompt'
 import { RowActions } from '@/global/components/UI/molecules/table/RowActions'
+import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
 import { formatDate } from '@/global/helpers/formatting/format'
 import editIcon from '@/assets/icons/edit.svg?raw'
 import powerIcon from '@/assets/icons/check.svg?raw'
@@ -26,8 +27,8 @@ export const AdminsTable: React.FC<Props> = ({ admins, loading, hasFilters, onEd
     ? hasFilters ? 'No hay administradores que coincidan con la búsqueda.' : 'No hay administradores registrados aún.'
     : null
   return (
-    <div className="superadmin-table-responsive table-scroll">
-      <table className="superadmin-table">
+    <>
+      <DataTable tableId="superadmin-admins" className="superadmin-table">
         <thead>
           <tr>
             {COLUMNS.map((name) => <th key={name}>{name}</th>)}
@@ -64,7 +65,7 @@ export const AdminsTable: React.FC<Props> = ({ admins, loading, hasFilters, onEd
             ))
           )}
         </tbody>
-      </table>
+      </DataTable>
       <ReasonPrompt
         open={toDeactivate !== null}
         title="Desactivar administrador"
@@ -77,6 +78,6 @@ export const AdminsTable: React.FC<Props> = ({ admins, loading, hasFilters, onEd
         }}
         onCancel={() => setToDeactivate(null)}
       />
-    </div>
+    </>
   )
 }

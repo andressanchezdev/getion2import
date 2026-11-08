@@ -16,7 +16,7 @@ export const SuperadminAdminsScreen: React.FC = () => {
   const openForm = (admin?: AdminUser) => dispatch(openDrawerForm({ kind: 'adminForm', payload: admin ? { admin } : {} }))
   return (
     <div className="superadmin-screen">
-      <div className="superadmin-table-card">
+      <div className="data-card">
         <AdminsToolbar
           filters={list.filters} hasFilters={list.hasFilters} companies={list.companies}
           onQuery={list.setQuery} onCompany={list.setCompany} onStatus={list.setStatus} onClear={list.clearFilters} onCreate={() => openForm()}

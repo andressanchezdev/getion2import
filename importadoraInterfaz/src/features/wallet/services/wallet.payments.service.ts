@@ -32,6 +32,16 @@ export const voidPayment = async (paymentId: number, voidReason: string): Promis
   await apiClient.post(PAYMENTS.VOID(paymentId), { voidReason })
 }
 
+// rechaza un pago en revisión con su motivo de 10 a 100 caracteres (POST /payments/:id/reject)
+export const rejectPayment = async (paymentId: number, reason: string): Promise<void> => {
+  await apiClient.post(PAYMENTS.REJECT(paymentId), { reason })
+}
+
+// devuelve un pago rechazado a «en revisión» (POST /payments/:id/reopen)
+export const reopenPayment = async (paymentId: number): Promise<void> => {
+  await apiClient.post(PAYMENTS.REOPEN(paymentId), {})
+}
+
 // consulta el detalle individual de un pago (GET /payments/:id)
 export const fetchPaymentDetails = async (paymentId: number): Promise<Record<string, unknown>> => {
   const { data } = await apiClient.get<APIResponse<Record<string, unknown>>>(PAYMENTS.BY_ID(paymentId))

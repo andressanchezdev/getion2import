@@ -41,27 +41,14 @@ export interface QuotationsState {
   detail: { id: number | null; data: Quotation | null; status: LoadStatus; error: string | null }
 }
 
-// cliente elegible en el formulario de nueva cotización
-export interface QuotationCustomerOption {
-  id: number
-  name: string
-  identification: string
-  phone: string
-}
-
-// producto elegible en el formulario (precio de mostrador P0)
-export interface QuotationProductOption {
-  id: number
+// renglón de la cotización que se está armando en «Cotizar» (antes de crearla)
+export interface QuotationDraftLine {
+  productId: number
   code: string
   name: string
-  price: number
-}
-
-// renglón que se va armando antes de crear la cotización
-export interface QuotationItemDraft {
-  productId: number
-  productCode: string
-  productName: string
+  imageUrl?: string
+  meta: string // marca · modelo · nivel de precio
   quantity: number
-  unitPrice: number
+  unitPrice: number // precio del nivel elegido, con IVA incluido (como en el carrito)
+  ivaPercent: number
 }

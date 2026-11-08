@@ -8,6 +8,7 @@ import { useVerticalDrag } from '@/global/hooks/ui/useVerticalDrag'
 import { closeDrawerForm, openDrawerForm, setRightDrawerOpen } from '@/features/navigation'
 import { selectCartTotals, useCartMenuActions } from '@/features/shop'
 import { DRAWER_REGISTRY, selectDrawerMode } from './drawerRegistry'
+import { getFormEntry } from './formRegistry'
 import { useDrawerPresence } from './useDrawerPresence'
 import { DrawerHeader } from './parts/DrawerHeader'
 import { DrawerTab } from './parts/DrawerTab'
@@ -74,7 +75,10 @@ export const DrawerRight: React.FC = () => {
     : null
 
   // Desplazamiento horizontal para ubicarse en el borde exterior cuando el panel está abierto
-  const tabRight = isOpen ? 'var(--drawer-width-open, 400px)' : 0
+  // un panel con lista (Roles y permisos) se abre más ancho: se cambia la variable de ancho solo para ese panel
+  const isWide = shownMode === 'form' && drawerForm !== null && Boolean(getFormEntry(drawerForm).wide)
+  const widthStyle = isWide ? ({ '--drawer-width-open': 'var(--drawer-width-wide)' } as React.CSSProperties) : undefined
+  const tabRight = isOpen ? (isWide ? 'var(--drawer-width-wide, 720px)' : 'var(--drawer-width-open, 400px)') : 0
 
   return (
     <>
@@ -121,7 +125,7 @@ export const DrawerRight: React.FC = () => {
       )}
 
       {isMounted && entry && meta && (
-        <aside className={`drawer-right ${isOpen ? 'drawer-right-open' : ''}`} aria-label={meta.title}>
+        <aside className={`drawer-right ${isOpen ? 'drawer-right-open' : ''}`} aria-label={meta.title} style={widthStyle}>
           <div ref={panelRef} className={`drawer-right-panel ${shownMode === 'cart' ? 'drawer-right-panel-lite' : ''}`}>
             <DrawerHeader icon={entry.icon} meta={meta} onClose={handleClose} menu={shownMode === 'cart' ? cartMenu : undefined} />
             <div className="drawer-right-body">

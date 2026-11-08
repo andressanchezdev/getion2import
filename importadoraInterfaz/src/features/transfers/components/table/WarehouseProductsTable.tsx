@@ -8,6 +8,7 @@ import { WarehouseStockRow } from './WarehouseStockRow'
 import './WarehouseProductsTable.css'
 import { usePagedList } from '@/global/hooks/data/usePagedList'
 import { Pagination } from '@/global/components/UI/molecules/table/Pagination'
+import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
 
 interface WarehouseProductsTableProps {
   warehouseId: number
@@ -45,8 +46,7 @@ export const WarehouseProductsTable: React.FC<WarehouseProductsTableProps> = ({
         </div>
       )}
 
-      <div className="wh-table-responsive table-scroll">
-        <table className="inv-table">
+      <DataTable tableId="transfers-warehouse-products" className="inv-table">
           <thead>
             <tr>
               <th>Código</th>
@@ -82,8 +82,7 @@ export const WarehouseProductsTable: React.FC<WarehouseProductsTableProps> = ({
               pageItems.map((row) => <WarehouseStockRow key={row.stockId} row={row} warehouseId={warehouseId} onRelocated={loadStock} />)
             )}
           </tbody>
-        </table>
-      </div>
+        </DataTable>
       <Pagination meta={meta} label="Paginación de existencias" onPageChange={setPage} />
     </div>
   )

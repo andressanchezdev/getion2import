@@ -7,6 +7,7 @@ import type { RequestContext } from '@/features/auth'
 import { indexStock, toProduct } from '../helpers/shop.adapter'
 import type { ProductDto, ProductStock, ProductsQuery, StockRowDto } from '../types/shop.api.types'
 import { toApiPriceTier } from '@/global/helpers/pricing/priceTier'
+import { getStorageUrl } from '@/global/helpers/storage/storageUrl'
 import type { NewProductInput, Product, ProductPrices } from '../types/shop.types'
 import { fetchWarehouseStock } from './shop.stock.service'
 
@@ -98,6 +99,13 @@ export const createProduct = async (input: NewProductInput): Promise<Product> =>
     }
     const { data } = await apiClient.post<APIResponse<ProductDto>>(PRODUCTS.LIST, body)
     return toProduct(data.data)
+}
+
+// la primera imagen de cada producto pedido (id → url); los que no tienen imagen no aparecen
+export const fetchProductThumbnails = async (ids: number[]): Promise<Record<number, string>> => {
+    if (ids.length === 0) return {}
+    const { data } = await apiClient.get<APIResponse<Array<{ id: number; imageUrl: string }> | null>>(PRODUCTS.THUMBNAILS, { params: { ids: ids.join(',') } })
+    return Object.fromEntries((data.data ?? []).map((item) => [item.id, getStorageUrl(item.imageUrl)]))
 }
 
 // cambia el estado de un producto (PUT /products/:id con { status: 'active' | 'inactive' })

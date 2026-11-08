@@ -36,6 +36,11 @@
   flex-wrap: wrap;
 }
 
+.data-toolbar > [class*="toolbar-actions"],
+.data-toolbar > [class*="toolbar-right"] {
+  margin-left: auto;
+}
+
 .data-toolbar-total {
   font-size: var(--text-sm);
   color: var(--color-text-secondary);

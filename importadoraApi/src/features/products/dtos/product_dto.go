@@ -151,3 +151,9 @@ type AssignProductSupplierRequest struct {
 	Cost         float64 `json:"cost" validate:"required,min=0"`
 	SupplierCode *string `json:"supplierCode"`
 }
+
+// ProductThumbnailResponse es la primera imagen de un producto (para los renglones de pedidos, cotizaciones, compras y traslados).
+type ProductThumbnailResponse struct {
+	ID       int64  `json:"id"`
+	ImageURL string `json:"imageUrl"`
+}

@@ -4,6 +4,8 @@
 import React, { useEffect } from 'react'
 import './QuotationDetailPanel.css'
 import { formatPesos } from '@/global/helpers/formatting/format'
+import { ProductLine, ProductLineList } from '@/global/components/UI/molecules/product/ProductLine'
+import { useProductImages } from '@/features/shop'
 import { closeDrawerForm, openDrawerForm } from '@/features/navigation'
 import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { QUOTATION_STATUS_LABEL } from '../../constants/quotations.constants'
@@ -18,6 +20,7 @@ interface QuotationDetailPanelProps {
 export const QuotationDetailPanel: React.FC<QuotationDetailPanelProps> = ({ quotationId }) => {
   const dispatch = useAppDispatch()
   const detail = useAppSelector(selectQuotationDetail)
+  const images = useProductImages((detail.data?.items ?? []).map((item) => item.productId))
 
   useEffect(() => {
     dispatch(loadQuotationDetailThunk(quotationId))
@@ -54,21 +57,11 @@ export const QuotationDetailPanel: React.FC<QuotationDetailPanelProps> = ({ quot
           ))}
         </dl>
 
-        <table className="quotation-detail-items">
-          <thead>
-            <tr><th>Repuesto</th><th>Cant.</th><th>Precio</th><th>Total</th></tr>
-          </thead>
-          <tbody>
-            {quotation.items.map((item) => (
-              <tr key={item.id}>
-                <td>{item.name}<small>{item.code}</small></td>
-                <td>{item.quantity}</td>
-                <td>{formatPesos(item.unitPrice)}</td>
-                <td>{formatPesos(item.lineTotal)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <ProductLineList>
+          {quotation.items.map((item) => (
+            <ProductLine key={item.id} name={item.name} code={item.code} imageUrl={images[item.productId]} quantity={item.quantity} unitPrice={item.unitPrice} total={item.lineTotal} />
+          ))}
+        </ProductLineList>
 
         <p className="quotation-detail-total">Total <strong>{formatPesos(quotation.total)}</strong></p>
         {quotation.notes && <p className="quotation-detail-notes">{quotation.notes}</p>}

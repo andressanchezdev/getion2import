@@ -6,7 +6,7 @@ import './Icon.css'
 
 interface IconProps {
   svg: string // contenido del svg (import de assets/icons con ?raw)
-  size?: 'sm' | 'md' | 'lg'
+  size?: 'sm' | 'md' | 'lg' | 'xl'
   className?: string
 }
 

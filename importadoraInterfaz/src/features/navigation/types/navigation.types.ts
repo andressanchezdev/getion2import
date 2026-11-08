@@ -75,6 +75,11 @@ export type DrawerFormKind =
   | 'adminForm'
   | 'registerExpense'
   | 'reasonForm'
+  | 'invoiceDetail'
+  | 'verifyGoods'
+  | 'countDetail'
+  | 'permissionsHub'
+  | 'quotationDraft'
 
 export interface DrawerForm {
   kind: DrawerFormKind

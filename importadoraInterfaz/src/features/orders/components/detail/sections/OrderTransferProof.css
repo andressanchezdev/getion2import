@@ -68,43 +68,12 @@
 }
 
 /* ventana con el comprobante completo, por encima del panel */
-.order-proof-modal {
-  position: fixed;
-  inset: 0;
-  z-index: calc(var(--z-modal) + 50);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-5);
-  background: var(--alpha-black-45);
-}
 
-.order-proof-modal-card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  max-width: 90%;
-  max-height: 90%;
-  padding: var(--space-3);
-  background: var(--bg-card);
-  border-radius: var(--radius-lg);
-}
-
-.order-proof-modal-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
-.order-proof-modal-title {
-  font-size: var(--text-md);
-  color: var(--color-text-primary);
-}
-
-.order-proof-modal-img {
-  max-width: 100%;
-  max-height: 75vh;
-  object-fit: contain;
-  border-radius: var(--radius-sm);
+/* el comprobante completo se ve dentro del mismo panel, sin ventana flotante */
+.order-proof-full {
+  display: block;
+  width: 100%;
+  margin-top: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
 }

@@ -6,17 +6,20 @@ import './EmployeePicker.css'
 import { openDrawerForm } from '@/features/navigation'
 import { SearchBar } from '@/global/components/UI/molecules/filters/SearchBar'
 import { RowActions } from '@/global/components/UI/molecules/table/RowActions'
+import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
 import { useAppDispatch } from '@/global/hooks/store/useRedux'
 import eyeIcon from '@/assets/icons/eye.svg?raw'
 import editIcon from '@/assets/icons/edit.svg?raw'
 import { useEmployeesDirectory } from '../../hooks/useEmployeesDirectory'
 import type { EmployeePermissionsMode } from '../permissions/EmployeePermissionsPanel'
+import type { SimpleEmployee } from '../../types/employees.types'
 
 interface EmployeePickerProps {
   mode: EmployeePermissionsMode
+  onPick?: (employee: SimpleEmployee) => void // si viene, el empleado se abre dentro del mismo panel en vez de otro panel
 }
 
-export const EmployeePicker: React.FC<EmployeePickerProps> = ({ mode }) => {
+export const EmployeePicker: React.FC<EmployeePickerProps> = ({ mode, onPick }) => {
   const dispatch = useAppDispatch()
   const { employees, loading } = useEmployeesDirectory()
   const [search, setSearch] = useState('')
@@ -33,7 +36,7 @@ export const EmployeePicker: React.FC<EmployeePickerProps> = ({ mode }) => {
       <div className="employee-picker-toolbar">
         <SearchBar value={search} onChange={setSearch} placeholder="Buscar empleado por nombre, cédula o correo..." className="employee-picker-search" />
       </div>
-      <table className="employee-picker-table">
+      <DataTable tableId="employees-picker" className="employee-picker-table">
         <thead>
           <tr><th>Empleado</th><th>Cargo</th><th>Acciones</th></tr>
         </thead>
@@ -55,7 +58,7 @@ export const EmployeePicker: React.FC<EmployeePickerProps> = ({ mode }) => {
                         key: mode,
                         label: isEdit ? 'Editar permisos' : 'Ver detalle',
                         icon: isEdit ? editIcon : eyeIcon,
-                        onClick: () => dispatch(isEdit ? openDrawerForm({ kind: 'employeePermissions', payload: { employee, mode } }) : openDrawerForm({ kind: 'employeeDetail', payload: employee })),
+                        onClick: () => (onPick ? onPick(employee) : dispatch(isEdit ? openDrawerForm({ kind: 'employeePermissions', payload: { employee, mode } }) : openDrawerForm({ kind: 'employeeDetail', payload: employee }))),
                       },
                     ]}
                   />
@@ -64,7 +67,7 @@ export const EmployeePicker: React.FC<EmployeePickerProps> = ({ mode }) => {
             ))
           )}
         </tbody>
-      </table>
+      </DataTable>
     </div>
   )
 }

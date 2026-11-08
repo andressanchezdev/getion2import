@@ -1,6 +1,7 @@
 // useTransferRequest · estado del pedido de traslado: bodega que recibe, líneas de varias bodegas de origen, búsqueda de repuestos y envío
 // conecta con: CreateTransferForm (lo usa), useTransferProductSearch (buscar), transfers.request (reglas), createTransferRequestThunk (enviar) y warehouses y auth
 // ojo: cada línea es un repuesto de UNA bodega; al enviar, la API crea un traslado por cada bodega de origen
+// ojo: el empleado solo pide hacia su sede (destino fijo); el administrador elige la bodega de origen y la de destino, en cualquier dirección
 import { useState, useEffect } from 'react'
 import { closeDrawerForm } from '@/features/navigation'
 import { toast } from '@/global/helpers/feedback/toast'
@@ -8,7 +9,6 @@ import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { totalUnits, validateRequest } from '../helpers/transfers.request'
 import {
   addTransferDraftLine,
-  changeTransferDraftOrigin,
   clearTransferDraft,
   removeTransferDraftLine,
   setTransferDraftDest,
@@ -71,6 +71,19 @@ export const useTransferRequest = (initial?: CreateTransferInitialPayload) => {
   const { items: products, status: searchStatus } = useTransferProductSearch(search)
 
   const lines = draft.lines
+
+  // administrador: de qué bodega salen los ítems (el empleado no la elige: pide a cualquier sede desde el desglose)
+  const [adminOriginId, setAdminOriginId] = useState(() => initial?.originWarehouseId ?? draft.lines[0]?.originWarehouseId ?? 0)
+  const originWarehouseId = isEmployee ? 0 : adminOriginId
+  const setOriginWarehouseId = (id: number) => {
+    if (isEmployee || id === adminOriginId) return
+    // las líneas de otra bodega de origen ya no aplican: se vacía la solicitud al cambiarla
+    if (lines.some((line) => line.originWarehouseId !== id)) {
+      dispatch(clearTransferDraft())
+      toast.info('Cambiaste la bodega de origen: se vació la solicitud.')
+    }
+    setAdminOriginId(id)
+  }
 
   // Sincronizar destino en el estado global si es administrador
   useEffect(() => {
@@ -142,29 +155,6 @@ export const useTransferRequest = (initial?: CreateTransferInitialPayload) => {
     )
   }
 
-  const changeOrigin = (productId: number, currentOriginWarehouseId: number, newOriginWarehouseId: number) => {
-    const line = lines.find((l) => l.productId === productId && l.originWarehouseId === currentOriginWarehouseId)
-    if (!line) return
-    const newOriginOption = line.availableOrigins?.find((o) => o.warehouseId === newOriginWarehouseId)
-    const wh = warehouses.find((w) => Number(w.id) === newOriginWarehouseId)
-    const newName = newOriginOption?.warehouseName || wh?.name || `Bodega #${newOriginWarehouseId}`
-    const newMax = newOriginOption ? newOriginOption.stock : line.max
-
-    dispatch(
-      changeTransferDraftOrigin({
-        productId,
-        currentOriginWarehouseId,
-        newOriginWarehouseId,
-        newOriginWarehouseName: newName,
-        newMax,
-      })
-    )
-  }
-
-  const changeQuantity = (line: TransferRequestLine, quantity: number) => {
-    dispatch(updateTransferDraftQuantity({ line, quantity }))
-  }
-
   const remove = (line: TransferRequestLine) => {
     dispatch(removeTransferDraftLine(line))
   }
@@ -226,6 +216,8 @@ export const useTransferRequest = (initial?: CreateTransferInitialPayload) => {
     destWarehouseName,
     setDestWarehouseId: handleSetDestWarehouseId,
     isEmployee,
+    originWarehouseId,
+    setOriginWarehouseId,
     focusedProduct,
     localStockInDest,
     totalRedStock,
@@ -238,8 +230,6 @@ export const useTransferRequest = (initial?: CreateTransferInitialPayload) => {
     getOriginQty,
     setOriginQty,
     addFrom,
-    changeOrigin,
-    changeQuantity,
     remove,
     clear,
     isPriority,

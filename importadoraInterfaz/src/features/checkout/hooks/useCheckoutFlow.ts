@@ -9,7 +9,7 @@ import { toast } from '@/global/helpers/feedback/toast'
 import { useAppDispatch } from '@/global/hooks/store/useRedux'
 import { useDebouncedValue } from '@/global/hooks/data/useDebouncedValue'
 import { usePermissions } from '@/global/hooks/access/usePermissions'
-import { checkoutBlockers } from '../helpers/checkout.blockers'
+import { checkoutBlockers, deliveryProblems, generalBlockers, type BlockerInput } from '../helpers/checkout.blockers'
 import { canPayByCredit, computeTotals, initialDelivery, isDeliveryValid } from '../helpers/checkout.adapter'
 import { confirmQuotationThunk, confirmSaleThunk, loadCheckoutCustomerThunk, loadCheckoutLinesThunk, searchCheckoutCustomersThunk } from '../thunks/checkout.thunks'
 import type { CheckoutCustomer, CheckoutLine, CheckoutPayload, DeliveryData, PaymentChoice } from '../types/checkout.types'
@@ -30,6 +30,7 @@ export const useCheckoutFlow = (payload: CheckoutPayload) => {
   const [customer, setCustomer] = useState<CheckoutCustomer | null>(null)
   const [delivery, setDelivery] = useState<DeliveryData>(EMPTY_DELIVERY)
   const [employeeId, setEmployeeId] = useState(0)
+  const [attempted, setAttempted] = useState(false) // se intentó continuar con algo pendiente: desde ahí los campos incompletos se marcan
   const [payment, setPayment] = useState<PaymentChoice>('cash')
   const [transferProof, setTransferProof] = useState('')
   const [transferReference, setTransferReference] = useState('')
@@ -100,8 +101,8 @@ export const useCheckoutFlow = (payload: CheckoutPayload) => {
   const transferOk = payment !== 'transfer' || Boolean(transferProof.trim())
   // con la caja de la bodega cerrada no se emite un pedido pagado en efectivo (hay que abrir el turno antes); si no se pudo consultar la caja no se bloquea
   const cashBlocked = !isQuotation && payment === 'cash' && cash.warehouseId > 0 && !cash.loading && !cash.failed && !cash.isOpen
-  // lo que falta para continuar, en frases; el panel las muestra junto al botón en vez de dejarlo gris sin explicación
-  const blockers = checkoutBlockers({
+  // lo que falta para continuar: cada dato de entrega se explica dentro de su campo y lo demás en una línea junto al botón
+  const blockerInput: BlockerInput = {
     hasCustomer: Boolean(customer),
     linesCount: lines ? lines.length : null,
     delivery,
@@ -111,11 +112,15 @@ export const useCheckoutFlow = (payload: CheckoutPayload) => {
     onPayment: step === 'payment',
     transferMissingProof: !transferOk,
     cashBlocked,
-  })
+  }
+  const blockers = checkoutBlockers(blockerInput)
+  const general = generalBlockers(blockerInput)
+  const problems = deliveryProblems(delivery)
   const canContinue = blockers.length === 0 && deliveryOk && !cashBlocked
 
   // Notifica al usuario en caso de presionar o consultar por qué está bloqueado el flujo
   const notifyBlockers = () => {
+    setAttempted(true)
     if (blockers.length > 0) {
       toast.warning('No se puede continuar con el pedido', {
         description: blockers[0],
@@ -161,6 +166,6 @@ export const useCheckoutFlow = (payload: CheckoutPayload) => {
     delivery, setDelivery, employeeId, setEmployeeId, payment, setPayment,
     transferProof, setTransferProof, transferReference, setTransferReference, transferBank, setTransferBank,
     immediatePicking, setImmediatePicking,
-    total, totals, payable, creditAllowed, canContinue, blockers, cashBlocked, cashWarehouseName: cash.warehouseName, submitting, error, confirm, notifyBlockers,
+    total, totals, payable, creditAllowed, canContinue, blockers, generalBlockers: general, problems, attempted, cashBlocked, cashWarehouseName: cash.warehouseName, submitting, error, confirm, notifyBlockers,
   }
 }

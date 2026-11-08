@@ -2,6 +2,7 @@
 // conecta con: AuditScreen (la usa), audit.types, RowActions (ícono «Ver detalle») y AuditScreen.css (clases audit-*)
 import React from 'react'
 import { RowActions } from '@/global/components/UI/molecules/table/RowActions'
+import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
 import eyeIcon from '@/assets/icons/eye.svg?raw'
 import { formatAuditDate } from '../helpers/audit.format'
 import type { AuditEntry } from '../types/audit.types'
@@ -12,7 +13,7 @@ interface AuditTableProps {
 }
 
 export const AuditTable: React.FC<AuditTableProps> = ({ entries, onOpen }) => (
-  <table className="audit-table">
+  <DataTable tableId="audit-movements" className="audit-table">
     <thead>
       <tr>
         <th>Fecha</th>
@@ -37,5 +38,5 @@ export const AuditTable: React.FC<AuditTableProps> = ({ entries, onOpen }) => (
         </tr>
       ))}
     </tbody>
-  </table>
+  </DataTable>
 )

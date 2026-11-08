@@ -83,7 +83,7 @@ export interface AbonoRecord {
   method: 'cash' | 'transfer' | string
   reference?: string
   amount: number
-  status: 'verified' | 'pending' | 'void'
+  status: 'verified' | 'pending' | 'rejected' | 'void'
   saleId?: number
   warehouseId?: number
   warehouseCode?: string

@@ -48,6 +48,11 @@ type VerifyPaymentRequest struct {
 	IssueNote *string `json:"issueNote,omitempty"`
 }
 
+// RejectPaymentRequest entrada de POST /payments/:id/reject: el motivo (10 a 100 caracteres).
+type RejectPaymentRequest struct {
+	Reason string `json:"reason"`
+}
+
 type VoidPaymentRequest struct {
 	VoidReason string `json:"voidReason" validate:"required"`
 }

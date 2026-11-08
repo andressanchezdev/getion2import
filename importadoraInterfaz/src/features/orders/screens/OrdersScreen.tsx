@@ -20,7 +20,7 @@ export const OrdersScreen: React.FC = () => {
 
   return (
     <div className="orders-screen">
-      <div className="orders-card">
+      <div className="data-card orders-card">
         <OrdersToolbar />
         <OrdersTable onCancel={setOrderToCancel} />
       </div>

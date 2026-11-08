@@ -9,6 +9,7 @@ import { openDrawerForm } from '@/features/navigation'
 import { usePermissions } from '@/global/hooks/access/usePermissions'
 import { ReasonPrompt } from '@/features/reasonPrompt'
 import { RowActions } from '@/global/components/UI/molecules/table/RowActions'
+import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
 import { getAvailableLevels, getPriceByLevel, getWarehouseStock, type Product } from '@/features/shop'
 import { selectProductsTable } from '../../selectors/inventory.selectors'
 import { useProductStatus } from '../../hooks/useProductStatus'
@@ -54,8 +55,8 @@ export const ProductsTable: React.FC = () => {
   }
 
   return (
-    <div className="inv-table-responsive table-scroll">
-      <table className="inv-table">
+    <>
+      <DataTable tableId="inventory-products" className="inv-table">
         <thead>
           <tr>
             <th>Imagen</th>
@@ -126,7 +127,7 @@ export const ProductsTable: React.FC = () => {
             })
           )}
         </tbody>
-      </table>
+      </DataTable>
       <ReasonPrompt
         open={toDeactivate !== null}
         title="Desactivar producto"
@@ -139,7 +140,7 @@ export const ProductsTable: React.FC = () => {
         }}
         onCancel={() => setToDeactivate(null)}
       />
-    </div>
+    </>
   )
 }
 

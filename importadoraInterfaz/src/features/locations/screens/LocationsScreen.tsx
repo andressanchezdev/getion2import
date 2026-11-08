@@ -11,6 +11,8 @@ import { openDrawerForm } from '@/features/navigation'
 import { LocationsTable } from '../components/table/LocationsTable'
 import { filterLocations, locationLabel } from '../helpers/locations.adapter'
 import { useLocations } from '../hooks/useLocations'
+import { Icon } from '@/global/components/UI/atoms/Icon'
+import plusIcon from '@/assets/icons/plus.svg?raw'
 
 export const LocationsScreen: React.FC = () => {
   const dispatch = useAppDispatch()
@@ -30,8 +32,8 @@ export const LocationsScreen: React.FC = () => {
         <span aria-hidden="true">›</span>
         <strong aria-current="page">Ubicaciones</strong>
       </nav> */}
-      <div className="inv-card">
-        <div className="inv-toolbar">
+      <div className="data-card">
+        <div className="data-toolbar inv-toolbar">
           <SearchBar
             value={query}
             onChange={setQuery}
@@ -52,7 +54,7 @@ export const LocationsScreen: React.FC = () => {
             </button>
             {canCreate && (
               <button type="button" className="btn-primary" onClick={() => dispatch(openDrawerForm({ kind: 'locationForm', payload: { warehouseId, warehouseName } }))}>
-                + Nueva ubicación
+                <Icon svg={plusIcon} /> Nueva ubicación
               </button>
             )}
           </div>

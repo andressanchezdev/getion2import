@@ -16,6 +16,8 @@ import { useTransfersLoader } from '../hooks/useTransfersLoader'
 import { selectTransfersList } from '../selectors/transfers.selectors'
 import { dispatchTransferThunk } from '../thunks/transfers.thunks'
 import type { TransferFilters, TrasladeItem } from '../types/transfers.types'
+import { Icon } from '@/global/components/UI/atoms/Icon'
+import plusIcon from '@/assets/icons/plus.svg?raw'
 
 type TransfersTab = 'products' | 'transfers'
 
@@ -54,8 +56,8 @@ export const TransfersScreen: React.FC = () => {
 
   return (
     <div className="transfers-container">
-      <div className="transfers-table-card">
-        <div className="transfers-toolbar">
+      <div className="data-card">
+        <div className="data-toolbar transfers-toolbar">
           <div className="transfers-toolbar-left">
             <SearchBar
               value={activeTab === 'transfers' ? filters.query : productQuery}
@@ -122,7 +124,7 @@ export const TransfersScreen: React.FC = () => {
                 className="btn-primary"
                 onClick={() => dispatch(openDrawerForm({ kind: 'createTransfer' }))}
               >
-                + Nuevo traslado
+                <Icon svg={plusIcon} /> Nuevo traslado
               </button>
             )}
           </div>

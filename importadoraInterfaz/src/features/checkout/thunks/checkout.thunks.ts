@@ -5,7 +5,7 @@
 import { createAsyncThunk } from '@reduxjs/toolkit'
 import { getErrorMessage } from '@/api'
 import { selectRequestContext } from '@/features/auth'
-import { createQuotation, fetchQuotationDetail } from '@/features/quotations'
+import { clearDraft, createQuotation, fetchQuotationDetail } from '@/features/quotations'
 import { clearCartThunk, createSale, findStockId, selectCartItems, toWarehouseNumber, type ThunkConfig } from '@/features/shop'
 import { fetchCheckoutCustomer, searchCheckoutCustomers } from '../services/checkout.service'
 import { toShippingAddress } from '../helpers/checkout.adapter'
@@ -32,12 +32,13 @@ export const loadCheckoutCustomerThunk = createAsyncThunk<CheckoutCustomer, numb
   }
 })
 
-// los renglones: del carrito, o de la cotización que continúa (cada producto con la ubicación de la bodega activa que tenga stock suficiente)
+// los renglones: del borrador de la cotización, del carrito, o de la cotización que continúa (cada producto con la ubicación de la bodega activa que tenga stock suficiente)
 export const loadCheckoutLinesThunk = createAsyncThunk<CheckoutLine[], CheckoutPayload, ThunkConfig>('checkout/loadLines', async (payload, { getState, rejectWithValue }) => {
   const state = getState()
   const ctx = selectRequestContext(state)
   if (!ctx) return rejectWithValue(NO_SESSION)
   try {
+    if (payload.lines) return payload.lines
     if (!payload.quotationId) {
       return selectCartItems(state).map((item) => ({ productId: Number(item.productId), stockId: item.stockId ?? 0, name: item.product.name, quantity: item.quantity, unitPrice: item.selectedPrice, ivaPercent: item.product.iva ?? 0 }))
     }
@@ -97,12 +98,12 @@ export const confirmSaleThunk = createAsyncThunk<{ id: number; serialCode: strin
   }
 })
 
-// crea la cotización del cliente con los renglones del carrito y vacía el carrito; quien la hace queda registrado (también si es el administrador)
+// crea la cotización del cliente con los renglones del borrador y lo vacía; quien la hace queda registrado (también si es el administrador)
 export const confirmQuotationThunk = createAsyncThunk<number, { customer: CheckoutCustomer; lines: CheckoutLine[] }, ThunkConfig>('checkout/confirmQuotation', async ({ customer, lines }, { getState, dispatch, rejectWithValue }) => {
   if (!selectRequestContext(getState())) return rejectWithValue(NO_SESSION)
   try {
     const id = await createQuotation({ customerId: customer.id, items: lines.map((line) => ({ productId: line.productId, quantity: line.quantity, unitPrice: line.unitPrice })) })
-    await dispatch(clearCartThunk())
+    dispatch(clearDraft())
     return id
   } catch (error) {
     return rejectWithValue(getErrorMessage(error, 'No se pudo crear la cotización.'))

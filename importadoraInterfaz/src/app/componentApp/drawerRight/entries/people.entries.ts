@@ -2,7 +2,7 @@
 import { createElement } from 'react'
 import { CreateCustomerForm, EditCustomerForm } from '@/features/customers'
 import { ExternalFormPanel, type ExternalFormPayload } from '@/features/externals'
-import { EmployeeDetailPanel, EmployeePermissionsPanel, RoleForm, type EmployeePermissionsMode, type EmployeeRole, type SimpleEmployee } from '@/features/employees'
+import { EmployeeDetailPanel, EmployeePermissionsPanel, PermissionsHubPanel, HUB_TITLES, RoleForm, type HubView, type EmployeePermissionsMode, type EmployeeRole, type SimpleEmployee } from '@/features/employees'
 import { AdminFormDrawer, type AdminFormPayload } from '@/features/superadmin'
 import userIcon from '@/assets/icons/user.svg'
 import type { DrawerFormKind } from '@/features/navigation'
@@ -37,6 +37,13 @@ export const PEOPLE_ENTRIES: Partial<Record<DrawerFormKind, FormEntry>> = {
       const form = payload as ExternalFormPayload
       return createElement(ExternalFormPanel, { key: `${form.kind}-${form.item?.id ?? 'new'}`, payload: form })
     },
+  },
+  permissionsHub: {
+    icon: userIcon,
+    title: (payload) => HUB_TITLES[payload as HubView],
+    subtitle: 'Roles, permisos y empleados',
+    wide: true,
+    render: (payload) => createElement(PermissionsHubPanel, { key: String(payload), view: payload as HubView }),
   },
   roleForm: {
     icon: userIcon,

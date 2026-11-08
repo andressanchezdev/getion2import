@@ -334,6 +334,7 @@
   /* menú contraído (solo íconos) */
   /* 280px: ancho fijo del menú lateral ERP */
   --drawer-width-open: 400px;
+  --drawer-width-wide: 720px; /* paneles con listas, como Roles y permisos */
   /* 360px: ancho del panel derecho abierto */
   --drawer-width-collapsed: 56px;
   /* 56px: ancho del panel derecho contraído */

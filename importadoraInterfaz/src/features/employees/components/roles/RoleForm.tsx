@@ -13,10 +13,12 @@ import type { EmployeeRole } from '../../types/employees.types'
 
 interface RoleFormProps {
   role: EmployeeRole | null // null = rol nuevo
+  onClose?: () => void // si viene, se usa en vez de cerrar el panel (cuando está anidado en Roles y permisos)
 }
 
-export const RoleForm: React.FC<RoleFormProps> = ({ role }) => {
+export const RoleForm: React.FC<RoleFormProps> = ({ role, onClose }) => {
   const dispatch = useAppDispatch()
+  const close = () => (onClose ? onClose() : dispatch(closeDrawerForm()))
   const isEdit = role !== null
   const [code, setCode] = useState(role?.code ?? '')
   const [name, setName] = useState(role?.roleName ?? '')
@@ -39,7 +41,7 @@ export const RoleForm: React.FC<RoleFormProps> = ({ role }) => {
     setSaving(false)
     if (saveRoleThunk.fulfilled.match(result)) {
       toast.success(isEdit ? 'Rol actualizado' : 'Rol creado')
-      dispatch(closeDrawerForm())
+      close()
     } else {
       setError(result.payload ?? 'No se pudo guardar el rol.')
     }
@@ -81,7 +83,7 @@ export const RoleForm: React.FC<RoleFormProps> = ({ role }) => {
       </div>
 
       <div className="employee-permissions-footer">
-        <button type="button" className="btn-secondary" onClick={() => dispatch(closeDrawerForm())}>Cancelar</button>
+        <button type="button" className="btn-secondary" onClick={close}>Cancelar</button>
         <button type="submit" className="btn-primary" disabled={!canSubmit}>{saving ? 'Guardando...' : isEdit ? 'Guardar cambios' : 'Crear rol'}</button>
       </div>
     </form>

@@ -5,6 +5,8 @@ import { FilterSelect } from '@/global/components/UI/molecules/filters/FilterSel
 import { SearchBar } from '@/global/components/UI/molecules/filters/SearchBar'
 import { ADMIN_STATUS_OPTIONS } from '../constants/superadmin.constants'
 import type { AdminFilters, AdminStatusFilter } from '../types/superadmin.types'
+import { Icon } from '@/global/components/UI/atoms/Icon'
+import plusIcon from '@/assets/icons/plus.svg?raw'
 
 interface Props {
   filters: AdminFilters
@@ -20,7 +22,7 @@ interface Props {
 export const AdminsToolbar: React.FC<Props> = ({ filters, hasFilters, companies, onQuery, onCompany, onStatus, onClear, onCreate }) => {
   const companyOptions = [{ value: 'all', label: 'Todas las empresas' }, ...companies.map((c) => ({ value: String(c.id), label: c.name }))]
   return (
-    <div className="superadmin-toolbar">
+    <div className="data-toolbar superadmin-toolbar">
       <div className="superadmin-toolbar-left">
         <SearchBar
           value={filters.query}
@@ -39,7 +41,7 @@ export const AdminsToolbar: React.FC<Props> = ({ filters, hasFilters, companies,
         <FilterSelect label="Todos los estados" value={filters.status} options={ADMIN_STATUS_OPTIONS} onChange={(value) => onStatus(value as AdminStatusFilter)} />
       </div>
       <div className="superadmin-toolbar-right">
-        <button type="button" className="btn-primary" onClick={onCreate}>+ Nuevo Administrador</button>
+        <button type="button" className="btn-primary" onClick={onCreate}><Icon svg={plusIcon} /> Nuevo Administrador</button>
       </div>
     </div>
   )

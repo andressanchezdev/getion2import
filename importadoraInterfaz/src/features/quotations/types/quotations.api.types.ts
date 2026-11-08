@@ -48,14 +48,3 @@ export interface UpdateQuotationBody {
   status?: string
   notes?: string
 }
-
-// un cliente tal como llega de GET /customers/search (solo lo que usa el selector de cotizaciones)
-export interface QuotationCustomerSearchDto {
-  id: number
-  name?: string | null
-  lastName?: string | null
-  businessName?: string | null
-  identification?: string | null
-  phone?: string | null
-  mobile?: string | null
-}

@@ -11,6 +11,8 @@ import { useAppDispatch } from '@/global/hooks/store/useRedux'
 import { openDrawerForm } from '@/features/navigation'
 import { StockTable } from '../components/table/StockTable'
 import { useStockTable } from '../hooks/useStockTable'
+import { Icon } from '@/global/components/UI/atoms/Icon'
+import plusIcon from '@/assets/icons/plus.svg?raw'
 
 export const StockScreen: React.FC = () => {
   const dispatch = useAppDispatch()
@@ -32,8 +34,8 @@ export const StockScreen: React.FC = () => {
 
   return (
     <div className="inv-screen">
-      <div className="inv-card">
-        <div className="inv-toolbar">
+      <div className="data-card">
+        <div className="data-toolbar inv-toolbar">
           <SearchBar value={stock.search} onChange={stock.setSearch} hasActiveFilters={stock.hasFilters} onClear={stock.clearFilters} placeholder="Buscar por código o nombre del producto..." className="inv-search" />
           <FilterSelect label="Ubicación" emptyValue="" value={stock.location} options={stock.locationOptions} onChange={(value) => stock.setLocation(value || '')} />
           <FilterSelect label="Categoría" emptyValue="" value={stock.filters.category} options={stock.categoryOptions} onChange={(value) => stock.setFilter({ category: value || '' })} />
@@ -47,7 +49,7 @@ export const StockScreen: React.FC = () => {
               title={canAssign ? undefined : 'Requiere permiso para editar existencias'}
               onClick={() => dispatch(openDrawerForm({ kind: 'assignStock', payload: { onDone: stock.reload } }))}
             >
-              + Asignar producto
+              <Icon svg={plusIcon} /> Asignar producto
             </button>
           </div>
         </div>

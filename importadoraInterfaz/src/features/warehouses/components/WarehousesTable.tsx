@@ -22,6 +22,9 @@ import type { WarehouseStatusFilter } from '../helpers/warehouses.manage'
 import { useManagedWarehouses } from '../hooks/useManagedWarehouses'
 import { useWarehouseActions } from '../hooks/useWarehouseActions'
 import type { Warehouse } from '../types/warehouse.types'
+import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
+import { Icon } from '@/global/components/UI/atoms/Icon'
+import plusIcon from '@/assets/icons/plus.svg?raw'
 
 interface WarehousesTableProps {
     onManageLocations?: (warehouse: Warehouse) => void
@@ -48,8 +51,8 @@ export const WarehousesTable: React.FC<WarehousesTableProps> = ({ onManageLocati
         : null
 
     return (
-        <div className="wh-card">
-            <div className="wh-toolbar">
+        <div className="data-card">
+            <div className="data-toolbar">
                 <SearchBar
                     value={list.search}
                     onChange={list.setSearch}
@@ -75,12 +78,11 @@ export const WarehousesTable: React.FC<WarehousesTableProps> = ({ onManageLocati
                     title={canCreate ? undefined : 'Requiere permiso para crear bodegas'}
                     onClick={() => dispatch(openDrawerForm({ kind: 'warehouseForm', payload: {} }))}
                 >
-                    + Nueva bodega
+                    <Icon svg={plusIcon} /> Nueva bodega
                 </button>
             </div>
 
-            <div className="wh-table-responsive table-scroll">
-                <table className="wh-table">
+            <DataTable tableId="warehouses-warehouses" className="wh-table">
                     <thead>
                         <tr>
                             <th>Bodega</th>
@@ -183,8 +185,7 @@ export const WarehousesTable: React.FC<WarehousesTableProps> = ({ onManageLocati
                             })
                         )}
                     </tbody>
-                </table>
-            </div>
+                </DataTable>
             <Pagination meta={meta} label="Paginación de bodegas" onPageChange={setPage} />
             <ReasonPrompt
                 open={Boolean(toDeactivate)}

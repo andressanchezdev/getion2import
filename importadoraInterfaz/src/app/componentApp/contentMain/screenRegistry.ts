@@ -9,6 +9,7 @@ import { ShopCatalogScreen } from '@/features/shop'
 import { NotFoundScreen } from './NotFoundScreen'
 
 const OrdersScreen = lazy(() => import('@/features/orders/screens/OrdersScreen').then((m) => ({ default: m.OrdersScreen })))
+const QuotationCatalogScreen = lazy(() => import('@/features/quotations/screens/QuotationCatalogScreen').then((m) => ({ default: m.QuotationCatalogScreen })))
 const QuotationsScreen = lazy(() => import('@/features/quotations/screens/QuotationsScreen').then((m) => ({ default: m.QuotationsScreen })))
 const BrandsScreen = lazy(() => import('@/features/inventory/screens/CatalogScreens').then((m) => ({ default: m.BrandsScreen })))
 const CategoriesScreen = lazy(() => import('@/features/inventory/screens/CatalogScreens').then((m) => ({ default: m.CategoriesScreen })))
@@ -47,6 +48,7 @@ export const SCREEN_REGISTRY: Partial<Record<ERPModule, ScreenEntry>> = {
   shop: {
     subitems: {
       catalog: ShopCatalogScreen,
+      quotationCatalog: QuotationCatalogScreen,
       quotations: QuotationsScreen,
       orders: OrdersScreen,
       transfers: TransfersScreen,

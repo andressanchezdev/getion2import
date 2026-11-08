@@ -11,6 +11,9 @@ import { CatalogTableRow } from './CatalogTableRow'
 import { usePagedList } from '@/global/hooks/data/usePagedList'
 import { Pagination } from '@/global/components/UI/molecules/table/Pagination'
 import { ReasonPrompt } from '@/features/reasonPrompt'
+import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
+import { Icon } from '@/global/components/UI/atoms/Icon'
+import plusIcon from '@/assets/icons/plus.svg?raw'
 
 export type { CatalogRow, CatalogType }
 
@@ -108,8 +111,8 @@ export const CatalogTable: React.FC<CatalogTableProps> = ({ type, noun, rows, lo
 
   return (
     <div className="inv-screen">
-      <div className="inv-card">
-        <div className="inv-toolbar">
+      <div className="data-card">
+        <div className="data-toolbar inv-toolbar">
           <SearchBar
             value={search}
             onChange={setSearch}
@@ -123,13 +126,12 @@ export const CatalogTable: React.FC<CatalogTableProps> = ({ type, noun, rows, lo
               {rows.length} {noun}
             </span>
             <button type="button" className="btn-primary" onClick={() => openItem('catalogItem')}>
-              + Crear {singular}
+              <Icon svg={plusIcon} /> Crear {singular}
             </button>
           </div>
         </div>
 
-        <div className="inv-table-responsive table-scroll">
-          <table className="inv-table">
+        <DataTable tableId="inventory-catalog" className="inv-table">
             <thead>
               <tr>
                 {withImage && <th>Logo</th>}
@@ -165,8 +167,7 @@ export const CatalogTable: React.FC<CatalogTableProps> = ({ type, noun, rows, lo
                 ))
               )}
             </tbody>
-          </table>
-        </div>
+          </DataTable>
         <Pagination meta={meta} label="Paginación del catálogo" onPageChange={setPage} />
       </div>
 

@@ -5,6 +5,7 @@ import { Pagination } from '@/global/components/UI/molecules/table/Pagination'
 import { usePagedList } from '@/global/hooks/data/usePagedList'
 import type { ReturnDto } from '../types/returns.types'
 import { ReturnRow } from './ReturnRow'
+import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
 
 interface Props {
   rows: ReturnDto[]
@@ -21,8 +22,7 @@ export const ReturnsTable: React.FC<Props> = ({ rows, loading, resetKey, onAppro
   const message = loading ? 'Cargando devoluciones y garantías...' : rows.length === 0 ? 'No se encontraron registros de devolución con los filtros aplicados.' : ''
   return (
     <>
-      <div className="returns-table-responsive table-scroll">
-        <table className="returns-table">
+      <DataTable tableId="returns-returns" className="returns-table">
           <thead>
             <tr>
               {COLUMNS.map((name) => <th key={name}>{name}</th>)}
@@ -36,8 +36,7 @@ export const ReturnsTable: React.FC<Props> = ({ rows, loading, resetKey, onAppro
               pageItems.map((ret) => <ReturnRow key={ret.id} ret={ret} onApprove={onApprove} onReject={onReject} />)
             )}
           </tbody>
-        </table>
-      </div>
+        </DataTable>
       <Pagination meta={meta} label="Paginación de devoluciones" onPageChange={setPage} />
     </>
   )

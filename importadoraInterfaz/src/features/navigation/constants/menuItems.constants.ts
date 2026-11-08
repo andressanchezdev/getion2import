@@ -17,7 +17,8 @@ export const MENU_ITEMS: NavItem[] = [
         icon: storeIcon,
         subitems: [
             { id: 'catalog', label: 'Catálogo' },
-            { id: 'quotations', label: 'Cotizaciones' },
+            { id: 'quotationCatalog', label: 'Cotizar' },
+            { id: 'quotations', label: 'Historial cotizaciones' },
             { id: 'orders', label: 'Pedidos Activos' },
             { id: 'transfers', label: 'Traslados' },
             { id: 'receiving', label: 'Recepción de Compra' },

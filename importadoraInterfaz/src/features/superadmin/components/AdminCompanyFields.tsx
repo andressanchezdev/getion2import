@@ -3,6 +3,8 @@
 // ojo: la empresa nueva pide nombre, ciudad, teléfono y dirección (el backend no guarda NIT)
 import React from 'react'
 import type { AdminDraft } from '../types/superadmin.types'
+import { Icon } from '@/global/components/UI/atoms/Icon'
+import plusIcon from '@/assets/icons/plus.svg?raw'
 
 interface Props {
   draft: AdminDraft
@@ -28,7 +30,7 @@ export const AdminCompanyFields: React.FC<Props> = ({ draft, companies, setField
       </label>
       <label className="admin-form-radio">
         <input type="radio" name="companyMode" checked={draft.companyMode === 'new'} onChange={() => setField('companyMode', 'new')} />
-        + Registrar nueva empresa
+        <Icon svg={plusIcon} /> Registrar nueva empresa
       </label>
     </div>
 

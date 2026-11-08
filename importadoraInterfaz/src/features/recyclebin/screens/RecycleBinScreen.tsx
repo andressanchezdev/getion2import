@@ -9,6 +9,7 @@ import refreshIcon from '@/assets/icons/refresh.svg?raw'
 import { RowActions } from '@/global/components/UI/molecules/table/RowActions'
 import { usePermissions } from '@/global/hooks/access/usePermissions'
 import { useRecycleBin } from '../hooks/useRecycleBin'
+import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
 
 const TABLE_LABELS: Record<string, string> = {
   customers: 'Clientes',
@@ -50,8 +51,8 @@ export const RecycleBinScreen: React.FC = () => {
 
   return (
     <div className="recycle-bin-screen">
-      <div className="recycle-bin-card">
-        <div className="recycle-bin-toolbar">
+      <div className="data-card">
+        <div className="data-toolbar">
           <div style={{ display: 'flex', gap: 'var(--space-3)', flex: 1, minWidth: '280px', maxWidth: '400px' }}>
             <SearchBar
               value={search}
@@ -109,8 +110,7 @@ export const RecycleBinScreen: React.FC = () => {
           </div>
         </div>
 
-        <div className="recycle-table-responsive table-scroll">
-          <table className="recycle-table">
+        <DataTable tableId="recyclebin-recycle-bin" className="recycle-table">
             <thead>
               <tr>
                 <th>Entidad</th>
@@ -179,8 +179,7 @@ export const RecycleBinScreen: React.FC = () => {
                 ))
               )}
             </tbody>
-          </table>
-        </div>
+          </DataTable>
       </div>
 
       {meta && (

@@ -1,5 +1,6 @@
-// CheckoutPanel · finalizar compra (o cotizar) en el panel derecho: primero el cliente y los datos de entrega (y el empleado si lo hace un administrador), después el pago
+// CheckoutPanel · finalizar compra (o crear la cotización armada en «Cotizar») en el panel derecho: primero el cliente y los datos de entrega (y el empleado si lo hace un administrador), después el pago
 // conecta con: formRegistry (lo muestra), useCheckoutFlow (estado y confirmación), CustomerStep, PaymentStep, navigation (closeDrawerForm) y CheckoutPanel.css
+// ojo: lo que falta de cada dato se explica dentro de su campo; lo demás (cliente, productos, comprobante, caja) va en una línea bajo el formulario
 // ojo: la cotización termina en el paso del cliente; la venta sigue al paso de pago; una cotización que se continúa llega con sus renglones (payload.quotationId)
 import React from 'react'
 import './CheckoutPanel.css'
@@ -22,10 +23,8 @@ export const CheckoutPanel: React.FC<{ payload: CheckoutPayload }> = ({ payload 
         {flow.lines?.length === 0 && <p className="checkout-hint">No hay productos para continuar.</p>}
         {onPayment ? <PaymentStep flow={flow} /> : <CustomerStep flow={flow} />}
         {flow.error && <div className="form-field-error-msg">{flow.error}</div>}
-        {!flow.canContinue && flow.blockers.length > 0 && flow.customer && (
-          <ul className="checkout-blockers" aria-live="polite">
-            {flow.blockers.map((message) => <li key={message}>{message}</li>)}
-          </ul>
+        {!flow.canContinue && flow.generalBlockers.length > 0 && flow.customer && (
+          <p className="checkout-blockers-line" aria-live="polite">{flow.generalBlockers.join(' · ')}</p>
         )}
       </div>
 

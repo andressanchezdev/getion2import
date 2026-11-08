@@ -5,7 +5,9 @@ import React, { useState } from 'react'
 import '@/global/components/UI/molecules/form/DrawerFormShell.css'
 import './PurchasePanels.css'
 import { Pill } from '@/global/components/UI/atoms/Pill'
-import { ConfirmDialog } from '@/global/components/UI/molecules/dialogs/ConfirmDialog'
+import { InlineConfirm } from '@/global/components/UI/molecules/dialogs/InlineConfirm'
+import { ProductLine, ProductLineList } from '@/global/components/UI/molecules/product/ProductLine'
+import { useProductImages } from '@/features/shop'
 import { formatCOP } from '@/global/helpers/formatting/format'
 import { useAppDispatch } from '@/global/hooks/store/useRedux'
 import { closeDrawerForm, openDrawerForm } from '@/features/navigation'
@@ -24,6 +26,7 @@ export const PurchaseDetailPanel: React.FC<{ payload: PurchasePanelPayload }> = 
   const actions = usePurchaseActions()
   const [confirmVoid, setConfirmVoid] = useState(false)
   const purchase = detail.purchase
+  const images = useProductImages((purchase?.items ?? []).map((item) => item.productId))
 
   if (!purchase) {
     return (
@@ -59,22 +62,20 @@ export const PurchaseDetailPanel: React.FC<{ payload: PurchasePanelPayload }> = 
         </section>
 
         <section className="drawer-form-section">
-          <table className="purchase-lines">
-            <thead>
-              <tr><th>Producto</th><th className="purchase-num">Pedido</th><th className="purchase-num">Recibido</th><th className="purchase-num">Costo</th></tr>
-            </thead>
-            <tbody>
-              {purchase.items.map((item) => (
-                <tr key={item.id}>
-                  <td><strong>{item.productCode}</strong><small>{item.productName}</small></td>
-                  <td className="purchase-num">{item.quantity}</td>
-                  <td className="purchase-num">{item.receivedQty}{pendingOf(item) > 0 ? <small> faltan {pendingOf(item)}</small> : null}</td>
-                  <td className="purchase-num">{formatCOP(item.unitCost)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <dl className="purchase-facts">
+          <ProductLineList>
+            {purchase.items.map((item) => (
+              <ProductLine
+                key={item.id}
+                name={item.productName}
+                code={item.productCode}
+                imageUrl={images[item.productId]}
+                quantity={item.quantity}
+                unitPrice={item.unitCost}
+                note={`Recibido ${item.receivedQty}${pendingOf(item) > 0 ? ` · faltan ${pendingOf(item)}` : ''}`}
+              />
+            ))}
+          </ProductLineList>
+                    <dl className="purchase-facts">
             <div><dt>Subtotal</dt><dd>{formatCOP(purchase.subtotal)}</dd></div>
             <div><dt>IVA</dt><dd>{formatCOP(purchase.ivaTotal)}</dd></div>
             <div><dt>Total</dt><dd><strong>{formatCOP(purchase.total)}</strong></dd></div>
@@ -88,7 +89,7 @@ export const PurchaseDetailPanel: React.FC<{ payload: PurchasePanelPayload }> = 
         {canReceive(purchase) && <button type="button" className="btn-primary" onClick={() => dispatch(openDrawerForm({ kind: 'purchaseReceive', payload: { id: purchase.id } }))}>Recibir mercancía</button>}
       </div>
 
-      <ConfirmDialog open={confirmVoid} title="Anular orden de compra" message={`¿Anular la orden ${purchase.serial}? No se puede deshacer.`} confirmLabel="Anular" onConfirm={doVoid} onCancel={() => setConfirmVoid(false)} />
+      <InlineConfirm open={confirmVoid} title="Anular orden de compra" message={`¿Anular la orden ${purchase.serial}? No se puede deshacer.`} confirmLabel="Anular" onConfirm={doVoid} onCancel={() => setConfirmVoid(false)} />
     </div>
   )
 }

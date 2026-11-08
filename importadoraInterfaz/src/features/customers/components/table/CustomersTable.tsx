@@ -14,12 +14,13 @@ import {
   selectVisibleCustomers,
 } from '../../selectors/customers.selectors'
 import { RowActions, type RowAction } from '@/global/components/UI/molecules/table/RowActions'
-import { ConfirmDialog } from '@/global/components/UI/molecules/dialogs/ConfirmDialog'
+import { ReasonPrompt } from '@/features/reasonPrompt'
 import { openDrawerForm } from '@/features/navigation'
 import { toast } from '@/global/helpers/feedback/toast'
 import eyeIcon from '@/assets/icons/eye.svg?raw'
 import editIcon from '@/assets/icons/edit.svg?raw'
 import trashIcon from '@/assets/icons/trash.svg?raw'
+import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
 
 const COLUMNS = 6
 
@@ -32,8 +33,6 @@ export const CustomersTable: React.FC = () => {
   const docAlerts = useDocumentAlerts()
 
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null)
-  const [deleteReason, setDeleteReason] = useState('')
-  const [isDeleting, setIsDeleting] = useState(false)
 
   const empty =
     status === 'loading'
@@ -54,19 +53,16 @@ export const CustomersTable: React.FC = () => {
     }
   }
 
-  const handleConfirmDelete = async () => {
-    if (!customerToDelete || deleteReason.trim().length < 10 || deleteReason.trim().length > 100) return
-    setIsDeleting(true)
+  const handleConfirmDelete = async (reason: string) => {
+    const target = customerToDelete
+    if (!target) return
+    setCustomerToDelete(null)
     try {
-      await dispatch(deleteCustomerThunk({ customerId: customerToDelete.id, reason: deleteReason.trim() })).unwrap()
-      toast.success(`Cliente ${customerToDelete.fullName} eliminado correctamente.`)
-      setCustomerToDelete(null)
-      setDeleteReason('')
+      await dispatch(deleteCustomerThunk({ customerId: target.id, reason })).unwrap()
+      toast.success(`Cliente ${target.fullName} eliminado correctamente.`)
       dispatch(loadCustomersThunk())
     } catch {
       toast.error('No se pudo eliminar el cliente.')
-    } finally {
-      setIsDeleting(false)
     }
   }
 
@@ -88,17 +84,13 @@ export const CustomersTable: React.FC = () => {
       label: 'Eliminar',
       icon: trashIcon,
       tone: 'danger',
-      onClick: () => {
-        setCustomerToDelete(customer)
-        setDeleteReason('')
-      },
+      onClick: () => setCustomerToDelete(customer),
     },
   ]
 
   return (
     <div className="customers-table-card">
-      <div className="customers-table-responsive table-scroll">
-        <table className="customers-table">
+      <DataTable tableId="customers-customers" className="customers-table">
           <thead>
             <tr>
               <th>Cliente</th>
@@ -147,7 +139,7 @@ export const CustomersTable: React.FC = () => {
                     </span>
                     {docAlerts[customer.id] === 'expired' && (
                       <span className="badge-doc-alert is-expired" title="Documentos legales vencidos">
-                        ⚠️ Vencido
+                        Vencido
                       </span>
                     )}
                     {docAlerts[customer.id] === 'expiring' && (
@@ -181,44 +173,16 @@ export const CustomersTable: React.FC = () => {
               ))
             )}
           </tbody>
-        </table>
-      </div>
+        </DataTable>
 
-      <ConfirmDialog
-        open={Boolean(customerToDelete)}
+      <ReasonPrompt
+        open={customerToDelete !== null}
         title="Eliminar cliente"
         message={`¿Estás seguro de eliminar a "${customerToDelete?.fullName}"? Esta acción lo enviará a la papelera.`}
-        confirmLabel={isDeleting ? 'Eliminando…' : 'Eliminar'}
-        confirmDisabled={deleteReason.trim().length < 10 || deleteReason.trim().length > 100 || isDeleting}
+        confirmLabel="Eliminar"
         onConfirm={handleConfirmDelete}
-        onCancel={() => {
-          setCustomerToDelete(null)
-          setDeleteReason('')
-        }}
-      >
-        <div style={{ marginTop: '12px' }}>
-          <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px', color: 'var(--c-slate-700)' }}>
-            Motivo de eliminación *
-          </label>
-          <textarea
-            value={deleteReason}
-            onChange={(e) => setDeleteReason(e.target.value)}
-            placeholder="Indica el motivo (10 a 100 caracteres)..."
-            rows={3}
-            maxLength={100}
-            style={{
-              width: '100%',
-              padding: '8px 10px',
-              border: '1px solid var(--c-slate-300)',
-              borderRadius: '6px',
-              fontSize: '13px',
-              fontFamily: 'inherit',
-              resize: 'vertical',
-            }}
-          />
-          <small>{deleteReason.trim().length}/100 (mínimo 10)</small>
-        </div>
-      </ConfirmDialog>
+        onCancel={() => setCustomerToDelete(null)}
+      />
     </div>
   )
 }

@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import './PurchasesTable.css'
 import { Pill } from '@/global/components/UI/atoms/Pill'
-import { ConfirmDialog } from '@/global/components/UI/molecules/dialogs/ConfirmDialog'
+import { ConfirmPrompt } from '@/features/reasonPrompt'
 import { SearchBar } from '@/global/components/UI/molecules/filters/SearchBar'
 import { Pagination } from '@/global/components/UI/molecules/table/Pagination'
 import { RowActions } from '@/global/components/UI/molecules/table/RowActions'
@@ -20,6 +20,9 @@ import { canReceive } from '../../helpers/purchases.rules'
 import { usePurchaseActions } from '../../hooks/usePurchaseActions'
 import { usePurchases, type PurchasesMode } from '../../hooks/usePurchases'
 import type { Purchase, PurchaseStatus } from '../../types/purchases.types'
+import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
+import { Icon } from '@/global/components/UI/atoms/Icon'
+import plusIcon from '@/assets/icons/plus.svg?raw'
 
 export const PurchasesTable: React.FC<{ mode: PurchasesMode }> = ({ mode }) => {
   const dispatch = useAppDispatch()
@@ -53,8 +56,8 @@ export const PurchasesTable: React.FC<{ mode: PurchasesMode }> = ({ mode }) => {
   }
 
   return (
-    <div className="purchases-card">
-      <div className="purchases-toolbar">
+    <div className="data-card">
+      <div className="data-toolbar purchases-toolbar">
         <SearchBar
           value={list.search}
           onChange={list.setSearch}
@@ -99,14 +102,13 @@ export const PurchasesTable: React.FC<{ mode: PurchasesMode }> = ({ mode }) => {
               className="btn-primary purchases-create"
               onClick={() => dispatch(openDrawerForm({ kind: 'purchaseForm' }))}
             >
-              + Nueva orden
+              <Icon svg={plusIcon} /> Nueva orden
             </button>
           )}
         </div>
       </div>
 
-      <div className="purchases-table-responsive table-scroll">
-        <table className="purchases-table">
+      <DataTable tableId="purchases-purchases" className="purchases-table">
           <thead>
             <tr>
               <th>Orden</th>
@@ -152,17 +154,15 @@ export const PurchasesTable: React.FC<{ mode: PurchasesMode }> = ({ mode }) => {
               ))
             )}
           </tbody>
-        </table>
-      </div>
+        </DataTable>
       <Pagination meta={meta} label="Paginación de compras" onPageChange={setPage} />
 
       {toVoid && (
-        <ConfirmDialog
+        <ConfirmPrompt
           open={Boolean(toVoid)}
           title={`¿Anular la orden ${toVoid.serial}?`}
           message="Esta orden quedará anulada y no podrá recibir mercancía. El consecutivo se conservará como anulado."
           confirmLabel="Sí, anular orden"
-          cancelLabel="No, mantenerla"
           onConfirm={confirmVoid}
           onCancel={() => setToVoid(null)}
         />

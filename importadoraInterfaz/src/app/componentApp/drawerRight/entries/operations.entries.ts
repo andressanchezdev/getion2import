@@ -3,12 +3,13 @@
 import { createElement } from 'react'
 import { CreateTransferForm, ReceiveTransferForm, TransferDetailPanel, type TrasladeItem, type CreateTransferInitialPayload } from '@/features/transfers'
 import { AuditDetailPanel, type AuditEntry } from '@/features/audit'
-import { QuotationDetailPanel } from '@/features/quotations'
+import { QuotationDetailPanel, QuotationDraftPanel } from '@/features/quotations'
 import { CheckoutPanel, type CheckoutPayload } from '@/features/checkout'
 import { CompanyWarehousesPanel } from '@/features/warehouses'
-import { BillingConfigPanel, DocSeriesPanel, type DocSeries } from '@/features/billing'
+import { BillingConfigPanel, DocSeriesPanel, InvoiceDetailPanel, type DocSeries } from '@/features/billing'
 import { PurchaseDetailPanel, PurchaseFormPanel, PurchaseReceivePanel, type PurchasePanelPayload } from '@/features/purchases'
-import { CashClosePanel, CashCollectPanel, CashOpenPanel, type CashCollectPayload } from '@/features/cashRegister'
+import { CashClosePanel, CashCollectPanel, CashOpenPanel, VerifyGoodsPanel, type CashCollectPayload, type VerifyGoodsPayload } from '@/features/cashRegister'
+import { CountDetailPanel, type CountDetailPayload } from '@/features/inventory'
 import { CreateAbonoPanel, AbonoDetailPanel, EnableCreditPanel, type CreateAbonoPayload, type AbonoRecord as WalletAbono, type EnableCreditPayload } from '@/features/wallet'
 import { RegisterExpenseDrawer } from '@/features/shop'
 import { ReasonFormPanel, type ReasonFormPayload } from '@/features/reasonPrompt'
@@ -22,6 +23,24 @@ import type { DrawerFormKind } from '@/features/navigation'
 import type { FormEntry } from './formEntry.types'
 
 export const OPERATIONS_ENTRIES: Partial<Record<DrawerFormKind, FormEntry>> = {
+  invoiceDetail: {
+    icon: fileIcon,
+    title: () => 'Detalle de factura',
+    subtitle: 'Datos de la factura emitida',
+    render: (payload) => createElement(InvoiceDetailPanel, { key: String(payload), invoiceId: Number(payload) }),
+  },
+  verifyGoods: {
+    icon: fileIcon,
+    title: (payload) => `Cotejar ${(payload as VerifyGoodsPayload).serial}`,
+    subtitle: 'Verificación de factura contra salida física',
+    render: (payload) => createElement(VerifyGoodsPanel, { key: String((payload as VerifyGoodsPayload).orderId), payload: payload as VerifyGoodsPayload }),
+  },
+  countDetail: {
+    icon: fileIcon,
+    title: (payload) => `Conteo físico #${(payload as CountDetailPayload).count.id}`,
+    subtitle: 'Existencias esperadas y contadas',
+    render: (payload) => createElement(CountDetailPanel, { key: `${(payload as CountDetailPayload).count.id}-${(payload as CountDetailPayload).count.status}`, payload: payload as CountDetailPayload }),
+  },
   reasonForm: {
     icon: fileIcon,
     title: (payload) => (payload as ReasonFormPayload).title,
@@ -33,6 +52,12 @@ export const OPERATIONS_ENTRIES: Partial<Record<DrawerFormKind, FormEntry>> = {
     title: () => 'Confirmar entrada del banco',
     subtitle: 'Liga el movimiento a un pago por transferencia',
     render: (payload) => createElement(BankConfirmPanel, { key: String((payload as BankRecord).id), record: payload as BankRecord }),
+  },
+  quotationDraft: {
+    icon: fileIcon,
+    title: () => 'Cotización en armado',
+    subtitle: 'Repuestos, cantidades y total',
+    render: () => createElement(QuotationDraftPanel),
   },
   quotationDetail: {
     icon: fileIcon,

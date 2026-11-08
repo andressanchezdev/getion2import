@@ -4,39 +4,6 @@
   overflow: hidden;
 }
 
-
-.orders-table-scroll {
-  width: 100%;
-  overflow-x: auto;
-}
-
-.orders-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-}
-
-.orders-table th {
-  padding: 10px var(--space-3);
-  background: var(--bg-card-inner);
-  border-bottom: 1px solid var(--color-border);
-  color: var(--color-text-secondary);
-  font-size: var(--text-xs);
-  font-weight: var(--font-weight-semibold);
-  white-space: nowrap;
-}
-
-.orders-table td {
-  padding: 10px var(--space-3);
-  border-bottom: 1px solid var(--color-border);
-  font-size: var(--text-sm);
-  vertical-align: middle;
-}
-
-.orders-table tbody tr:last-child td {
-  border-bottom: none;
-}
-
 .orders-table-row {
   cursor: pointer;
 }

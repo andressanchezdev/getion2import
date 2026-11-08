@@ -13,6 +13,7 @@ import type { AbonoRecord } from '../../types/wallet.types'
 const STATUS: Record<AbonoRecord['status'], { label: string; tone: PillTone }> = {
   verified: { label: 'Verificado', tone: 'green' },
   pending: { label: 'En revisión', tone: 'amber' },
+  rejected: { label: 'Rechazado', tone: 'red' },
   void: { label: 'Anulado', tone: 'gray' },
 }
 

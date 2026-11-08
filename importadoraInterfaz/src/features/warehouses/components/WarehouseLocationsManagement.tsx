@@ -13,6 +13,7 @@ import type { Warehouse } from '../types/warehouse.types'
 import { LocationDialogs } from './locations/LocationDialogs'
 import { LocationRow } from './locations/LocationRow'
 import { LocationsToolbar } from './locations/LocationsToolbar'
+import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
 
 interface Props {
   warehouses: Warehouse[]
@@ -45,13 +46,12 @@ export const WarehouseLocationsManagement: React.FC<Props> = ({ warehouses, sele
     : null
 
   return (
-    <div className="wh-card">
+    <div className="data-card">
       <LocationsToolbar
         query={query} onQuery={setQuery} warehouses={warehouses} warehouseId={warehouseId} warehouseName={warehouseName}
         onSelectWarehouse={onSelectWarehouse} total={locations.length} visible={visible} canCreate={canCreate}
       />
-      <div className="wh-table-responsive table-scroll">
-        <table className="wh-table">
+      <DataTable tableId="warehouses-warehouse-locations-management" className="wh-table">
           <thead>
             <tr>
               <th>Código</th>
@@ -76,8 +76,7 @@ export const WarehouseLocationsManagement: React.FC<Props> = ({ warehouses, sele
               ))
             )}
           </tbody>
-        </table>
-      </div>
+        </DataTable>
       <Pagination meta={meta} label="Paginación de ubicaciones" onPageChange={setPage} />
       <LocationDialogs
         toDeactivate={manage.toDeactivate} onConfirmDeactivate={manage.confirmDeactivate} onCancelDeactivate={manage.cancelDeactivate}

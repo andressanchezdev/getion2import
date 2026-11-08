@@ -27,20 +27,6 @@
     transform: translateY(0);
 }
 
-.consolidated-icon {
-    font-size: 11px;
-    line-height: 1;
-}
-
-.consolidated-label {
-    font-size: var(--text-2xs, 10px);
-    font-weight: var(--font-weight-semibold, 600);
-    text-transform: uppercase;
-    color: var(--color-text-secondary, #64748b);
-    line-height: 1;
-    letter-spacing: 0.02em;
-}
-
 .consolidated-qty {
     font-size: var(--text-xs, 12px);
     font-weight: var(--font-weight-bold, 700);

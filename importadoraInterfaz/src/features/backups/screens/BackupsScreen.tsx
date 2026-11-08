@@ -12,6 +12,7 @@ import fileIcon from '@/assets/icons/file-text.svg?raw'
 import refreshIcon from '@/assets/icons/refresh.svg?raw'
 import { useBackups } from '../hooks/useBackups'
 import type { Backup } from '../types/backups.types'
+import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
 
 const NOTE_MAX = 200 // la API acepta notas de hasta 200 caracteres
 
@@ -22,7 +23,7 @@ export const BackupsScreen: React.FC = () => {
 
   return (
     <div className="backups-screen">
-      <div className="backups-card">
+      <div className="data-card">
         <div className="backups-summary">
           <div className="backups-summary-text">
             <span className="backups-summary-title">
@@ -45,8 +46,7 @@ export const BackupsScreen: React.FC = () => {
           Los respaldos son manuales. Contienen toda la base de datos. Descarga una copia a tu equipo: si el servidor se pierde, esa copia es la que te salva.
         </div>
 
-        <div className="backups-table-responsive table-scroll">
-          <table className="backups-table">
+        <DataTable tableId="backups-backups" className="backups-table">
             <thead>
               <tr>
                 <th>Fecha</th>
@@ -94,8 +94,7 @@ export const BackupsScreen: React.FC = () => {
                 ))
               )}
             </tbody>
-          </table>
-        </div>
+          </DataTable>
       </div>
 
       <ReasonPrompt

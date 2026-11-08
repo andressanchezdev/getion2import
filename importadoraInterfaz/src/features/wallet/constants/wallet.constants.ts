@@ -55,6 +55,7 @@ export const ABONO_STATUS_OPTIONS = [
   { value: 'all', label: 'Todos los estados' },
   { value: 'verified', label: 'Verificado' },
   { value: 'pending', label: 'En revisión' },
+  { value: 'rejected', label: 'Rechazado' },
 ]
 
 // búsqueda de clientes al habilitar crédito

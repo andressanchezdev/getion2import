@@ -13,6 +13,7 @@ import continueIcon from '@/assets/icons/receipt.svg?raw'
 import { QUOTATION_STATUS_LABEL } from '../../constants/quotations.constants'
 import { selectHasQuotationFilters, selectQuotationsError, selectQuotationsStatus, selectQuotationsTableItems } from '../../selectors/quotations.selectors'
 import { loadQuotationsThunk } from '../../thunks/quotations.thunks'
+import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
 
 const COLUMNS = 7
 
@@ -38,8 +39,7 @@ export const QuotationsTable: React.FC = () => {
   })()
 
   return (
-    <div className="quotations-table-responsive table-scroll">
-      <table className="quotations-table">
+    <DataTable tableId="quotations-quotations" className="quotations-table">
         <thead>
           <tr>
             <th>Código</th>
@@ -114,8 +114,7 @@ export const QuotationsTable: React.FC = () => {
             ))
           )}
         </tbody>
-      </table>
-    </div>
+      </DataTable>
   )
 }
 

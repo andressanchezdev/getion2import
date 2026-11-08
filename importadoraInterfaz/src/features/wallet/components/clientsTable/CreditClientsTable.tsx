@@ -15,6 +15,7 @@ import { loadWalletThunk } from '../../thunks/wallet.thunks'
 import { CreditClientsToolbar } from './CreditClientsToolbar'
 import { CreditClientRow } from '../clientRow/CreditClientRow'
 import { WalletKpiHeader } from '../kpis/WalletKpiHeader'
+import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
 
 export const CreditClientsTable: React.FC = () => {
   const dispatch = useAppDispatch()
@@ -32,12 +33,11 @@ export const CreditClientsTable: React.FC = () => {
       <WalletKpiHeader />
 
       {/* 2. Tarjeta con barra de filtros y tabla */}
-      <div className="credit-table-clients-card">
+      <div className="data-card">
         <CreditClientsToolbar />
 
       {/* Tabla de Clientes */}
-      <div className="credit-table-responsive table-scroll">
-        <table className="credit-table">
+      <DataTable tableId="wallet-credit-clients" className="credit-table">
           <thead>
             <tr>
               <th>Cliente / Documento</th>
@@ -85,8 +85,7 @@ export const CreditClientsTable: React.FC = () => {
               </tr>
             )}
           </tbody>
-        </table>
-      </div>
+        </DataTable>
 
       {/* Paginación */}
       {meta && (

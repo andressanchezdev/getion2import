@@ -5,7 +5,7 @@
 import { apiClient, API_CONFIG, toPaginated, withCompany, type APIResponse } from '@/api'
 import type { RequestContext } from '@/features/auth'
 import { pickWhatsapp, toQuotation } from '../helpers/quotations.adapter'
-import type { CreateQuotationBody, QuotationCustomerDto, QuotationCustomerSearchDto, QuotationDto, UpdateQuotationBody } from '../types/quotations.api.types'
+import type { CreateQuotationBody, QuotationCustomerDto, QuotationDto, UpdateQuotationBody } from '../types/quotations.api.types'
 import type { Quotation } from '../types/quotations.types'
 
 const { QUOTATIONS, CUSTOMERS } = API_CONFIG.ENDPOINTS
@@ -50,10 +50,4 @@ export const createQuotation = async (body: CreateQuotationBody): Promise<number
 // actualiza una cotización (por ejemplo, la marca como enviada)
 export const updateQuotation = async (id: number, body: UpdateQuotationBody): Promise<void> => {
   await apiClient.put(QUOTATIONS.BY_ID(id), body)
-}
-
-// busca clientes por nombre, documento o correo (hasta `limit`)
-export const searchCustomers = async (text: string, limit: number): Promise<QuotationCustomerSearchDto[]> => {
-  const { data } = await apiClient.get<APIResponse<QuotationCustomerSearchDto[] | null>>(CUSTOMERS.SEARCH, { params: { q: text, page: 1, pageSize: limit } })
-  return toPaginated(data).items
 }

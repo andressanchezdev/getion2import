@@ -1,34 +1,4 @@
 /* QuotationsTable.css · estilos de la tabla de cotizaciones · solo usa tokens de styles/tokens.css */
-.quotations-table-responsive {
-  width: 100%;
-  overflow-x: auto;
-  min-height: 480px;
-}
-
-.quotations-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-  font-size: var(--text-sm);
-}
-
-.quotations-table th {
-  padding: var(--space-3) var(--space-4);
-  font-size: var(--text-xs);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-secondary);
-  letter-spacing: var(--tracking-wider);
-  text-transform: uppercase;
-  white-space: nowrap;
-  background: var(--c-slate-50);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.quotations-table td {
-  padding: 0.875rem var(--space-4);
-  vertical-align: middle;
-  border-bottom: 1px solid var(--color-border);
-}
 
 .quotations-table-row:hover {
   background: var(--bg-card-inner);
@@ -86,18 +56,6 @@
 
 /* En pantallas móviles menores a 380px las filas se convierten en tarjetas con las acciones en el footer */
 @media (max-width: 380px) {
-  .quotations-table-responsive {
-    overflow-x: visible;
-  }
-
-  .quotations-table {
-    display: block;
-    width: 100%;
-  }
-
-  .quotations-table thead {
-    display: none;
-  }
 
   .quotations-table tbody {
     display: flex;
@@ -115,15 +73,6 @@
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
-  }
-
-  .quotations-table td {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.25rem 0;
-    border-bottom: 1px dashed var(--color-border);
-    font-size: var(--text-xs);
   }
 
   .quotations-table td::before {

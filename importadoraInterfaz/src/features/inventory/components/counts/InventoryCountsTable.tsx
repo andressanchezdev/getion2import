@@ -6,6 +6,7 @@ import { formatDate } from '@/global/helpers/formatting/format'
 import eyeIcon from '@/assets/icons/eye.svg?raw'
 import { RowActions, type RowAction } from '@/global/components/UI/molecules/table/RowActions'
 import type { InventoryCount } from '../../types/inventory.counts.types'
+import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
 
 interface Props {
   items: InventoryCount[]
@@ -63,8 +64,7 @@ export const InventoryCountsTable: React.FC<Props> = ({
   }
 
   return (
-    <div className="counts-table-responsive table-scroll">
-      <table className="counts-table">
+    <DataTable tableId="inventory-inventory-counts" className="counts-table">
         <thead>
           <tr>
             <th># Conteo</th>
@@ -109,8 +109,7 @@ export const InventoryCountsTable: React.FC<Props> = ({
             ))
           )}
         </tbody>
-      </table>
-    </div>
+      </DataTable>
   )
 }
 

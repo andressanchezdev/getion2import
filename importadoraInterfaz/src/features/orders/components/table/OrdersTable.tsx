@@ -19,6 +19,7 @@ import { OrderRowActions } from './OrderRowActions'
 import './OrdersTable.css'
 import { usePagedList } from '@/global/hooks/data/usePagedList'
 import { Pagination } from '@/global/components/UI/molecules/table/Pagination'
+import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
 
 const COLUMNS = 7
 
@@ -59,8 +60,7 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({ onCancel, extraActions
 
   return (
     <div className="orders-table-card" aria-busy={status === 'loading'}>
-      <div className="orders-table-scroll table-scroll">
-        <table className="orders-table">
+      <DataTable tableId="orders-orders" className="orders-table">
           <thead>
             <tr>
               <th>Pedido</th>
@@ -98,7 +98,7 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({ onCancel, extraActions
                   <td>
                     <b className="orders-table-strong">{order.serial}</b>
                     {order.channel === 'immediate' ? (
-                      <span className="orders-badge-immediate">⚡ Picking Inmediato</span>
+                      <span className="orders-badge-immediate">Picking inmediato</span>
                     ) : (
                       <small className="orders-table-sub">Normal</small>
                     )}
@@ -135,8 +135,7 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({ onCancel, extraActions
               ))
             )}
           </tbody>
-        </table>
-      </div>
+        </DataTable>
       <Pagination meta={meta} label="Paginación de pedidos" onPageChange={setPage} />
     </div>
   )

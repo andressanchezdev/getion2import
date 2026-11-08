@@ -14,6 +14,7 @@ import './EmployeesTable.css'
 import { usePagedList } from '@/global/hooks/data/usePagedList'
 import { ReasonPrompt } from '@/features/reasonPrompt'
 import { Pagination } from '@/global/components/UI/molecules/table/Pagination'
+import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
 
 interface EmployeesTableProps {
   employees: SimpleEmployee[]
@@ -50,8 +51,7 @@ export const EmployeesTable: React.FC<EmployeesTableProps> = ({ employees, loadi
 
   return (
     <>
-    <div className="employees-table-responsive table-scroll">
-      <table className="employees-table">
+    <DataTable tableId="employees-employees" className="employees-table">
         <thead>
           <tr>
             <th>Empleado</th>
@@ -108,8 +108,7 @@ export const EmployeesTable: React.FC<EmployeesTableProps> = ({ employees, loadi
             })
           )}
         </tbody>
-      </table>
-    </div>
+      </DataTable>
     <Pagination meta={meta} label="Paginación de empleados" onPageChange={setPage} />
     <ReasonPrompt
       open={Boolean(toDeactivate)}

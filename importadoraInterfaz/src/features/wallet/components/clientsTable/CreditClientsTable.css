@@ -8,43 +8,7 @@
   width: 100%;
 }
 
-.credit-table-clients-card {
-  background: var(--bg-card, var(--c-white));
-  border: 1px solid var(--color-border, var(--c-slate-200));
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  box-shadow: var(--shadow-rest);
-  display: flex;
-  flex-direction: column;
-}
-
 /* Table */
-.credit-table-responsive {
-  width: 100%;
-  overflow-x: auto;
-}
-
-.credit-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-  font-size: var(--text-sm);
-}
-
-.credit-table th {
-  background: var(--c-slate-50);
-  color: var(--color-text-secondary, var(--c-slate-500));
-  font-weight: var(--font-weight-semibold);
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--color-border, var(--c-slate-200));
-  white-space: nowrap;
-}
-
-.credit-table td {
-  padding: 0.875rem var(--space-4);
-  border-bottom: 1px solid var(--color-border, var(--c-slate-100));
-  vertical-align: middle;
-}
 
 /* Empty State */
 .credit-table-empty-td {

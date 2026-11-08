@@ -77,32 +77,6 @@
   font-size: var(--text-sm);
 }
 
-.billing-table-responsive {
-  width: 100%;
-}
-
-.billing-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-  font-size: var(--text-sm);
-}
-
-.billing-table th {
-  background: var(--c-slate-50);
-  color: var(--color-text-secondary);
-  font-weight: var(--font-weight-semibold);
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--color-border);
-  white-space: nowrap;
-}
-
-.billing-table td {
-  padding: 0.875rem var(--space-4);
-  border-bottom: 1px solid var(--color-border);
-  vertical-align: middle;
-}
-
 .billing-num {
   text-align: right;
 }

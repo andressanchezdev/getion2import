@@ -6,6 +6,8 @@ import { useAppSelector } from '@/global/hooks/store/useRedux'
 import { selectWarehouses } from '@/features/warehouses'
 import type { ReturnsCounts } from '../helpers/returns.helpers'
 import type { ReturnStatusFilter } from '../types/returns.types'
+import { Icon } from '@/global/components/UI/atoms/Icon'
+import plusIcon from '@/assets/icons/plus.svg?raw'
 
 interface Props {
   query: string
@@ -57,7 +59,7 @@ export const ReturnsToolbar: React.FC<Props> = ({ query, status, warehouseId, co
         </label>
       </div>
       <div className="returns-toolbar-actions">
-        <button type="button" className="btn-primary" onClick={onCreate}>+ Crear Devolución</button>
+        <button type="button" className="btn-primary" onClick={onCreate}><Icon svg={plusIcon} /> Crear Devolución</button>
       </div>
     </div>
   )

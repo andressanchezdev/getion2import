@@ -58,24 +58,3 @@
 }
 
 /* Crear cotización: segunda opción al lado de Finalizar compra, con borde en vez de relleno amarillo */
-.shop-cart-btn-quote {
-  height: 44px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-base);
-  background: var(--bg-card);
-  color: var(--color-text-primary);
-  font-family: inherit;
-  font-size: var(--text-sm);
-  font-weight: var(--font-weight-bold);
-  cursor: pointer;
-  transition: border-color var(--motion-fast);
-}
-
-.shop-cart-btn-quote:hover:not(:disabled) {
-  border-color: var(--c-yellow-400);
-}
-
-.shop-cart-btn-quote:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}

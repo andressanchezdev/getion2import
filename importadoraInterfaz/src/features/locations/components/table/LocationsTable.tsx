@@ -17,6 +17,7 @@ import qrIcon from '@/assets/icons/qr-code.svg?raw'
 import { hasStock, locationLabel } from '../../helpers/locations.adapter'
 import { useLocationActions } from '../../hooks/useLocationActions'
 import type { WarehouseLocation } from '../../types/locations.types'
+import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
 
 interface LocationsTableProps {
   locations: WarehouseLocation[]
@@ -57,8 +58,7 @@ export const LocationsTable: React.FC<LocationsTableProps> = ({ locations, wareh
 
   return (
     <>
-      <div className="inv-table-responsive table-scroll">
-        <table className="inv-table">
+      <DataTable tableId="locations-locations" className="inv-table">
           <thead>
             <tr>
               <th>Código</th>
@@ -130,8 +130,7 @@ export const LocationsTable: React.FC<LocationsTableProps> = ({ locations, wareh
               ))
             )}
           </tbody>
-        </table>
-      </div>
+        </DataTable>
       <Pagination meta={meta} label="Paginación de ubicaciones" onPageChange={setPage} />
 
       <ReasonPrompt

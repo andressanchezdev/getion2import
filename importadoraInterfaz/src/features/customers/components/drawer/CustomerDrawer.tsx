@@ -4,7 +4,7 @@
 import React, { useState } from 'react'
 import './CustomerDrawer.css'
 import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
-import { ConfirmDialog } from '@/global/components/UI/molecules/dialogs/ConfirmDialog'
+import { InlineConfirm } from '@/global/components/UI/molecules/dialogs/InlineConfirm'
 import { selectCartCustomer, setCartCustomerThunk } from '@/features/shop'
 import { useLoadCatalogs } from '@/features/catalogs'
 import { useSelectedCustomerData } from '../../hooks/useSelectedCustomerData'
@@ -59,7 +59,7 @@ export const CustomerDrawer: React.FC = () => {
       <CustomerDocumentsSection customerId={customerId} />
       <CustomerDiscountsSection onRequestDelete={(id) => setPending({ kind: 'discount', id })} />
 
-      <ConfirmDialog
+      <InlineConfirm
         open={pending !== null}
         title={pending?.kind === 'direction' ? '¿Borrar la dirección?' : '¿Borrar el descuento?'}
         message="Esta acción no se puede deshacer."

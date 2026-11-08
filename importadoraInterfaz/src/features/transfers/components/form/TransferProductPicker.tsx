@@ -1,6 +1,6 @@
 // TransferProductPicker · buscador de repuestos del pedido de traslado: cada resultado muestra sus bodegas con existencias para agregarlo con un clic
 // conecta con: CreateTransferForm (lo pinta), useTransferRequest (búsqueda y agregar) y transfers.types
-// ojo: la bodega que recibe no aparece como origen (no se pide a sí misma); las bodegas sin disponible salen apagadas
+// ojo: la bodega que recibe no aparece como origen (no se pide a sí misma); las bodegas sin disponible salen apagadas; si el administrador ya eligió la bodega de origen, solo se ofrece esa
 import React from 'react'
 import type { ProductStockMatrix } from '../../types/transfers.types'
 
@@ -10,11 +10,12 @@ interface Props {
   products: ProductStockMatrix[]
   searching: boolean
   destWarehouseId: number
+  originWarehouseId?: number // administrador: solo se ofrece esta bodega de origen
   onAdd: (product: ProductStockMatrix, warehouseId: number) => void
 }
 
 // buscador y lista de resultados con sus bodegas de origen posibles
-export const TransferProductPicker: React.FC<Props> = ({ search, onSearch, products, searching, destWarehouseId, onAdd }) => (
+export const TransferProductPicker: React.FC<Props> = ({ search, onSearch, products, searching, destWarehouseId, originWarehouseId, onAdd }) => (
   <section className="transfer-req-section">
     <label className="transfer-select-label" htmlFor="transfer-search">
       Agregar repuestos
@@ -39,7 +40,7 @@ export const TransferProductPicker: React.FC<Props> = ({ search, onSearch, produ
             </div>
             <div className="transfer-req-chips">
               {product.locations
-                .filter((location) => location.warehouseId !== destWarehouseId)
+                .filter((location) => location.warehouseId !== destWarehouseId && (!originWarehouseId || location.warehouseId === originWarehouseId))
                 .map((location) => (
                   <button
                     key={location.warehouseId}

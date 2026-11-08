@@ -113,6 +113,11 @@ func (s *InventoryService) CreateTransfer(ctx context.Context, actor *middleware
 		}
 	}
 
+	// el empleado solo pide traslados hacia su propia sede; el administrador puede mover entre dos bodegas cualquiera de su compañía
+	if actor.ActorType == types.ActorEmployee && (actor.WarehouseID == nil || *actor.WarehouseID != req.DestinationWarehouseID) {
+		return nil, utils.Forbidden("FORBIDDEN_TRANSFER_DESTINATION", "Un empleado solo puede pedir traslados hacia su propia sede.")
+	}
+
 	var createdTransfer *repositories.TransferEntity
 	var createdItems []repositories.TransferItemEntity
 
