@@ -29,7 +29,7 @@ export const CompaniesScreen: React.FC = () => {
         <div className="data-toolbar">
           <SearchBar value={search} onChange={setSearch} placeholder="Buscar por nombre, ciudad o correo..." className="companies-search" />
         </div>
-        <DataTable tableId="companies-companies" className="companies-table">
+        <DataTable tableId="companies-companies">
             <thead>
               <tr><th>Compañía</th><th>Ciudad</th><th>Correo</th><th>Acciones</th></tr>
             </thead>

@@ -13,7 +13,7 @@ interface AuditTableProps {
 }
 
 export const AuditTable: React.FC<AuditTableProps> = ({ entries, onOpen }) => (
-  <DataTable tableId="audit-movements" className="audit-table">
+  <DataTable tableId="audit-movements">
     <thead>
       <tr>
         <th>Fecha</th>

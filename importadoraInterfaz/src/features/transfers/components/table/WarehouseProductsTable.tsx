@@ -46,7 +46,7 @@ export const WarehouseProductsTable: React.FC<WarehouseProductsTableProps> = ({
         </div>
       )}
 
-      <DataTable tableId="transfers-warehouse-products" className="inv-table">
+      <DataTable tableId="transfers-warehouse-products">
           <thead>
             <tr>
               <th>Código</th>

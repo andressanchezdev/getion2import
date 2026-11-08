@@ -8,7 +8,7 @@ import { toast } from '@/global/helpers/feedback/toast'
 import { selectRequestContext } from '@/features/auth'
 import { splitPayment } from '../helpers/wallet.helpers'
 import { fetchCustomerInvoices } from '../services/wallet.service'
-import { adjustCustomerCredit, registerPayment, updateCredit, verifyPayment, voidPayment, rejectPayment, reopenPayment } from '../services/wallet.payments.service'
+import { registerPayment, updateCredit, verifyPayment, voidPayment, rejectPayment, reopenPayment } from '../services/wallet.payments.service'
 import { loadPaymentsHistoryThunk } from './wallet.history.thunks'
 import { loadWalletSummaryThunk, loadWalletThunk, NO_SESSION, type WalletThunkConfig } from './wallet.thunks'
 import type { CreditUpdateInput, PaymentDetails, PaymentInput } from '../types/wallet.api.types'
@@ -140,21 +140,6 @@ export const reopenPaymentThunk = createAsyncThunk<void, { paymentId: number }, 
       dispatch(loadWalletSummaryThunk())
     } catch (error) {
       return rejectWithValue(failWith(error, 'No se pudo devolver el pago a revisión.'))
-    }
-  }
-)
-
-// aplica un ajuste de cartera manual (POST /wallet/adjust)
-export const adjustCreditThunk = createAsyncThunk<void, { customerId: number; amount: number; reason: string }, WalletThunkConfig>(
-  'wallet/adjustCredit',
-  async ({ customerId, amount, reason }, { dispatch, rejectWithValue }) => {
-    try {
-      await adjustCustomerCredit(customerId, amount, reason)
-      toast.success('Ajuste de cartera aplicado exitosamente')
-      dispatch(loadWalletThunk())
-      dispatch(loadWalletSummaryThunk())
-    } catch (error) {
-      return rejectWithValue(failWith(error, 'No se pudo registrar el ajuste de cartera.'))
     }
   }
 )

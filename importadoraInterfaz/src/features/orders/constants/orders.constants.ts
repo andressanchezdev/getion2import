@@ -31,8 +31,6 @@ export const ORDERS_PAGE_SIZE = 50
 // mínimo de letras del motivo para anular un pedido
 export const MIN_CANCEL_REASON = 5
 
-export const NO_WAREHOUSE_ORDERS = 'Elige una bodega para ver los pedidos.'
-
 export const INITIAL_ORDERS_STATE: OrdersState = {
   stage: 'verification',
   channel: 'all',

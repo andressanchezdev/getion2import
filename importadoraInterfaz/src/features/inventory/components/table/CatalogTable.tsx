@@ -131,7 +131,7 @@ export const CatalogTable: React.FC<CatalogTableProps> = ({ type, noun, rows, lo
           </div>
         </div>
 
-        <DataTable tableId="inventory-catalog" className="inv-table">
+        <DataTable tableId="inventory-catalog">
             <thead>
               <tr>
                 {withImage && <th>Logo</th>}

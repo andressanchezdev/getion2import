@@ -108,12 +108,6 @@ export const fetchProductThumbnails = async (ids: number[]): Promise<Record<numb
     return Object.fromEntries((data.data ?? []).map((item) => [item.id, getStorageUrl(item.imageUrl)]))
 }
 
-// cambia el estado de un producto (PUT /products/:id con { status: 'active' | 'inactive' })
-export const updateProductStatus = async (productId: number | string, status: 'active' | 'inactive'): Promise<ProductDto> => {
-    const { data } = await apiClient.put<APIResponse<ProductDto>>(PRODUCTS.BY_ID(Number(productId)), { status })
-    return data.data
-}
-
 // actualiza campos del producto (nombre, descripción, código, estado, precios, categoría, nuevo)
 export const updateProductDetails = async (
     productId: number | string,

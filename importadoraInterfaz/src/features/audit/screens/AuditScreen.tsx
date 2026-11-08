@@ -134,7 +134,7 @@ export const AuditScreen: React.FC = () => {
           </div>
         </div>
 
-        <div className="audit-table-card">
+        <div>
           {loading ? (
             <div className="audit-empty">Cargando movimientos...</div>
           ) : error ? (

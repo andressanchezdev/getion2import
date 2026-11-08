@@ -63,6 +63,5 @@ export const SALES_ENDPOINTS = {
   WALLET: {
     SUMMARY: (customerId: number | string) => `/wallet/summary/${customerId}`,
     ENTRIES: '/wallet/entries',
-    ADJUST: '/wallet/adjust',
   },
 } as const

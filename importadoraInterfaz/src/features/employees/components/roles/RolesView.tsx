@@ -63,7 +63,7 @@ export const RolesView: React.FC<RolesViewProps> = ({ manage, onEdit }) => {
           </button>
         </div>
       )}
-      <DataTable tableId="employees-roles-view" className="roles-view-table">
+      <DataTable tableId="employees-roles-view">
           <thead>
             <tr><th>Código</th><th>Rol</th><th>Descripción</th><th>Estado</th>{manage && <th>Acciones</th>}</tr>
           </thead>

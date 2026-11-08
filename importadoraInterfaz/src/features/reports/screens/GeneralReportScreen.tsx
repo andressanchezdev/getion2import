@@ -173,7 +173,7 @@ export const GeneralReportScreen: React.FC = () => {
             </Pill>
           </div>
 
-          <DataTable tableId="reports-general-report" className="inv-table">
+          <DataTable tableId="reports-general-report">
               <thead>
                 <tr>
                   <th>Código</th>
@@ -233,7 +233,7 @@ export const GeneralReportScreen: React.FC = () => {
             </Pill>
           </div>
 
-          <DataTable tableId="reports-general-report-2" className="inv-table">
+          <DataTable tableId="reports-general-report-2">
               <thead>
                 <tr>
                   <th>Código</th>

@@ -35,11 +35,6 @@ export interface EmployeePermissionsResponse {
   modules?: ModulePermission[]
 }
 
-export interface SaveModulePermissionsRequest {
-  employeeId: number
-  modules: ModulePermission[]
-}
-
 export interface SimpleEmployee {
   employeeId: number
   name: string

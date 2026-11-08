@@ -5,9 +5,6 @@ import { DEFAULT_PAGE_SIZE } from '@/api'
 
 export const CUSTOMERS_PAGE_SIZE = DEFAULT_PAGE_SIZE
 
-// las direcciones y los descuentos de un cliente caben en una sola página
-export const CUSTOMER_EXTRAS_PAGE_SIZE = 50
-
 export const EMPTY_DIRECTION_INPUT: DirectionInput = {
   address: '',
   neighborhood: '',

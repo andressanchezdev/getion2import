@@ -39,7 +39,7 @@ export const store = configureStore({
     }),
 })
 
-export const persistor = persistStore(store)
+persistStore(store)
 
 // ojo: si el backend responde 401 (token vencido) se cierra la sesión; la alerta "Tu sesión expiró" la muestra logoutThunk (antes se mostraba aquí)
 setUnauthorizedHandler((details) => {

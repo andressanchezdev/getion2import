@@ -84,5 +84,4 @@ export const {
 } = navigationSlice.actions
 
 export const navigationReducer = navigationSlice.reducer
-export const uiReducer = navigationSlice.reducer
 export default navigationSlice.reducer

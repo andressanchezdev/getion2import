@@ -8,9 +8,6 @@ export const formatCOP = (val: number) => formatPesos(val)
 // alias universal de moneda
 export const formatCurrency = formatCOP
 
-// número con separador de miles (sin símbolo $)
-export const formatNumber = (val: number): string => new Intl.NumberFormat('es-CO').format(val)
-
 // $165.000 sin espacio después del signo, como se ve en las cards y el carrito de la maqueta (sin decimales)
 export const formatPesos = (val: number) => `$${new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(val)}`
 
@@ -33,11 +30,6 @@ export const onlyDigits = (text: string): string => text.replace(/\D/g, '')
 
 // agrupa los dígitos de a tres con punto, como se escriben los pesos ('1250000' -> '1.250.000'); sin dígitos devuelve ''
 export const formatThousands = (digits: string): string => onlyDigits(digits).replace(/\B(?=(\d{3})+(?!\d))/g, '.')
-
-// $165k (versión corta para botones de nivel de precio)
-export const formatShortK = (val: number) => {
-  return `$${Math.round(val / 1000)}k`
-}
 
 // iniciales de un nombre (Usuario Administrador -> UA), para el avatar
 export const getInitials = (name: string) => {

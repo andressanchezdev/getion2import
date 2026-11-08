@@ -58,7 +58,7 @@ export const LocationsTable: React.FC<LocationsTableProps> = ({ locations, wareh
 
   return (
     <>
-      <DataTable tableId="locations-locations" className="inv-table">
+      <DataTable tableId="locations-locations">
           <thead>
             <tr>
               <th>Código</th>

@@ -56,7 +56,7 @@ export const ProductsTable: React.FC = () => {
 
   return (
     <>
-      <DataTable tableId="inventory-products" className="inv-table">
+      <DataTable tableId="inventory-products">
         <thead>
           <tr>
             <th>Imagen</th>

@@ -86,7 +86,7 @@ export const InvoicesTable: React.FC = () => {
         </div>
       </div>
 
-      <DataTable tableId="billing-invoices" className="invoices-table">
+      <DataTable tableId="billing-invoices">
           <thead>
             <tr>
               <th>Número</th>

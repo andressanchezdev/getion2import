@@ -19,7 +19,7 @@ interface Props {
 }
 
 export const StockTable: React.FC<Props> = ({ rows, message, locationCounts, productSums, totals }) => (
-  <DataTable tableId="inventory-stock" className="inv-table">
+  <DataTable tableId="inventory-stock">
       <thead>
         <tr>
           <th>Código</th>

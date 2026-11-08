@@ -21,34 +21,9 @@
   border-bottom: 1px solid var(--color-border);
 }
 
-.data-toolbar-search {
-  flex: 0 1 40%;
-  width: 40%;
-  max-width: 40%;
-  min-width: 240px;
-}
-
-.data-toolbar-end {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-}
-
 .data-toolbar > [class*="toolbar-actions"],
 .data-toolbar > [class*="toolbar-right"] {
   margin-left: auto;
-}
-
-.data-toolbar-total {
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-  white-space: nowrap;
-}
-
-.data-toolbar-total strong {
-  color: var(--color-text-primary);
 }
 
 .data-table-wrap {
@@ -95,22 +70,6 @@
   overflow: visible;
 }
 
-.data-num {
-  text-align: right;
-}
-
-.data-empty {
-  padding: 3rem var(--space-4);
-  text-align: center;
-  color: var(--color-text-secondary);
-}
-
-/* el número o código principal de la fila: negro y en seminegrita (no azul) */
-.data-key {
-  color: var(--color-text-primary);
-  font-weight: var(--font-weight-semibold);
-}
-
 /* tirador para ajustar el ancho de la columna (lo agrega useColumnResize en cada encabezado) */
 .col-resizer {
   position: absolute;
@@ -142,16 +101,5 @@
 @media (max-width: 900px) {
   .data-toolbar {
     gap: var(--space-3);
-  }
-
-  .data-toolbar-search {
-    flex: 1 1 100%;
-    width: 100%;
-    max-width: 100%;
-  }
-
-  .data-toolbar-end {
-    margin-left: 0;
-    width: 100%;
   }
 }

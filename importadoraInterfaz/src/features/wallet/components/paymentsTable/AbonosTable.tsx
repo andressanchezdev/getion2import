@@ -80,7 +80,7 @@ export const AbonosTable: React.FC = () => {
         </button>
       </div>
 
-      <DataTable tableId="wallet-abonos" className="abonos-table">
+      <DataTable tableId="wallet-abonos">
           <thead>
             <tr>
               <th>Recibo</th>

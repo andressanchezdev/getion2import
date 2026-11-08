@@ -62,7 +62,7 @@ export const ExternalsTable: React.FC<{ kind: ExternalKind }> = ({ kind }) => {
           </button>
         </div>
 
-        <DataTable tableId="externals-externals" className="externals-table">
+        <DataTable tableId="externals-externals">
             <thead>
               <tr>
                 <th>Razón social</th>

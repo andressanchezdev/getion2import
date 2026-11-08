@@ -51,7 +51,7 @@ export const WarehouseLocationsManagement: React.FC<Props> = ({ warehouses, sele
         query={query} onQuery={setQuery} warehouses={warehouses} warehouseId={warehouseId} warehouseName={warehouseName}
         onSelectWarehouse={onSelectWarehouse} total={locations.length} visible={visible} canCreate={canCreate}
       />
-      <DataTable tableId="warehouses-warehouse-locations-management" className="wh-table">
+      <DataTable tableId="warehouses-warehouse-locations-management">
           <thead>
             <tr>
               <th>Código</th>

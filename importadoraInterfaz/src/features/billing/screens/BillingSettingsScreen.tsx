@@ -69,7 +69,7 @@ export const BillingSettingsScreen: React.FC = () => {
             <span className="billing-muted">El número que llevará el próximo documento de cada tipo.</span>
           </div>
         </div>
-        <DataTable tableId="billing-billing-settings" className="billing-table">
+        <DataTable tableId="billing-billing-settings">
             <thead>
               <tr>
                 <th>Documento</th>

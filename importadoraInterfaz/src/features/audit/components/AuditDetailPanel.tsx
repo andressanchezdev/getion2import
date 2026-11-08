@@ -38,7 +38,7 @@ export const AuditDetailPanel: React.FC<AuditDetailPanelProps> = ({ entry }) => 
           {entry.changes.length === 0 ? (
             <p className="audit-muted">Este movimiento no guardó detalle de cambios.</p>
           ) : (
-            <table className="audit-table">
+            <table className="data-table">
               <thead>
                 <tr><th>Campo</th><th>Antes</th><th>Después</th></tr>
               </thead>

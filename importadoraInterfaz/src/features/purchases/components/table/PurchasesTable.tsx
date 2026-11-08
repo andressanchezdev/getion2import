@@ -108,7 +108,7 @@ export const PurchasesTable: React.FC<{ mode: PurchasesMode }> = ({ mode }) => {
         </div>
       </div>
 
-      <DataTable tableId="purchases-purchases" className="purchases-table">
+      <DataTable tableId="purchases-purchases">
           <thead>
             <tr>
               <th>Orden</th>

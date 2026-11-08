@@ -82,7 +82,7 @@ export const WarehousesTable: React.FC<WarehousesTableProps> = ({ onManageLocati
                 </button>
             </div>
 
-            <DataTable tableId="warehouses-warehouses" className="wh-table">
+            <DataTable tableId="warehouses-warehouses">
                     <thead>
                         <tr>
                             <th>Bodega</th>

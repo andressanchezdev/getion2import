@@ -37,7 +37,7 @@ export const BankRecordsTable: React.FC<Props> = ({ records, message }) => {
 
   return (
     <>
-      <DataTable tableId="bank-bank-records" className="bank-table">
+      <DataTable tableId="bank-bank-records">
           <thead>
             <tr>
               <th>Fecha</th>
