@@ -3,6 +3,7 @@
 // ojo: cada pantalla pasa su <thead> y <tbody> como hijos y un tableId único y estable (ahí se recuerdan los anchos); sin tableId distinto dos tablas compartirían los mismos anchos
 import React, { useRef } from 'react'
 import { useAppSelector } from '@/global/hooks/store/useRedux'
+import { useColumnAlign } from '@/global/hooks/ui/useColumnAlign'
 import { useColumnResize } from '@/global/hooks/ui/useColumnResize'
 import { columnWidthsKey } from '@/global/helpers/table/columnWidths'
 import { Icon } from '@/global/components/UI/atoms/Icon'
@@ -17,6 +18,7 @@ interface DataTableProps {
 export const DataTable: React.FC<DataTableProps> = ({ tableId, className = '', children }) => {
   const ref = useRef<HTMLTableElement>(null)
   const user = useAppSelector((state) => state.auth.user)
+  useColumnAlign(ref)
   const { isResized, reset } = useColumnResize(ref, columnWidthsKey(user ? `${user.userType}-${user.userId}` : undefined, tableId))
 
   return (

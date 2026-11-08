@@ -2,6 +2,7 @@
 @import './styles/tokens.css';
 @import './styles/table-scroll.css';
 @import './styles/data-table.css';
+@import './styles/data-table-align.css';
 
 /* ============================================================================
    RESET Y ESTILOS BASE
