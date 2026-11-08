@@ -1127,6 +1127,7 @@ CREATE TABLE purchases (
     subtotal        NUMERIC(14,2) NOT NULL DEFAULT 0 CHECK (subtotal >= 0),
     iva_total       NUMERIC(14,2) NOT NULL DEFAULT 0 CHECK (iva_total >= 0),
     total           NUMERIC(14,2) NOT NULL DEFAULT 0 CHECK (total >= 0),
+    paid_total      NUMERIC(14,2) NOT NULL DEFAULT 0 CHECK (paid_total >= 0), -- lo que la caja ya pagó de esta recepción
     notes           TEXT,
     received_at     TIMESTAMPTZ,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -1135,6 +1136,10 @@ CREATE TABLE purchases (
 );
 
 CREATE INDEX idx_purchases_company_status ON purchases (company_id, status);
+
+-- el gasto de caja que paga una recepción de compra queda ligado a esa orden
+ALTER TABLE cash_session_expenses ADD COLUMN purchase_id BIGINT REFERENCES purchases(id) ON DELETE SET NULL;
+CREATE INDEX idx_cash_session_expenses_purchase ON cash_session_expenses (purchase_id);
 
 -- 39. TABLA: purchase_items
 CREATE TABLE purchase_items (

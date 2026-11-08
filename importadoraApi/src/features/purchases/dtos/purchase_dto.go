@@ -39,6 +39,7 @@ type PurchaseResponse struct {
 	Subtotal      float64                `json:"subtotal"`
 	IVATotal      float64                `json:"ivaTotal"`
 	Total         float64                `json:"total"`
+	PaidTotal     float64                `json:"paidTotal"` // lo que la caja ya pagó de la recepción
 	Notes         *string                `json:"notes,omitempty"`
 	ReceivedAt    *time.Time             `json:"receivedAt,omitempty"`
 	CreatedAt     time.Time              `json:"createdAt"`
@@ -93,6 +94,13 @@ type SupplierProductItemDTO struct {
 	Cost         float64 `json:"cost"`
 }
 
+// SaveSupplierProductRequest agrega un producto al catálogo del proveedor o actualiza su costo y su código.
+type SaveSupplierProductRequest struct {
+	ProductID    int64   `json:"productId" validate:"required"`
+	Cost         float64 `json:"cost" validate:"min=0"`
+	SupplierCode string  `json:"supplierCode"`
+}
+
 type SupplierCatalogUploadResponse struct {
 	SupplierID      int64    `json:"supplierId"`
 	SupplierName    string   `json:"supplierName"`
@@ -102,3 +110,8 @@ type SupplierCatalogUploadResponse struct {
 	Warnings        []string `json:"warnings,omitempty"`
 }
 
+// PayPurchaseRequest es el pago de una recepción de compra desde la caja: la caja solo desembolsa efectivo.
+type PayPurchaseRequest struct {
+	CashAmount    float64 `json:"cashAmount" validate:"required,gt=0"`
+	ReceiptNumber string  `json:"receiptNumber"` // número de la factura o recibo del proveedor; si va vacío se usa el de la orden
+}

@@ -302,4 +302,9 @@ ALTER TABLE cash_sessions ADD COLUMN IF NOT EXISTS counted_abonos NUMERIC(14,2) 
 -- lo mismo con las cotizaciones: un administrador puede crearlas sin ser empleado
 ALTER TABLE quotations ALTER COLUMN employee_id DROP NOT NULL;
 
+-- la caja paga las recepciones de compra: el gasto queda ligado a la orden y la orden lleva lo pagado
+ALTER TABLE purchases ADD COLUMN IF NOT EXISTS paid_total NUMERIC(14,2) NOT NULL DEFAULT 0 CHECK (paid_total >= 0);
+ALTER TABLE cash_session_expenses ADD COLUMN IF NOT EXISTS purchase_id BIGINT REFERENCES purchases(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_cash_session_expenses_purchase ON cash_session_expenses (purchase_id);
+
 COMMIT;

@@ -57,3 +57,32 @@ type CloseCashSessionRequest struct {
 	Notes           *string              `json:"notes,omitempty"`
 	Expenses        []CashExpenseRequest `json:"expenses,omitempty"`
 }
+
+// CashExpenseRow es un gasto de caja ya registrado (un pago de recepción de compra o un gasto menor declarado al cerrar): lo que lista «Facturas»
+type CashExpenseRow struct {
+	ID            int64     `json:"id"`
+	SessionID     int64     `json:"sessionId"`
+	WarehouseID   int64     `json:"warehouseId"`
+	WarehouseName string    `json:"warehouseName"`
+	ExpenseType   string    `json:"expenseType"` // merchandise_arrival (recepción de compra), services, payroll...
+	ReceiptNumber *string   `json:"receiptNumber,omitempty"`
+	Concept       string    `json:"concept"`
+	CashAmount    float64   `json:"cashAmount"`
+	Total         float64   `json:"total"`
+	PurchaseID    *int64    `json:"purchaseId,omitempty"`
+	PurchaseCode  *string   `json:"purchaseCode,omitempty"`
+	SupplierName  *string   `json:"supplierName,omitempty"`
+	PaidBy        string    `json:"paidBy"`   // quién abrió el turno de caja
+	ClosedAt      time.Time `json:"closedAt"` // el gasto entra a Facturas cuando la caja cierra
+}
+
+// CashExpenseFilter filtra la lista de gastos de caja.
+type CashExpenseFilter struct {
+	CompanyID   *int64
+	WarehouseID *int64
+	From        *time.Time
+	To          *time.Time
+	Search      string
+	Page        int
+	PageSize    int
+}

@@ -6,10 +6,12 @@ package repositories
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
 	"importadoraApi/src/core/db"
+	"importadoraApi/src/features/cash_sessions/dtos"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -221,4 +223,81 @@ func (r *CashSessionRepository) FindWarehouseCompanyID(ctx context.Context, q db
 		return 0, err
 	}
 	return companyID, nil
+}
+
+// RegisteredExpensesCash suma lo que la caja ya pagó en efectivo durante el turno (pagos de recepciones de compra).
+func (r *CashSessionRepository) RegisteredExpensesCash(ctx context.Context, q db.DBExecutor, sessionID int64) (float64, error) {
+	var total float64
+	err := q.QueryRow(ctx, `SELECT COALESCE(SUM(cash_amount), 0) FROM cash_session_expenses WHERE cash_session_id = $1`, sessionID).Scan(&total)
+	if err != nil && isMissingSchemaElement(err) {
+		return 0, nil
+	}
+	return total, err
+}
+
+// ListClosedExpenses lista los gastos de las cajas ya cerradas (de todas las bodegas de la compañía), del más reciente al más antiguo.
+func (r *CashSessionRepository) ListClosedExpenses(ctx context.Context, q db.DBExecutor, f dtos.CashExpenseFilter) ([]dtos.CashExpenseRow, int, error) {
+	where := []string{"cs.status = 'closed'"}
+	args := make([]interface{}, 0)
+	add := func(cond string, value interface{}) {
+		args = append(args, value)
+		where = append(where, fmt.Sprintf(cond, len(args)))
+	}
+	if f.CompanyID != nil {
+		add("cs.company_id = $%d", *f.CompanyID)
+	}
+	if f.WarehouseID != nil {
+		add("cs.warehouse_id = $%d", *f.WarehouseID)
+	}
+	if f.From != nil {
+		add("cs.closed_at >= $%d", *f.From)
+	}
+	if f.To != nil {
+		add("cs.closed_at < $%d", f.To.AddDate(0, 0, 1))
+	}
+	if f.Search != "" {
+		add("(e.concept ILIKE $%[1]d OR e.receipt_number ILIKE $%[1]d OR sup.name ILIKE $%[1]d OR pu.serial_code ILIKE $%[1]d)", "%"+f.Search+"%")
+	}
+	whereClause := "WHERE " + strings.Join(where, " AND ")
+	from := `
+		FROM cash_session_expenses e
+		JOIN cash_sessions cs ON cs.id = e.cash_session_id
+		JOIN warehouses w ON w.id = cs.warehouse_id
+		LEFT JOIN purchases pu ON pu.id = e.purchase_id
+		LEFT JOIN externals sup ON sup.id = pu.supplier_id
+	`
+	var total int
+	if err := q.QueryRow(ctx, "SELECT COUNT(*) "+from+whereClause, args...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+	pageSize, page := f.PageSize, f.Page
+	if pageSize <= 0 {
+		pageSize = 30
+	}
+	if page <= 0 {
+		page = 1
+	}
+	args = append(args, pageSize, (page-1)*pageSize)
+	rows, err := q.Query(ctx, fmt.Sprintf(`
+		SELECT e.id, cs.id, cs.warehouse_id, w.name, e.expense_type, e.receipt_number, e.concept,
+			e.cash_amount, e.cash_amount + e.transfer_amount, e.purchase_id, pu.serial_code, sup.name,
+			cs.opened_by_name, cs.closed_at
+		%s %s
+		ORDER BY cs.closed_at DESC, e.id DESC
+		LIMIT $%d OFFSET $%d
+	`, from, whereClause, len(args)-1, len(args)), args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+	list := make([]dtos.CashExpenseRow, 0)
+	for rows.Next() {
+		var row dtos.CashExpenseRow
+		if err := rows.Scan(&row.ID, &row.SessionID, &row.WarehouseID, &row.WarehouseName, &row.ExpenseType, &row.ReceiptNumber, &row.Concept,
+			&row.CashAmount, &row.Total, &row.PurchaseID, &row.PurchaseCode, &row.SupplierName, &row.PaidBy, &row.ClosedAt); err != nil {
+			return nil, 0, err
+		}
+		list = append(list, row)
+	}
+	return list, total, rows.Err()
 }

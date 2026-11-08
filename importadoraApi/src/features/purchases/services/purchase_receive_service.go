@@ -248,6 +248,7 @@ func (s *PurchaseService) mapToDTO(p *repositories.PurchaseEntity, items []repos
 		Subtotal:      p.Subtotal,
 		IVATotal:      p.IVATotal,
 		Total:         p.Total,
+		PaidTotal:     p.PaidTotal,
 		Notes:         p.Notes,
 		ReceivedAt:    p.ReceivedAt,
 		CreatedAt:     p.CreatedAt,

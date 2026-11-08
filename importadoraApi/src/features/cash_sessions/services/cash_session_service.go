@@ -11,6 +11,7 @@ import (
 
 	"importadoraApi/src/core/db"
 	"importadoraApi/src/core/middlewares"
+	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
 	authRepos "importadoraApi/src/features/auth/repositories"
 	"importadoraApi/src/features/cash_sessions/dtos"
@@ -54,7 +55,12 @@ func (s *CashSessionService) GetActive(ctx context.Context, actor *middlewares.A
 	if err != nil {
 		return nil, utils.Internal("Error al calcular los totales del turno.", err)
 	}
-	expected := entity.OpeningAmount + sums.Cash + sums.AbonosCash
+	// lo que la caja ya pagó en el turno (recepciones de compra) sale de la gaveta
+	registered, err := s.repo.RegisteredExpensesCash(ctx, s.pool, entity.ID)
+	if err != nil {
+		return nil, utils.Internal("Error al consultar los pagos del turno.", err)
+	}
+	expected := entity.OpeningAmount + sums.Cash + sums.AbonosCash - registered
 
 	res := toResponse(entity)
 	res.CashTotal = sums.Cash
@@ -62,6 +68,7 @@ func (s *CashSessionService) GetActive(ctx context.Context, actor *middlewares.A
 	res.AbonosTotal = sums.Abonos
 	res.PaymentsCount = sums.Count
 	res.ExpectedCash = expected
+	res.ExpensesCash = registered
 	return res, nil
 }
 
@@ -161,6 +168,12 @@ func (s *CashSessionService) Close(ctx context.Context, actor *middlewares.Actor
 	}
 
 	// efectivo esperado en la gaveta: fondo inicial + ventas en efectivo + abonos en efectivo - gastos pagados en efectivo
+	// al cierre salen de la gaveta los gastos declarados ahora y los pagos que la caja ya registró en el turno (recepciones de compra)
+	registered, err := s.repo.RegisteredExpensesCash(ctx, s.pool, existing.ID)
+	if err != nil {
+		return nil, utils.Internal("Error al consultar los pagos del turno.", err)
+	}
+	expensesCash += registered
 	expectedCash := existing.OpeningAmount + sums.Cash + sums.AbonosCash - expensesCash
 	diff := req.CountedCash - expectedCash
 
@@ -288,4 +301,26 @@ func diffOf(declared *float64, received float64) *float64 {
 	}
 	d := *declared - received
 	return &d
+}
+
+// ListExpenses lista los gastos de las cajas ya cerradas de la compañía (lo que muestra «Facturas»); un empleado solo ve los de su bodega.
+func (s *CashSessionService) ListExpenses(ctx context.Context, actor *middlewares.ActorContext, filter dtos.CashExpenseFilter) ([]dtos.CashExpenseRow, *utils.PaginatorMetadata, error) {
+	if actor == nil {
+		return nil, nil, utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
+	}
+	if actor.ActorType != types.ActorSuperadmin {
+		filter.CompanyID = actor.CompanyID
+	}
+	if actor.ActorType == types.ActorEmployee {
+		if actor.WarehouseID == nil {
+			return []dtos.CashExpenseRow{}, &utils.PaginatorMetadata{}, nil
+		}
+		filter.WarehouseID = actor.WarehouseID
+	}
+	list, total, err := s.repo.ListClosedExpenses(ctx, s.pool, filter)
+	if err != nil {
+		return nil, nil, utils.Internal("Error al listar los gastos de caja.", err)
+	}
+	meta := utils.BuildMeta(filter.Page, filter.PageSize, total)
+	return list, &meta, nil
 }
