@@ -28,7 +28,7 @@ export const DrawerHeader: React.FC<DrawerHeaderProps> = ({ icon, meta, onClose,
         aria-label="Cerrar panel"
         title="Cerrar panel (Esc)"
       >
-        {menu ? '›' : '✕'}
+        ✕
       </button>
 
       <div className="drawer-header-icon-col">

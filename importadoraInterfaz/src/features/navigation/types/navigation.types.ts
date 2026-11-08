@@ -79,7 +79,6 @@ export type DrawerFormKind =
   | 'verifyGoods'
   | 'countDetail'
   | 'permissionsHub'
-  | 'quotationDraft'
 
 export interface DrawerForm {
   kind: DrawerFormKind

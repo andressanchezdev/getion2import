@@ -14,4 +14,10 @@ export const selectDraftQuantities = createSelector([selectDraftLines], (lines) 
 
 export const selectDraftUnits = createSelector([selectDraftLines], (lines) => lines.reduce((sum, line) => sum + line.quantity, 0))
 
+// encabezado del panel derecho cuando se arma una cotización
+export const selectQuotationCartMeta = createSelector([selectDraftUnits], (units) => ({
+  title: 'Cotización',
+  subtitle: `${units} ${units === 1 ? 'artículo' : 'artículos'}`,
+}))
+
 export const selectDraftTotal = createSelector([selectDraftLines], (lines) => lines.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0))

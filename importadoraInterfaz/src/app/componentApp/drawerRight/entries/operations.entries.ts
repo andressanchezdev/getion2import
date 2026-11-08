@@ -3,7 +3,7 @@
 import { createElement } from 'react'
 import { CreateTransferForm, ReceiveTransferForm, TransferDetailPanel, type TrasladeItem, type CreateTransferInitialPayload } from '@/features/transfers'
 import { AuditDetailPanel, type AuditEntry } from '@/features/audit'
-import { QuotationDetailPanel, QuotationDraftPanel } from '@/features/quotations'
+import { QuotationDetailPanel } from '@/features/quotations'
 import { CheckoutPanel, type CheckoutPayload } from '@/features/checkout'
 import { CompanyWarehousesPanel } from '@/features/warehouses'
 import { BillingConfigPanel, DocSeriesPanel, InvoiceDetailPanel, type DocSeries } from '@/features/billing'
@@ -52,12 +52,6 @@ export const OPERATIONS_ENTRIES: Partial<Record<DrawerFormKind, FormEntry>> = {
     title: () => 'Confirmar entrada del banco',
     subtitle: 'Liga el movimiento a un pago por transferencia',
     render: (payload) => createElement(BankConfirmPanel, { key: String((payload as BankRecord).id), record: payload as BankRecord }),
-  },
-  quotationDraft: {
-    icon: fileIcon,
-    title: () => 'Cotización en armado',
-    subtitle: 'Repuestos, cantidades y total',
-    render: () => createElement(QuotationDraftPanel),
   },
   quotationDetail: {
     icon: fileIcon,

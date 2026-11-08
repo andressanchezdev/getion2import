@@ -7,6 +7,7 @@ import { useClickOutside } from '@/global/hooks/ui/useClickOutside'
 import { useVerticalDrag } from '@/global/hooks/ui/useVerticalDrag'
 import { closeDrawerForm, openDrawerForm, setRightDrawerOpen } from '@/features/navigation'
 import { selectCartTotals, useCartMenuActions } from '@/features/shop'
+import { selectDraftUnits, useQuotationCartMenuActions } from '@/features/quotations'
 import { DRAWER_REGISTRY, selectDrawerMode } from './drawerRegistry'
 import { getFormEntry } from './formRegistry'
 import { useDrawerPresence } from './useDrawerPresence'
@@ -24,27 +25,33 @@ export const DrawerRight: React.FC = () => {
   const drawerForm = useAppSelector((state) => state.ui.drawerForm)
   const activeModule = useAppSelector((state) => state.ui.activeModule)
   const activeSubitem = useAppSelector((state) => state.ui.activeSubitem)
-  const { totalItemsCount } = useAppSelector(selectCartTotals)
+  const { totalItemsCount: saleItemsCount } = useAppSelector(selectCartTotals)
+  const quotationUnits = useAppSelector(selectDraftUnits)
   const [isCartCollapsed, setIsCartCollapsed] = useState(false)
-  const cartMenu = useCartMenuActions()
+  const saleCartMenu = useCartMenuActions()
+  const quotationCartMenu = useQuotationCartMenuActions()
   const panelRef = useRef<HTMLDivElement>(null)
 
   // Detección de módulo de catálogo
-  const isInCatalog = (activeModule === 'shop' && activeSubitem === 'catalog') || mode === 'cart'
+  // ojo: hay dos carritos con el mismo diseño: el de ventas (catálogo) y el de cotizaciones (Cotizar)
+  const isQuotationCatalog = activeModule === 'shop' && activeSubitem === 'quotationCatalog'
+  const isCartMode = (value: typeof mode) => value === 'cart' || value === 'quotationCart'
+  const isInCatalog = (activeModule === 'shop' && (activeSubitem === 'catalog' || isQuotationCatalog)) || isCartMode(mode)
+  const totalItemsCount = isQuotationCatalog || mode === 'quotationCart' ? quotationUnits : saleItemsCount
 
   // Borrador de traslados activos (memoria a corto plazo)
   const transferDraft = useAppSelector((state) => state.transfers.draft)
   const transferUnitsCount = transferDraft.lines.reduce((acc, l) => acc + (l.quantity || 0), 0)
 
   // el carrito contraído deja el panel cerrado pero muestra la pestaña con el contador
-  const effectiveMode = mode === 'cart' && isCartCollapsed ? null : mode
+  const effectiveMode = isCartMode(mode) && isCartCollapsed ? null : mode
   const { shownMode, isMounted, isOpen } = useDrawerPresence(effectiveMode)
   const entry = shownMode ? DRAWER_REGISTRY[shownMode] : null
   const meta = useAppSelector(entry ? entry.selectMeta : () => null)
 
   // Estados de apertura
   const isTransferFormOpen = shownMode === 'form' && drawerForm?.kind === 'createTransfer' && isOpen
-  const isCartDrawerOpen = shownMode === 'cart' && isOpen
+  const isCartDrawerOpen = isCartMode(shownMode) && isOpen
 
   // Visibilidad de pestañas laterales (al mismo nivel)
   const isCartTabVisible = isInCatalog && !isCartDrawerOpen
@@ -62,8 +69,8 @@ export const DrawerRight: React.FC = () => {
     else setIsCartCollapsed(true)
   }
   useEscapeKey(handleClose, isOpen)
-  // el carrito se cierra exclusivamente con su botón de cerrar (>) o Esc; no por clic afuera
-  const shouldCloseOnClickOutside = isOpen && shownMode !== 'cart'
+  // el carrito se cierra exclusivamente con su botón de cerrar (✕) o Esc; no por clic afuera
+  const shouldCloseOnClickOutside = isOpen && !isCartMode(shownMode)
   useClickOutside(panelRef, handleClose, shouldCloseOnClickOutside, KEEP_OPEN_SELECTOR)
 
   // Posiciones verticales calculadas para que NUNCA se sobrepongan entre ellas
@@ -126,8 +133,8 @@ export const DrawerRight: React.FC = () => {
 
       {isMounted && entry && meta && (
         <aside className={`drawer-right ${isOpen ? 'drawer-right-open' : ''}`} aria-label={meta.title} style={widthStyle}>
-          <div ref={panelRef} className={`drawer-right-panel ${shownMode === 'cart' ? 'drawer-right-panel-lite' : ''}`}>
-            <DrawerHeader icon={entry.icon} meta={meta} onClose={handleClose} menu={shownMode === 'cart' ? cartMenu : undefined} />
+          <div ref={panelRef} className={`drawer-right-panel ${isCartMode(shownMode) ? 'drawer-right-panel-lite' : ''}`}>
+            <DrawerHeader icon={entry.icon} meta={meta} onClose={handleClose} menu={shownMode === 'cart' ? saleCartMenu : shownMode === 'quotationCart' ? quotationCartMenu : undefined} />
             <div className="drawer-right-body">
               <entry.Body />
             </div>

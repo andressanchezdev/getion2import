@@ -65,7 +65,6 @@ const SAMPLES: Record<DrawerFormKind, unknown> = {
   verifyGoods: { orderId: 1, serial: 'PD-1', customerName: 'Cliente', total: 0, onVerified: () => undefined },
   countDetail: { count: { id: 1 } },
   permissionsHub: 'viewRoles',
-  quotationDraft: undefined,
 }
 
 describe('formRegistry', () => {
