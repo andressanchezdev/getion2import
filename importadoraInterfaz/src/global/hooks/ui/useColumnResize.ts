@@ -3,7 +3,7 @@
 // ojo: el primer arrastre congela los anchos actuales de todas las columnas (layout fijo) y la tabla pasa a desplazarse en horizontal si hace falta; doble clic en el borde o el botón de recarga (reset) restablecen
 // devuelve isResized (la tabla ya no tiene su distribución original) y reset (vuelve a la distribución original y olvida lo guardado)
 import { useCallback, useLayoutEffect, useState, type RefObject } from 'react'
-import { MIN_COLUMN_WIDTH, clampColumnWidth, clearColumnWidths, readColumnWidths, writeColumnWidths } from '@/global/helpers/table/columnWidths'
+import { MIN_COLUMN_WIDTH, clearColumnWidths, readColumnWidths, resizeColumns, toPercentages, writeColumnWidths } from '@/global/helpers/table/columnWidths'
 
 const HANDLE_CLASS = 'col-resizer'
 const RESIZED_CLASS = 'is-resized'
@@ -11,13 +11,15 @@ const RESIZED_CLASS = 'is-resized'
 const headerCells = (table: HTMLTableElement): HTMLTableCellElement[] =>
   Array.from(table.querySelectorAll<HTMLTableCellElement>('thead th')).filter((cell) => cell.colSpan <= 1)
 
-// fija el ancho de todas las columnas en píxeles y pasa la tabla a layout fijo
+// fija el ancho de cada columna como porcentaje del total y pasa la tabla a layout fijo con el 100 % del espacio: así la tabla siempre llena su contenedor (la primera columna queda pegada a la izquierda y la última a la derecha)
 const applyWidths = (table: HTMLTableElement, cells: HTMLTableCellElement[], widths: number[]) => {
+  const percentages = toPercentages(widths)
   cells.forEach((cell, index) => {
-    cell.style.width = `${widths[index]}px`
+    cell.style.width = `${percentages[index]}%`
     cell.style.minWidth = `${MIN_COLUMN_WIDTH}px`
   })
-  table.style.width = `${widths.reduce((sum, width) => sum + width, 0)}px`
+  table.style.width = '100%'
+  table.style.minWidth = `${cells.length * MIN_COLUMN_WIDTH}px`
   table.classList.add(RESIZED_CLASS)
 }
 
@@ -27,6 +29,7 @@ const resetWidths = (table: HTMLTableElement, cells: HTMLTableCellElement[]) => 
     cell.style.minWidth = ''
   })
   table.style.width = ''
+  table.style.minWidth = ''
   table.classList.remove(RESIZED_CLASS)
 }
 
@@ -79,9 +82,8 @@ export const useColumnResize = (tableRef: RefObject<HTMLTableElement | null>, st
 
         const onMove = (move: PointerEvent) => {
           moved = true
-          const widths = [...startWidths]
-          widths[index] = clampColumnWidth(startWidths[index], move.clientX - startX)
-          applyWidths(table, all, widths)
+          // el cambio se reparte con la columna vecina: el total no cambia y la última columna no se despega del borde
+          applyWidths(table, all, resizeColumns(startWidths, index, move.clientX - startX))
         }
         const onUp = (up: PointerEvent) => {
           handle.releasePointerCapture(up.pointerId)

@@ -37,3 +37,25 @@ export const clearColumnWidths = (key: string): void => {
 
 // ancho nuevo de una columna al arrastrar: nunca menor al mínimo
 export const clampColumnWidth = (startWidth: number, delta: number): number => Math.max(MIN_COLUMN_WIDTH, Math.round(startWidth + delta))
+
+// reparte el cambio de ancho entre dos columnas para que el total no cambie: la tabla siempre llena su espacio, la primera y la última quedan pegadas a sus bordes
+// la columna vecina que compensa es la siguiente si no es la última; si no, la anterior; nunca baja del mínimo ni de ella ni de la vecina
+export const resizeColumns = (startWidths: number[], index: number, delta: number, min: number = MIN_COLUMN_WIDTH): number[] => {
+  const last = startWidths.length - 1
+  if (startWidths.length < 2 || index < 0 || index > last) return startWidths
+  // compensa la siguiente si no es la última; si no, la anterior (con solo dos columnas, la otra)
+  const neighbor = index + 1 < last ? index + 1 : index > 0 ? index - 1 : index + 1
+  const maxGrow = startWidths[neighbor] - min
+  const maxShrink = startWidths[index] - min
+  const applied = Math.max(-maxShrink, Math.min(maxGrow, delta))
+  const widths = [...startWidths]
+  widths[index] = Math.round(startWidths[index] + applied)
+  widths[neighbor] = Math.round(startWidths[neighbor] - applied)
+  return widths
+}
+
+// ancho de cada columna como porcentaje del total, para que la tabla siga llenando su espacio si cambia el tamaño de la ventana
+export const toPercentages = (widths: number[]): number[] => {
+  const total = widths.reduce((sum, width) => sum + width, 0)
+  return widths.map((width) => (width / total) * 100)
+}
