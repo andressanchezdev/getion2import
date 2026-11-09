@@ -24,8 +24,8 @@ describe('employees thunks de gestión', () => {
   it('desactivar actualiza la fila sin mutar el original', async () => {
     vi.mocked(service.setEmployeeStatus).mockResolvedValue()
     const store = makeStore()
-    await store.dispatch(setEmployeeStatusThunk({ employeeId: 5, isActive: false }) as never)
-    expect(service.setEmployeeStatus).toHaveBeenCalledWith(5, 'inactive')
+    await store.dispatch(setEmployeeStatusThunk({ employeeId: 5, isActive: false, reason: 'Salida de la empresa' }) as never)
+    expect(service.setEmployeeStatus).toHaveBeenCalledWith(5, 'inactive', 'Salida de la empresa')
     expect((store.getState() as { employees: { directory: { items: SimpleEmployee[] } } }).employees.directory.items[0].isActive).toBe(false)
     expect(employee.isActive).toBe(true)
   })

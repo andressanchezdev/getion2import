@@ -1,13 +1,15 @@
 // ProductsTable · tabla de productos: imagen, código, nombre, marca, categoría, ubicación, precio (P0), vendible, estado y acciones (detalle, editar, ubicaciones y QR); el estado se cambia desde un desplegable en su columna
 // conecta con: ProductsScreen (la usa), inventory.selectors (productos y estado), useProductStatus (activar o desactivar), shop.helpers, RowActions y DrawerRight (productDetail, editProduct, productLocations y qrLabels)
 // ojo: la tabla muestra también los productos inactivos (para poder reactivarlos); la administración no depende de tener una bodega elegida
-import React from 'react'
+import React, { useState } from 'react'
 import '../InventoryTables.css'
 import { formatPesos } from '@/global/helpers/formatting/format'
 import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { openDrawerForm } from '@/features/navigation'
 import { usePermissions } from '@/global/hooks/access/usePermissions'
+import { ReasonPrompt } from '@/features/reasonPrompt'
 import { RowActions } from '@/global/components/UI/molecules/table/RowActions'
+import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
 import { getAvailableLevels, getPriceByLevel, getWarehouseStock, type Product } from '@/features/shop'
 import { selectProductsTable } from '../../selectors/inventory.selectors'
 import { useProductStatus } from '../../hooks/useProductStatus'
@@ -22,6 +24,7 @@ export const ProductsTable: React.FC = () => {
   const warehouseId = useAppSelector((state) => state.ui.activeWarehouseId)
   const { canPerformAction, isAdmin } = usePermissions()
   const { updatingId, changeStatus } = useProductStatus()
+  const [toDeactivate, setToDeactivate] = useState<Product | null>(null)
 
   const canManage = isAdmin || canPerformAction('inventory', 'products', 'update')
 
@@ -52,8 +55,8 @@ export const ProductsTable: React.FC = () => {
   }
 
   return (
-    <div className="inv-table-responsive table-scroll">
-      <table className="inv-table">
+    <>
+      <DataTable tableId="inventory-products">
         <thead>
           <tr>
             <th>Imagen</th>
@@ -110,7 +113,7 @@ export const ProductsTable: React.FC = () => {
                       disabled={!canManage || updatingId === product.id}
                       aria-label={`Estado de ${product.code}`}
                       title={canManage ? 'Cambiar estado' : 'Solo administradores o usuarios con permiso pueden modificar el estado'}
-                      onChange={(event) => changeStatus(product, event.target.value as 'active' | 'inactive')}
+                      onChange={(event) => (event.target.value === 'inactive' ? setToDeactivate(product) : changeStatus(product, 'active'))}
                     >
                       <option value="active">Activo</option>
                       <option value="inactive">Inactivo</option>
@@ -124,8 +127,20 @@ export const ProductsTable: React.FC = () => {
             })
           )}
         </tbody>
-      </table>
-    </div>
+      </DataTable>
+      <ReasonPrompt
+        open={toDeactivate !== null}
+        title="Desactivar producto"
+        message={`¿Pasar ${toDeactivate?.code ?? ''} a inactivo? Saldrá de operación y no estará disponible para ventas.`}
+        confirmLabel="Desactivar"
+        onConfirm={(reason) => {
+          const target = toDeactivate
+          setToDeactivate(null)
+          if (target) void changeStatus(target, 'inactive', reason)
+        }}
+        onCancel={() => setToDeactivate(null)}
+      />
+    </>
   )
 }
 

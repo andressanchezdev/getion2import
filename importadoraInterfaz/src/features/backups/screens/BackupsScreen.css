@@ -1,0 +1,17 @@
+/* BackupsScreen.css */
+.backups-screen { display: flex; flex-direction: column; gap: var(--space-4); }
+.backups-summary { padding: var(--space-4) var(--space-6); display: flex; justify-content: space-between; align-items: center; gap: var(--space-4); border-bottom: 1px solid var(--color-border); }
+.backups-summary-text { display: flex; flex-direction: column; gap: 2px; }
+.backups-summary-title { font-weight: var(--font-weight-semibold); }
+.backups-summary-sub { font-size: var(--text-sm); color: var(--color-text-secondary); }
+.backups-actions { display: flex; gap: var(--space-3); }
+.backups-note { padding: var(--space-3) var(--space-6); font-size: var(--text-sm); color: var(--color-text-secondary); background: var(--c-slate-50); border-bottom: 1px solid var(--color-border); }
+.backups-table-empty { text-align: center; color: var(--color-text-secondary); padding: var(--space-8) var(--space-6); }
+
+/* vista móvil: el resumen y los botones bajan de fila (único lugar donde se permite flex-wrap) */
+@media (max-width: 900px) {
+  .backups-summary,
+  .backups-actions {
+    flex-wrap: wrap;
+  }
+}

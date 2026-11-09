@@ -1,8 +1,9 @@
 // ProductCardMedia · imagen del producto con el menú de tarifas flotante en la esquina superior derecha e indicadores de stock por bodega
-// conecta con: ProductCard (le pasa los datos); ProductCardTierMenu (menú de tarifas); ProductCardWarehouseStock; getCategoryEmoji de shop.helpers
+// conecta con: ProductCard (le pasa los datos); ProductCardTierMenu (menú de tarifas); ProductCardWarehouseStock; Icon (paquete cuando no hay imagen)
 import React, { useState } from 'react'
 import type { ProductCardMediaProps } from '../../../types/shop.card.types'
-import { getCategoryEmoji } from '../../../helpers/shop.helpers'
+import { Icon } from '@/global/components/UI/atoms/Icon'
+import packageIcon from '@/assets/icons/package-alt-2-svgrepo-com.svg?raw'
 import { ProductCardTierMenu } from '../tier/ProductCardTierMenu'
 import { ProductCardWarehouseStock } from '../stock/ProductCardWarehouseStock'
 import './ProductCardMedia.css'
@@ -46,7 +47,7 @@ export const ProductCardMedia: React.FC<ProductCardMediaProps> = ({
                 />
             ) : (
                 <span className="product-card-emoji" role="img" aria-label={category}>
-                    {getCategoryEmoji(category)}
+                    <Icon svg={packageIcon} size="xl" />
                 </span>
             )}
         </div>

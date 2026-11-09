@@ -134,8 +134,8 @@
 }
 
 .user-profile-permissions-list {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 6px;
   max-height: 120px;
   overflow-y: auto;

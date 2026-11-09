@@ -27,8 +27,8 @@ export const updateBrand = async (brandId: number, payload: { name: string; imag
 }
 
 // elimina una marca
-export const deleteBrand = async (brandId: number): Promise<void> => {
-  await apiClient.delete(`/brands/${brandId}`)
+export const deleteBrand = async (brandId: number, reason: string): Promise<void> => {
+  await apiClient.delete(`/brands/${brandId}`, { data: { reason } })
 }
 
 // trae las categorías de la compañía
@@ -48,8 +48,8 @@ export const updateCategory = async (categoryId: number, payload: { name: string
 }
 
 // elimina una categoría
-export const deleteCategory = async (categoryId: number): Promise<void> => {
-  await apiClient.delete(`/categories/${categoryId}`)
+export const deleteCategory = async (categoryId: number, reason: string): Promise<void> => {
+  await apiClient.delete(`/categories/${categoryId}`, { data: { reason } })
 }
 
 // trae los modelos de moto de la compañía
@@ -69,6 +69,6 @@ export const updateModel = async (modelId: number, payload: { name: string; desc
 }
 
 // elimina un modelo de moto
-export const deleteModel = async (modelId: number): Promise<void> => {
-  await apiClient.delete(`/models/${modelId}`)
+export const deleteModel = async (modelId: number, reason: string): Promise<void> => {
+  await apiClient.delete(`/models/${modelId}`, { data: { reason } })
 }

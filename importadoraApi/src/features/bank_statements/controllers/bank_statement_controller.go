@@ -102,7 +102,9 @@ func (c *BankStatementController) IgnoreRecord(ctx echo.Context) error {
 	var body struct {
 		Notes *string `json:"notes"`
 	}
-	_ = ctx.Bind(&body)
+	if err := utils.BindJSON(ctx, &body); err != nil {
+		return err
+	}
 
 	err = c.service.IgnoreRecord(ctx.Request().Context(), actor, id, body.Notes)
 	if err != nil {

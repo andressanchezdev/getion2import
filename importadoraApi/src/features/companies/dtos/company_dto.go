@@ -38,6 +38,7 @@ type UpdateCompanyRequest struct {
 	City     *string `json:"city,omitempty"`
 	LogoURL  *string `json:"logoUrl,omitempty"`
 	IsActive *bool   `json:"isActive,omitempty"`
+	Reason   string  `json:"reason,omitempty"` // obligatorio (10 a 100) si se desactiva
 }
 
 // CompanySearchQuery parámetros de búsqueda para GET /companies/search.

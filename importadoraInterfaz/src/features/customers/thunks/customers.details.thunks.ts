@@ -48,11 +48,11 @@ export const addDirectionThunk = createAsyncThunk<Direction[], { customerId: num
   { condition: (_, { getState }) => !getState().customers.directions.saving }
 )
 
-export const deleteDirectionThunk = createAsyncThunk<Direction[], { customerId: number; directionId: number }, ThunkConfig>(
+export const deleteDirectionThunk = createAsyncThunk<Direction[], { customerId: number; directionId: number; reason: string }, ThunkConfig>(
   'customers/deleteDirection',
-  async ({ customerId, directionId }, { rejectWithValue }) => {
+  async ({ customerId, directionId, reason }, { rejectWithValue }) => {
     try {
-      await deleteDirection(customerId, directionId)
+      await deleteDirection(customerId, directionId, reason)
       return await fetchDirections(customerId)
     } catch (error) {
       return rejectWithValue(failWith(error, 'No se pudo borrar la dirección.'))

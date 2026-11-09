@@ -7,12 +7,15 @@ import { QuotationDetailPanel } from '@/features/quotations'
 import { CheckoutPanel, type CheckoutPayload } from '@/features/checkout'
 import { CompanyWarehousesPanel } from '@/features/warehouses'
 import { BillingConfigPanel, DocSeriesPanel, type DocSeries } from '@/features/billing'
-import { PurchaseDetailPanel, PurchaseFormPanel, PurchaseReceivePanel, type PurchasePanelPayload } from '@/features/purchases'
-import { CashClosePanel, CashCollectPanel, CashOpenPanel, type CashCollectPayload } from '@/features/cashRegister'
+import { PurchaseDetailPanel, PurchaseFormPanel, PurchasePayPanel, PurchaseReceivePanel, SupplierCatalogPanel, type PurchasePanelPayload, type SupplierCatalogPayload } from '@/features/purchases'
+import { CashClosePanel, CashCollectPanel, CashOpenPanel, VerifyGoodsPanel, type CashCollectPayload, type VerifyGoodsPayload } from '@/features/cashRegister'
+import { CountDetailPanel, type CountDetailPayload } from '@/features/inventory'
 import { CreateAbonoPanel, AbonoDetailPanel, EnableCreditPanel, type CreateAbonoPayload, type AbonoRecord as WalletAbono, type EnableCreditPayload } from '@/features/wallet'
 import { RegisterExpenseDrawer } from '@/features/shop'
+import { ReasonFormPanel, type ReasonFormPayload } from '@/features/reasonPrompt'
 import userIcon from '@/assets/icons/user.svg'
 import shippingIcon from '@/assets/icons/shipping.svg'
+import walletIcon from '@/assets/icons/wallet.svg'
 import historyIcon from '@/assets/icons/history.svg'
 import fileIcon from '@/assets/icons/file-text.svg'
 import cartIcon from '@/assets/icons/cart.svg'
@@ -21,6 +24,24 @@ import type { DrawerFormKind } from '@/features/navigation'
 import type { FormEntry } from './formEntry.types'
 
 export const OPERATIONS_ENTRIES: Partial<Record<DrawerFormKind, FormEntry>> = {
+  verifyGoods: {
+    icon: fileIcon,
+    title: (payload) => `Cotejar ${(payload as VerifyGoodsPayload).serial}`,
+    subtitle: 'Verificación de factura contra salida física',
+    render: (payload) => createElement(VerifyGoodsPanel, { key: String((payload as VerifyGoodsPayload).orderId), payload: payload as VerifyGoodsPayload }),
+  },
+  countDetail: {
+    icon: fileIcon,
+    title: (payload) => `Conteo físico #${(payload as CountDetailPayload).count.id}`,
+    subtitle: 'Existencias esperadas y contadas',
+    render: (payload) => createElement(CountDetailPanel, { key: `${(payload as CountDetailPayload).count.id}-${(payload as CountDetailPayload).count.status}`, payload: payload as CountDetailPayload }),
+  },
+  reasonForm: {
+    icon: fileIcon,
+    title: (payload) => (payload as ReasonFormPayload).title,
+    subtitle: 'Queda registrado en la auditoría',
+    render: (payload) => createElement(ReasonFormPanel, { key: (payload as ReasonFormPayload).requestId, payload: payload as ReasonFormPayload }),
+  },
   bankConfirm: {
     icon: fileIcon,
     title: () => 'Confirmar entrada del banco',
@@ -106,6 +127,18 @@ export const OPERATIONS_ENTRIES: Partial<Record<DrawerFormKind, FormEntry>> = {
     subtitle: 'Detalle de la orden, estado y trazabilidad',
     render: (payload) => createElement(PurchaseDetailPanel, { payload: payload as PurchasePanelPayload }),
   },
+  purchasePay: {
+    icon: walletIcon,
+    title: () => 'Pagar recepción',
+    subtitle: 'Desde la caja de la bodega, en efectivo',
+    render: (payload) => createElement(PurchasePayPanel, { key: String((payload as PurchasePanelPayload).id), payload: payload as PurchasePanelPayload }),
+  },
+  supplierCatalog: {
+    icon: fileIcon,
+    title: (payload) => `Catálogo de ${(payload as SupplierCatalogPayload).name}`,
+    subtitle: 'Productos que vende el proveedor y su costo',
+    render: (payload) => createElement(SupplierCatalogPanel, { key: String((payload as SupplierCatalogPayload).id), payload: payload as SupplierCatalogPayload }),
+  },
   purchaseReceive: {
     icon: shippingIcon,
     title: (payload) => `Recibir Orden #${(payload as PurchasePanelPayload)?.id || ''}`,
@@ -120,8 +153,8 @@ export const OPERATIONS_ENTRIES: Partial<Record<DrawerFormKind, FormEntry>> = {
   },
   cashClose: {
     icon: cartIcon,
-    title: () => 'Arqueo y cierre de caja',
-    subtitle: 'Efectivo contado y balance del turno',
+    title: () => 'Cierre de caja',
+    subtitle: 'Efectivo, transferencias y abonos del turno',
     render: () => createElement(CashClosePanel),
   },
   cashCollect: {

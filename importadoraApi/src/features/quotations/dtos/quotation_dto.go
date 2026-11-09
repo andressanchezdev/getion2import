@@ -28,7 +28,7 @@ type QuotationResponse struct {
 	SerialCode    string                  `json:"serialCode"`
 	CustomerID    int64                   `json:"customerId"`
 	CustomerName  string                  `json:"customerName"`
-	EmployeeID    int64                   `json:"employeeId"`
+	EmployeeID    *int64                  `json:"employeeId,omitempty"`
 	EmployeeName  string                  `json:"employeeName"`
 	CartID        *int64                  `json:"cartId,omitempty"`
 	SaleID        *int64                  `json:"saleId,omitempty"`

@@ -30,16 +30,15 @@ export const SALES_ENDPOINTS = {
     CONFIRM: (id: number | string) => `/bank-statements/records/${id}/confirm`,
     IGNORE: (id: number | string) => `/bank-statements/records/${id}/ignore`,
   },
-  // Turnos de caja y arqueos
+  // Turnos de caja y cierres
   CASH_SESSIONS: {
     ACTIVE: '/cash/sessions/active',
     OPEN: '/cash/sessions/open',
     CLOSE: '/cash/sessions/close',
   },
-  // Facturación fiscal
-  INVOICES: {
-    LIST: '/invoices',
-    BY_ID: (id: number | string) => `/invoices/${id}`,
+  // gastos de las cajas ya cerradas (lo que lista «Facturas»)
+  CASH_EXPENSES: {
+    LIST: '/cash/expenses',
   },
   // Devoluciones y garantías
   RETURNS: {
@@ -55,11 +54,12 @@ export const SALES_ENDPOINTS = {
     BY_ID: (id: number | string) => `/payments/${id}`,
     VERIFY: (id: number | string) => `/payments/${id}/verify`,
     VOID: (id: number | string) => `/payments/${id}/void`,
+    REJECT: (id: number | string) => `/payments/${id}/reject`,
+    REOPEN: (id: number | string) => `/payments/${id}/reopen`,
   },
   // Cartera y crédito
   WALLET: {
     SUMMARY: (customerId: number | string) => `/wallet/summary/${customerId}`,
     ENTRIES: '/wallet/entries',
-    ADJUST: '/wallet/adjust',
   },
 } as const

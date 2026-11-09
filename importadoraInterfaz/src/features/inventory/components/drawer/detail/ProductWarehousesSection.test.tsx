@@ -35,14 +35,6 @@ describe('ProductWarehousesSection', () => {
     expect(screen.getByText('Sin estante asignado')).toBeTruthy()
   })
 
-  it('resume dónde hay unidades y, sin existencias en ninguna bodega, dice que no hay inventario asignado', () => {
-    const { unmount } = render(<ProductWarehousesSection product={product} warehouses={warehouses} stockRows={[row(1, 1, 'ESTANTE-A', 4)]} loading={false} />)
-    expect(screen.getByText('Disponible en Principal (ESTANTE-A: 4 und)')).toBeTruthy()
-    unmount()
-    render(<ProductWarehousesSection product={product} warehouses={warehouses} stockRows={[]} loading={false} />)
-    expect(screen.getByText('Sin inventario asignado')).toBeTruthy()
-  })
-
   it('mientras carga avisa que está consultando', () => {
     render(<ProductWarehousesSection product={product} warehouses={warehouses} stockRows={[]} loading />)
     expect(screen.getByText(/Cargando existencias/)).toBeTruthy()

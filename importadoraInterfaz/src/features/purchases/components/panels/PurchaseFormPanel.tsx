@@ -45,16 +45,17 @@ export const PurchaseFormPanel: React.FC = () => {
 
         <section className="drawer-form-section">
           <div className="drawer-form-field purchase-search">
-            <label className="drawer-form-label" htmlFor="purchase-product">Agregar producto</label>
-            <input id="purchase-product" className="drawer-form-control" value={form.text} onChange={(e) => form.setText(e.target.value)} placeholder="Busca por código o nombre..." autoComplete="off" disabled={form.saving} />
-            {form.searching && <span className="drawer-form-hint">Buscando…</span>}
+            <label className="drawer-form-label" htmlFor="purchase-product">Agregar producto del proveedor</label>
+            <input id="purchase-product" className="drawer-form-control" value={form.text} onChange={(e) => form.setText(e.target.value)} placeholder={form.supplierId > 0 ? 'Busca por código o nombre en su catálogo...' : 'Primero elige un proveedor'} autoComplete="off" disabled={form.saving || form.supplierId <= 0} />
+            {form.loadingCatalog && <span className="drawer-form-hint">Consultando el catálogo del proveedor…</span>}
+            {form.catalogEmpty && <span className="drawer-form-hint">Este proveedor no tiene productos en su catálogo: agrégalos en Terceros › Proveedores › Catálogo.</span>}
             {form.results.length > 0 && (
               <ul className="purchase-results" aria-label="Productos encontrados">
                 {form.results.map((product) => (
-                  <li key={product.id}>
+                  <li key={product.productId}>
                     <button type="button" className="purchase-option" onClick={() => form.addProduct(product)}>
                       <strong>{product.code}</strong>
-                      <span>{product.name}</span>
+                      <span>{product.name} · {formatCOP(product.cost)}</span>
                     </button>
                   </li>
                 ))}

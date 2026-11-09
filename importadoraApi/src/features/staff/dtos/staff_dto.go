@@ -51,6 +51,7 @@ type UpdateAdminRequest struct {
 	Document     *string             `json:"document"`
 	Phone        *string             `json:"phone"`
 	IsActive     *bool               `json:"isActive"`
+	Reason       string              `json:"reason"` // obligatorio (10 a 100) si se desactiva
 	Password     *string             `json:"password"`
 }
 
@@ -87,6 +88,7 @@ type UpdateRoleRequest struct {
 	Name        *string `json:"name"`
 	Description *string `json:"description"`
 	IsActive    *bool   `json:"isActive"`
+	Reason string `json:"reason,omitempty"` // obligatorio (10 a 100) si se desactiva
 }
 
 // ==========================================
@@ -164,6 +166,7 @@ type UpdateEmployeeRequest struct {
 	WorkModality     *types.WorkModality     `json:"workModality"`
 	EmploymentStatus *types.EmploymentStatus `json:"employmentStatus"`
 	Status           *types.EmployeeStatus   `json:"status"`
+	Reason           string                  `json:"reason"` // obligatorio (10-100) al inactivar
 }
 
 type UpdateCredentialsRequest struct {

@@ -118,6 +118,14 @@ func (s *PurchaseService) Create(ctx context.Context, actor *middlewares.ActorCo
 	itemsComputed := make([]itemComputed, 0, len(req.Items))
 
 	for _, it := range req.Items {
+		// el proveedor solo recibe órdenes de lo que vende (su catálogo)
+		offered, err := s.purchaseRepo.SupplierOffers(ctx, tx, req.SupplierID, it.ProductID)
+		if err != nil {
+			return nil, utils.Internal("Error al consultar el catálogo del proveedor.", err)
+		}
+		if !offered {
+			return nil, utils.BadRequest("PRODUCT_NOT_OFFERED_BY_SUPPLIER", fmt.Sprintf("El producto %d no está en el catálogo de este proveedor. Agrégalo primero a su catálogo.", it.ProductID))
+		}
 		if it.Quantity <= 0 {
 			return nil, utils.BadRequest("INVALID_QUANTITY", "La cantidad debe ser mayor a 0.")
 		}
@@ -149,7 +157,7 @@ func (s *PurchaseService) Create(ctx context.Context, actor *middlewares.ActorCo
 		SerialCode:   serialCode,
 		SupplierID:   req.SupplierID,
 		WarehouseID:  req.WarehouseID,
-		EmployeeID:   actor.ActorID,
+		EmployeeID:   creatorEmployeeID(actor),
 		Status:       types.PurchaseOrdered, // Nace lista para enviar a proveedor
 		SupplierRef:  req.SupplierRef,
 		ExpectedDate: expectedDate,

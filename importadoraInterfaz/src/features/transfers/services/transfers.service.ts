@@ -146,6 +146,16 @@ export const searchProductsMultibodega = async (
   )
 }
 
+// lo vendible de un producto en CADA bodega de la compañía (bodega → unidades), sumando sus ubicaciones; las bodegas sin filas no aparecen (son cero)
+export const fetchProductStockByWarehouse = async (ctx: RequestContext, productId: number): Promise<Record<string, number>> => {
+  const { data } = await apiClient.get<APIResponse<TransferStockRowDto[] | null>>(INVENTORY.STOCK, {
+    params: withCompany(ctx.companyId, { productId, page: 1, pageSize: 200 }),
+  })
+  const byWarehouse: Record<string, number> = {}
+  for (const row of data.data ?? []) byWarehouse[String(row.warehouseId)] = (byWarehouse[String(row.warehouseId)] ?? 0) + Math.max(0, row.sellable)
+  return byWarehouse
+}
+
 // existencias de una bodega (con búsqueda por repuesto, código o estante) para la pestaña «Repuestos en sede»
 export const fetchWarehouseStock = async (ctx: RequestContext, warehouseId: number, query: string): Promise<StockFullDto[]> => {
   const { data } = await apiClient.get<APIResponse<StockFullDto[] | null>>(INVENTORY.STOCK, {

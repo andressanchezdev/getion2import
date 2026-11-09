@@ -5,9 +5,9 @@ package services
 
 import (
 	"context"
-	"errors"
 	"time"
 
+	"importadoraApi/src/core/utils"
 	"importadoraApi/src/features/sales/dtos"
 )
 
@@ -18,7 +18,7 @@ func (s *SaleService) StageHistory(ctx context.Context, companyID, saleID int64)
 		return nil, err
 	}
 	if sale == nil || (companyID > 0 && sale.CompanyID != companyID) {
-		return nil, errors.New("venta no encontrada")
+		return nil, utils.NotFound("SALE_NOT_FOUND", "La venta no existe.")
 	}
 
 	entities, err := s.saleRepo.ListStageHistory(ctx, s.pool, saleID)

@@ -1,7 +1,7 @@
 // purchases.adapter · convierte lo que responde la API en Go (órdenes de compra y sus renglones) a lo que usa la app, y filtra la tabla por texto y estado
 // conecta con: purchases.service (convierte cada respuesta) y usePurchases (filtra); es el único lugar que conoce los nombres del backend en compras
 // ojo: lo que la API no trae queda neutro: sin fecha esperada, sin notas y sin código del proveedor
-import type { Purchase, PurchaseDto, PurchaseItem, PurchaseItemDto, PurchaseStatus } from '../types/purchases.types'
+import type { Purchase, PurchaseDto, PurchaseItem, PurchaseItemDto, PurchaseStatus, SupplierProduct, SupplierProductDto } from '../types/purchases.types'
 
 const STATUSES: PurchaseStatus[] = ['draft', 'ordered', 'partial', 'received', 'voided']
 const text = (value: string | null | undefined): string => (value ?? '').trim()
@@ -35,10 +35,19 @@ export const toPurchase = (dto: PurchaseDto): Purchase => ({
   subtotal: money(dto.subtotal),
   ivaTotal: money(dto.ivaTotal),
   total: money(dto.total),
+  paidTotal: money(dto.paidTotal),
   notes: text(dto.notes),
   receivedAt: dayOf(dto.receivedAt),
   createdAt: dayOf(dto.createdAt),
   items: (dto.items ?? []).map(toPurchaseItem),
+})
+
+export const toSupplierProduct = (dto: SupplierProductDto): SupplierProduct => ({
+  productId: dto.productId,
+  code: text(dto.productCode),
+  name: text(dto.productName),
+  supplierCode: text(dto.supplierCode),
+  cost: money(dto.cost),
 })
 
 const plain = (value: string): string => value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()

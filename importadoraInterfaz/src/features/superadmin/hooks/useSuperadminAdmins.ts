@@ -26,6 +26,6 @@ export const useSuperadminAdmins = () => {
     setStatus: useCallback((value: AdminStatusFilter) => dispatch(setAdminStatus(value)), [dispatch]),
     setPage: useCallback((page: number) => dispatch(setAdminPage(page)), [dispatch]),
     clearFilters: useCallback(() => dispatch(clearAdminFilters()), [dispatch]),
-    toggle: useCallback((admin: AdminUser) => dispatch(toggleAdminStatusThunk(admin)), [dispatch]),
+    toggle: useCallback((admin: AdminUser, reason?: string) => dispatch(toggleAdminStatusThunk({ admin, reason })), [dispatch]),
   }
 }

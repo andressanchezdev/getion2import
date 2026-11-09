@@ -7,6 +7,8 @@ import { useAppDispatch } from '@/global/hooks/store/useRedux'
 import { openDrawerForm } from '@/features/navigation'
 import { locationLabel, type WarehouseLocation } from '@/features/locations'
 import type { Warehouse } from '../../types/warehouse.types'
+import { Icon } from '@/global/components/UI/atoms/Icon'
+import plusIcon from '@/assets/icons/plus.svg?raw'
 
 interface Props {
   query: string
@@ -31,14 +33,14 @@ export const LocationsToolbar: React.FC<Props> = ({ query, onQuery, warehouses, 
       })
     )
   return (
-    <div className="wh-toolbar">
+    <div className="data-toolbar">
       <SearchBar value={query} onChange={onQuery} hasActiveFilters={Boolean(query)} onClear={() => onQuery('')} placeholder="Buscar ubicación por código o pasillo..." className="wh-search" />
       <FilterSelect label="Sede / Bodega" emptyValue="" value={String(warehouseId)} options={options} onChange={(val) => val && onSelectWarehouse(Number(val))} />
       <span className="wh-count" aria-live="polite">{total} ubicaciones en {warehouseName}</span>
       <button type="button" className="btn-secondary" disabled={visible.length === 0} onClick={printQr}>Imprimir QR</button>
       {canCreate && (
         <button type="button" className="btn-primary" onClick={() => dispatch(openDrawerForm({ kind: 'locationForm', payload: { warehouseId, warehouseName } }))}>
-          + Nueva ubicación
+          <Icon svg={plusIcon} /> Nueva ubicación
         </button>
       )}
     </div>

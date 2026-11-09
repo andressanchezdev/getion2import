@@ -3,6 +3,8 @@
 // ojo: las condiciones de crédito solo aparecen en proveedores y la cobertura solo en transportadoras
 import React from 'react'
 import '@/global/components/UI/molecules/form/DrawerFormShell.css'
+import { MoneyInput } from '@/global/components/UI/molecules/form'
+import { SANITIZERS } from '@/global/helpers/validation/validation.helpers'
 import { useExternalForm, type ExternalFormValues } from '../../hooks/useExternalForm'
 import type { DocumentType, ExternalEntity, ExternalKind } from '../../types/externals.types'
 
@@ -22,6 +24,7 @@ export const ExternalFormPanel: React.FC<{ payload: ExternalFormPayload }> = ({ 
   const form = useExternalForm(payload.kind, payload.item)
   const { values, set, saving } = form
 
+  // type «tel» deja solo dígitos (máx. 10, como un teléfono colombiano); «number» es para enteros como los días de plazo
   const text = (field: keyof ExternalFormValues, label: string, placeholder: string, type = 'text') => (
     <div className="drawer-form-field">
       <label className="drawer-form-label" htmlFor={`external-${field}`}>{label}</label>
@@ -30,8 +33,12 @@ export const ExternalFormPanel: React.FC<{ payload: ExternalFormPayload }> = ({ 
         className="drawer-form-control"
         type={type}
         min={type === 'number' ? 0 : undefined}
+        max={type === 'number' ? 365 : undefined}
+        step={type === 'number' ? 1 : undefined}
+        inputMode={type === 'tel' ? 'tel' : type === 'number' ? 'numeric' : undefined}
+        maxLength={type === 'tel' ? 10 : 120}
         value={String(values[field])}
-        onChange={(e) => set(field, e.target.value as never)}
+        onChange={(e) => set(field, (type === 'tel' ? SANITIZERS.phoneCO(e.target.value) : e.target.value) as never)}
         placeholder={placeholder}
         disabled={saving}
       />
@@ -46,7 +53,7 @@ export const ExternalFormPanel: React.FC<{ payload: ExternalFormPayload }> = ({ 
         <section className="drawer-form-section">
           <div className="drawer-form-field">
             <label className="drawer-form-label" htmlFor="external-name">Razón social / nombre *</label>
-            <input id="external-name" className="drawer-form-control" value={values.name} onChange={(e) => set('name', e.target.value)} placeholder="Ej: Repuestos y Accesorios S.A.S." disabled={saving} autoFocus required />
+            <input id="external-name" className="drawer-form-control" value={values.name} maxLength={120} onChange={(e) => set('name', e.target.value)} placeholder="Ej: Repuestos y Accesorios S.A.S." disabled={saving} autoFocus required />
           </div>
           <div className="drawer-form-grid">
             <div className="drawer-form-field">
@@ -71,12 +78,12 @@ export const ExternalFormPanel: React.FC<{ payload: ExternalFormPayload }> = ({ 
 
         <section className="drawer-form-section">
           <div className="drawer-form-grid">
-            {text('phone', 'Teléfono', 'Ej: 3120001122')}
+            {text('phone', 'Teléfono', 'Ej: 3120001122', 'tel')}
             {text('email', 'Correo', 'contacto@empresa.com', 'email')}
           </div>
           <div className="drawer-form-grid">
             {text('contactName', 'Persona de contacto', 'Ej: Carlos Restrepo')}
-            {text('contactPhone', 'Teléfono del contacto', 'Ej: 3158889900')}
+            {text('contactPhone', 'Teléfono del contacto', 'Ej: 3158889900', 'tel')}
           </div>
           <div className="drawer-form-grid">
             {text('city', 'Ciudad', 'Ej: Cali')}
@@ -89,7 +96,10 @@ export const ExternalFormPanel: React.FC<{ payload: ExternalFormPayload }> = ({ 
           <section className="drawer-form-section">
             <div className="drawer-form-grid">
               {text('termsDays', 'Días de plazo de pago', '30', 'number')}
-              {text('creditLimit', 'Cupo de crédito ($)', '5000000', 'number')}
+              <div className="drawer-form-field">
+                <label className="drawer-form-label" htmlFor="external-creditLimit">Cupo de crédito ($)</label>
+                <MoneyInput id="external-creditLimit" className="drawer-form-control" value={values.creditLimit === '0' ? '' : values.creditLimit} onValueChange={(digits) => set('creditLimit', digits || '0')} placeholder="Ej: 5.000.000" disabled={saving} />
+              </div>
             </div>
           </section>
         )}

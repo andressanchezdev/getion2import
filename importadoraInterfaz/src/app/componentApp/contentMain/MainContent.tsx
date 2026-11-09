@@ -10,6 +10,8 @@ import { labelForLevel } from '@/global/helpers/access/accessLevels'
 import { renderScreen } from './screenRegistry'
 import { MainContentPlaceholder } from './MainContentPlaceholder'
 import { AppHeader } from '../header/AppHeader'
+import { Icon } from '@/global/components/UI/atoms/Icon'
+import lockIcon from '@/assets/icons/lock.svg?raw'
 
 export const MainContent: React.FC = () => {
   const { activeModule, activeSubitem, activeWarehouseId } = useAppSelector((state) => state.ui)
@@ -48,7 +50,7 @@ export const MainContent: React.FC = () => {
         {!isAuthorized ? (
           <div className="main-content-unauthorized">
             <div className="main-content-unauthorized-card">
-              <div className="main-content-unauthorized-icon">🔒</div>
+              <div className="main-content-unauthorized-icon"><Icon svg={lockIcon} size="xl" /></div>
               <h3 className="main-content-unauthorized-title">Acceso Restringido</h3>
               <p className="main-content-unauthorized-desc">
                 No tienes permisos asignados para visualizar o gestionar este submódulo.

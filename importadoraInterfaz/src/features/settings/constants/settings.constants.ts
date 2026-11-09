@@ -15,10 +15,10 @@ export const MIN_PASSWORD_LENGTH = 6
 export const MAX_SCREENSAVER_FILE_BYTES = 10 * 1024 * 1024
 
 // campos que se muestran y editan de la empresa (los que el backend guarda)
-export const COMPANY_FIELDS: Array<{ key: keyof CompanyInput; label: string; type: 'text' | 'email'; required: boolean }> = [
+export const COMPANY_FIELDS: Array<{ key: keyof CompanyInput; label: string; type: 'text' | 'email' | 'tel'; required: boolean }> = [
   { key: 'name', label: 'Razón Social / Nombre', type: 'text', required: true },
   { key: 'city', label: 'Ciudad', type: 'text', required: false },
   { key: 'address', label: 'Dirección Física', type: 'text', required: false },
-  { key: 'phone', label: 'Teléfono de Contacto', type: 'text', required: false },
+  { key: 'phone', label: 'Teléfono de Contacto', type: 'tel', required: false },
   { key: 'email', label: 'Correo Electrónico', type: 'email', required: false },
 ]

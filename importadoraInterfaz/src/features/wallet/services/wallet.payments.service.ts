@@ -1,12 +1,12 @@
-// wallet.payments.service · llamadas al backend que cambian cartera: abonar, verificar transferencia, anular pago, ajustes manuales y crédito
-// conecta con: api/client y api/config (PAYMENTS, WALLET, CUSTOMERS); las usa wallet.payments.thunks
+// wallet.payments.service · llamadas al backend que cambian cartera: abonar, verificar transferencia, anular, rechazar y reabrir pagos y crédito
+// conecta con: api/client y api/config (PAYMENTS, CUSTOMERS); las usa wallet.payments.thunks
 // ojo: en la API en Go un pago nace EN REVISIÓN y solo baja la deuda cuando se verifica
 import { apiClient, API_CONFIG, createAppError, type APIResponse } from '@/api'
 import type { RequestContext } from '@/features/auth'
 import { WALLET_PAYMENT_METHOD } from '../constants/wallet.constants'
 import type { CreditUpdateInput, PaymentDetails, PaymentInput } from '../types/wallet.api.types'
 
-const { PAYMENTS, CUSTOMERS, WALLET } = API_CONFIG.ENDPOINTS
+const { PAYMENTS, CUSTOMERS } = API_CONFIG.ENDPOINTS
 
 // registra un abono a una venta
 export const registerPayment = async (_ctx: RequestContext, _customerId: number, payment: PaymentInput, details: PaymentDetails = { method: WALLET_PAYMENT_METHOD }): Promise<void> => {
@@ -32,19 +32,14 @@ export const voidPayment = async (paymentId: number, voidReason: string): Promis
   await apiClient.post(PAYMENTS.VOID(paymentId), { voidReason })
 }
 
-// consulta el detalle individual de un pago (GET /payments/:id)
-export const fetchPaymentDetails = async (paymentId: number): Promise<Record<string, unknown>> => {
-  const { data } = await apiClient.get<APIResponse<Record<string, unknown>>>(PAYMENTS.BY_ID(paymentId))
-  return data.data
+// rechaza un pago en revisión con su motivo de 10 a 100 caracteres (POST /payments/:id/reject)
+export const rejectPayment = async (paymentId: number, reason: string): Promise<void> => {
+  await apiClient.post(PAYMENTS.REJECT(paymentId), { reason })
 }
 
-// aplica un ajuste de cartera manual (POST /wallet/adjust): amount > 0 abono/favor, amount < 0 cargo
-export const adjustCustomerCredit = async (customerId: number, amount: number, reason: string): Promise<void> => {
-  await apiClient.post(WALLET.ADJUST, {
-    customerId,
-    amount,
-    reason,
-  })
+// devuelve un pago rechazado a «en revisión» (POST /payments/:id/reopen)
+export const reopenPayment = async (paymentId: number): Promise<void> => {
+  await apiClient.post(PAYMENTS.REOPEN(paymentId), {})
 }
 
 // cambia el cupo, el plazo y si el cliente tiene crédito

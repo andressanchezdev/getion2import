@@ -152,11 +152,16 @@ func (ctrl *PurchaseController) Void(c echo.Context) error {
 		return err
 	}
 
+	var req dtos.VoidPurchaseRequest
+	if err := utils.BindJSON(c, &req); err != nil {
+		return err
+	}
+
 	actor := middlewares.GetActor(c)
 	ip := c.RealIP()
 	ua := c.Request().UserAgent()
 
-	if err := ctrl.service.Void(c.Request().Context(), actor, id, ip, ua); err != nil {
+	if err := ctrl.service.Void(c.Request().Context(), actor, id, req.Reason, ip, ua); err != nil {
 		return err
 	}
 
@@ -206,3 +211,52 @@ func (ctrl *PurchaseController) ListSupplierProducts(c echo.Context) error {
 	return utils.RespondOK(c, "Catálogo de repuestos del proveedor obtenido", products)
 }
 
+// SaveSupplierProduct PUT /purchases/suppliers/:supplierId/products
+func (ctrl *PurchaseController) SaveSupplierProduct(c echo.Context) error {
+	supplierID, err := utils.ParamInt64(c, "supplierId")
+	if err != nil {
+		return err
+	}
+	var req dtos.SaveSupplierProductRequest
+	if err := utils.BindJSON(c, &req); err != nil {
+		return err
+	}
+	list, err := ctrl.service.SaveSupplierProduct(c.Request().Context(), middlewares.GetActor(c), supplierID, req, c.RealIP(), c.Request().UserAgent())
+	if err != nil {
+		return err
+	}
+	return utils.RespondOK(c, "Producto guardado en el catálogo del proveedor", list)
+}
+
+// DeleteSupplierProduct DELETE /purchases/suppliers/:supplierId/products/:productId
+func (ctrl *PurchaseController) DeleteSupplierProduct(c echo.Context) error {
+	supplierID, err := utils.ParamInt64(c, "supplierId")
+	if err != nil {
+		return err
+	}
+	productID, err := utils.ParamInt64(c, "productId")
+	if err != nil {
+		return err
+	}
+	if err := ctrl.service.DeleteSupplierProduct(c.Request().Context(), middlewares.GetActor(c), supplierID, productID, c.RealIP(), c.Request().UserAgent()); err != nil {
+		return err
+	}
+	return utils.RespondOK[any](c, "Producto quitado del catálogo del proveedor", nil)
+}
+
+// Pay POST /purchases/:id/pay
+func (ctrl *PurchaseController) Pay(c echo.Context) error {
+	id, err := utils.ParamInt64(c, "id")
+	if err != nil {
+		return err
+	}
+	var req dtos.PayPurchaseRequest
+	if err := utils.BindJSON(c, &req); err != nil {
+		return err
+	}
+	resp, err := ctrl.service.Pay(c.Request().Context(), middlewares.GetActor(c), id, req, c.RealIP(), c.Request().UserAgent())
+	if err != nil {
+		return err
+	}
+	return utils.RespondOK(c, "Recepción pagada desde la caja", resp)
+}

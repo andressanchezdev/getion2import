@@ -31,9 +31,9 @@ export const useCreateAbono = (onDone?: () => void) => {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const search = useCreditCustomerSearch(query)
+  const search = useCreditCustomerSearch(query, true)
   const invoicesState = useAppSelector(selectWalletInvoices)
-  const clients = useMemo(() => search.items.filter((option) => option.isCredit), [search.items])
+  const clients = search.items
   const pending = useMemo(() => pendingInvoices(invoicesState.items), [invoicesState.items])
   const debt = debtOf(pending)
   const selectedInvoice = pending.find((invoice) => String(invoice.saleId) === saleId)

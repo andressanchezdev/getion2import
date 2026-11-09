@@ -153,10 +153,17 @@ func (c *ExternalController) Delete(ctx echo.Context) error {
 		return err
 	}
 
+	var req struct {
+		Reason string `json:"reason"`
+	}
+	if err := utils.BindJSON(ctx, &req); err != nil {
+		return err
+	}
+
 	ip := utils.EchoClientIP(ctx)
 	ua := ctx.Request().UserAgent()
 
-	if err := c.service.Delete(ctx.Request().Context(), actor, id, ip, ua); err != nil {
+	if err := c.service.Delete(ctx.Request().Context(), actor, id, req.Reason, ip, ua); err != nil {
 		return err
 	}
 

@@ -1,4 +1,4 @@
-// ShopCartFooter · pie del carrito (como los totales de la maqueta): subtotal, IVA, total, finalizar compra y crear cotización (vaciar y compartir están en el menú ☰ del encabezado del carrito)
+// ShopCartFooter · pie del carrito (como los totales de la maqueta): subtotal, IVA, total, y finalizar compra (vaciar y compartir están en el menú ☰ del encabezado del carrito); las cotizaciones se arman en Tienda > Cotizar
 // conecta con: navigation (abre el panel de finalizar compra), usePermissions (permiso de ventas), shop.selectors (total) y shop.helpers (separa el IVA)
 // ojo: el subtotal y el IVA (19 %) se calculan como en la maqueta, con los precios con IVA incluido, hasta que el backend envíe los impuestos (ver IVA_RATE en shop.constants)
 import React from 'react'
@@ -20,8 +20,8 @@ export const ShopCartFooter: React.FC = () => {
   // vender o cotizar es de quien tiene permiso de ventas (el administrador también, pero asigna la venta a un empleado)
   const canSell = usePermissions().canPerformAction('shop', 'orders', 'create')
 
-  // finalizar compra y cotizar abren el mismo panel: cliente y entrega, y después el pago (la cotización termina en el cliente)
-  const openCheckout = (mode: 'sale' | 'quotation') => dispatch(openDrawerForm({ kind: 'checkout', payload: { mode } }))
+  // finalizar compra abre el panel: cliente y entrega, y después el pago
+  const openCheckout = () => dispatch(openDrawerForm({ kind: 'checkout', payload: { mode: 'sale' } }))
 
   return (
     <div className="shop-cart-footer">
@@ -43,13 +43,9 @@ export const ShopCartFooter: React.FC = () => {
         className="shop-cart-btn-checkout"
         disabled={isEmpty || isBusy || !canSell}
         title={canSell ? undefined : 'No tienes permiso de ventas'}
-        onClick={() => openCheckout('sale')}
+        onClick={openCheckout}
       >
         Finalizar compra
-      </button>
-
-      <button type="button" className="shop-cart-btn-quote" disabled={isEmpty || isBusy || !canSell} title={canSell ? undefined : 'No tienes permiso de ventas'} onClick={() => openCheckout('quotation')}>
-        Crear cotización
       </button>
     </div>
   )

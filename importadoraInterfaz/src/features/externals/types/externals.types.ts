@@ -50,14 +50,6 @@ export interface CreateExternalPayload {
 
 export type UpdateExternalPayload = Partial<CreateExternalPayload>
 
-export interface ExternalFilterParams {
-  kind: ExternalKind
-  search?: string
-  isActive?: boolean
-  page?: number
-  pageSize?: number
-}
-
 // filtro de estado de la tabla
 export type ExternalStatusFilter = 'all' | 'active' | 'inactive'
 

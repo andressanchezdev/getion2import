@@ -76,7 +76,7 @@
   --c-black: #000000;
 
   /* ---- 1a. PALETA DE LA MAQUETA (MAQUETA-V3): el «chrome» de la app (menú, cabecera, tablas, panel) y las cards de IP ---- */
-  --c-shell-50: #f5f6f9;
+  --c-shell-50: #E9EBEE;
   /* fondo de la app y del contenido */
   --c-shell-100: #eef1f5;
   /* superficie suave: hover, campos y encabezados de tabla */
@@ -225,7 +225,8 @@
   --duration-halo: 360ms;
   /* menú: halo de salida cuando el cambio ya se aplicó */
   --duration-enter: 260ms;
-  --duration-screensaver-in: 2400ms; /* el protector de pantalla se funde desde la transparencia en este tiempo */
+  --duration-screensaver-in: 2400ms;
+  /* el protector de pantalla se funde desde la transparencia en este tiempo */
   /* entrada de contenido y apertura de paneles */
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
 
@@ -334,6 +335,8 @@
   /* menú contraído (solo íconos) */
   /* 280px: ancho fijo del menú lateral ERP */
   --drawer-width-open: 400px;
+  --drawer-width-wide: 720px;
+  /* paneles con listas, como Roles y permisos */
   /* 360px: ancho del panel derecho abierto */
   --drawer-width-collapsed: 56px;
   /* 56px: ancho del panel derecho contraído */

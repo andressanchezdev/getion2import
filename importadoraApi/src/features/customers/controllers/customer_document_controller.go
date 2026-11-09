@@ -102,4 +102,3 @@ func (c *CustomerController) DeleteDocument(ctx echo.Context) error {
 
 	return utils.RespondNoContent(ctx)
 }
-

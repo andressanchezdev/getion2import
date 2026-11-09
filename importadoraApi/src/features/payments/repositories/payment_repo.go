@@ -276,6 +276,45 @@ func (r *PaymentRepository) Void(ctx context.Context, q db.DBExecutor, paymentID
 	return nil
 }
 
+// Reject pasa el pago de «en revisión» a «rechazado» (con novedad) y guarda quién lo rechazó y por qué.
+func (r *PaymentRepository) Reject(ctx context.Context, q db.DBExecutor, paymentID, employeeID int64, reason string) error {
+	const sql = `
+		UPDATE payments SET
+			status = 'issue',
+			verified_by_employee_id = $1,
+			verified_at = CURRENT_TIMESTAMP,
+			issue_note = $2
+		WHERE id = $3 AND status = 'review'
+	`
+	cmdTag, err := q.Exec(ctx, sql, employeeID, reason, paymentID)
+	if err != nil {
+		return err
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return errors.New("el pago no existe o ya no se encuentra en estado de revisión")
+	}
+	return nil
+}
+
+// Reopen devuelve un pago rechazado a «en revisión»; falla si no estaba rechazado.
+func (r *PaymentRepository) Reopen(ctx context.Context, q db.DBExecutor, paymentID int64) error {
+	const sql = `
+		UPDATE payments SET
+			status = 'review',
+			verified_by_employee_id = NULL,
+			verified_at = NULL
+		WHERE id = $1 AND status = 'issue'
+	`
+	cmdTag, err := q.Exec(ctx, sql, paymentID)
+	if err != nil {
+		return err
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return errors.New("el pago no existe o ya no se encuentra rechazado")
+	}
+	return nil
+}
+
 // AddPaidToSale suma al abonado de la venta lo que acaba de verificarse
 func (r *PaymentRepository) AddPaidToSale(ctx context.Context, q db.DBExecutor, saleID int64, amount float64) error {
 	const sql = `UPDATE sales SET paid_total = paid_total + $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`

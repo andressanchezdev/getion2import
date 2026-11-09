@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import '@/global/components/UI/molecules/form/DrawerFormShell.css'
 import './AbonoDetailPanel.css'
 import { Pill, type PillTone } from '@/global/components/UI/atoms/Pill'
+import { InlineReason } from '@/global/components/UI/molecules/dialogs/InlineReason'
 import { formatCOP } from '@/global/helpers/formatting/format'
 import { useAppDispatch } from '@/global/hooks/store/useRedux'
 import { closeDrawerForm } from '@/features/navigation'
@@ -13,12 +14,14 @@ import type { AbonoRecord } from '../../types/wallet.types'
 const STATUS: Record<AbonoRecord['status'], { label: string; tone: PillTone }> = {
   verified: { label: 'Verificado', tone: 'green' },
   pending: { label: 'En revisión', tone: 'amber' },
+  rejected: { label: 'Rechazado', tone: 'red' },
   void: { label: 'Anulado', tone: 'gray' },
 }
 
 export const AbonoDetailPanel: React.FC<{ abono: AbonoRecord }> = ({ abono }) => {
   const dispatch = useAppDispatch()
   const [isProcessing, setIsProcessing] = useState(false)
+  const [askingVoid, setAskingVoid] = useState(false)
   const status = STATUS[abono.status]
   const warehouse = [abono.warehouseCode, abono.warehouseName].filter(Boolean).join(' · ')
   const rows: Array<[string, React.ReactNode]> = [
@@ -46,13 +49,11 @@ export const AbonoDetailPanel: React.FC<{ abono: AbonoRecord }> = ({ abono }) =>
     }
   }
 
-  const handleVoid = async () => {
-    const reason = window.prompt('Ingrese el motivo de anulación del abono:')
-    if (!reason || reason.trim() === '') return
-
+  const handleVoid = async (reason: string) => {
+    setAskingVoid(false)
     setIsProcessing(true)
     try {
-      await dispatch(voidPaymentThunk({ paymentId: abono.id, reason: reason.trim() })).unwrap()
+      await dispatch(voidPaymentThunk({ paymentId: abono.id, reason })).unwrap()
       dispatch(closeDrawerForm())
     } finally {
       setIsProcessing(false)
@@ -95,7 +96,7 @@ export const AbonoDetailPanel: React.FC<{ abono: AbonoRecord }> = ({ abono }) =>
             type="button"
             className="btn-danger"
             style={{ backgroundColor: 'var(--danger-600, #dc2626)', color: '#fff', border: 'none', padding: '8px 14px', borderRadius: '6px', cursor: 'pointer' }}
-            onClick={handleVoid}
+            onClick={() => setAskingVoid(true)}
             disabled={isProcessing}
           >
             {isProcessing ? 'Anulando...' : 'Anular Pago'}
@@ -105,6 +106,7 @@ export const AbonoDetailPanel: React.FC<{ abono: AbonoRecord }> = ({ abono }) =>
           Cerrar
         </button>
       </div>
+      <InlineReason open={askingVoid} title="Anular pago" message={`¿Anular el recibo ${abono.serialCode}? No cuenta como pago; indica el motivo.`} confirmLabel="Anular pago" onConfirm={handleVoid} onCancel={() => setAskingVoid(false)} />
     </div>
   )
 }

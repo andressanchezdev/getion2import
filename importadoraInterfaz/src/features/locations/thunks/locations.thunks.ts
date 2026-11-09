@@ -60,11 +60,11 @@ export const updateLocationThunk = createAsyncThunk<WarehouseLocation[], { wareh
 )
 
 // activa o desactiva una ubicación y devuelve la lista nueva
-export const toggleLocationThunk = createAsyncThunk<WarehouseLocation[], { warehouseId: number; locationId: number; isActive: boolean }, ThunkConfig>(
+export const toggleLocationThunk = createAsyncThunk<WarehouseLocation[], { warehouseId: number; locationId: number; isActive: boolean; reason?: string }, ThunkConfig>(
   'locations/toggle',
-  async ({ warehouseId, locationId, isActive }, { rejectWithValue }) => {
+  async ({ warehouseId, locationId, isActive, reason }, { rejectWithValue }) => {
     try {
-      await setLocationActive(warehouseId, locationId, isActive)
+      await setLocationActive(warehouseId, locationId, isActive, reason)
       return await fetchLocations(warehouseId)
     } catch (error) {
       return rejectWithValue(getErrorMessage(error, 'No se pudo cambiar el estado de la ubicación.'))
@@ -74,11 +74,11 @@ export const toggleLocationThunk = createAsyncThunk<WarehouseLocation[], { wareh
 )
 
 // borra una ubicación vacía y devuelve la lista nueva
-export const deleteLocationThunk = createAsyncThunk<WarehouseLocation[], { warehouseId: number; locationId: number }, ThunkConfig>(
+export const deleteLocationThunk = createAsyncThunk<WarehouseLocation[], { warehouseId: number; locationId: number; reason: string }, ThunkConfig>(
   'locations/delete',
-  async ({ warehouseId, locationId }, { rejectWithValue }) => {
+  async ({ warehouseId, locationId, reason }, { rejectWithValue }) => {
     try {
-      await deleteLocation(warehouseId, locationId)
+      await deleteLocation(warehouseId, locationId, reason)
       return await fetchLocations(warehouseId)
     } catch (error) {
       return rejectWithValue(getErrorMessage(error, 'No se pudo borrar la ubicación.'))

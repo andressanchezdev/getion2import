@@ -4,6 +4,10 @@ import { CashClosedBanner } from '@/features/cashRegister'
 import { formatPesos } from '@/global/helpers/formatting/format'
 import type { useCheckoutFlow } from '../hooks/useCheckoutFlow'
 import { TransferPaymentSection } from './TransferPaymentSection'
+import { Icon } from '@/global/components/UI/atoms/Icon'
+import walletIcon from '@/assets/icons/wallet.svg?raw'
+import buildingIcon from '@/assets/icons/building.svg?raw'
+import receiptIcon from '@/assets/icons/receipt.svg?raw'
 
 type Flow = ReturnType<typeof useCheckoutFlow>
 
@@ -66,7 +70,7 @@ export const PaymentStep: React.FC<{ flow: Flow }> = ({ flow }) => {
           onClick={() => flow.setPayment('cash')}
         >
           <div className="checkout-pay-left">
-            <span className="checkout-pay-icon" aria-hidden="true">💵</span>
+            <span className="checkout-pay-icon"><Icon svg={walletIcon} size="lg" /></span>
             <div className="checkout-pay-meta">
               <strong>Efectivo</strong>
               <small>Pago de contado en mostrador</small>
@@ -84,7 +88,7 @@ export const PaymentStep: React.FC<{ flow: Flow }> = ({ flow }) => {
           onClick={() => flow.setPayment('transfer')}
         >
           <div className="checkout-pay-left">
-            <span className="checkout-pay-icon" aria-hidden="true">🏦</span>
+            <span className="checkout-pay-icon"><Icon svg={buildingIcon} size="lg" /></span>
             <div className="checkout-pay-meta">
               <strong>Transferencia Bancaria</strong>
               <small>Bancolombia, Nequi, Daviplata</small>
@@ -104,7 +108,7 @@ export const PaymentStep: React.FC<{ flow: Flow }> = ({ flow }) => {
             onClick={() => flow.setPayment('credit')}
           >
             <div className="checkout-pay-left">
-              <span className="checkout-pay-icon" aria-hidden="true">💳</span>
+              <span className="checkout-pay-icon"><Icon svg={receiptIcon} size="lg" /></span>
               <div className="checkout-pay-meta">
                 <strong>Crédito de Cartera</strong>
                 <small>
@@ -146,7 +150,7 @@ export const PaymentStep: React.FC<{ flow: Flow }> = ({ flow }) => {
             />
             <div>
               <strong style={{ fontSize: '13px', color: 'var(--color-text-primary, #0f172a)', display: 'block' }}>
-                ⚡ Despacho con Picking Inmediato
+                Despacho con picking inmediato
               </strong>
               <small style={{ fontSize: '11px', color: 'var(--color-text-secondary, #64748b)' }}>
                 Alistamiento prioritario en mostrador / sin cola regular

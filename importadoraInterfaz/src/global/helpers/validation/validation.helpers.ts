@@ -16,6 +16,9 @@ export const SANITIZERS = {
         return `${parts[0]}.${parts.slice(1).join('')}`
     },
 
+    // Teléfono colombiano: solo dígitos y a lo sumo 10 (celular de 10 dígitos o fijo de 7 u 10)
+    phoneCO: (str: string): string => str.replace(/\D/g, '').slice(0, 10),
+
     // Convierte a mayúsculas limpias sin caracteres especiales
     cleanCode: (str: string): string => str.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, ''),
 }
@@ -82,4 +85,31 @@ export const VALIDATORS = {
         }
         return { valid: true }
     },
+}
+
+// ---- mensajes de problema para formularios con campos opcionales (devuelven null si está bien o vacío y no es obligatorio) ----
+
+// teléfono colombiano: celular de 10 dígitos que empieza en 3, fijo de 7 dígitos o fijo de 10 con indicativo 60X
+export const phoneProblem = (value: string, required = false): string | null => {
+    const digits = value.replace(/\D/g, '')
+    if (digits === '') return required ? 'El teléfono es obligatorio.' : null
+    const mobile = digits.length === 10 && digits.startsWith('3')
+    const landline10 = digits.length === 10 && digits.startsWith('60')
+    const landline7 = digits.length === 7 && !digits.startsWith('0')
+    return mobile || landline10 || landline7 ? null : 'Teléfono no válido: celular de 10 dígitos (3001234567), fijo de 7 o fijo con indicativo (6012345678).'
+}
+
+// correo electrónico con formato válido
+export const emailProblem = (value: string, required = false): string | null => {
+    if (value.trim() === '') return required ? 'El correo es obligatorio.' : null
+    return VALIDATORS.isValidEmail(value).valid ? null : 'Correo no válido (ej. usuario@empresa.com).'
+}
+
+// entero dentro de un rango (días de plazo, porcentajes, rangos de numeración); vacío es válido salvo que sea obligatorio
+export const integerProblem = (value: string | number, label: string, min: number, max: number, required = false): string | null => {
+    const text = String(value).trim()
+    if (text === '') return required ? `${label} es obligatorio.` : null
+    const n = Number(text)
+    if (!Number.isInteger(n) || n < min || n > max) return `${label} debe ser un número entero entre ${min} y ${max}.`
+    return null
 }

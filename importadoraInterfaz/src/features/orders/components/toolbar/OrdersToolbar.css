@@ -1,25 +1,6 @@
 /* OrdersToolbar.css · barra de búsqueda (38%), filtros centrales y acciones · idéntico al diseño canónico */
-.orders-toolbar {
-  background: var(--bg-card);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--space-4);
-  padding: var(--space-4);
-  border-bottom: 1px solid var(--color-border);
-}
 
 /* tarjeta única de la bandeja (barra + tabla): la usan Pedidos y Caja */
-.orders-card {
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--bg-card);
-  box-shadow: var(--shadow-rest);
-  overflow: hidden;
-}
 
 .orders-toolbar-search {
   flex: 0 0 38%;
@@ -95,12 +76,9 @@
 }
 
 @media (max-width: 768px) {
-  .orders-toolbar {
-    flex-direction: row;
-    padding: 0.75rem;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-  }
+.orders-toolbar {
+  flex-direction: row;
+}
 
   .orders-toolbar-search {
     flex: 1 1 100%;

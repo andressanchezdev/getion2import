@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/utils"
 	"importadoraApi/src/features/customers/dtos"
 
 	"github.com/jackc/pgx/v5"
@@ -17,12 +18,20 @@ import (
 
 // ListSelector trae la lista corta de clientes (id, nombre y documento) para los selectores, con búsqueda opcional.
 func (r *CustomerRepository) ListSelector(ctx context.Context, q db.DBExecutor, companyID int64, search string) ([]dtos.CustomerSelectorResponse, error) {
+	items, err := r.listSelector(ctx, q, companyID, search, false)
+	if err == nil && len(items) == 0 && strings.TrimSpace(search) != "" {
+		return r.listSelector(ctx, q, companyID, search, true)
+	}
+	return items, err
+}
+
+func (r *CustomerRepository) listSelector(ctx context.Context, q db.DBExecutor, companyID int64, search string, fuzzy bool) ([]dtos.CustomerSelectorResponse, error) {
 	where := []string{"c.company_id = $1", "c.deleted_at IS NULL", "c.status = 'active'"}
 	args := []interface{}{companyID}
 	argIdx := 2
 
 	if strings.TrimSpace(search) != "" {
-		where = append(where, fmt.Sprintf("(c.document ILIKE $%d OR c.name ILIKE $%d OR c.trade_name ILIKE $%d)", argIdx, argIdx, argIdx))
+		where = append(where, fmt.Sprintf("(c.document ILIKE $%d OR c.name ILIKE $%d OR c.trade_name ILIKE $%d)%s", argIdx, argIdx, argIdx, utils.FuzzyOr(fuzzy, argIdx, "c.name")))
 		args = append(args, "%"+strings.TrimSpace(search)+"%")
 		argIdx++
 	}
@@ -33,7 +42,7 @@ func (r *CustomerRepository) ListSelector(ctx context.Context, q db.DBExecutor, 
 			c.id, c.document, c.name, c.trade_name, c.price_tier,
 			c.credit_enabled,
 			COALESCE(v.available_credit, 0) AS available_credit,
-			(c.document = '222222222222' OR c.name ILIKE '%%Consumidor Final%%' OR c.trade_name ILIKE '%%Mostrador%%') AS is_default
+			COALESCE(c.document = '222222222222' OR c.name ILIKE '%%Consumidor Final%%' OR c.trade_name ILIKE '%%Mostrador%%', FALSE) AS is_default
 		FROM customers c
 		LEFT JOIN v_customer_credit_summary v ON v.customer_id = c.id
 		%s

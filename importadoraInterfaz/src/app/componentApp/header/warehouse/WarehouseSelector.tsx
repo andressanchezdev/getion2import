@@ -35,6 +35,9 @@ export const WarehouseSelector: React.FC = () => {
         }
     }, [status, warehouses, activeWarehouseId, activeWarehouseName, user?.warehouseId, isAdmin, dispatch])
 
+    // una compañía nueva aún no tiene bodegas: se dice así en vez de dejar «Cargando bodega…» para siempre
+    const withoutWarehouses = status === 'succeeded' && warehouses.length === 0
+
     return (
         <div className="app-header-warehouse-wrapper" ref={wrapperRef}>
             <div className="app-header-warehouse-relative">
@@ -50,7 +53,7 @@ export const WarehouseSelector: React.FC = () => {
                     title={canChangeWarehouse ? 'Cambiar bodega activa' : 'Sede física asignada a tu usuario'}
                 >
                     <img src={buildingIcon} alt="" className="app-header-warehouse-icon" aria-hidden="true" />
-                    <span className="app-header-warehouse-name">{activeWarehouseName}</span>
+                    <span className="app-header-warehouse-name">{withoutWarehouses ? 'Sin bodegas' : activeWarehouseName}</span>
                     {canChangeWarehouse && (
                         <span className="app-header-warehouse-chevron" aria-hidden="true">
                             ▾

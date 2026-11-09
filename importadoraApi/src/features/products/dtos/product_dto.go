@@ -99,6 +99,7 @@ type UpdateProductRequest struct {
 	IsNew       *bool                `json:"isNew"`
 	Images      []string             `json:"images"`
 	Status      *types.ProductStatus `json:"status"`
+	Reason      string               `json:"reason"` // obligatorio (10 a 100) si pasa a inactivo o descontinuado
 }
 
 type DeleteProductRequest struct {
@@ -149,4 +150,10 @@ type AssignProductSupplierRequest struct {
 	SupplierID   int64   `json:"supplierId" validate:"required"`
 	Cost         float64 `json:"cost" validate:"required,min=0"`
 	SupplierCode *string `json:"supplierCode"`
+}
+
+// ProductThumbnailResponse es la primera imagen de un producto (para los renglones de pedidos, cotizaciones, compras y traslados).
+type ProductThumbnailResponse struct {
+	ID       int64  `json:"id"`
+	ImageURL string `json:"imageUrl"`
 }

@@ -12,6 +12,8 @@ import { CustomersTable } from '../components/table/CustomersTable'
 import { useCustomersLoader } from '../hooks/useCustomersLoader'
 import { selectCustomersMeta, selectCustomersQuery, selectCustomersStatus } from '../selectors/customers.selectors'
 import { setCustomersPage, setCustomersQuery } from '../slices/customers.slice'
+import { Icon } from '@/global/components/UI/atoms/Icon'
+import plusIcon from '@/assets/icons/plus.svg?raw'
 
 export const CustomersScreen: React.FC = () => {
   const dispatch = useAppDispatch()
@@ -25,8 +27,8 @@ export const CustomersScreen: React.FC = () => {
 
   return (
     <div className="customers-screen">
-      <div className="customers-screen-card">
-        <div className="customers-screen-toolbar">
+      <div className="data-card">
+        <div className="data-toolbar">
           <SearchBar
             value={query}
             onChange={(value) => dispatch(setCustomersQuery(value))}
@@ -40,7 +42,7 @@ export const CustomersScreen: React.FC = () => {
               style={{ whiteSpace: 'nowrap' }}
               onClick={() => dispatch(openDrawerForm({ kind: 'createCustomer' }))}
             >
-              + Nuevo Cliente
+              <Icon svg={plusIcon} /> Nuevo Cliente
             </button>
           )}
         </div>

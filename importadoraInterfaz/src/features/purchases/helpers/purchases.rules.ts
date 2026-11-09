@@ -49,3 +49,16 @@ export const draftProblem = (supplierId: number, lines: DraftLine[]): string | n
   if (broken) return `${broken.productName}: pon la cantidad y el costo`
   return null
 }
+
+// lo que falta por pagar de una orden
+export const pendingToPay = (purchase: Pick<Purchase, 'total' | 'paidTotal'>): number => Math.max(0, purchase.total - purchase.paidTotal)
+
+// la caja solo paga una recepción completa y mientras quede algo pendiente
+export const canPay = (purchase: Pick<Purchase, 'status' | 'total' | 'paidTotal'>): boolean => purchase.status === 'received' && pendingToPay(purchase) > 0
+
+// qué le falta al pago para poder enviarse (null = listo)
+export const payProblem = (amount: number, pending: number): string | null => {
+  if (!(amount > 0)) return 'Escribe cuánto vas a pagar.'
+  if (amount > pending) return 'El pago no puede superar lo pendiente de la orden.'
+  return null
+}

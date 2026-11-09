@@ -2,10 +2,13 @@
 import React, { useRef, useEffect } from 'react'
 import './NotificationsPopover.css'
 import { formatDate } from '@/global/helpers/formatting/format'
+import { Icon } from '@/global/components/UI/atoms/Icon'
+import bellIcon from '@/assets/icons/bell.svg?raw'
 import { useNotifications } from '../hooks/useNotifications'
 
 export const NotificationsPopover: React.FC = () => {
   const {
+    canReceive,
     notifications,
     unreadCount,
     loading,
@@ -31,6 +34,9 @@ export const NotificationsPopover: React.FC = () => {
     }
   }, [isOpen, setIsOpen])
 
+  // el superadmin no recibe notificaciones: no se pinta la campanita
+  if (!canReceive) return null
+
   return (
     <div className="notif-wrapper" ref={dropdownRef}>
       <button
@@ -40,7 +46,7 @@ export const NotificationsPopover: React.FC = () => {
         title="Notificaciones"
         aria-label="Notificaciones"
       >
-        <span>🔔</span>
+        <Icon svg={bellIcon} size="lg" />
         {unreadCount > 0 && <span className="notif-badge">{unreadCount}</span>}
       </button>
 

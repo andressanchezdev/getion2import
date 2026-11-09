@@ -7,20 +7,6 @@ import type { StockRowDto } from '../types/shop.api.types'
 const STOCK_PAGE_SIZE = 200
 const STOCK_MAX_PAGES = 25
 
-// trae todas las existencias de la compañía (todas las bodegas)
-export const fetchCompanyStock = async (ctx: RequestContext): Promise<StockRowDto[]> => {
-    const rows: StockRowDto[] = []
-    for (let page = 1; page <= STOCK_MAX_PAGES; page++) {
-        const { data } = await apiClient.get<APIResponse<StockRowDto[] | null>>(API_CONFIG.ENDPOINTS.INVENTORY.STOCK, {
-            params: withCompany(ctx.companyId, { page, pageSize: STOCK_PAGE_SIZE }),
-        })
-        const result = toPaginated(data)
-        rows.push(...result.items)
-        if (!result.meta.hasNextPage) break
-    }
-    return rows
-}
-
 // trae las filas de existencias de una bodega
 export const fetchWarehouseStock = async (ctx: RequestContext, warehouseId: number): Promise<StockRowDto[]> => {
     const rows: StockRowDto[] = []

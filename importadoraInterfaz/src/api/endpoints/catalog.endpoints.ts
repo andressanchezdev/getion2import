@@ -6,6 +6,7 @@ export const CATALOG_ENDPOINTS = {
   PRODUCTS: {
     LIST: '/products',
     SEARCH: '/products/search',
+    THUMBNAILS: '/products/thumbnails',
     BY_ID: (id: number | string) => `/products/${id}`,
     CODES: (id: number | string) => `/products/${id}/codes`,
     CODE_BY_ID: (id: number | string, codeId: number | string) => `/products/${id}/codes/${codeId}`,

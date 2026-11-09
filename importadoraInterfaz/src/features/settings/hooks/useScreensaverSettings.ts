@@ -36,7 +36,7 @@ export const useScreensaverSettings = () => {
     try {
       const opt = await optimizeImageFile(file, { maxWidth: 1200, maxHeight: 1200, quality: 0.82, mimeType: 'image/webp' })
       setNewImage(opt.dataUrl)
-      setInfo(opt.compressionPercent > 0 ? `⚡ Optimizada: de ${formatBytes(opt.originalSizeBytes)} a ${opt.formattedSize} (-${opt.compressionPercent}%)` : `Tamaño: ${opt.formattedSize}`)
+      setInfo(opt.compressionPercent > 0 ? `Optimizada: de ${formatBytes(opt.originalSizeBytes)} a ${opt.formattedSize} (-${opt.compressionPercent}%)` : `Tamaño: ${opt.formattedSize}`)
     } catch {
       notify.error('Error al optimizar la imagen')
     } finally {

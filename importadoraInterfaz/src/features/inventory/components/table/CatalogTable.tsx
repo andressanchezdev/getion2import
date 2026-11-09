@@ -10,7 +10,10 @@ import { toast } from '@/global/helpers/feedback/toast'
 import { CatalogTableRow } from './CatalogTableRow'
 import { usePagedList } from '@/global/hooks/data/usePagedList'
 import { Pagination } from '@/global/components/UI/molecules/table/Pagination'
-import { ConfirmDialog } from '@/global/components/UI/molecules/dialogs/ConfirmDialog'
+import { ReasonPrompt } from '@/features/reasonPrompt'
+import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
+import { Icon } from '@/global/components/UI/atoms/Icon'
+import plusIcon from '@/assets/icons/plus.svg?raw'
 
 export type { CatalogRow, CatalogType }
 
@@ -33,7 +36,6 @@ export const CatalogTable: React.FC<CatalogTableProps> = ({ type, noun, rows, lo
   const [togglingId, setTogglingId] = useState<number | null>(null)
   const [cloningId, setCloningId] = useState<number | null>(null)
   const [toDelete, setToDelete] = useState<CatalogRow | null>(null)
-  const [deleteReason, setDeleteReason] = useState('')
   const [deleting, setDeleting] = useState(false)
 
   const needle = search.trim().toLowerCase()
@@ -92,14 +94,14 @@ export const CatalogTable: React.FC<CatalogTableProps> = ({ type, noun, rows, lo
     }
   }
 
-  const handleConfirmDelete = async () => {
-    if (!toDelete) return
+  const handleConfirmDelete = async (reason: string) => {
+    const target = toDelete
+    if (!target) return
+    setToDelete(null)
     setDeleting(true)
     try {
-      await dispatch(deleteCatalogItemThunk({ type, id: toDelete.id })).unwrap()
+      await dispatch(deleteCatalogItemThunk({ type, id: target.id, reason })).unwrap()
       toast.success(`${singular} eliminada correctamente.`)
-      setToDelete(null)
-      setDeleteReason('')
     } catch (err: unknown) {
       toast.error(typeof err === 'string' ? err : `Error al eliminar la ${singular.toLowerCase()}.`)
     } finally {
@@ -109,8 +111,8 @@ export const CatalogTable: React.FC<CatalogTableProps> = ({ type, noun, rows, lo
 
   return (
     <div className="inv-screen">
-      <div className="inv-card">
-        <div className="inv-toolbar">
+      <div className="data-card">
+        <div className="data-toolbar inv-toolbar">
           <SearchBar
             value={search}
             onChange={setSearch}
@@ -124,13 +126,12 @@ export const CatalogTable: React.FC<CatalogTableProps> = ({ type, noun, rows, lo
               {rows.length} {noun}
             </span>
             <button type="button" className="btn-primary" onClick={() => openItem('catalogItem')}>
-              + Crear {singular}
+              <Icon svg={plusIcon} /> Crear {singular}
             </button>
           </div>
         </div>
 
-        <div className="inv-table-responsive table-scroll">
-          <table className="inv-table">
+        <DataTable tableId="inventory-catalog">
             <thead>
               <tr>
                 {withImage && <th>Logo</th>}
@@ -160,58 +161,24 @@ export const CatalogTable: React.FC<CatalogTableProps> = ({ type, noun, rows, lo
                     onView={(item) => openItem('catalogDetail', item)}
                     onEdit={(item) => openItem('catalogItem', item)}
                     onClone={handleClone}
-                    onDelete={(item) => {
-                      setToDelete(item)
-                      setDeleteReason('')
-                    }}
+                    onDelete={setToDelete}
                     onToggleStatus={handleToggleStatus}
                   />
                 ))
               )}
             </tbody>
-          </table>
-        </div>
+          </DataTable>
         <Pagination meta={meta} label="Paginación del catálogo" onPageChange={setPage} />
       </div>
 
-      <ConfirmDialog
+      <ReasonPrompt
         open={toDelete !== null}
         title={`Eliminar ${singular}`}
         message={`¿Estás seguro de que deseas eliminar ${toDelete?.name}? Esta acción enviará el registro a la papelera.`}
-        confirmLabel={deleting ? 'Eliminando…' : 'Eliminar'}
-        confirmDisabled={deleting || deleteReason.trim().length < 3}
-        confirmDisabledReason={deleteReason.trim().length < 3 ? 'Debes especificar el motivo de eliminación (mínimo 3 caracteres).' : undefined}
+        confirmLabel="Eliminar"
         onConfirm={handleConfirmDelete}
-        onCancel={() => {
-          if (!deleting) {
-            setToDelete(null)
-            setDeleteReason('')
-          }
-        }}
-      >
-        <div style={{ marginTop: '12px' }}>
-          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px', color: 'var(--color-text-secondary)' }}>
-            Motivo de la eliminación (mínimo 3 caracteres) *
-          </label>
-          <textarea
-            style={{
-              width: '100%',
-              padding: '8px',
-              borderRadius: '6px',
-              border: '1px solid var(--color-border)',
-              fontSize: '13px',
-              resize: 'vertical',
-            }}
-            rows={3}
-            placeholder="Especifica el motivo por el cual eliminas este elemento..."
-            value={deleteReason}
-            onChange={(e) => setDeleteReason(e.target.value)}
-            maxLength={200}
-            disabled={deleting}
-            required
-          />
-        </div>
-      </ConfirmDialog>
+        onCancel={() => setToDelete(null)}
+      />
     </div>
   )
 }

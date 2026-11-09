@@ -25,7 +25,7 @@ type TransferEntity struct {
 	OriginWarehouseName    string
 	DestinationWarehouseID int64
 	DestinationWarehouseName string
-	EmployeeID             int64
+	EmployeeID             *int64 // quien pidió el traslado; vacío si lo creó un administrador sin empleado
 	EmployeeName           string
 	DispatchedByEmployeeID *int64
 	DispatchedByName       *string

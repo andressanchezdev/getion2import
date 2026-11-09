@@ -11,6 +11,7 @@ import (
 
 	"importadoraApi/src/core/db"
 	"importadoraApi/src/core/middlewares"
+	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
 	authRepos "importadoraApi/src/features/auth/repositories"
 	"importadoraApi/src/features/cash_sessions/dtos"
@@ -50,17 +51,24 @@ func (s *CashSessionService) GetActive(ctx context.Context, actor *middlewares.A
 	}
 
 	// totales en vivo del turno (los gastos se declaran recién al cerrar)
-	cash, transfer, count, err := s.repo.SessionTotals(ctx, s.pool, entity.ID)
+	sums, err := s.repo.SessionTotals(ctx, s.pool, entity.ID)
 	if err != nil {
 		return nil, utils.Internal("Error al calcular los totales del turno.", err)
 	}
-	expected := entity.OpeningAmount + cash
+	// lo que la caja ya pagó en el turno (recepciones de compra) sale de la gaveta
+	registered, err := s.repo.RegisteredExpensesCash(ctx, s.pool, entity.ID)
+	if err != nil {
+		return nil, utils.Internal("Error al consultar los pagos del turno.", err)
+	}
+	expected := entity.OpeningAmount + sums.Cash + sums.AbonosCash - registered
 
 	res := toResponse(entity)
-	res.CashTotal = cash
-	res.TransferTotal = transfer
-	res.PaymentsCount = count
+	res.CashTotal = sums.Cash
+	res.TransferTotal = sums.Transfer
+	res.AbonosTotal = sums.Abonos
+	res.PaymentsCount = sums.Count
 	res.ExpectedCash = expected
+	res.ExpensesCash = registered
 	return res, nil
 }
 
@@ -128,6 +136,10 @@ func (s *CashSessionService) Close(ctx context.Context, actor *middlewares.Actor
 		return nil, utils.BadRequest("INVALID_COUNTED_CASH", "El efectivo contado no puede ser negativo.")
 	}
 
+	if (req.CountedTransfer != nil && *req.CountedTransfer < 0) || (req.CountedAbonos != nil && *req.CountedAbonos < 0) {
+		return nil, utils.BadRequest("INVALID_AMOUNT", "Los montos declarados de transferencias y abonos no pueden ser negativos.")
+	}
+
 	expenses, expensesCash, err := cleanExpenses(req.Expenses)
 	if err != nil {
 		return nil, err
@@ -150,13 +162,19 @@ func (s *CashSessionService) Close(ctx context.Context, actor *middlewares.Actor
 		return nil, utils.Conflict("PENDING_VERIFICATION_SALES", fmt.Sprintf("No se puede cerrar la caja: hay %d pedido(s) en verificación pendiente(s) en esta sede. Deben verificarse o cancelarse antes del cierre.", pendingCount))
 	}
 
-	cash, transfer, count, err := s.repo.SessionTotals(ctx, s.pool, existing.ID)
+	sums, err := s.repo.SessionTotals(ctx, s.pool, existing.ID)
 	if err != nil {
 		return nil, utils.Internal("Error al calcular totales del turno.", err)
 	}
 
-	// efectivo esperado en la gaveta: fondo inicial + ventas en efectivo - gastos pagados en efectivo
-	expectedCash := existing.OpeningAmount + cash - expensesCash
+	// efectivo esperado en la gaveta: fondo inicial + ventas en efectivo + abonos en efectivo - gastos pagados en efectivo
+	// al cierre salen de la gaveta los gastos declarados ahora y los pagos que la caja ya registró en el turno (recepciones de compra)
+	registered, err := s.repo.RegisteredExpensesCash(ctx, s.pool, existing.ID)
+	if err != nil {
+		return nil, utils.Internal("Error al consultar los pagos del turno.", err)
+	}
+	expensesCash += registered
+	expectedCash := existing.OpeningAmount + sums.Cash + sums.AbonosCash - expensesCash
 	diff := req.CountedCash - expectedCash
 
 	actorType := string(actor.ActorType)
@@ -166,9 +184,12 @@ func (s *CashSessionService) Close(ctx context.Context, actor *middlewares.Actor
 	existing.ClosedByActorType = &actorType
 	existing.ClosedByActorID = &actorID
 	existing.ClosedByName = &actorName
-	existing.CashTotal = &cash
-	existing.TransferTotal = &transfer
-	existing.PaymentsCount = &count
+	existing.CashTotal = &sums.Cash
+	existing.TransferTotal = &sums.Transfer
+	existing.AbonosTotal = &sums.Abonos
+	existing.CountedTransfer = req.CountedTransfer
+	existing.CountedAbonos = req.CountedAbonos
+	existing.PaymentsCount = &sums.Count
 	existing.ExpectedCash = &expectedCash
 	existing.CountedCash = &req.CountedCash
 	existing.Difference = &diff
@@ -223,13 +244,16 @@ func toExpenseDTOs(items []repositories.CashExpenseEntity) []dtos.CashExpenseReq
 }
 
 func toResponse(e *repositories.CashSessionEntity) *dtos.CashSessionResponse {
-	var cash, transfer, expected float64
+	var cash, transfer, abonos, expected float64
 	var count int
 	if e.CashTotal != nil {
 		cash = *e.CashTotal
 	}
 	if e.TransferTotal != nil {
 		transfer = *e.TransferTotal
+	}
+	if e.AbonosTotal != nil {
+		abonos = *e.AbonosTotal
 	}
 	if e.PaymentsCount != nil {
 		count = *e.PaymentsCount
@@ -257,10 +281,46 @@ func toResponse(e *repositories.CashSessionEntity) *dtos.CashSessionResponse {
 		ClosedAt:          e.ClosedAt,
 		CashTotal:         cash,
 		TransferTotal:     transfer,
+		AbonosTotal:       abonos,
 		PaymentsCount:     count,
 		ExpectedCash:      expected,
 		CountedCash:       e.CountedCash,
 		Difference:        e.Difference,
+		CountedTransfer:   e.CountedTransfer,
+		TransferDiff:      diffOf(e.CountedTransfer, transfer),
+		CountedAbonos:     e.CountedAbonos,
+		AbonosDiff:        diffOf(e.CountedAbonos, abonos),
 		Notes:             e.Notes,
 	}
+}
+
+// diffOf es lo declarado menos lo recibido; sin declarar no hay diferencia
+func diffOf(declared *float64, received float64) *float64 {
+	if declared == nil {
+		return nil
+	}
+	d := *declared - received
+	return &d
+}
+
+// ListExpenses lista los gastos de las cajas ya cerradas de la compañía (lo que muestra «Facturas»); un empleado solo ve los de su bodega.
+func (s *CashSessionService) ListExpenses(ctx context.Context, actor *middlewares.ActorContext, filter dtos.CashExpenseFilter) ([]dtos.CashExpenseRow, *utils.PaginatorMetadata, error) {
+	if actor == nil {
+		return nil, nil, utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
+	}
+	if actor.ActorType != types.ActorSuperadmin {
+		filter.CompanyID = actor.CompanyID
+	}
+	if actor.ActorType == types.ActorEmployee {
+		if actor.WarehouseID == nil {
+			return []dtos.CashExpenseRow{}, &utils.PaginatorMetadata{}, nil
+		}
+		filter.WarehouseID = actor.WarehouseID
+	}
+	list, total, err := s.repo.ListClosedExpenses(ctx, s.pool, filter)
+	if err != nil {
+		return nil, nil, utils.Internal("Error al listar los gastos de caja.", err)
+	}
+	meta := utils.BuildMeta(filter.Page, filter.PageSize, total)
+	return list, &meta, nil
 }

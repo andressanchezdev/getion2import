@@ -14,15 +14,17 @@ export type EmployeePermissionsMode = 'view' | 'edit'
 interface EmployeePermissionsPanelProps {
   employee: SimpleEmployee
   mode: EmployeePermissionsMode
+  onClose?: () => void // si viene, se usa en vez de cerrar el panel (cuando está anidado en Roles y permisos)
 }
 
-export const EmployeePermissionsPanel: React.FC<EmployeePermissionsPanelProps> = ({ employee, mode }) => {
+export const EmployeePermissionsPanel: React.FC<EmployeePermissionsPanelProps> = ({ employee, mode, onClose }) => {
   const dispatch = useAppDispatch()
+  const close = () => (onClose ? onClose() : dispatch(closeDrawerForm()))
   const { map, setMap, loading, saving, feedback, save } = useEmployeePermissions(employee.employeeId)
   const readOnly = mode === 'view'
 
   const handleSave = async () => {
-    if (await save()) dispatch(closeDrawerForm())
+    if (await save()) close()
   }
 
   return (
@@ -43,7 +45,7 @@ export const EmployeePermissionsPanel: React.FC<EmployeePermissionsPanelProps> =
       </div>
 
       <div className="employee-permissions-footer">
-        <button type="button" className="btn-secondary" onClick={() => dispatch(closeDrawerForm())}>
+        <button type="button" className="btn-secondary" onClick={close}>
           {readOnly ? 'Cerrar' : 'Cancelar'}
         </button>
         {!readOnly && (

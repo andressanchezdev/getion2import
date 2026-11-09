@@ -215,6 +215,9 @@ func (s *CatalogService) UpdateBrand(ctx context.Context, actor *middlewares.Act
 	if req.ImageURL != nil {
 		current.ImageURL = req.ImageURL
 	}
+	if _, rerr := utils.ReasonOnDeactivation(current.IsActive, req.IsActive, req.Reason); rerr != nil {
+		return nil, rerr
+	}
 	if req.IsActive != nil {
 		current.IsActive = *req.IsActive
 	}
@@ -247,7 +250,11 @@ func (s *CatalogService) UpdateBrand(ctx context.Context, actor *middlewares.Act
 }
 
 // DeleteBrand elimina la marca validando que sea de la compañía del usuario.
-func (s *CatalogService) DeleteBrand(ctx context.Context, actor *middlewares.ActorContext, id int64, ip, ua string) error {
+func (s *CatalogService) DeleteBrand(ctx context.Context, actor *middlewares.ActorContext, id int64, reason, ip, ua string) error {
+	reason, verr := utils.ValidateReason(reason)
+	if verr != nil {
+		return verr
+	}
 	if actor == nil {
 		return utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
 	}
@@ -277,7 +284,7 @@ func (s *CatalogService) DeleteBrand(ctx context.Context, actor *middlewares.Act
 		Entity:    "brands",
 		EntityID:  &current.ID,
 		Action:    "BRAND_DEACTIVATED",
-		Reason:    "Desactivación lógica de marca",
+		Reason:    reason,
 		IPAddress: ip,
 		UserAgent: ua,
 	})

@@ -4,6 +4,8 @@ import React, { useState } from 'react'
 import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { openDrawerForm } from '@/features/navigation'
 import { SearchBar } from '@/global/components/UI/molecules/filters/SearchBar'
+import { Icon } from '@/global/components/UI/atoms/Icon'
+import plusIcon from '@/assets/icons/plus.svg?raw'
 import { FilterSelect } from '@/global/components/UI/molecules/filters/FilterSelect'
 import { EmployeesTable } from '../components/table/EmployeesTable'
 import { useEmployeesDirectory } from '../hooks/useEmployeesDirectory'
@@ -31,8 +33,8 @@ export const EmployeesScreen: React.FC = () => {
 
   return (
     <div className="employees-screen">
-      <div className="employees-card">
-        <div className="employees-toolbar">
+      <div className="data-card">
+        <div className="data-toolbar employees-toolbar">
           <SearchBar
             value={search}
             onChange={setSearch}
@@ -57,7 +59,7 @@ export const EmployeesScreen: React.FC = () => {
               className="employees-btn-create"
               onClick={() => setIsCreateOpen(true)}
             >
-              <span>+</span> Registrar Empleado
+              <Icon svg={plusIcon} /> Registrar Empleado
             </button>
           </div>
         </div>

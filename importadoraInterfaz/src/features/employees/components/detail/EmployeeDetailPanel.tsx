@@ -12,8 +12,9 @@ import { summarizePermissions } from '../../helpers/permissions.selection'
 import { useEmployeePermissions } from '../../hooks/useEmployeePermissions'
 import type { SimpleEmployee } from '../../types/employees.types'
 
-export const EmployeeDetailPanel: React.FC<{ employee: SimpleEmployee }> = ({ employee }) => {
+export const EmployeeDetailPanel: React.FC<{ employee: SimpleEmployee; onClose?: () => void }> = ({ employee, onClose }) => {
   const dispatch = useAppDispatch()
+  const close = () => (onClose ? onClose() : dispatch(closeDrawerForm()))
   const { map, loading, feedback } = useEmployeePermissions(employee.employeeId)
   const canEdit = usePermissions().canPerformAction('settings', 'rolesPermissions', 'update')
   const summary = summarizePermissions(map, ASSIGNABLE_MENU_ITEMS)
@@ -68,7 +69,7 @@ export const EmployeeDetailPanel: React.FC<{ employee: SimpleEmployee }> = ({ em
       </div>
 
       <div className="employee-detail-footer">
-        <button type="button" className="btn-secondary" onClick={() => dispatch(closeDrawerForm())}>Cerrar</button>
+        <button type="button" className="btn-secondary" onClick={close}>Cerrar</button>
         {canEdit && (
           <button type="button" className="btn-primary" onClick={() => dispatch(openDrawerForm({ kind: 'employeePermissions', payload: { employee, mode: 'edit' } }))}>
             Editar permisos

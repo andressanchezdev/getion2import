@@ -23,7 +23,7 @@ type QuotationEntity struct {
 	SerialCode    string
 	CustomerID    int64
 	CustomerName  string
-	EmployeeID    int64
+	EmployeeID    *int64 // quien la creó; vacío si la creó un administrador sin empleado
 	EmployeeName  string
 	CartID        *int64
 	SaleID        *int64
@@ -230,13 +230,6 @@ func (r *QuotationRepository) Update(ctx context.Context, q db.DBExecutor, qe *Q
 		WHERE id = $4
 	`
 	_, err := q.Exec(ctx, sql, qe.Status, qe.ValidUntil, qe.Notes, qe.ID)
-	return err
-}
-
-// SetSaleID liga la cotización al pedido en que se convirtió y la marca como convertida.
-func (r *QuotationRepository) SetSaleID(ctx context.Context, q db.DBExecutor, id, saleID int64) error {
-	const sql = `UPDATE quotations SET sale_id = $1, status = 'converted', updated_at = CURRENT_TIMESTAMP WHERE id = $2`
-	_, err := q.Exec(ctx, sql, saleID, id)
 	return err
 }
 

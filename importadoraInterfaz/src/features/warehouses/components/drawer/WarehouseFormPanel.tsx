@@ -3,6 +3,7 @@
 // ojo: al crear no se pide código (se asigna por defecto); al editar se muestra y permite modificarlo
 import React from 'react'
 import '@/global/components/UI/molecules/form/DrawerFormShell.css'
+import { SANITIZERS } from '@/global/helpers/validation/validation.helpers'
 import { useWarehouseForm, type WarehouseFormValues } from '../../hooks/useWarehouseForm'
 import type { Warehouse } from '../../types/warehouse.types'
 
@@ -14,14 +15,16 @@ export const WarehouseFormPanel: React.FC<{ payload: WarehouseFormPayload }> = (
     const form = useWarehouseForm(payload.warehouse)
     const { values, set, saving } = form
 
-    const text = (field: keyof WarehouseFormValues, label: string, placeholder: string, extra: { required?: boolean; hint?: string; upper?: boolean } = {}) => (
+    const text = (field: keyof WarehouseFormValues, label: string, placeholder: string, extra: { required?: boolean; hint?: string; upper?: boolean; tel?: boolean } = {}) => (
         <div className="drawer-form-field">
             <label className="drawer-form-label" htmlFor={`warehouse-${field}`}>{label}{extra.required ? ' *' : ''}</label>
             <input
                 id={`warehouse-${field}`}
                 className="drawer-form-control"
                 value={values[field]}
-                onChange={(e) => set(field, extra.upper ? e.target.value.toUpperCase() : e.target.value)}
+                onChange={(e) => set(field, extra.tel ? SANITIZERS.phoneCO(e.target.value) : extra.upper ? e.target.value.toUpperCase() : e.target.value)}
+                maxLength={extra.tel ? 10 : extra.upper ? 20 : 150}
+                inputMode={extra.tel ? 'tel' : undefined}
                 placeholder={placeholder}
                 disabled={saving}
                 required={extra.required}
@@ -49,7 +52,7 @@ export const WarehouseFormPanel: React.FC<{ payload: WarehouseFormPayload }> = (
                 <section className="drawer-form-section">
                     <div className="drawer-form-grid">
                         {text('city', 'Ciudad', 'Ej: Cali', { required: true })}
-                        {text('phone', 'Teléfono', 'Ej: 3001234567')}
+                        {text('phone', 'Teléfono', 'Ej: 3001234567', { tel: true })}
                     </div>
                     {text('address', 'Dirección', 'Ej: Calle 15 # 22-45', { required: true })}
                 </section>

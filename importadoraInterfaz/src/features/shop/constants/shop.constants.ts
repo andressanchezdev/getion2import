@@ -2,9 +2,6 @@
 // conecta con: shop.slice (initialState), ShopCatalogScreen
 import type { CatalogFilter, PriceLevelOption, ShopState } from '../types/shop.types'
 
-// texto de la opción 'sin filtro' en los selectores de categoría y marca (el valor interno es null)
-export const ALL_FILTER_OPTION = 'Todas'
-
 // nombre de cada chip de filtro del catálogo: es el texto de su opción vacía («sin filtro»), como los chips de la maqueta
 export const CATEGORY_FILTER_LABEL = 'Categoría'
 export const BRAND_FILTER_LABEL = 'Marca'

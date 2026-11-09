@@ -36,8 +36,3 @@
   color: var(--color-text-secondary);
   font-weight: var(--font-weight-semibold);
 }
-
-.wh-table-responsive {
-  width: 100%;
-  overflow-x: auto;
-}

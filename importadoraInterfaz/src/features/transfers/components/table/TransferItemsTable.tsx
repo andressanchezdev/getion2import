@@ -15,6 +15,7 @@ import { TRANSFER_STATUS_BADGE } from '../../constants/transfers.constants'
 import type { TrasladeItem } from '../../types/transfers.types'
 import { usePagedList } from '@/global/hooks/data/usePagedList'
 import { Pagination } from '@/global/components/UI/molecules/table/Pagination'
+import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
 
 interface TransferItemsTableProps {
   items: TrasladeItem[]
@@ -78,8 +79,7 @@ export const TransferItemsTable: React.FC<TransferItemsTableProps> = ({
 
   return (
     <>
-    <div className="transfers-table-responsive table-scroll">
-      <table className="transfers-table">
+    <DataTable tableId="transfers-transfer-items" className="transfers-table">
         <thead>
           <tr>
             <th>Serial</th>
@@ -149,8 +149,7 @@ export const TransferItemsTable: React.FC<TransferItemsTableProps> = ({
             })
           )}
         </tbody>
-      </table>
-    </div>
+      </DataTable>
     <Pagination meta={meta} label="Paginación de traslados" onPageChange={setPage} />
     </>
   )

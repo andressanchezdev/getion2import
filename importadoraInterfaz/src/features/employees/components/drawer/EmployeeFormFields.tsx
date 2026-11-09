@@ -1,6 +1,7 @@
 // EmployeeFormFields · las tres secciones del formulario de empleado: datos personales, credenciales y sede con rol
 // conecta con: CreateEmployeeDrawer; los valores y cambios vienen de useCreateEmployeeForm
 import React from 'react'
+import { SANITIZERS } from '@/global/helpers/validation/validation.helpers'
 import type { EmployeeFormValues } from '../../hooks/useCreateEmployeeForm'
 import type { EmployeeRole } from '../../types/employees.types'
 
@@ -14,12 +15,14 @@ interface TextFieldProps {
   placeholder?: string
   required?: boolean
   minLength?: number
+  maxLength?: number
+  inputMode?: 'tel' | 'numeric' | 'email'
 }
 
-const TextField: React.FC<TextFieldProps> = ({ label, value, onChange, type = 'text', placeholder, required, minLength }) => (
+const TextField: React.FC<TextFieldProps> = ({ label, value, onChange, type = 'text', placeholder, required, minLength, maxLength = 80, inputMode }) => (
   <div className="emp-form-field">
     <label>{label}</label>
-    <input type={type} required={required} minLength={minLength} placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)} />
+    <input type={type} required={required} minLength={minLength} maxLength={maxLength} inputMode={inputMode} placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)} />
   </div>
 )
 
@@ -40,10 +43,10 @@ export const PersonalSection: React.FC<{ values: EmployeeFormValues; setValue: S
           <option value="PA">Pasaporte (PA)</option>
         </select>
       </div>
-      <TextField label="Número de Documento" placeholder="Ej. 1004260999" value={values.document} onChange={(v) => setValue('document', v)} />
+      <TextField label="Número de Documento" placeholder="Ej. 1004260999" maxLength={15} value={values.document} onChange={(v) => setValue('document', v.replace(/[^a-zA-Z0-9-]/g, ''))} />
     </div>
     <div className="emp-form-row two-cols">
-      <TextField label="Teléfono / Celular" placeholder="Ej. 3120005544" value={values.phone} onChange={(v) => setValue('phone', v)} />
+      <TextField label="Teléfono / Celular" type="tel" inputMode="tel" maxLength={10} placeholder="Ej. 3120005544" value={values.phone} onChange={(v) => setValue('phone', SANITIZERS.phoneCO(v))} />
       <div className="emp-form-field">
         <label>Modalidad</label>
         <select value={values.workModality} onChange={(e) => setValue('workModality', e.target.value as EmployeeFormValues['workModality'])}>
@@ -60,7 +63,7 @@ export const CredentialsSection: React.FC<{ values: EmployeeFormValues; setValue
   <div className="emp-form-section">
     <h4 className="emp-form-section-title">Credenciales & Acceso</h4>
     <div className="emp-form-row two-cols">
-      <TextField label="Correo Electrónico (Usuario) *" type="email" required placeholder="colaborador@empresa.com" value={values.email} onChange={(v) => setValue('email', v)} />
+      <TextField label="Correo Electrónico (Usuario) *" type="email" inputMode="email" maxLength={120} required placeholder="colaborador@empresa.com" value={values.email} onChange={(v) => setValue('email', v)} />
       <TextField label="Contraseña Inicial (mín. 8 caracteres) *" type="password" required minLength={8} placeholder="••••••••" value={values.password} onChange={(v) => setValue('password', v)} />
     </div>
   </div>

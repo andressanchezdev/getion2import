@@ -1,24 +1,5 @@
 /* PurchasesTable.css · órdenes de compra: una sola tarjeta con la barra de herramientas pegada a la tabla · solo usa tokens de styles/tokens.css */
 /* ojo: misma tarjeta que créditos, abonos, bodegas y proveedores; la barra queda arriba y la tabla hace scroll por dentro */
-.purchases-card {
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--bg-card);
-  box-shadow: var(--shadow-rest);
-  overflow: hidden;
-}
-
-.purchases-toolbar {
-  background: var(--bg-card);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-  padding: var(--space-4);
-  border-bottom: 1px solid var(--color-border);
-}
 
 .purchases-search {
   flex: 0 0 40%;
@@ -90,32 +71,6 @@
 
 .purchases-create {
   white-space: nowrap;
-}
-
-.purchases-table-responsive {
-  width: 100%;
-}
-
-.purchases-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-  font-size: var(--text-sm);
-}
-
-.purchases-table th {
-  background: var(--c-slate-50);
-  color: var(--color-text-secondary);
-  font-weight: var(--font-weight-semibold);
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--color-border);
-  white-space: nowrap;
-}
-
-.purchases-table td {
-  padding: 0.875rem var(--space-4);
-  border-bottom: 1px solid var(--color-border);
-  vertical-align: middle;
 }
 
 .purchases-num {

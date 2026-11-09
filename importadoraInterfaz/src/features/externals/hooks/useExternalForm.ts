@@ -4,6 +4,7 @@
 import { useState } from 'react'
 import { closeDrawerForm } from '@/features/navigation'
 import { toast } from '@/global/helpers/feedback/toast'
+import { emailProblem, integerProblem, phoneProblem } from '@/global/helpers/validation/validation.helpers'
 import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { labelsOf } from '../constants/externals.constants'
 import { selectExternalsSaving } from '../selectors/externals.selectors'
@@ -58,8 +59,14 @@ export const useExternalForm = (kind: ExternalKind, item?: ExternalEntity) => {
   const submit = async (event: React.FormEvent) => {
     event.preventDefault()
     if (saving) return
-    if (!values.name.trim()) {
-      setError('El nombre o razón social es obligatorio.')
+    const problem =
+      (!values.name.trim() ? 'El nombre o razón social es obligatorio.' : null) ??
+      phoneProblem(values.phone) ??
+      phoneProblem(values.contactPhone) ??
+      emailProblem(values.email) ??
+      (kind === 'carrier' ? null : integerProblem(values.termsDays, 'Los días de plazo', 0, 365))
+    if (problem) {
+      setError(problem)
       return
     }
     setError(null)

@@ -315,15 +315,16 @@ func (r *ReturnRepository) Approve(ctx context.Context, q db.DBExecutor, id, app
 }
 
 // Reject pasa la devolución de «pendiente» a «rechazada» y guarda quién la rechazó.
-func (r *ReturnRepository) Reject(ctx context.Context, q db.DBExecutor, id, approverEmployeeID int64) error {
+func (r *ReturnRepository) Reject(ctx context.Context, q db.DBExecutor, id, approverEmployeeID int64, reason string) error {
 	const sql = `
 		UPDATE returns SET
 			status = 'rejected',
 			approved_by_employee_id = $1,
-			approved_at = CURRENT_TIMESTAMP
+			approved_at = CURRENT_TIMESTAMP,
+			reject_reason = $3
 		WHERE id = $2 AND status = 'pending'
 	`
-	cmdTag, err := q.Exec(ctx, sql, approverEmployeeID, id)
+	cmdTag, err := q.Exec(ctx, sql, approverEmployeeID, id, reason)
 	if err != nil {
 		return err
 	}

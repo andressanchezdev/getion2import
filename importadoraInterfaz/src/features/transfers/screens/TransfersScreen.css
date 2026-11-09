@@ -6,33 +6,12 @@
 }
 
 /* tarjeta contenedora única con la barra de herramientas y la tabla integrada */
-.transfers-table-card {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background: var(--bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-rest);
-}
-
-.transfers-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--space-4);
-  padding: var(--space-4);
-  border-bottom: 1px solid var(--color-border);
-  background: var(--bg-card);
-}
 
 .transfers-toolbar-left {
   display: flex;
   align-items: center;
   gap: var(--space-3);
   flex: 1 1 520px;
-  flex-wrap: wrap;
 }
 
 .transfers-search-bar {
@@ -72,7 +51,6 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  flex-wrap: wrap;
 }
 
 .transfers-empty {
@@ -80,4 +58,12 @@
   text-align: center;
   font-size: var(--text-sm);
   color: var(--color-text-muted);
+}
+
+/* vista móvil: los filtros y las pestañas bajan de fila (único lugar donde se permite flex-wrap) */
+@media (max-width: 900px) {
+  .transfers-toolbar-left,
+  .transfers-toolbar-right {
+    flex-wrap: wrap;
+  }
 }

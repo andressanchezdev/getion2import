@@ -86,11 +86,11 @@ export const createEmployeeThunk = createAsyncThunk<void, NewEmployeeInput, { st
 )
 
 // activa o desactiva un empleado; devuelve el id y el estado para que el slice actualice la fila
-export const setEmployeeStatusThunk = createAsyncThunk<{ employeeId: number; isActive: boolean }, { employeeId: number; isActive: boolean }, { rejectValue: string }>(
+export const setEmployeeStatusThunk = createAsyncThunk<{ employeeId: number; isActive: boolean }, { employeeId: number; isActive: boolean; reason?: string }, { rejectValue: string }>(
   'employees/setStatus',
-  async ({ employeeId, isActive }, { rejectWithValue }) => {
+  async ({ employeeId, isActive, reason }, { rejectWithValue }) => {
     try {
-      await setEmployeeStatus(employeeId, isActive ? 'active' : 'inactive')
+      await setEmployeeStatus(employeeId, isActive ? 'active' : 'inactive', reason)
       toast.success(`Empleado marcado como ${isActive ? 'Activo' : 'Inactivo'}`)
       return { employeeId, isActive }
     } catch (error) {

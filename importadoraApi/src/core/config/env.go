@@ -8,7 +8,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 )
 
 // envStr obtiene una variable de entorno como string o retorna un valor por defecto si está vacía.
@@ -29,19 +28,6 @@ func envInt(key string, fallback int) (int, error) {
 	res, err := strconv.Atoi(val)
 	if err != nil {
 		return 0, fmt.Errorf("valor de entorno %s no es un entero válido: %w", key, err)
-	}
-	return res, nil
-}
-
-// envDuration obtiene una variable de entorno parseable como time.Duration o retorna el fallback.
-func envDuration(key string, fallback time.Duration) (time.Duration, error) {
-	val := strings.TrimSpace(os.Getenv(key))
-	if val == "" {
-		return fallback, nil
-	}
-	res, err := time.ParseDuration(val)
-	if err != nil {
-		return 0, fmt.Errorf("valor de entorno %s no es una duración válida: %w", key, err)
 	}
 	return res, nil
 }

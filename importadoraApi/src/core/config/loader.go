@@ -67,6 +67,9 @@ func Load() (*Config, error) {
 		LoginBlockDuration: time.Duration(blockMinutes) * time.Minute,
 		CORSAllowedOrigins: parseCSV(envStr("CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")),
 		UploadsDir:         envStr("UPLOADS_DIR", "./uploads"),
+		BackupsDir:         envStr("BACKUPS_DIR", "./backups"),
+		PgDumpPath:         envStr("PG_DUMP_PATH", "pg_dump"),
+		PgRestorePath:      envStr("PG_RESTORE_PATH", "pg_restore"),
 	}
 
 	if err := Validate(cfg); err != nil {

@@ -8,6 +8,8 @@ import { MoneyInput } from '@/global/components/UI/molecules/form'
 import { useAppDispatch } from '@/global/hooks/store/useRedux'
 import { IVA_OPTIONS } from '../../constants/inventory.constants'
 import { useCreateProductForm } from '../../hooks/useCreateProductForm'
+import { Icon } from '@/global/components/UI/atoms/Icon'
+import plusIcon from '@/assets/icons/plus.svg?raw'
 
 // niveles de precio con el nombre que usa la lista de precios del producto
 const PRICE_TIERS = [
@@ -88,7 +90,7 @@ export const CreateProductForm: React.FC = () => {
           {form.models.length > 0 && (
             <div className="drawer-form-field" style={{ marginTop: '0.75rem' }}>
               <label className="drawer-form-label">Modelos compatibles adicionales (múltiples)</label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', maxHeight: '120px', overflowY: 'auto', padding: '6px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', background: 'var(--bg-card)' }}>
+              <div className="drawer-form-chip-grid">
                 {form.models.map((model) => {
                   const isSelected = form.compatibleModelIds.includes(model.id)
                   return (
@@ -179,7 +181,7 @@ export const CreateProductForm: React.FC = () => {
             </div>
           ))}
           <button type="button" className="drawer-form-add" onClick={form.addPlace} disabled={saving || !form.warehouseId}>
-            + Agregar otra ubicación
+            <Icon svg={plusIcon} /> Agregar otra ubicación
           </button>
           <span className="drawer-form-hint">Un producto puede estar en varias ubicaciones de la bodega. Con 0 unidades solo se asigna el estante; al guardar se abre un QR por ubicación para pegarlo ahí.</span>
         </section>

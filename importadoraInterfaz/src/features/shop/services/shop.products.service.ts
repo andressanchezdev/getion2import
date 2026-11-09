@@ -7,6 +7,7 @@ import type { RequestContext } from '@/features/auth'
 import { indexStock, toProduct } from '../helpers/shop.adapter'
 import type { ProductDto, ProductStock, ProductsQuery, StockRowDto } from '../types/shop.api.types'
 import { toApiPriceTier } from '@/global/helpers/pricing/priceTier'
+import { getStorageUrl } from '@/global/helpers/storage/storageUrl'
 import type { NewProductInput, Product, ProductPrices } from '../types/shop.types'
 import { fetchWarehouseStock } from './shop.stock.service'
 
@@ -100,10 +101,11 @@ export const createProduct = async (input: NewProductInput): Promise<Product> =>
     return toProduct(data.data)
 }
 
-// cambia el estado de un producto (PUT /products/:id con { status: 'active' | 'inactive' })
-export const updateProductStatus = async (productId: number | string, status: 'active' | 'inactive'): Promise<ProductDto> => {
-    const { data } = await apiClient.put<APIResponse<ProductDto>>(PRODUCTS.BY_ID(Number(productId)), { status })
-    return data.data
+// la primera imagen de cada producto pedido (id → url); los que no tienen imagen no aparecen
+export const fetchProductThumbnails = async (ids: number[]): Promise<Record<number, string>> => {
+    if (ids.length === 0) return {}
+    const { data } = await apiClient.get<APIResponse<Array<{ id: number; imageUrl: string }> | null>>(PRODUCTS.THUMBNAILS, { params: { ids: ids.join(',') } })
+    return Object.fromEntries((data.data ?? []).map((item) => [item.id, getStorageUrl(item.imageUrl)]))
 }
 
 // actualiza campos del producto (nombre, descripción, código, estado, precios, categoría, nuevo)
@@ -120,6 +122,7 @@ export const updateProductDetails = async (
         modelId?: number
         isNew?: boolean
         iva?: number
+        reason?: string // obligatorio (10 a 100) al pasar a inactivo
     }
 ): Promise<ProductDto> => {
     const body: Record<string, unknown> = {}
@@ -132,6 +135,7 @@ export const updateProductDetails = async (
     if (updates.modelId !== undefined) body.modelId = updates.modelId
     if (updates.isNew !== undefined) body.isNew = updates.isNew
     if (updates.iva !== undefined) body.iva = updates.iva
+    if (updates.reason !== undefined) body.reason = updates.reason
     if (updates.prices) {
         const pricesBody: Record<string, number> = {}
         for (const [level, price] of Object.entries(updates.prices)) {

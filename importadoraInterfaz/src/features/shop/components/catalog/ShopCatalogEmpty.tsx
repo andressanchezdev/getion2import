@@ -3,11 +3,13 @@
 import React from 'react'
 import type { ShopCatalogEmptyProps } from '../../types/shop.catalog.types'
 import './ShopCatalogEmpty.css'
+import { Icon } from '@/global/components/UI/atoms/Icon'
+import searchIcon from '@/assets/icons/search.svg?raw'
 
 export const ShopCatalogEmpty: React.FC<ShopCatalogEmptyProps> = ({ warehouseName, hasActiveFilters, onReset }) => {
   return (
     <div className="shop-catalog-empty-state">
-      <div className="shop-catalog-empty-state-icon">🔍</div>
+      <div className="shop-catalog-empty-state-icon"><Icon svg={searchIcon} size="xl" /></div>
       <h3 className="shop-catalog-empty-state-title">No se encontraron repuestos</h3>
       <p className="shop-catalog-empty-state-desc">
         No hay productos que coincidan con los filtros aplicados en{' '}

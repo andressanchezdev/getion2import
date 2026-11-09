@@ -35,11 +35,6 @@ export interface EmployeePermissionsResponse {
   modules?: ModulePermission[]
 }
 
-export interface SaveModulePermissionsRequest {
-  employeeId: number
-  modules: ModulePermission[]
-}
-
 export interface SimpleEmployee {
   employeeId: number
   name: string
@@ -70,6 +65,7 @@ export interface RoleInput {
   name: string
   description: string
   isActive?: boolean // solo al editar
+  reason?: string // obligatorio (10 a 100) al desactivar
 }
 
 // estado del slice: lista de empleados (con la bodega por la que se pidió) y lista de roles

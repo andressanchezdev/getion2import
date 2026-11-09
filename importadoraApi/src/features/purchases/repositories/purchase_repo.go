@@ -25,7 +25,7 @@ type PurchaseEntity struct {
 	SupplierName  string
 	WarehouseID   int64
 	WarehouseName string
-	EmployeeID    int64
+	EmployeeID    *int64 // quien la creó; vacío si la creó un administrador sin empleado
 	EmployeeName  string
 	Status        types.PurchaseStatus
 	SupplierRef   *string
@@ -33,6 +33,7 @@ type PurchaseEntity struct {
 	Subtotal      float64
 	IVATotal      float64
 	Total         float64
+	PaidTotal     float64 // lo que la caja ya pagó de la recepción
 	Notes         *string
 	ReceivedAt    *time.Time
 	CreatedAt     time.Time
@@ -101,20 +102,20 @@ func (r *PurchaseRepository) FindByID(ctx context.Context, q db.DBExecutor, id i
 	const sql = `
 		SELECT
 			p.id, p.company_id, p.serial_code, p.supplier_id, s.name,
-			p.warehouse_id, w.name, p.employee_id, e.full_name,
-			p.status, p.supplier_ref, p.expected_date, p.subtotal, p.iva_total, p.total,
+			p.warehouse_id, w.name, p.employee_id, COALESCE(e.full_name, ''),
+			p.status, p.supplier_ref, p.expected_date, p.subtotal, p.iva_total, p.total, p.paid_total,
 			p.notes, p.received_at, p.created_at, p.updated_at
 		FROM purchases p
 		JOIN externals s ON s.id = p.supplier_id
 		JOIN warehouses w ON w.id = p.warehouse_id
-		JOIN employees e ON e.id = p.employee_id
+		LEFT JOIN employees e ON e.id = p.employee_id
 		WHERE p.id = $1
 	`
 	var entity PurchaseEntity
 	err := q.QueryRow(ctx, sql, id).Scan(
 		&entity.ID, &entity.CompanyID, &entity.SerialCode, &entity.SupplierID, &entity.SupplierName,
 		&entity.WarehouseID, &entity.WarehouseName, &entity.EmployeeID, &entity.EmployeeName,
-		&entity.Status, &entity.SupplierRef, &entity.ExpectedDate, &entity.Subtotal, &entity.IVATotal, &entity.Total,
+		&entity.Status, &entity.SupplierRef, &entity.ExpectedDate, &entity.Subtotal, &entity.IVATotal, &entity.Total, &entity.PaidTotal,
 		&entity.Notes, &entity.ReceivedAt, &entity.CreatedAt, &entity.UpdatedAt,
 	)
 	if err != nil {
@@ -225,13 +226,13 @@ func (r *PurchaseRepository) List(ctx context.Context, q db.DBExecutor, f dtos.P
 	selectSQL := fmt.Sprintf(`
 		SELECT
 			p.id, p.company_id, p.serial_code, p.supplier_id, s.name,
-			p.warehouse_id, w.name, p.employee_id, e.full_name,
-			p.status, p.supplier_ref, p.expected_date, p.subtotal, p.iva_total, p.total,
+			p.warehouse_id, w.name, p.employee_id, COALESCE(e.full_name, ''),
+			p.status, p.supplier_ref, p.expected_date, p.subtotal, p.iva_total, p.total, p.paid_total,
 			p.notes, p.received_at, p.created_at, p.updated_at
 		FROM purchases p
 		JOIN externals s ON s.id = p.supplier_id
 		JOIN warehouses w ON w.id = p.warehouse_id
-		JOIN employees e ON e.id = p.employee_id
+		LEFT JOIN employees e ON e.id = p.employee_id
 		%s
 		ORDER BY p.created_at DESC
 		LIMIT $%d OFFSET $%d
@@ -251,7 +252,7 @@ func (r *PurchaseRepository) List(ctx context.Context, q db.DBExecutor, f dtos.P
 		if err := rows.Scan(
 			&entity.ID, &entity.CompanyID, &entity.SerialCode, &entity.SupplierID, &entity.SupplierName,
 			&entity.WarehouseID, &entity.WarehouseName, &entity.EmployeeID, &entity.EmployeeName,
-			&entity.Status, &entity.SupplierRef, &entity.ExpectedDate, &entity.Subtotal, &entity.IVATotal, &entity.Total,
+			&entity.Status, &entity.SupplierRef, &entity.ExpectedDate, &entity.Subtotal, &entity.IVATotal, &entity.Total, &entity.PaidTotal,
 			&entity.Notes, &entity.ReceivedAt, &entity.CreatedAt, &entity.UpdatedAt,
 		); err != nil {
 			return nil, 0, err
@@ -350,5 +351,61 @@ func (r *PurchaseRepository) ListSupplierProducts(ctx context.Context, q db.DBEx
 func (r *PurchaseRepository) UpdateProductLastCost(ctx context.Context, q db.DBExecutor, productID int64, cost float64) error {
 	const sql = `UPDATE products SET last_cost = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`
 	_, err := q.Exec(ctx, sql, cost, productID)
+	return err
+}
+
+// SupplierOffers dice si el proveedor vende ese producto (está en su catálogo product_suppliers); lo usa la orden de compra.
+func (r *PurchaseRepository) SupplierOffers(ctx context.Context, q db.DBExecutor, supplierID, productID int64) (bool, error) {
+	var ok bool
+	err := q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM product_suppliers WHERE supplier_id = $1 AND product_id = $2)`, supplierID, productID).Scan(&ok)
+	return ok, err
+}
+
+// DeleteSupplierProduct quita un producto del catálogo del proveedor y dice si estaba.
+func (r *PurchaseRepository) DeleteSupplierProduct(ctx context.Context, q db.DBExecutor, supplierID, productID int64) (bool, error) {
+	tag, err := q.Exec(ctx, `DELETE FROM product_suppliers WHERE supplier_id = $1 AND product_id = $2`, supplierID, productID)
+	if err != nil {
+		return false, err
+	}
+	return tag.RowsAffected() > 0, nil
+}
+
+// ProductCompany devuelve la compañía dueña del producto (0 si no existe).
+func (r *PurchaseRepository) ProductCompany(ctx context.Context, q db.DBExecutor, productID int64) (int64, error) {
+	var companyID int64
+	err := q.QueryRow(ctx, `SELECT company_id FROM products WHERE id = $1 AND deleted_at IS NULL`, productID).Scan(&companyID)
+	if err != nil {
+		return 0, nil
+	}
+	return companyID, nil
+}
+
+// FindOpenCashSession devuelve el turno de caja abierto de quien paga en esa bodega (0 si no tiene).
+// ojo: consulta cash_sessions porque pagar una recepción es un gasto del turno de esa caja
+func (r *PurchaseRepository) FindOpenCashSession(ctx context.Context, q db.DBExecutor, companyID, warehouseID int64, actorType string, actorID int64) (int64, error) {
+	var id int64
+	err := q.QueryRow(ctx, `
+		SELECT id FROM cash_sessions
+		WHERE company_id = $1 AND warehouse_id = $2 AND opened_by_actor_type = $3 AND opened_by_actor_id = $4 AND status = 'open'
+		LIMIT 1
+	`, companyID, warehouseID, actorType, actorID).Scan(&id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return 0, nil
+	}
+	return id, err
+}
+
+// InsertReceptionExpense registra, como gasto del turno de caja, el pago de una recepción de compra (queda ligado a la orden).
+func (r *PurchaseRepository) InsertReceptionExpense(ctx context.Context, q db.DBExecutor, sessionID, purchaseID int64, receipt, concept string, cash float64) error {
+	_, err := q.Exec(ctx, `
+		INSERT INTO cash_session_expenses (cash_session_id, expense_type, receipt_number, concept, cash_amount, transfer_amount, purchase_id)
+		VALUES ($1, 'merchandise_arrival', NULLIF($2, ''), $3, $4, 0, $5)
+	`, sessionID, receipt, concept, cash, purchaseID)
+	return err
+}
+
+// AddPaidTotal suma lo pagado a la orden de compra.
+func (r *PurchaseRepository) AddPaidTotal(ctx context.Context, q db.DBExecutor, purchaseID int64, amount float64) error {
+	_, err := q.Exec(ctx, `UPDATE purchases SET paid_total = paid_total + $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, amount, purchaseID)
 	return err
 }

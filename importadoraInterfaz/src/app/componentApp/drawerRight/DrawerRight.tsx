@@ -1,20 +1,24 @@
-// DrawerRight · panel derecho contextual: carrito en el catálogo, detalle del objeto seleccionado o formulario de la acción abierta; se cierra con un clic fuera de él o con Esc
-import React, { useRef, useState } from 'react'
+// DrawerRight · panel derecho contextual: carrito en el catálogo, detalle del objeto seleccionado o formulario de la acción abierta; se cierra únicamente con la ✕ de su encabezado (ni con clic fuera ni con Esc)
+import React, { useCallback, useEffect, useState } from 'react'
 import './DrawerRight.css'
 import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
-import { useEscapeKey } from '@/global/hooks/ui/useEscapeKey'
-import { useClickOutside } from '@/global/hooks/ui/useClickOutside'
 import { useVerticalDrag } from '@/global/hooks/ui/useVerticalDrag'
-import { closeDrawerForm, openDrawerForm, setRightDrawerOpen } from '@/features/navigation'
+import {
+  closeDrawerForm,
+  openDrawerForm,
+  setRightDrawerOpen,
+  setActiveModule,
+  setActiveSubitem,
+} from '@/features/navigation'
 import { selectCartTotals, useCartMenuActions } from '@/features/shop'
+import { selectDraftUnits, useQuotationCartMenuActions } from '@/features/quotations'
 import { DRAWER_REGISTRY, selectDrawerMode } from './drawerRegistry'
+import { getFormEntry } from './formRegistry'
 import { useDrawerPresence } from './useDrawerPresence'
 import { DrawerHeader } from './parts/DrawerHeader'
 import { DrawerTab } from './parts/DrawerTab'
 import shippingIcon from '@/assets/icons/shipping.svg'
 
-// los clics en ventanas de confirmación y alertas no cuentan como «fuera» del panel (si no, confirmar algo lo cerraría)
-const KEEP_OPEN_SELECTOR = '[role="dialog"], [role="alertdialog"], [data-sonner-toaster]'
 const TAB_HEIGHT_OFFSET = 68 // Altura de pestaña más margen de separación para no sobreponerse
 
 export const DrawerRight: React.FC = () => {
@@ -23,31 +27,38 @@ export const DrawerRight: React.FC = () => {
   const drawerForm = useAppSelector((state) => state.ui.drawerForm)
   const activeModule = useAppSelector((state) => state.ui.activeModule)
   const activeSubitem = useAppSelector((state) => state.ui.activeSubitem)
-  const { totalItemsCount } = useAppSelector(selectCartTotals)
+  const { totalItemsCount: saleItemsCount } = useAppSelector(selectCartTotals)
+  const quotationUnits = useAppSelector(selectDraftUnits)
   const [isCartCollapsed, setIsCartCollapsed] = useState(false)
-  const cartMenu = useCartMenuActions()
-  const panelRef = useRef<HTMLDivElement>(null)
+  const saleCartMenu = useCartMenuActions()
+  const quotationCartMenu = useQuotationCartMenuActions()
 
   // Detección de módulo de catálogo
-  const isInCatalog = (activeModule === 'shop' && activeSubitem === 'catalog') || mode === 'cart'
+  // ojo: hay dos carritos con el mismo diseño: el de ventas (catálogo) y el de cotizaciones (Cotizar)
+  const isQuotationCatalog = activeModule === 'shop' && activeSubitem === 'quotationCatalog'
+  const isQuotationView = isQuotationCatalog || mode === 'quotationCart'
+  const isCartMode = (value: typeof mode) => value === 'cart' || value === 'quotationCart'
+  const isInCatalog = (activeModule === 'shop' && (activeSubitem === 'catalog' || isQuotationCatalog)) || isCartMode(mode)
+  const totalItemsCount = isQuotationView ? quotationUnits : saleItemsCount
 
   // Borrador de traslados activos (memoria a corto plazo)
   const transferDraft = useAppSelector((state) => state.transfers.draft)
   const transferUnitsCount = transferDraft.lines.reduce((acc, l) => acc + (l.quantity || 0), 0)
 
   // el carrito contraído deja el panel cerrado pero muestra la pestaña con el contador
-  const effectiveMode = mode === 'cart' && isCartCollapsed ? null : mode
+  const effectiveMode = isCartMode(mode) && isCartCollapsed ? null : mode
   const { shownMode, isMounted, isOpen } = useDrawerPresence(effectiveMode)
   const entry = shownMode ? DRAWER_REGISTRY[shownMode] : null
   const meta = useAppSelector(entry ? entry.selectMeta : () => null)
 
   // Estados de apertura
   const isTransferFormOpen = shownMode === 'form' && drawerForm?.kind === 'createTransfer' && isOpen
-  const isCartDrawerOpen = shownMode === 'cart' && isOpen
+  const isCartDrawerOpen = isCartMode(shownMode) && isOpen
 
   // Visibilidad de pestañas laterales (al mismo nivel)
   const isCartTabVisible = isInCatalog && !isCartDrawerOpen
-  const isTransferTabVisible = (isInCatalog || transferUnitsCount > 0) && !isTransferFormOpen
+  // ojo: en Cotizar no hay pestaña de traslados (aunque haya un borrador de traslado): ahí solo se arma la cotización
+  const isTransferTabVisible = !isQuotationView && (isInCatalog || transferUnitsCount > 0) && !isTransferFormOpen
 
   // Arrastre vertical coordinado: si ambas pestañas están visibles, reserva el espacio para evitar solapamiento
   const bothTabsVisible = isCartTabVisible && isTransferTabVisible
@@ -55,15 +66,46 @@ export const DrawerRight: React.FC = () => {
   const dragCoord = useVerticalDrag('ip_cart_tab_top', extraHeight)
 
   // cerrar: el carrito se contrae; un objeto se deselecciona; se apaga rightDrawerOpen
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     dispatch(setRightDrawerOpen(false))
     if (entry?.close) entry.close(dispatch)
     else setIsCartCollapsed(true)
-  }
-  useEscapeKey(handleClose, isOpen)
-  // el carrito se cierra exclusivamente con su botón de cerrar (>) o Esc; no por clic afuera
-  const shouldCloseOnClickOutside = isOpen && shownMode !== 'cart'
-  useClickOutside(panelRef, handleClose, shouldCloseOnClickOutside, KEEP_OPEN_SELECTOR)
+  }, [dispatch, entry])
+  // ojo: ningún panel se cierra con clic fuera ni con Esc; solo con la ✕ del encabezado (el carrito se contrae y el borrador de traslado se conserva)
+
+  // Atajo de teclado global: Alt + C abre o cierra el carrito de compras (o cotización)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Validar Alt + C (ignorando AltGr en Windows que envía ctrlKey + altKey)
+      if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === 'c' || e.key === 'C' || e.code === 'KeyC')) {
+        e.preventDefault()
+
+        // Si el carrito ya está abierto en pantalla, actuar como toggle y cerrarlo/contraerlo
+        if (isCartDrawerOpen) {
+          handleClose()
+          return
+        }
+
+        // Si no estamos en el catálogo (ventas o cotizaciones), cambiar a ventas para poder mostrar el carrito
+        if (!isInCatalog) {
+          dispatch(setActiveModule('shop'))
+          dispatch(setActiveSubitem('catalog'))
+        }
+
+        // Si hay una acción/formulario abierto (ej. traslado), cerrarlo para priorizar el carrito
+        if (drawerForm) {
+          dispatch(closeDrawerForm())
+        }
+
+        // Abrir y descolapsar el carrito
+        setIsCartCollapsed(false)
+        dispatch(setRightDrawerOpen(true))
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isCartDrawerOpen, isInCatalog, drawerForm, handleClose, dispatch])
 
   // Posiciones verticales calculadas para que NUNCA se sobrepongan entre ellas
   const cartTabTop = isCartTabVisible ? dragCoord.top : null
@@ -74,7 +116,10 @@ export const DrawerRight: React.FC = () => {
     : null
 
   // Desplazamiento horizontal para ubicarse en el borde exterior cuando el panel está abierto
-  const tabRight = isOpen ? 'var(--drawer-width-open, 400px)' : 0
+  // un panel con lista (Roles y permisos) se abre más ancho: se cambia la variable de ancho solo para ese panel
+  const isWide = shownMode === 'form' && drawerForm !== null && Boolean(getFormEntry(drawerForm).wide)
+  const widthStyle = isWide ? ({ '--drawer-width-open': 'var(--drawer-width-wide)' } as React.CSSProperties) : undefined
+  const tabRight = isOpen ? (isWide ? 'var(--drawer-width-wide, 720px)' : 'var(--drawer-width-open, 400px)') : 0
 
   return (
     <>
@@ -90,6 +135,7 @@ export const DrawerRight: React.FC = () => {
             dispatch(setRightDrawerOpen(true))
           }}
           label="carrito"
+          title="Abrir carrito (Alt + C) · arrástralo para moverlo"
           storageKey="ip_cart_tab_top"
           controlledTop={cartTabTop}
           controlledRight={tabRight}
@@ -121,9 +167,9 @@ export const DrawerRight: React.FC = () => {
       )}
 
       {isMounted && entry && meta && (
-        <aside className={`drawer-right ${isOpen ? 'drawer-right-open' : ''}`} aria-label={meta.title}>
-          <div ref={panelRef} className={`drawer-right-panel ${shownMode === 'cart' ? 'drawer-right-panel-lite' : ''}`}>
-            <DrawerHeader icon={entry.icon} meta={meta} onClose={handleClose} menu={shownMode === 'cart' ? cartMenu : undefined} />
+        <aside className={`drawer-right ${isOpen ? 'drawer-right-open' : ''}`} aria-label={meta.title} style={widthStyle}>
+          <div className={`drawer-right-panel ${isCartMode(shownMode) ? 'drawer-right-panel-lite' : ''}`}>
+            <DrawerHeader icon={entry.icon} meta={meta} onClose={handleClose} menu={shownMode === 'cart' ? saleCartMenu : shownMode === 'quotationCart' ? quotationCartMenu : undefined} />
             <div className="drawer-right-body">
               <entry.Body />
             </div>

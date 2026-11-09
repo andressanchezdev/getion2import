@@ -4,6 +4,7 @@ package services
 // conecta con: WarehouseService (mismo servicio, repartido en varios archivos por responsabilidad; la estructura y el constructor están en warehouse_service.go)
 
 import (
+	authRepos "importadoraApi/src/features/auth/repositories"
 	"context"
 	"fmt"
 	"strings"
@@ -117,6 +118,9 @@ func (s *WarehouseService) UpdateLocation(ctx context.Context, actor *middleware
 	if req.Description != nil {
 		current.Description = req.Description
 	}
+	if _, rerr := utils.ReasonOnDeactivation(current.IsActive, req.IsActive, req.Reason); rerr != nil {
+		return nil, rerr
+	}
 	if req.IsActive != nil {
 		current.IsActive = *req.IsActive
 	}
@@ -142,7 +146,11 @@ func (s *WarehouseService) UpdateLocation(ctx context.Context, actor *middleware
 }
 
 // DeleteLocation elimina una ubicación de la bodega solo si no tiene existencias.
-func (s *WarehouseService) DeleteLocation(ctx context.Context, actor *middlewares.ActorContext, warehouseID, locationID int64, ip, ua string) error {
+func (s *WarehouseService) DeleteLocation(ctx context.Context, actor *middlewares.ActorContext, warehouseID, locationID int64, reason, ip, ua string) error {
+	reason, verr := utils.ValidateReason(reason)
+	if verr != nil {
+		return verr
+	}
 	if actor == nil {
 		return utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
 	}
@@ -170,7 +178,22 @@ func (s *WarehouseService) DeleteLocation(ctx context.Context, actor *middleware
 		return utils.Conflict("LOCATION_NOT_EMPTY", fmt.Sprintf("No se puede eliminar la ubicación '%s' porque cuenta con %d unidades almacenadas. Debe reubicar los productos antes de eliminarla.", current.Code, stockCount))
 	}
 
-	return s.warehouseRepo.DeleteLocation(ctx, s.pool, locationID)
+	if err := s.warehouseRepo.DeleteLocation(ctx, s.pool, locationID); err != nil {
+		return utils.Internal("Error al inactivar la ubicación.", err)
+	}
+
+	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
+		CompanyID: &current.CompanyID,
+		ActorType: actor.ActorType,
+		ActorID:   actor.ActorID,
+		Entity:    "warehouse_locations",
+		EntityID:  &locationID,
+		Action:    "LOCATION_DEACTIVATED",
+		Reason:    reason,
+		IPAddress: ip,
+		UserAgent: ua,
+	})
+	return nil
 }
 
 // toLocationDTO arma la respuesta de una ubicación con lo que guarda.

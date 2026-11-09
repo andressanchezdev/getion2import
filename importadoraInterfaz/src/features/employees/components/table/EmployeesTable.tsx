@@ -1,8 +1,7 @@
-// EmployeesTable · tabla de empleados: avatar con iniciales, nombre y contacto, cargo, sede, modalidad, estado y acciones con ícono
+// EmployeesTable · tabla de empleados: nombre y contacto, cargo, sede, modalidad, estado y acciones con ícono
 // conecta con: EmployeesScreen (la usa), employees.types, global format (iniciales) y RowActions (acciones «Ver detalle» (datos y lista de permisos) y «Editar permisos»); estilos en EmployeesTable.css
 // ojo: carga y lista vacía se muestran dentro de la misma tabla para que no salte el diseño
 import React, { useState } from 'react'
-import { getInitials } from '@/global/helpers/formatting/format'
 import { RowActions } from '@/global/components/UI/molecules/table/RowActions'
 import { usePermissions } from '@/global/hooks/access/usePermissions'
 import eyeIcon from '@/assets/icons/eye.svg?raw'
@@ -13,7 +12,9 @@ import { useAppDispatch } from '@/global/hooks/store/useRedux'
 import { setEmployeeStatusThunk, unlockEmployeeThunk } from '../../thunks/employees.thunks'
 import './EmployeesTable.css'
 import { usePagedList } from '@/global/hooks/data/usePagedList'
+import { ReasonPrompt } from '@/features/reasonPrompt'
 import { Pagination } from '@/global/components/UI/molecules/table/Pagination'
+import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
 
 interface EmployeesTableProps {
   employees: SimpleEmployee[]
@@ -33,17 +34,24 @@ export const EmployeesTable: React.FC<EmployeesTableProps> = ({ employees, loadi
   const message = loading ? 'Cargando directorio de empleados…' : employees.length === 0 ? 'No se encontraron empleados registrados.' : null
   const { pageItems, meta, setPage } = usePagedList(employees, employees.length)
 
+  const [toDeactivate, setToDeactivate] = useState<SimpleEmployee | null>(null)
+
+  const applyStatus = async (emp: SimpleEmployee, isActive: boolean, reason?: string) => {
+    setTogglingId(emp.employeeId)
+    await dispatch(setEmployeeStatusThunk({ employeeId: emp.employeeId, isActive, reason }))
+    setTogglingId(null)
+  }
+
+  // reactivar es directo; desactivar pide el motivo (10-100 caracteres)
   const handleToggleEmployeeStatus = async (emp: SimpleEmployee) => {
     if (!canEditPermissions || togglingId === emp.employeeId) return
-    setTogglingId(emp.employeeId)
-    await dispatch(setEmployeeStatusThunk({ employeeId: emp.employeeId, isActive: !emp.isActive }))
-    setTogglingId(null)
+    if (emp.isActive) setToDeactivate(emp)
+    else await applyStatus(emp, true)
   }
 
   return (
     <>
-    <div className="employees-table-responsive table-scroll">
-      <table className="employees-table">
+    <DataTable tableId="employees-employees" className="employees-table">
         <thead>
           <tr>
             <th>Empleado</th>
@@ -66,7 +74,6 @@ export const EmployeesTable: React.FC<EmployeesTableProps> = ({ employees, loadi
                 <tr key={employee.employeeId} className="employees-table-row">
                   <td>
                     <div className="employees-table-person">
-                      <span className="employees-table-avatar" aria-hidden="true">{getInitials(fullName)}</span>
                       <div className="employees-table-person-text">
                         <span className="employees-table-name">{fullName}</span>
                         <span className="employees-table-contact">CC {employee.identification} · {employee.email}</span>
@@ -101,9 +108,20 @@ export const EmployeesTable: React.FC<EmployeesTableProps> = ({ employees, loadi
             })
           )}
         </tbody>
-      </table>
-    </div>
+      </DataTable>
     <Pagination meta={meta} label="Paginación de empleados" onPageChange={setPage} />
+    <ReasonPrompt
+      open={Boolean(toDeactivate)}
+      title="Desactivar empleado"
+      message={`¿Desactivar a "${toDeactivate?.name ?? ''}"? Se cerrarán sus sesiones.`}
+      confirmLabel="Desactivar"
+      onConfirm={async (reason) => {
+        const emp = toDeactivate
+        setToDeactivate(null)
+        if (emp) await applyStatus(emp, false, reason)
+      }}
+      onCancel={() => setToDeactivate(null)}
+    />
     </>
   )
 }

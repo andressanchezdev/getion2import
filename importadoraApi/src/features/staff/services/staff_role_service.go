@@ -170,6 +170,9 @@ func (s *StaffService) UpdateRole(ctx context.Context, actor *middlewares.ActorC
 	if req.Description != nil {
 		current.Description = req.Description
 	}
+	if _, rerr := utils.ReasonOnDeactivation(current.IsActive, req.IsActive, req.Reason); rerr != nil {
+		return nil, rerr
+	}
 	if req.IsActive != nil {
 		current.IsActive = *req.IsActive
 	}
@@ -203,7 +206,11 @@ func (s *StaffService) UpdateRole(ctx context.Context, actor *middlewares.ActorC
 }
 
 // DeactivateRole desactiva el rol sin borrar su historial.
-func (s *StaffService) DeactivateRole(ctx context.Context, actor *middlewares.ActorContext, id int64, ip, ua string) error {
+func (s *StaffService) DeactivateRole(ctx context.Context, actor *middlewares.ActorContext, id int64, reason, ip, ua string) error {
+	reason, verr := utils.ValidateReason(reason)
+	if verr != nil {
+		return verr
+	}
 	if actor == nil {
 		return utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
 	}
@@ -233,7 +240,7 @@ func (s *StaffService) DeactivateRole(ctx context.Context, actor *middlewares.Ac
 		Entity:    "roles",
 		EntityID:  &current.ID,
 		Action:    "ROLE_DEACTIVATED",
-		Reason:    "Desactivación de rol",
+		Reason:    reason,
 		IPAddress: ip,
 		UserAgent: ua,
 	})

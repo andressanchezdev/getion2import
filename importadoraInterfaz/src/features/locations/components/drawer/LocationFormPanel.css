@@ -22,8 +22,8 @@
 }
 
 .location-quick-presets {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
   gap: var(--space-1);
 }
 
@@ -71,8 +71,8 @@
 }
 
 .location-builder-chips {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
   gap: 4px;
 }
 

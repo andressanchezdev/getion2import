@@ -112,7 +112,10 @@ func (s *PaymentService) CreateBatch(ctx context.Context, actor *middlewares.Act
 	if err != nil || sale == nil {
 		return nil, utils.Internal("Error al consultar la venta.", err)
 	}
-	empID := actor.ActorID
+	empID, aerr := s.actorEmployeeID(ctx, actor)
+	if aerr != nil {
+		return nil, aerr
+	}
 	if empID <= 0 {
 		empID = sale.EmployeeID
 	}
@@ -139,7 +142,7 @@ func (s *PaymentService) CreateBatch(ctx context.Context, actor *middlewares.Act
 			return nil, utils.Internal("Error al guardar el pago.", err)
 		}
 		if line.Method == types.PaymentCash {
-			if err := s.verifyInTx(ctx, tx, created, actor.ActorID, nil); err != nil {
+			if err := s.verifyInTx(ctx, tx, created, empID, nil); err != nil {
 				return nil, utils.Internal("Error al verificar el pago en efectivo.", err)
 			}
 		}
@@ -151,7 +154,7 @@ func (s *PaymentService) CreateBatch(ctx context.Context, actor *middlewares.Act
 		})
 	}
 
-	if err := s.syncVerificationStage(ctx, tx, req.SaleID, actor.ActorID); err != nil {
+	if err := s.syncVerificationStage(ctx, tx, req.SaleID, empID); err != nil {
 		return nil, utils.Internal("Error al actualizar la etapa del pedido.", err)
 	}
 	if err := tx.Commit(ctx); err != nil {

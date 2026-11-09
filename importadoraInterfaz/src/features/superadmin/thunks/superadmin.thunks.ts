@@ -17,10 +17,10 @@ export const loadAdminsThunk = createAsyncThunk<Paginated<AdminUser>, void, Conf
   }
 })
 
-export const toggleAdminStatusThunk = createAsyncThunk<void, AdminUser, Config>('superadmin/toggle', async (admin, { dispatch, rejectWithValue }) => {
+export const toggleAdminStatusThunk = createAsyncThunk<void, { admin: AdminUser; reason?: string }, Config>('superadmin/toggle', async ({ admin, reason }, { dispatch, rejectWithValue }) => {
   const next = !admin.isActive
   try {
-    await updateAdmin(admin.id, { isActive: next })
+    await updateAdmin(admin.id, { isActive: next, reason })
     toast.success(`Administrador ${admin.fullName || admin.email} ${next ? 'activado' : 'desactivado'}.`)
     await dispatch(loadAdminsThunk())
   } catch (error) {

@@ -32,5 +32,6 @@ func RegisterRoutes(e *echo.Echo, authMiddleware *middlewares.AuthMiddleware, ct
 	{
 		invoicesGroup.GET("", ctrl.ListInvoices, authMiddleware.RequirePermission("orders", "view"))
 		invoicesGroup.GET("/:id", ctrl.FindInvoiceByID, authMiddleware.RequirePermission("orders", "view"))
+		invoicesGroup.POST("/:id/annul", ctrl.AnnulInvoice, authMiddleware.RequirePermission("orders", "delete"))
 	}
 }

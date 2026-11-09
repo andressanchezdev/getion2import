@@ -8,7 +8,7 @@ import { toast } from '@/global/helpers/feedback/toast'
 import { selectRequestContext } from '@/features/auth'
 import { splitPayment } from '../helpers/wallet.helpers'
 import { fetchCustomerInvoices } from '../services/wallet.service'
-import { adjustCustomerCredit, registerPayment, updateCredit, verifyPayment, voidPayment } from '../services/wallet.payments.service'
+import { registerPayment, updateCredit, verifyPayment, voidPayment, rejectPayment, reopenPayment } from '../services/wallet.payments.service'
 import { loadPaymentsHistoryThunk } from './wallet.history.thunks'
 import { loadWalletSummaryThunk, loadWalletThunk, NO_SESSION, type WalletThunkConfig } from './wallet.thunks'
 import type { CreditUpdateInput, PaymentDetails, PaymentInput } from '../types/wallet.api.types'
@@ -114,17 +114,32 @@ export const voidPaymentThunk = createAsyncThunk<void, { paymentId: number; reas
   }
 )
 
-// aplica un ajuste de cartera manual (POST /wallet/adjust)
-export const adjustCreditThunk = createAsyncThunk<void, { customerId: number; amount: number; reason: string }, WalletThunkConfig>(
-  'wallet/adjustCredit',
-  async ({ customerId, amount, reason }, { dispatch, rejectWithValue }) => {
+// rechaza un pago en revisión con motivo (POST /payments/:id/reject)
+export const rejectPaymentThunk = createAsyncThunk<void, { paymentId: number; reason: string }, WalletThunkConfig>(
+  'wallet/rejectPayment',
+  async ({ paymentId, reason }, { dispatch, rejectWithValue }) => {
     try {
-      await adjustCustomerCredit(customerId, amount, reason)
-      toast.success('Ajuste de cartera aplicado exitosamente')
-      dispatch(loadWalletThunk())
+      await rejectPayment(paymentId, reason)
+      toast.success('Pago rechazado')
+      dispatch(loadPaymentsHistoryThunk())
       dispatch(loadWalletSummaryThunk())
     } catch (error) {
-      return rejectWithValue(failWith(error, 'No se pudo registrar el ajuste de cartera.'))
+      return rejectWithValue(failWith(error, 'No se pudo rechazar el pago.'))
+    }
+  }
+)
+
+// devuelve un pago rechazado a revisión (POST /payments/:id/reopen)
+export const reopenPaymentThunk = createAsyncThunk<void, { paymentId: number }, WalletThunkConfig>(
+  'wallet/reopenPayment',
+  async ({ paymentId }, { dispatch, rejectWithValue }) => {
+    try {
+      await reopenPayment(paymentId)
+      toast.success('Pago devuelto a revisión')
+      dispatch(loadPaymentsHistoryThunk())
+      dispatch(loadWalletSummaryThunk())
+    } catch (error) {
+      return rejectWithValue(failWith(error, 'No se pudo devolver el pago a revisión.'))
     }
   }
 )

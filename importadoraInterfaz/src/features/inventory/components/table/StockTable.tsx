@@ -6,6 +6,7 @@ import '../InventoryTables.css'
 import { Pill, type PillTone } from '@/global/components/UI/atoms/Pill'
 import { STOCK_LEVEL_LABEL } from '../../constants/inventory.constants'
 import type { InventoryStockRow, StockLevel } from '../../types/inventory.types'
+import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
 
 const LEVEL_TONE: Record<StockLevel, PillTone> = { out: 'red', low: 'amber', ok: 'green' }
 
@@ -18,8 +19,7 @@ interface Props {
 }
 
 export const StockTable: React.FC<Props> = ({ rows, message, locationCounts, productSums, totals }) => (
-  <div className="inv-table-responsive table-scroll">
-    <table className="inv-table">
+  <DataTable tableId="inventory-stock">
       <thead>
         <tr>
           <th>Código</th>
@@ -87,8 +87,7 @@ export const StockTable: React.FC<Props> = ({ rows, message, locationCounts, pro
           </tr>
         </tfoot>
       )}
-    </table>
-  </div>
+    </DataTable>
 )
 
 export default StockTable

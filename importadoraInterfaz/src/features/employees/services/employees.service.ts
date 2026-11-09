@@ -63,7 +63,7 @@ export const createRole = async (input: RoleInput): Promise<void> => {
 
 // edita un rol (PUT /roles/:id): nombre, descripción y si está activo; el código no cambia
 export const updateRole = async (roleId: number, input: RoleInput): Promise<void> => {
-  await apiClient.put(EMPLOYEES.ROLE_BY_ID(roleId), { name: input.name, description: input.description, isActive: input.isActive })
+  await apiClient.put(EMPLOYEES.ROLE_BY_ID(roleId), { name: input.name, description: input.description, isActive: input.isActive, reason: input.reason })
 }
 
 // registra un empleado activo (la compañía sale del token)
@@ -72,8 +72,8 @@ export const createEmployee = async (input: NewEmployeeInput): Promise<void> => 
 }
 
 // activa o desactiva un empleado
-export const setEmployeeStatus = async (employeeId: number, status: 'active' | 'inactive'): Promise<void> => {
-  await apiClient.put(EMPLOYEES.BY_ID(employeeId), { status })
+export const setEmployeeStatus = async (employeeId: number, status: 'active' | 'inactive', reason?: string): Promise<void> => {
+  await apiClient.put(EMPLOYEES.BY_ID(employeeId), status === 'inactive' ? { status, reason } : { status })
 }
 
 // desbloquea la cuenta del empleado tras intentos fallidos (POST /employees/:id/unlock)

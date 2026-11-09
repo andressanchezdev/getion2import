@@ -1,0 +1,21 @@
+/* data-table-align.css · alineación por columna de las tablas: la pone useColumnAlign en el encabezado y en las celdas · solo usa tokens de styles/tokens.css */
+/* acciones y estados al centro, números y valores a la derecha, lo demás a la izquierda */
+.data-table [data-align="center"] {
+  text-align: center;
+}
+
+.data-table [data-align="right"] {
+  text-align: right;
+}
+
+.data-table td[data-align="center"] .row-actions {
+  justify-content: center;
+}
+
+.data-table td[data-align="right"] .row-actions {
+  justify-content: flex-end;
+}
+
+.data-table td[data-align="center"] > * {
+  margin-inline: auto;
+}

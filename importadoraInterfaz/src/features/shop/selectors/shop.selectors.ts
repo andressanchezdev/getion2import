@@ -15,9 +15,6 @@ const selectCartState = (state: ShopRootState) => state.cart
 export const selectCartCustomer = (state: ShopRootState) => state.shop.cartCustomer
 // dice si hay un cambio al carrito en curso
 export const selectCartMutating = (state: ShopRootState) => state.cart.mutating
-// lee el estado de carga del carrito
-export const selectCartStatus = (state: ShopRootState) => state.cart.status
-
 // líneas del carrito (del backend) con el nivel de precio con que se agregó cada una (si se sabe)
 export const selectCartItems = createSelector([selectCartState, selectShop], (cart, shop) =>
   cart.items.map((item) => ({ ...item, priceLevel: shop.cartLevels[item.productId] ?? item.priceLevel }))

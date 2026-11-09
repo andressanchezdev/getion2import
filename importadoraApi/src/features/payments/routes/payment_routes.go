@@ -20,5 +20,7 @@ func RegisterRoutes(e *echo.Echo, authMiddleware *middlewares.AuthMiddleware, ct
 		g.GET("/:id", ctrl.FindByID, authMiddleware.RequirePermission("payments", "view"))
 		g.POST("/:id/verify", ctrl.Verify, authMiddleware.RequirePermission("payments", "edit"))
 		g.POST("/:id/void", ctrl.Void, authMiddleware.RequirePermission("payments", "edit"))
+		g.POST("/:id/reject", ctrl.Reject, authMiddleware.RequirePermission("payments", "edit"))
+		g.POST("/:id/reopen", ctrl.Reopen, authMiddleware.RequirePermission("payments", "edit"))
 	}
 }

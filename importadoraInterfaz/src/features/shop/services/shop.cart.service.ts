@@ -15,12 +15,6 @@ export const fetchActiveCart = async (known: Record<string, Product> = {}): Prom
     return toCartSnapshot(data.data, known)
 }
 
-// crea un nuevo carrito explícito (POST /carts) para ventas alternas o en espera
-export const createCartRequest = async (payload?: { customerId?: number; warehouseId?: number }): Promise<CartSnapshot> => {
-    const { data } = await apiClient.post<APIResponse<CartDto>>(CARTS.BASE, payload ?? {})
-    return toCartSnapshot(data.data)
-}
-
 // agrega un producto desde una ubicación de la bodega (stockId); el precio es el del nivel elegido en la pantalla
 export const addCartItem = async ({ cartId, stockId, quantity, price }: CartAddInput): Promise<void> => {
     await apiClient.post(CARTS.ITEMS(cartId), { stockId, quantity, unitPrice: price })

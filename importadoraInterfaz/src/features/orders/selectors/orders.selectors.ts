@@ -8,7 +8,6 @@ import type { OrdersState } from '../types/orders.types'
 // forma mínima del state que necesitan estos selectors (así la feature no importa el store de app)
 type OrdersRoot = { orders: OrdersState }
 
-export const selectOrders = (state: OrdersRoot) => state.orders
 // lee la tabla de pedidos (filas, estado de carga y error)
 export const selectOrdersList = (state: OrdersRoot) => state.orders.list
 // lee el id del pedido abierto en el panel (null si no hay)

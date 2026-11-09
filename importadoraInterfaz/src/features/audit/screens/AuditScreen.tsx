@@ -33,8 +33,8 @@ export const AuditScreen: React.FC = () => {
 
   return (
     <div className="audit-screen">
-      <div className="audit-card">
-        <div className="audit-toolbar">
+      <div className="data-card">
+        <div className="data-toolbar audit-toolbar">
           <div className="audit-toolbar-filters">
             {/* Filtro rápido por Rol */}
             <label className="audit-filter">
@@ -134,7 +134,7 @@ export const AuditScreen: React.FC = () => {
           </div>
         </div>
 
-        <div className="audit-table-card table-scroll">
+        <div>
           {loading ? (
             <div className="audit-empty">Cargando movimientos...</div>
           ) : error ? (

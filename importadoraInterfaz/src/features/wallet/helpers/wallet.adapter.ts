@@ -86,10 +86,10 @@ export const toInvoice = (dto: WalletSaleDto, now: number = Date.now()): CreditI
   }
 }
 
-const ABONO_STATUSES: AbonoRecord['status'][] = ['verified', 'pending', 'void']
+const ABONO_STATUSES: AbonoRecord['status'][] = ['verified', 'pending', 'rejected', 'void']
 
 // el backend llama «review» al pago que espera verificación (en la pantalla es «pending», en revisión) y «voided» al anulado («void»)
-const abonoStatusOf = (status?: string): AbonoRecord['status'] => (status === 'review' ? 'pending' : status === 'voided' ? 'void' : ABONO_STATUSES.includes(status as AbonoRecord['status']) ? (status as AbonoRecord['status']) : 'verified')
+const abonoStatusOf = (status?: string): AbonoRecord['status'] => (status === 'review' ? 'pending' : status === 'issue' ? 'rejected' : status === 'voided' ? 'void' : ABONO_STATUSES.includes(status as AbonoRecord['status']) ? (status as AbonoRecord['status']) : 'verified')
 
 // un pago del historial: recibo, cliente, venta, método, referencia, monto y estado (lo que el backend no trae se rellena con un texto neutro)
 export const toAbonoRecord = (dto: PaymentHistoryDto, index: number): AbonoRecord => {

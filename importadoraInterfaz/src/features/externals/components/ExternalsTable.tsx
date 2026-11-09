@@ -4,7 +4,7 @@
 import React, { useState } from 'react'
 import './ExternalsTable.css'
 import '@/features/inventory/components/InventoryTables.css'
-import { ConfirmDialog } from '@/global/components/UI/molecules/dialogs/ConfirmDialog'
+import { ReasonPrompt } from '@/features/reasonPrompt'
 import { FilterSelect } from '@/global/components/UI/molecules/filters/FilterSelect'
 import { SearchBar } from '@/global/components/UI/molecules/filters/SearchBar'
 import { Pagination } from '@/global/components/UI/molecules/table/Pagination'
@@ -15,10 +15,14 @@ import { useAppDispatch } from '@/global/hooks/store/useRedux'
 import { openDrawerForm } from '@/features/navigation'
 import editIcon from '@/assets/icons/edit.svg?raw'
 import trashIcon from '@/assets/icons/trash.svg?raw'
+import listIcon from '@/assets/icons/list.svg?raw'
 import { EXTERNAL_STATUS_OPTIONS, labelsOf } from '../constants/externals.constants'
 import { useExternalActions } from '../hooks/useExternalActions'
 import { useExternals } from '../hooks/useExternals'
 import type { ExternalEntity, ExternalKind, ExternalStatusFilter } from '../types/externals.types'
+import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
+import { Icon } from '@/global/components/UI/atoms/Icon'
+import plusIcon from '@/assets/icons/plus.svg?raw'
 
 export const ExternalsTable: React.FC<{ kind: ExternalKind }> = ({ kind }) => {
   const dispatch = useAppDispatch()
@@ -42,25 +46,24 @@ export const ExternalsTable: React.FC<{ kind: ExternalKind }> = ({ kind }) => {
 
   const openForm = (item?: ExternalEntity) => dispatch(openDrawerForm({ kind: 'externalForm', payload: { kind, item } }))
 
-  const confirmDelete = async () => {
+  const confirmDelete = async (reason: string) => {
     const target = toDelete
     setToDelete(null)
-    if (target) await actions.remove(target)
+    if (target) await actions.remove(target, reason)
   }
 
   return (
     <div className="externals-screen">
-      <div className="externals-card">
-        <div className="externals-toolbar">
+      <div className="data-card">
+        <div className="data-toolbar externals-toolbar">
           <SearchBar value={list.search} onChange={list.setSearch} hasActiveFilters={list.hasFilters} onClear={list.clearFilters} placeholder={labels.searchHint} className="externals-search" />
           <FilterSelect label="Estado" emptyValue="all" value={list.status} options={EXTERNAL_STATUS_OPTIONS} onChange={(value) => list.setStatus((value || 'all') as ExternalStatusFilter)} />
           <button type="button" className="btn-primary externals-create" onClick={() => openForm()}>
-            + Registrar {labels.singular.toLowerCase()}
+            <Icon svg={plusIcon} /> Registrar {labels.singular.toLowerCase()}
           </button>
         </div>
 
-        <div className="externals-table-responsive table-scroll">
-          <table className="externals-table">
+        <DataTable tableId="externals-externals">
             <thead>
               <tr>
                 <th>Razón social</th>
@@ -135,6 +138,7 @@ export const ExternalsTable: React.FC<{ kind: ExternalKind }> = ({ kind }) => {
                     <td>
                       <RowActions
                         actions={[
+                          { key: 'catalog', label: `Catálogo de productos de ${item.name}`, icon: listIcon, visible: isSupplier, onClick: () => dispatch(openDrawerForm({ kind: 'supplierCatalog', payload: { id: item.id, name: item.name } })) },
                           { key: 'edit', label: `Editar ${labels.article}`, icon: editIcon, onClick: () => openForm(item) },
                           { key: 'delete', label: `Eliminar ${labels.article}`, icon: trashIcon, tone: 'danger', onClick: () => setToDelete(item) },
                         ]}
@@ -144,15 +148,14 @@ export const ExternalsTable: React.FC<{ kind: ExternalKind }> = ({ kind }) => {
                 ))
               )}
             </tbody>
-          </table>
-        </div>
+          </DataTable>
         <Pagination meta={meta} label={`Paginación de ${labels.plural}`} onPageChange={setPage} />
       </div>
 
-      <ConfirmDialog
+      <ReasonPrompt
         open={toDelete !== null}
         title={`Eliminar ${labels.singular.toLowerCase()}`}
-        message={`¿Eliminar ${labels.article} «${toDelete?.name ?? ''}»? Esta acción no se puede deshacer.`}
+        message={`¿Eliminar ${labels.article} «${toDelete?.name ?? ''}»? Indica el motivo para dejar constancia.`}
         confirmLabel="Eliminar"
         onConfirm={confirmDelete}
         onCancel={() => setToDelete(null)}

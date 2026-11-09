@@ -32,7 +32,7 @@
   color: var(--color-text-primary);
 }
 
-/* Botón ☰ (contraer o expandir el menú) */
+/* botón ✕ (cerrar el menú; solo se ve con el menú abierto) */
 .side-menu-brand-toggle {
   width: 32px;
   height: 32px;
@@ -48,10 +48,6 @@
   line-height: 1;
   cursor: pointer;
   transition: border-color var(--motion-fast);
-}
-
-.side-menu-brand-mini .side-menu-brand-toggle {
-  margin-left: 0;
 }
 
 .side-menu-brand-toggle:hover {

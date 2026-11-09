@@ -48,7 +48,7 @@ export const OrdersToolbar: React.FC<OrdersToolbarProps> = ({ hideWarehouseFilte
   }
 
   return (
-    <div className="orders-toolbar">
+    <div className="data-toolbar orders-toolbar">
       <SearchBar
         value={query}
         onChange={(value) => dispatch(setOrderQuery(value))}

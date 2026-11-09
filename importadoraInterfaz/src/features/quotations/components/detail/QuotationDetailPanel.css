@@ -33,31 +33,6 @@
   word-break: break-word;
 }
 
-.quotation-detail-items {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--text-sm);
-}
-
-.quotation-detail-items th {
-  padding: 0.5rem 0.5rem;
-  text-align: left;
-  font-size: var(--text-xs);
-  color: var(--color-text-secondary);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.quotation-detail-items td {
-  padding: 0.5rem;
-  vertical-align: top;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.quotation-detail-items small {
-  display: block;
-  color: var(--color-text-muted);
-}
-
 .quotation-detail-total {
   margin: 0;
   text-align: right;

@@ -92,27 +92,5 @@ export const splitIncludedTax = (total: number, rate: number = IVA_RATE): { subt
   return { subtotal, tax: total - subtotal }
 }
 
-// emoji según la categoría, para enriquecer el thumbnail de la tarjeta
-export const getCategoryEmoji = (category: string): string => {
-  switch (category.toLowerCase()) {
-    case 'motor':
-      return '⚙️'
-    case 'frenos':
-      return '🛑'
-    case 'transmisión':
-      return '⛓️'
-    case 'eléctrico':
-      return '⚡'
-    case 'suspensión':
-      return '🔩'
-    default:
-      return '📦'
-  }
-}
-
 // ojo: toApiPriceTier (P0..P3 → p1..p4) se movió a global/helpers/priceTier (también la usa customers); se re-exporta para no cambiar los imports de shop
 export { toApiPriceTier } from '@/global/helpers/pricing/priceTier'
-
-// los renglones del carrito como los pide POST /sales: ubicación (stockId), cantidad y precio unitario; un renglón sin ubicación no se puede vender
-export const toSaleLines = (items: CartItem[]): { stockId: number; quantity: number; unitPrice: number }[] =>
-  items.flatMap((item) => (item.stockId ? [{ stockId: item.stockId, quantity: item.quantity, unitPrice: item.selectedPrice }] : []))

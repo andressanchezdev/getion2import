@@ -87,6 +87,9 @@ import (
 	reportRepos "importadoraApi/src/features/reports/repositories"
 	reportServices "importadoraApi/src/features/reports/services"
 
+	backupControllers "importadoraApi/src/features/backups/controllers"
+	backupRepos "importadoraApi/src/features/backups/repositories"
+	backupServices "importadoraApi/src/features/backups/services"
 	recycleBinControllers "importadoraApi/src/features/recyclebin/controllers"
 	recycleBinRepos "importadoraApi/src/features/recyclebin/repositories"
 	recycleBinServices "importadoraApi/src/features/recyclebin/services"
@@ -132,6 +135,7 @@ type AppContainer struct {
 	AuditCtrl         *auditControllers.AuditController
 	ReportCtrl        *reportControllers.ReportController
 	RecycleBinCtrl    *recycleBinControllers.RecycleBinController
+	BackupCtrl        *backupControllers.BackupController
 	BankStatementCtrl *bankStatementControllers.BankStatementController
 	CashSessionCtrl   *cashSessionControllers.CashSessionController
 	ScreensaverCtrl   *screensaverControllers.ScreensaverController
@@ -206,7 +210,7 @@ func NewContainer(cfg *config.Config, database *db.Database) *AppContainer {
 
 	// Sales & Returns
 	saleRepo := saleRepos.NewSaleRepository()
-	saleService := saleServices.NewSaleService(database.Pool, saleRepo, inventoryRepo)
+	saleService := saleServices.NewSaleService(database.Pool, saleRepo, inventoryRepo, auditRepo)
 	saleCtrl := saleControllers.NewSaleController(saleService)
 
 	returnRepo := returnRepos.NewReturnRepository()
@@ -241,6 +245,11 @@ func NewContainer(cfg *config.Config, database *db.Database) *AppContainer {
 
 	recycleBinService := recycleBinServices.NewRecycleBinService(database.Pool, recycleBinRepo, auditRepo, notificationRepo)
 	recycleBinCtrl := recycleBinControllers.NewRecycleBinController(recycleBinService)
+
+	backupStore := backupRepos.NewBackupStore(cfg.BackupsDir)
+	backupPgTools := backupRepos.NewPgToolsRepository(cfg)
+	backupService := backupServices.NewBackupService(database.Pool, backupStore, backupPgTools, auditRepo)
+	backupCtrl := backupControllers.NewBackupController(backupService)
 
 	bankStatementRepo := bankStatementRepos.NewBankStatementRepository()
 	bankStatementService := bankStatementServices.NewBankStatementService(database.Pool, bankStatementRepo, paymentRepo, paymentService)
@@ -280,6 +289,7 @@ func NewContainer(cfg *config.Config, database *db.Database) *AppContainer {
 		AuditCtrl:         auditCtrl,
 		ReportCtrl:        reportCtrl,
 		RecycleBinCtrl:    recycleBinCtrl,
+		BackupCtrl:        backupCtrl,
 		BankStatementCtrl: bankStatementCtrl,
 		CashSessionCtrl:   cashSessionCtrl,
 		ScreensaverCtrl:   screensaverCtrl,

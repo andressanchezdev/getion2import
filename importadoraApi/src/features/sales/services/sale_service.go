@@ -13,6 +13,7 @@ import (
 	"importadoraApi/src/core/db"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
+	authRepos "importadoraApi/src/features/auth/repositories"
 	inventoryrepos "importadoraApi/src/features/inventory/repositories"
 	"importadoraApi/src/features/sales/dtos"
 	"importadoraApi/src/features/sales/repositories"
@@ -25,14 +26,16 @@ type SaleService struct {
 	pool          *pgxpool.Pool
 	saleRepo      *repositories.SaleRepository
 	inventoryRepo *inventoryrepos.InventoryRepository
+	auditRepo     *authRepos.AuditRepository
 }
 
 // NewSaleService crea el servicio con las piezas que necesita para funcionar.
-func NewSaleService(pool *pgxpool.Pool, saleRepo *repositories.SaleRepository, inventoryRepo *inventoryrepos.InventoryRepository) *SaleService {
+func NewSaleService(pool *pgxpool.Pool, saleRepo *repositories.SaleRepository, inventoryRepo *inventoryrepos.InventoryRepository, auditRepo *authRepos.AuditRepository) *SaleService {
 	return &SaleService{
 		pool:          pool,
 		saleRepo:      saleRepo,
 		inventoryRepo: inventoryRepo,
+		auditRepo:     auditRepo,
 	}
 }
 
@@ -212,12 +215,12 @@ func (s *SaleService) Create(ctx context.Context, actorCompanyID *int64, actorEm
 
 	effectiveEmployeeID := actorEmployeeID
 	if req.SalespersonEmployeeID != nil && *req.SalespersonEmployeeID > 0 {
-		exists, err := s.saleRepo.ActiveEmployeeExists(ctx, tx, *req.SalespersonEmployeeID, companyID)
+		exists, err := s.saleRepo.ActiveEmployeeInWarehouseExists(ctx, tx, *req.SalespersonEmployeeID, companyID, req.WarehouseID)
 		if err != nil {
 			return nil, fmt.Errorf("error al verificar empleado vendedor: %w", err)
 		}
 		if !exists {
-			return nil, utils.NotFound("SALESPERSON_NOT_FOUND", "El vendedor elegido no existe o no está activo en la compañía.")
+			return nil, utils.BadRequest("INVALID_SALESPERSON_WAREHOUSE", "El vendedor elegido no existe, no está activo o no pertenece a la bodega de la venta.")
 		}
 		effectiveEmployeeID = *req.SalespersonEmployeeID
 	}
@@ -255,6 +258,12 @@ func (s *SaleService) Create(ctx context.Context, actorCompanyID *int64, actorEm
 	createdSale, err := s.saleRepo.Create(ctx, tx, saleEntity)
 	if err != nil {
 		return nil, fmt.Errorf("error al guardar pedido de venta: %w", err)
+	}
+
+	if req.QuotationID != nil && *req.QuotationID > 0 {
+		if err := s.saleRepo.MarkQuotationConverted(ctx, tx, *req.QuotationID, createdSale.ID); err != nil {
+			return nil, fmt.Errorf("error al actualizar estado de la cotización: %w", err)
+		}
 	}
 
 	// el pedido entra al historial de etapas; un pedido a crédito deja todo su total a crédito (el cupo ya se validó arriba)
@@ -317,7 +326,7 @@ func (s *SaleService) Create(ctx context.Context, actorCompanyID *int64, actorEm
 		return nil, err
 	}
 
-	return s.FindByID(ctx, createdSale.ID)
+	return s.FindByID(ctx, createdSale.CompanyID, createdSale.ID)
 }
 
 // insufficientStockError arma el 400 INSUFFICIENT_STOCK con cuántas unidades quedan realmente vendibles (disponible - reservado) de esa existencia.

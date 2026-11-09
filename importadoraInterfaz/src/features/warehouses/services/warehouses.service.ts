@@ -31,6 +31,6 @@ export const updateWarehouse = async (id: string | number, input: UpdateWarehous
 }
 
 // desactiva la bodega (el backend no la borra)
-export const deleteWarehouse = async (id: string | number): Promise<void> => {
-    await apiClient.delete(`${BASE}/${id}`)
+export const deleteWarehouse = async (id: string | number, reason: string): Promise<void> => {
+    await apiClient.delete(`${BASE}/${id}`, { data: { reason } })
 }

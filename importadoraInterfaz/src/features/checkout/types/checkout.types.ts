@@ -28,6 +28,7 @@ export type PaymentChoice = 'cash' | 'transfer' | 'credit'
 export interface CheckoutPayload {
   mode: 'sale' | 'quotation'
   quotationId?: number // si viene, la venta sale de esa cotización en vez del carrito
+  lines?: CheckoutLine[] // cotización nueva: los renglones del borrador de «Cotizar» (en vez del carrito)
   customerId?: number // si viene (ej. desde una cotización), el cliente queda seleccionado por defecto
 }
 

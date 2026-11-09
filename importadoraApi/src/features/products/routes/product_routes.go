@@ -16,6 +16,7 @@ func RegisterRoutes(e *echo.Echo, authMiddleware *middlewares.AuthMiddleware, ct
 	{
 		p.GET("", ctrl.Get)
 		p.GET("/search", ctrl.Search)
+		p.GET("/thumbnails", ctrl.Thumbnails)
 		p.GET("/:id", ctrl.GetByID)
 		p.POST("", ctrl.Create, authMiddleware.RequirePermission("products", "create"))
 		p.PUT("/:id", ctrl.Update, authMiddleware.RequirePermission("products", "edit"))

@@ -6,6 +6,8 @@ import './TransferDetailPanel.css'
 import { closeDrawerForm } from '@/features/navigation'
 import { formatDateTime } from '@/global/helpers/formatting/format'
 import { useAppDispatch } from '@/global/hooks/store/useRedux'
+import { ProductLine, ProductLineList } from '@/global/components/UI/molecules/product/ProductLine'
+import { useProductImages } from '@/features/shop'
 import { TRANSFER_STATUS_BADGE } from '../../constants/transfers.constants'
 import { useTransferDetail } from '../../hooks/useTransferDetail'
 import type { TrasladeItem } from '../../types/transfers.types'
@@ -22,6 +24,7 @@ const person = (name: string | undefined, id: number | undefined, fallback: stri
 export const TransferDetailPanel: React.FC<TransferDetailPanelProps> = ({ transfer }) => {
   const dispatch = useAppDispatch()
   const { detail, loading } = useTransferDetail(transfer)
+  const images = useProductImages((detail?.products ?? []).map((item) => item.productId))
 
   if (!detail) {
     return (
@@ -69,35 +72,15 @@ export const TransferDetailPanel: React.FC<TransferDetailPanelProps> = ({ transf
           ))}
         </dl>
 
-        <table className="transfer-detail-items">
-          <thead>
-            <tr>
-              <th>Repuesto</th>
-              <th>Ubicación destino</th>
-              <th>Cant.</th>
-            </tr>
-          </thead>
-          <tbody>
-            {products.length === 0 ? (
-              <tr>
-                <td colSpan={3} style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--color-text-subtle)' }}>
-                  {loading ? 'Cargando repuestos del traslado…' : 'No hay repuestos registrados en este traslado.'}
-                </td>
-              </tr>
-            ) : (
-              products.map((p) => (
-                <tr key={p.itemId}>
-                  <td>
-                    {p.description}
-                    <small>{p.code || '—'}</small>
-                  </td>
-                  <td>{p.destinationLocation || 'Por asignar'}</td>
-                  <td>{p.quantity}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+        {products.length === 0 ? (
+          <p className="transfer-detail-empty">{loading ? 'Cargando repuestos del traslado…' : 'No hay repuestos registrados en este traslado.'}</p>
+        ) : (
+          <ProductLineList>
+            {products.map((item) => (
+              <ProductLine key={item.itemId} name={item.description} code={item.code} imageUrl={images[item.productId]} quantity={item.quantity} note={`Ubicación destino: ${item.destinationLocation || 'Por asignar'}`} />
+            ))}
+          </ProductLineList>
+        )}
 
         <p className="transfer-detail-total">
           Total <strong>{units} uds.</strong> en {products.length} {products.length === 1 ? 'ítem' : 'ítems'}

@@ -20,7 +20,7 @@ export const useReturnsList = () => {
 
   const reload = useCallback(() => dispatch(loadReturnsThunk()), [dispatch])
   const approve = useCallback((ret: ReturnDto) => dispatch(approveReturnThunk(ret.id)), [dispatch])
-  const reject = useCallback((ret: ReturnDto) => dispatch(rejectReturnThunk(ret.id)), [dispatch])
+  const reject = useCallback((ret: ReturnDto, reason: string) => dispatch(rejectReturnThunk({ id: ret.id, reason })), [dispatch])
   const setWarehouse = useCallback((id: number | null) => dispatch(setReturnsWarehouse(id)), [dispatch])
   const setStatus = useCallback((value: ReturnStatusFilter) => dispatch(setReturnsStatus(value)), [dispatch])
   const setQuery = useCallback((value: string) => dispatch(setReturnsQuery(value)), [dispatch])

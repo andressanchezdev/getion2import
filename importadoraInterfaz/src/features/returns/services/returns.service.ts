@@ -22,8 +22,8 @@ export const approveReturn = async (id: number): Promise<void> => {
   await apiClient.post(RETURNS.APPROVE(id))
 }
 
-export const rejectReturn = async (id: number): Promise<void> => {
-  await apiClient.post(RETURNS.REJECT(id))
+export const rejectReturn = async (id: number, reason: string): Promise<void> => {
+  await apiClient.post(RETURNS.REJECT(id), { reason })
 }
 
 // ventas que coinciden con el texto (pedido, cliente o NIT); sin texto trae las más recientes

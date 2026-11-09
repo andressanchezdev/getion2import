@@ -16,6 +16,7 @@ import shoppingBagIcon from '@/assets/icons/shopping-bag.svg?raw'
 import checkIcon from '@/assets/icons/check.svg?raw'
 import { useGeneralReport } from '../hooks/useGeneralReport'
 import './GeneralReportScreen.css'
+import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
 
 export const GeneralReportScreen: React.FC = () => {
   const { report, loading, reload } = useGeneralReport()
@@ -57,8 +58,8 @@ export const GeneralReportScreen: React.FC = () => {
   return (
     <div className="gen-report-screen">
       {/* Toolbar general: únicamente controles de búsqueda y filtrado orientados en la misma dirección */}
-      <div className="gen-report-card">
-        <div className="gen-report-toolbar">
+      <div className="data-card">
+        <div className="data-toolbar gen-report-toolbar">
           <SearchBar
             value={search}
             onChange={setSearch}
@@ -158,7 +159,7 @@ export const GeneralReportScreen: React.FC = () => {
       {/* Tablas canónicas de información operativa */}
       <div className="gen-report-sections-grid">
         {/* Tabla 1: Stock Crítico */}
-        <div className="gen-report-card">
+        <div className="data-card">
           <div className="gen-report-section-header">
             <div className="gen-report-section-title-group">
               <span className="gen-report-section-icon" aria-hidden="true" dangerouslySetInnerHTML={{ __html: databaseIcon }} />
@@ -172,8 +173,7 @@ export const GeneralReportScreen: React.FC = () => {
             </Pill>
           </div>
 
-          <div className="gen-report-table-responsive table-scroll">
-            <table className="inv-table">
+          <DataTable tableId="reports-general-report">
               <thead>
                 <tr>
                   <th>Código</th>
@@ -215,12 +215,11 @@ export const GeneralReportScreen: React.FC = () => {
                   ))
                 )}
               </tbody>
-            </table>
-          </div>
+            </DataTable>
         </div>
 
         {/* Tabla 2: Alta Rotación */}
-        <div className="gen-report-card">
+        <div className="data-card">
           <div className="gen-report-section-header">
             <div className="gen-report-section-title-group">
               <span className="gen-report-section-icon" aria-hidden="true" dangerouslySetInnerHTML={{ __html: shoppingBagIcon }} />
@@ -234,8 +233,7 @@ export const GeneralReportScreen: React.FC = () => {
             </Pill>
           </div>
 
-          <div className="gen-report-table-responsive table-scroll">
-            <table className="inv-table">
+          <DataTable tableId="reports-general-report-2">
               <thead>
                 <tr>
                   <th>Código</th>
@@ -268,8 +266,7 @@ export const GeneralReportScreen: React.FC = () => {
                   ))
                 )}
               </tbody>
-            </table>
-          </div>
+            </DataTable>
         </div>
       </div>
     </div>

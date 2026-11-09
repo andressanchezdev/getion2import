@@ -65,7 +65,12 @@ func (s *PurchaseService) Receive(ctx context.Context, actor *middlewares.ActorC
 	}
 
 	refType := "purchase"
-	empID := actor.ActorID
+	// el kardex guarda el empleado solo si quien recibe es empleado (un administrador no tiene id de empleado)
+	var empID *int64
+	if actor.ActorType == types.ActorEmployee {
+		id := actor.ActorID
+		empID = &id
+	}
 	for _, reqIt := range req.Items {
 		item, exists := itemsMap[reqIt.PurchaseItemID]
 		if !exists {
@@ -111,7 +116,7 @@ func (s *PurchaseService) Receive(ctx context.Context, actor *middlewares.ActorC
 			StockID:       stockEntity.ID,
 			WarehouseID:   p.WarehouseID,
 			ProductID:     item.ProductID,
-			EmployeeID:    &empID,
+			EmployeeID:    empID,
 			MovementType:  types.MovementPurchaseIn,
 			Quantity:      reqIt.Quantity,
 			ReferenceType: &refType,
@@ -165,9 +170,13 @@ func (s *PurchaseService) Receive(ctx context.Context, actor *middlewares.ActorC
 }
 
 // Void anula una orden de compra siempre que no haya sido recibida.
-func (s *PurchaseService) Void(ctx context.Context, actor *middlewares.ActorContext, purchaseID int64, ip, ua string) error {
+func (s *PurchaseService) Void(ctx context.Context, actor *middlewares.ActorContext, purchaseID int64, reason, ip, ua string) error {
 	if actor == nil {
 		return utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
+	}
+	reason, verr := utils.ValidateReason(reason)
+	if verr != nil {
+		return verr
 	}
 
 	p, err := s.purchaseRepo.FindByID(ctx, s.pool, purchaseID)
@@ -199,7 +208,7 @@ func (s *PurchaseService) Void(ctx context.Context, actor *middlewares.ActorCont
 		Entity:    "purchases",
 		EntityID:  &p.ID,
 		Action:    "PURCHASE_VOIDED",
-		Reason:    fmt.Sprintf("Orden de compra %s anulada", p.SerialCode),
+		Reason:    fmt.Sprintf("Orden de compra %s anulada: %s", p.SerialCode, reason),
 		IPAddress: ip,
 		UserAgent: ua,
 	})
@@ -248,6 +257,7 @@ func (s *PurchaseService) mapToDTO(p *repositories.PurchaseEntity, items []repos
 		Subtotal:      p.Subtotal,
 		IVATotal:      p.IVATotal,
 		Total:         p.Total,
+		PaidTotal:     p.PaidTotal,
 		Notes:         p.Notes,
 		ReceivedAt:    p.ReceivedAt,
 		CreatedAt:     p.CreatedAt,

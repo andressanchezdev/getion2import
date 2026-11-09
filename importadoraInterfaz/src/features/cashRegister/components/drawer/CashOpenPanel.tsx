@@ -19,7 +19,7 @@ export const CashOpenPanel: React.FC = () => {
         <div className="drawer-form-field">
           <label className="drawer-form-label" htmlFor="cash-opening">Fondo inicial de cambio *</label>
           <MoneyInput id="cash-opening" className="drawer-form-control" value={form.amount} onValueChange={form.setAmount} placeholder="Ej: 50.000" disabled={form.saving} required />
-          <span className="drawer-form-hint">El efectivo con el que arranca la gaveta. Se descuenta al hacer el arqueo del cierre.</span>
+          <span className="drawer-form-hint">El efectivo con el que arranca la gaveta. Se descuenta al hacer el cierre de caja.</span>
         </div>
       </div>
       <div className="drawer-form-footer">

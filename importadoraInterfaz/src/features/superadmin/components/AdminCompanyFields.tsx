@@ -3,6 +3,8 @@
 // ojo: la empresa nueva pide nombre, ciudad, teléfono y dirección (el backend no guarda NIT)
 import React from 'react'
 import type { AdminDraft } from '../types/superadmin.types'
+import { Icon } from '@/global/components/UI/atoms/Icon'
+import plusIcon from '@/assets/icons/plus.svg?raw'
 
 interface Props {
   draft: AdminDraft
@@ -11,10 +13,10 @@ interface Props {
   setCompanyField: (key: keyof AdminDraft['company'], value: string) => void
 }
 
-const NEW_COMPANY_FIELDS: Array<{ key: keyof AdminDraft['company']; label: string; placeholder: string; required?: boolean }> = [
+const NEW_COMPANY_FIELDS: Array<{ key: keyof AdminDraft['company']; label: string; placeholder: string; required?: boolean; tel?: boolean }> = [
   { key: 'name', label: 'Razón Social / Nombre *', placeholder: 'Ej. Distribuidora del Norte SAS', required: true },
   { key: 'city', label: 'Ciudad', placeholder: 'Ej. Bogotá' },
-  { key: 'phone', label: 'Teléfono', placeholder: '601 234 5678' },
+  { key: 'phone', label: 'Teléfono', placeholder: '6012345678', tel: true },
   { key: 'address', label: 'Dirección', placeholder: 'Calle 10 # 20-30' },
 ]
 
@@ -28,7 +30,7 @@ export const AdminCompanyFields: React.FC<Props> = ({ draft, companies, setField
       </label>
       <label className="admin-form-radio">
         <input type="radio" name="companyMode" checked={draft.companyMode === 'new'} onChange={() => setField('companyMode', 'new')} />
-        + Registrar nueva empresa
+        <Icon svg={plusIcon} /> Registrar nueva empresa
       </label>
     </div>
 
@@ -46,11 +48,13 @@ export const AdminCompanyFields: React.FC<Props> = ({ draft, companies, setField
             <label className="drawer-form-label" htmlFor={`new-comp-${field.key}`}>{field.label}</label>
             <input
               id={`new-comp-${field.key}`}
-              type="text"
+              type={field.tel ? 'tel' : 'text'}
+              inputMode={field.tel ? 'tel' : undefined}
+              maxLength={field.tel ? 10 : 120}
               className="drawer-form-control"
               placeholder={field.placeholder}
               value={draft.company[field.key]}
-              onChange={(e) => setCompanyField(field.key, e.target.value)}
+              onChange={(e) => setCompanyField(field.key, field.tel ? e.target.value.replace(/\D/g, '') : e.target.value)}
               required={field.required}
             />
           </div>

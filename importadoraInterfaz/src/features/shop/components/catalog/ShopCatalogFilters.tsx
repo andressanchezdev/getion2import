@@ -4,7 +4,7 @@ import React from 'react'
 import type { ShopCatalogFiltersProps } from '../../types/shop.catalog.types'
 import './ShopCatalogFilters.css'
 
-export const ShopCatalogFilters: React.FC<ShopCatalogFiltersProps> = ({ resultsCount, totalCount }) => {
+export const ShopCatalogFilters: React.FC<ShopCatalogFiltersProps> = ({ resultsCount, totalCount, children }) => {
   return (
     /* Fila 2: Resumen de resultados */
     <div className="shop-catalog-filter-row">
@@ -12,6 +12,7 @@ export const ShopCatalogFilters: React.FC<ShopCatalogFiltersProps> = ({ resultsC
       <div className="shop-catalog-results-summary">
         Mostrando {resultsCount} de {totalCount} repuestos
       </div>
+      {children}
     </div>
   )
 }

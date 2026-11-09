@@ -19,7 +19,7 @@ export const fetchRecycleBin = async (
   return data
 }
 
-export const restoreRecycleBinItem = async (id: number): Promise<void> => {
-  await apiClient.post(RECYCLE_BIN.RESTORE(id))
+export const restoreRecycleBinItem = async (id: number, reason: string): Promise<void> => {
+  await apiClient.post(RECYCLE_BIN.RESTORE(id), { reason })
 }
 

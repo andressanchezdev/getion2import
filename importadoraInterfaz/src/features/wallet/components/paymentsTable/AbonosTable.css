@@ -1,24 +1,5 @@
 /* AbonosTable.css · abonos y recaudos: una sola tarjeta con la barra de herramientas pegada a la tabla · solo usa tokens de styles/tokens.css */
 /* ojo: misma tarjeta que créditos, conciliación, proveedores y bodegas; la barra queda arriba y la tabla hace scroll por dentro */
-.abonos-card {
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--bg-card);
-  box-shadow: var(--shadow-rest);
-  overflow: hidden;
-}
-
-.abonos-toolbar {
-  background: var(--bg-card);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-  padding: var(--space-4);
-  border-bottom: 1px solid var(--color-border);
-}
 
 .abonos-search {
   flex: 0 0 40%;
@@ -42,32 +23,6 @@
   white-space: nowrap;
 }
 
-.abonos-table-responsive {
-  width: 100%;
-}
-
-.abonos-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-  font-size: var(--text-sm);
-}
-
-.abonos-table th {
-  background: var(--c-slate-50);
-  color: var(--color-text-secondary);
-  font-weight: var(--font-weight-semibold);
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--color-border);
-  white-space: nowrap;
-}
-
-.abonos-table td {
-  padding: 0.875rem var(--space-4);
-  border-bottom: 1px solid var(--color-border);
-  vertical-align: middle;
-}
-
 .abonos-num {
   text-align: right;
 }
@@ -76,4 +31,10 @@
   padding: 3rem var(--space-4);
   text-align: center;
   color: var(--color-text-secondary);
+}
+
+/* el estado editable se ve como su insignia (ui-pill) pero es un desplegable */
+.abonos-status-select {
+  cursor: pointer;
+  font-family: inherit;
 }

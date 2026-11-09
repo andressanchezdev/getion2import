@@ -1,12 +1,15 @@
 // InventoryCountsScreen.tsx · pantalla de Conteos Físicos y Auditoría de Inventario
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
+import { openDrawerForm } from '@/features/navigation'
+import { ReasonPrompt } from '@/features/reasonPrompt'
+import { useAppDispatch } from '@/global/hooks/store/useRedux'
 import { Pagination } from '@/global/components/UI/molecules/table/Pagination'
 import { usePermissions } from '@/global/hooks/access/usePermissions'
 import { useInventoryCounts } from '../hooks/useInventoryCounts'
 import { InventoryCountsTable } from '../components/counts/InventoryCountsTable'
-import { CountDetailModal } from '../components/counts/CountDetailModal'
-import { CreateCountModal } from '../components/counts/CreateCountModal'
 import type { CountStatus } from '../types/inventory.counts.types'
+import { Icon } from '@/global/components/UI/atoms/Icon'
+import plusIcon from '@/assets/icons/plus.svg?raw'
 
 export const InventoryCountsScreen: React.FC = () => {
   const {
@@ -20,13 +23,34 @@ export const InventoryCountsScreen: React.FC = () => {
     selectedCount,
     loadCounts,
     openDetail,
-    closeDetail,
     handleCreateCount,
     handleUpdateItems,
     handleVerify,
     handleCorroborate,
     activeWarehouseId,
   } = useInventoryCounts()
+
+  const dispatch = useAppDispatch()
+  // el panel recibe siempre las acciones más recientes sin volver a abrirse por cada cambio del hook
+  const actions = useRef({ handleUpdateItems, handleVerify, handleCorroborate })
+  useEffect(() => {
+    actions.current = { handleUpdateItems, handleVerify, handleCorroborate }
+  })
+  // el detalle del conteo se abre en el panel derecho; si el conteo cambia (verificar, corroborar) se vuelve a abrir con el dato nuevo
+  useEffect(() => {
+    if (!selectedCount) return
+    dispatch(
+      openDrawerForm({
+        kind: 'countDetail',
+        payload: {
+          count: selectedCount,
+          onSaveItems: (id: number, items: Parameters<typeof handleUpdateItems>[1]) => actions.current.handleUpdateItems(id, items),
+          onVerify: (id: number) => actions.current.handleVerify(id),
+          onCorroborate: (id: number) => actions.current.handleCorroborate(id),
+        },
+      })
+    )
+  }, [selectedCount, dispatch])
 
   const { canPerformAction } = usePermissions()
   const canCreate = canPerformAction('inventory', 'products', 'create')
@@ -35,7 +59,7 @@ export const InventoryCountsScreen: React.FC = () => {
   return (
     <div className="inventory-screen" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
       <div className="inventory-card" style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)', overflow: 'hidden' }}>
-        <div style={{ padding: 'var(--space-4) var(--space-6)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--color-border)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+        <div className="data-toolbar">
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
             <span style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--color-text-secondary)' }}>
               Filtrar por estado:
@@ -66,7 +90,7 @@ export const InventoryCountsScreen: React.FC = () => {
               title={!activeWarehouseId ? 'Selecciona una bodega activa para iniciar un conteo' : undefined}
               onClick={() => setCreateModalOpen(true)}
             >
-              + Nuevo Conteo Físico
+              <Icon svg={plusIcon} /> Nuevo Conteo Físico
             </button>
           )}
         </div>
@@ -89,23 +113,21 @@ export const InventoryCountsScreen: React.FC = () => {
         />
       )}
 
-      {selectedCount && (
-        <CountDetailModal
-          count={selectedCount}
-          onClose={closeDetail}
-          onSaveItems={handleUpdateItems}
-          onVerify={handleVerify}
-          onCorroborate={handleCorroborate}
-        />
-      )}
-
-      {createModalOpen && activeWarehouseId && (
-        <CreateCountModal
-          warehouseId={Number(activeWarehouseId)}
-          onClose={() => setCreateModalOpen(false)}
-          onSubmit={handleCreateCount}
-        />
-      )}
+      <ReasonPrompt
+        open={createModalOpen && Boolean(activeWarehouseId)}
+        title="Iniciar conteo físico"
+        message="Se creará un registro de conteo físico para la bodega activa, congelando las existencias esperadas actuales."
+        confirmLabel="Iniciar conteo"
+        fieldLabel="Observaciones o notas (opcional)"
+        placeholder="Ej: auditoría física de fin de mes, pasillos A y B..."
+        minLength={0}
+        maxLength={200}
+        onConfirm={(notes) => {
+          setCreateModalOpen(false)
+          void handleCreateCount({ warehouseId: Number(activeWarehouseId), notes: notes || undefined })
+        }}
+        onCancel={() => setCreateModalOpen(false)}
+      />
     </div>
   )
 }

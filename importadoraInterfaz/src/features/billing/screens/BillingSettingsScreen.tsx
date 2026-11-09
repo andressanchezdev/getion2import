@@ -9,6 +9,7 @@ import editIcon from '@/assets/icons/edit.svg?raw'
 import { DOC_SERIES_LABELS } from '../constants/billing.constants'
 import { nextNumberLabel, rangeRemaining } from '../helpers/billing.rules'
 import { useBillingSettings } from '../hooks/useBillingSettings'
+import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
 
 export const BillingSettingsScreen: React.FC = () => {
   const billing = useBillingSettings()
@@ -68,8 +69,7 @@ export const BillingSettingsScreen: React.FC = () => {
             <span className="billing-muted">El número que llevará el próximo documento de cada tipo.</span>
           </div>
         </div>
-        <div className="billing-table-responsive table-scroll">
-          <table className="billing-table">
+        <DataTable tableId="billing-billing-settings">
             <thead>
               <tr>
                 <th>Documento</th>
@@ -98,8 +98,7 @@ export const BillingSettingsScreen: React.FC = () => {
                 ))
               )}
             </tbody>
-          </table>
-        </div>
+          </DataTable>
       </div>
     </div>
   )

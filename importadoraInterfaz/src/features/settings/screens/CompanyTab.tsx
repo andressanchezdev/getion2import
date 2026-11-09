@@ -1,5 +1,7 @@
 // CompanyTab · ficha de la empresa (datos que usan facturas, cotizaciones y pedidos): se ve y se edita
 // conecta con: SettingsScreen (pestaña «empresa») y useCompanyForm (datos, edición y guardado); no habla con el API
+import { Icon } from '@/global/components/UI/atoms/Icon'
+import buildingIcon from '@/assets/icons/building.svg?raw'
 import React from 'react'
 import { COMPANY_FIELDS } from '../constants/settings.constants'
 import { useCompanyForm } from '../hooks/useCompanyForm'
@@ -15,7 +17,7 @@ export const CompanyTab: React.FC = () => {
           <p className="company-tab-subtitle">Información de la empresa utilizada en facturación, cotizaciones y pedidos.</p>
         </div>
         {!form.editing && form.company && (
-          <button type="button" className="company-btn-edit" onClick={form.startEdit}>✏️ Editar Información de Empresa</button>
+          <button type="button" className="company-btn-edit" onClick={form.startEdit}><Icon svg={buildingIcon} /> Editar Información de Empresa</button>
         )}
       </div>
 
@@ -41,8 +43,10 @@ export const CompanyTab: React.FC = () => {
                 <input
                   id={`comp-${field.key}`}
                   type={field.type}
+                  inputMode={field.type === 'tel' ? 'tel' : undefined}
+                  maxLength={field.type === 'tel' ? 10 : 120}
                   value={form.draft[field.key]}
-                  onChange={(e) => form.setField(field.key, e.target.value)}
+                  onChange={(e) => form.setField(field.key, field.type === 'tel' ? e.target.value.replace(/\D/g, '') : e.target.value)}
                   required={field.required}
                 />
               </div>

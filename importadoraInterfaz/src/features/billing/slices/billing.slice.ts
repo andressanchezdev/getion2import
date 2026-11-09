@@ -1,10 +1,10 @@
-// billing.slice · facturas de la bodega, datos fiscales y series de consecutivos
+// billing.slice · datos fiscales y series de consecutivos de la bodega
 // conecta con: billing.thunks (lo llenan) y billing.selectors (lo leen); clave 'billing' en rootReducer (NO se guarda en el navegador)
 // ojo: se vacía al cerrar sesión; al cambiar de compañía rootReducer lo reinicia
 import { createSlice } from '@reduxjs/toolkit'
 import { logoutThunk } from '@/features/auth'
 import { INITIAL_BILLING_STATE } from '../constants/billing.constants'
-import { loadBillingSettingsThunk, loadInvoicesThunk, saveBillingConfigThunk, saveDocSeriesThunk } from '../thunks/billing.thunks'
+import { loadBillingSettingsThunk, saveBillingConfigThunk, saveDocSeriesThunk } from '../thunks/billing.thunks'
 
 export const billingSlice = createSlice({
   name: 'billing',
@@ -12,33 +12,8 @@ export const billingSlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder
-      .addCase(loadInvoicesThunk.pending, (state, action) => {
-        const nextWhId = action.meta.arg ?? null
-        if (state.warehouseId !== nextWhId) {
-          state.invoices = []
-          state.config = null
-          state.series = []
-          state.settingsStatus = 'idle'
-        }
-        state.warehouseId = nextWhId
-        state.invoicesStatus = 'loading'
-        state.invoicesError = null
-        state.requestId = action.meta.requestId
-      })
-      .addCase(loadInvoicesThunk.fulfilled, (state, action) => {
-        if (state.requestId !== action.meta.requestId) return
-        state.invoices = action.payload
-        state.invoicesStatus = 'succeeded'
-      })
-      .addCase(loadInvoicesThunk.rejected, (state, action) => {
-        if (state.requestId !== action.meta.requestId) return
-        state.invoicesStatus = 'failed'
-        state.invoicesError = action.payload ?? 'No se pudieron cargar las facturas.'
-      })
       .addCase(loadBillingSettingsThunk.pending, (state, action) => {
         if (state.warehouseId !== action.meta.arg) {
-          state.invoices = []
-          state.invoicesStatus = 'idle'
           state.config = null
           state.series = []
         }

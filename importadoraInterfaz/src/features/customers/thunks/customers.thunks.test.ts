@@ -140,7 +140,7 @@ describe('detalle, direcciones y descuentos', () => {
     const { store, dispatch } = makeStore()
     const first = dispatch(addDirectionThunk({ customerId: 5, input }))
     expect(store.getState().customers.directions.saving).toBe(true)
-    await dispatch(deleteDirectionThunk({ customerId: 5, directionId: 1 })) // ignorado
+    await dispatch(deleteDirectionThunk({ customerId: 5, directionId: 1, reason: 'Dirección repetida en la ficha' })) // ignorado
     release()
     await first
     expect(deleteDirection).not.toHaveBeenCalled()
@@ -150,9 +150,9 @@ describe('detalle, direcciones y descuentos', () => {
     vi.mocked(fetchDirections).mockResolvedValue([])
     vi.mocked(fetchDiscounts).mockResolvedValue([])
     const { store, dispatch } = makeStore()
-    await dispatch(deleteDirectionThunk({ customerId: 5, directionId: 1 }))
+    await dispatch(deleteDirectionThunk({ customerId: 5, directionId: 1, reason: 'Dirección repetida en la ficha' }))
     await dispatch(deleteDiscountThunk({ customerId: 5, discountId: 2 }))
-    expect(deleteDirection).toHaveBeenCalledWith(5, 1)
+    expect(deleteDirection).toHaveBeenCalledWith(5, 1, 'Dirección repetida en la ficha')
     expect(deleteDiscount).toHaveBeenCalledWith()
     expect(store.getState().customers.directions.items).toEqual([])
     expect(store.getState().customers.discounts.items).toEqual([])

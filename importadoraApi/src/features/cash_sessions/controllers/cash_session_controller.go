@@ -5,6 +5,7 @@ package controllers
 
 import (
 	"strconv"
+	"time"
 
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/utils"
@@ -66,4 +67,27 @@ func (c *CashSessionController) Close(ctx echo.Context) error {
 		return err
 	}
 	return utils.RespondOK(ctx, "Turno de caja cerrado correctamente", res)
+}
+
+// ListExpenses GET /cash/expenses (warehouseId, from, to, q): los gastos de las cajas cerradas
+func (c *CashSessionController) ListExpenses(ctx echo.Context) error {
+	params := utils.ParsePagination(ctx)
+	filter := dtos.CashExpenseFilter{Search: ctx.QueryParam("q"), Page: params.Page, PageSize: params.PageSize}
+	if v, err := strconv.ParseInt(ctx.QueryParam("companyId"), 10, 64); err == nil && v > 0 {
+		filter.CompanyID = &v
+	}
+	if v, err := strconv.ParseInt(ctx.QueryParam("warehouseId"), 10, 64); err == nil && v > 0 {
+		filter.WarehouseID = &v
+	}
+	if t, err := time.Parse("2006-01-02", ctx.QueryParam("from")); err == nil {
+		filter.From = &t
+	}
+	if t, err := time.Parse("2006-01-02", ctx.QueryParam("to")); err == nil {
+		filter.To = &t
+	}
+	items, meta, err := c.service.ListExpenses(ctx.Request().Context(), middlewares.GetActor(ctx), filter)
+	if err != nil {
+		return err
+	}
+	return utils.RespondPaginated(ctx, "Gastos de caja obtenidos", items, *meta)
 }

@@ -205,6 +205,10 @@ func (s *StaffService) UpdateAdmin(ctx context.Context, actor *middlewares.Actor
 	if req.Phone != nil {
 		current.Phone = req.Phone
 	}
+	deactivationReason, rerr := utils.ReasonOnDeactivation(current.IsActive, req.IsActive, req.Reason)
+	if rerr != nil {
+		return nil, rerr
+	}
 	if req.IsActive != nil {
 		current.IsActive = *req.IsActive
 	}
@@ -238,7 +242,7 @@ func (s *StaffService) UpdateAdmin(ctx context.Context, actor *middlewares.Actor
 		Entity:    "admins",
 		EntityID:  &current.ID,
 		Action:    "ADMIN_UPDATED",
-		Reason:    "Actualización de administrador",
+		Reason:    utils.ReasonOrDefault(deactivationReason, "Actualización de administrador"),
 		IPAddress: ip,
 		UserAgent: ua,
 	})
@@ -247,7 +251,11 @@ func (s *StaffService) UpdateAdmin(ctx context.Context, actor *middlewares.Actor
 }
 
 // DeactivateAdmin desactiva el administrador sin borrar su historial.
-func (s *StaffService) DeactivateAdmin(ctx context.Context, actor *middlewares.ActorContext, id int64, ip, ua string) error {
+func (s *StaffService) DeactivateAdmin(ctx context.Context, actor *middlewares.ActorContext, id int64, reason, ip, ua string) error {
+	reason, verr := utils.ValidateReason(reason)
+	if verr != nil {
+		return verr
+	}
 	if actor == nil {
 		return utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
 	}
@@ -284,7 +292,7 @@ func (s *StaffService) DeactivateAdmin(ctx context.Context, actor *middlewares.A
 		Entity:    "admins",
 		EntityID:  &current.ID,
 		Action:    "ADMIN_DEACTIVATED",
-		Reason:    "Desactivación lógica de administrador",
+		Reason:    reason,
 		IPAddress: ip,
 		UserAgent: ua,
 	})

@@ -12,5 +12,7 @@ export { ProductLocationsPanel } from './components/drawer/ProductLocationsPanel
 export { CreateProductForm } from './components/drawer/CreateProductForm'
 export { StockScreen } from './screens/StockScreen'
 export { InventoryCountsScreen } from './screens/InventoryCountsScreen'
+export { CountDetailPanel } from './components/counts/CountDetailPanel'
+export type { CountDetailPayload } from './components/counts/CountDetailPanel'
 export { AssignStockPanel } from './components/drawer/AssignStockPanel'
 export type { AssignStockPayload } from './hooks/useAssignStockForm'

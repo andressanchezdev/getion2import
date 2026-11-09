@@ -6,5 +6,6 @@ export interface FormEntry {
   icon: string
   title: (payload: unknown) => string
   subtitle?: string
+  wide?: boolean // true: el panel se abre más ancho (listas y tablas)
   render: (payload: unknown) => ReactNode
 }

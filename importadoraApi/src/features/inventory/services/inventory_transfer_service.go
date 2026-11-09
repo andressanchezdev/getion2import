@@ -29,6 +29,14 @@ func (s *InventoryService) ListTransfers(ctx context.Context, actor *middlewares
 		filter.CompanyID = actor.CompanyID
 	}
 
+	// un empleado solo ve los traslados que salen de su bodega o llegan a ella, sin importar el filtro que pida
+	if actor.ActorType == types.ActorEmployee {
+		if actor.WarehouseID == nil {
+			return []dtos.TransferResponse{}, &utils.PaginatorMetadata{}, nil
+		}
+		filter.WarehouseID = actor.WarehouseID
+	}
+
 	entities, total, err := s.inventoryRepo.ListTransfers(ctx, s.pool, filter)
 	if err != nil {
 		return nil, nil, utils.Internal("Error al listar traslados.", err)
@@ -68,6 +76,9 @@ func (s *InventoryService) GetTransferByID(ctx context.Context, actor *middlewar
 		if actor.CompanyID == nil || *actor.CompanyID != transfer.CompanyID {
 			return nil, utils.Forbidden("FORBIDDEN_COMPANY_ACCESS", "No tienes permiso para consultar este traslado.")
 		}
+	}
+	if actor.ActorType == types.ActorEmployee && !employeeInWarehouse(actor, transfer.OriginWarehouseID, transfer.DestinationWarehouseID) {
+		return nil, utils.Forbidden("FORBIDDEN_TRANSFER_WAREHOUSE", "Este traslado no es de tu bodega.")
 	}
 
 	items, err := s.inventoryRepo.ListTransferItems(ctx, s.pool, id)
@@ -113,6 +124,11 @@ func (s *InventoryService) CreateTransfer(ctx context.Context, actor *middleware
 		}
 	}
 
+	// el empleado solo pide traslados hacia su propia sede; el administrador puede mover entre dos bodegas cualquiera de su compañía
+	if actor.ActorType == types.ActorEmployee && (actor.WarehouseID == nil || *actor.WarehouseID != req.DestinationWarehouseID) {
+		return nil, utils.Forbidden("FORBIDDEN_TRANSFER_DESTINATION", "Un empleado solo puede pedir traslados hacia su propia sede.")
+	}
+
 	var createdTransfer *repositories.TransferEntity
 	var createdItems []repositories.TransferItemEntity
 
@@ -128,7 +144,7 @@ func (s *InventoryService) CreateTransfer(ctx context.Context, actor *middleware
 			SerialCode:             serialCode,
 			OriginWarehouseID:      req.OriginWarehouseID,
 			DestinationWarehouseID: req.DestinationWarehouseID,
-			EmployeeID:             actor.ActorID,
+			EmployeeID:             requesterEmployeeID(actor),
 			Status:                 types.TransferPending,
 			IsPriority:             req.IsPriority,
 			Notes:                  req.Notes,
@@ -242,4 +258,26 @@ func (s *InventoryService) mapTransferToDTO(t *repositories.TransferEntity, item
 		UpdatedAt:                t.UpdatedAt,
 		Items:                    itemsDTO,
 	}
+}
+
+// requesterEmployeeID es el empleado que pide el traslado: el propio si es empleado; un administrador no es empleado, así que queda vacío
+func requesterEmployeeID(actor *middlewares.ActorContext) *int64 {
+	if actor.ActorType != types.ActorEmployee {
+		return nil
+	}
+	id := actor.ActorID
+	return &id
+}
+
+// employeeInWarehouse dice si el empleado trabaja en alguna de las bodegas dadas; un empleado sin bodega no está en ninguna
+func employeeInWarehouse(actor *middlewares.ActorContext, warehouseIDs ...int64) bool {
+	if actor.WarehouseID == nil {
+		return false
+	}
+	for _, id := range warehouseIDs {
+		if *actor.WarehouseID == id {
+			return true
+		}
+	}
+	return false
 }

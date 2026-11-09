@@ -29,9 +29,9 @@ export const approveReturnThunk = createAsyncThunk<void, number, Config>('return
   }
 })
 
-export const rejectReturnThunk = createAsyncThunk<void, number, Config>('returns/reject', async (id, { dispatch, rejectWithValue }) => {
+export const rejectReturnThunk = createAsyncThunk<void, { id: number; reason: string }, Config>('returns/reject', async ({ id, reason }, { dispatch, rejectWithValue }) => {
   try {
-    await rejectReturn(id)
+    await rejectReturn(id, reason)
     toast.info(`Devolución #${id} rechazada`)
     await dispatch(loadReturnsThunk())
   } catch (error) {

@@ -181,7 +181,8 @@ CREATE TABLE companies (
     logo_url                    TEXT,
     is_active                   BOOLEAN NOT NULL DEFAULT TRUE,
     created_at                  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at                  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    updated_at                  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at                  TIMESTAMPTZ
 );
 
 -- 3. TABLA: warehouses (Bodegas únicas por compañía, todas al mismo nivel, sin is_main)
@@ -639,7 +640,7 @@ CREATE TABLE transfers (
     transfer_type               VARCHAR(40) NOT NULL DEFAULT 'standard',
     origin_warehouse_id         BIGINT NOT NULL REFERENCES warehouses(id) ON DELETE RESTRICT,
     destination_warehouse_id    BIGINT NOT NULL REFERENCES warehouses(id) ON DELETE RESTRICT,
-    employee_id                 BIGINT NOT NULL REFERENCES employees(id) ON DELETE RESTRICT,
+    employee_id                 BIGINT REFERENCES employees(id) ON DELETE RESTRICT,
     dispatched_by_employee_id   BIGINT REFERENCES employees(id) ON DELETE SET NULL,
     received_by_employee_id     BIGINT REFERENCES employees(id) ON DELETE SET NULL,
     status                      VARCHAR(20) NOT NULL DEFAULT 'pending'
@@ -898,7 +899,7 @@ CREATE TABLE quotations (
     company_id      BIGINT NOT NULL REFERENCES companies(id) ON DELETE RESTRICT,
     serial_code     VARCHAR(40) NOT NULL,
     customer_id     BIGINT NOT NULL REFERENCES customers(id) ON DELETE RESTRICT,
-    employee_id     BIGINT NOT NULL REFERENCES employees(id) ON DELETE RESTRICT,
+    employee_id     BIGINT REFERENCES employees(id) ON DELETE RESTRICT,
     cart_id         BIGINT REFERENCES carts(id) ON DELETE SET NULL,
     sale_id         BIGINT REFERENCES sales(id) ON DELETE SET NULL,
     status          VARCHAR(20) NOT NULL DEFAULT 'draft'
@@ -948,6 +949,7 @@ CREATE TABLE returns (
     replacement_stock_id        BIGINT REFERENCES stock(id) ON DELETE SET NULL,
     status                      VARCHAR(20) NOT NULL DEFAULT 'pending'
         CHECK (status IN ('pending', 'approved', 'rejected')),
+    reject_reason               TEXT,
     total                       NUMERIC(14,2) NOT NULL CHECK (total > 0),
     evidence_url                TEXT,
     receipt_url                 TEXT,
@@ -997,6 +999,9 @@ CREATE TABLE cash_sessions (
     counted_cash            NUMERIC(14,2) CHECK (counted_cash IS NULL OR counted_cash >= 0),
     difference              NUMERIC(14,2),
     notes                   TEXT,
+    abonos_total            NUMERIC(14,2),
+    counted_transfer        NUMERIC(14,2) CHECK (counted_transfer IS NULL OR counted_transfer >= 0),
+    counted_abonos          NUMERIC(14,2) CHECK (counted_abonos IS NULL OR counted_abonos >= 0),
     CHECK (status = 'open' OR closed_at IS NOT NULL)
 );
 
@@ -1115,7 +1120,7 @@ CREATE TABLE purchases (
     serial_code     VARCHAR(40) NOT NULL,
     supplier_id     BIGINT NOT NULL REFERENCES externals(id) ON DELETE RESTRICT,
     warehouse_id    BIGINT NOT NULL REFERENCES warehouses(id) ON DELETE RESTRICT,
-    employee_id     BIGINT NOT NULL REFERENCES employees(id) ON DELETE RESTRICT,
+    employee_id     BIGINT REFERENCES employees(id) ON DELETE RESTRICT,
     status          VARCHAR(20) NOT NULL DEFAULT 'draft'
         CHECK (status IN ('draft', 'ordered', 'partial', 'received', 'voided')),
     supplier_ref    VARCHAR(80),
@@ -1123,6 +1128,7 @@ CREATE TABLE purchases (
     subtotal        NUMERIC(14,2) NOT NULL DEFAULT 0 CHECK (subtotal >= 0),
     iva_total       NUMERIC(14,2) NOT NULL DEFAULT 0 CHECK (iva_total >= 0),
     total           NUMERIC(14,2) NOT NULL DEFAULT 0 CHECK (total >= 0),
+    paid_total      NUMERIC(14,2) NOT NULL DEFAULT 0 CHECK (paid_total >= 0), -- lo que la caja ya pagó de esta recepción
     notes           TEXT,
     received_at     TIMESTAMPTZ,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -1131,6 +1137,10 @@ CREATE TABLE purchases (
 );
 
 CREATE INDEX idx_purchases_company_status ON purchases (company_id, status);
+
+-- el gasto de caja que paga una recepción de compra queda ligado a esa orden
+ALTER TABLE cash_session_expenses ADD COLUMN purchase_id BIGINT REFERENCES purchases(id) ON DELETE SET NULL;
+CREATE INDEX idx_cash_session_expenses_purchase ON cash_session_expenses (purchase_id);
 
 -- 39. TABLA: purchase_items
 CREATE TABLE purchase_items (
@@ -1524,6 +1534,32 @@ LEFT JOIN stock s ON s.warehouse_id = l.warehouse_id AND s.location = l.code
 GROUP BY l.id, l.company_id, l.warehouse_id, w.code, w.name, l.code, l.description, l.qr_code, l.is_active;
 
 
+-- Busquedas instantaneas y tolerantes a errores (pg_trgm): un indice GIN por columna que se consulta con ILIKE o con el operador <%
+CREATE INDEX IF NOT EXISTS idx_customers_name_trgm ON customers USING gin (name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_customers_last_name_trgm ON customers USING gin (last_name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_customers_trade_name_trgm ON customers USING gin (trade_name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_customers_document_trgm ON customers USING gin (document gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_customers_email_trgm ON customers USING gin ((email::text) gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_customers_phone_trgm ON customers USING gin (phone gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_customers_mobile_trgm ON customers USING gin (mobile gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_products_name_trgm ON products USING gin (name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_products_easysearch_trgm ON products USING gin (easysearch gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_products_code_trgm ON products USING gin (code gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_employees_full_name_trgm ON employees USING gin (full_name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_employees_email_trgm ON employees USING gin ((email::text) gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_employees_document_trgm ON employees USING gin (document gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_externals_name_trgm ON externals USING gin (name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_externals_document_trgm ON externals USING gin (document gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_externals_contact_trgm ON externals USING gin (contact_name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_externals_email_trgm ON externals USING gin ((email::text) gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_externals_phone_trgm ON externals USING gin (phone gin_trgm_ops);
+
+-- Umbral de parecido para el operador <% (0.4 tolera errores de ortografia; solo se usa como respaldo cuando la busqueda exacta no encuentra nada)
+DO $$
+BEGIN
+    EXECUTE format('ALTER DATABASE %I SET pg_trgm.word_similarity_threshold = 0.4', current_database());
+END $$;
+
 -- ============================================================
 -- PARTE 4: DATOS SEMILLA LIMPIOS DE OPERACIÓN (SEED DEMO)
 -- ============================================================
@@ -1534,7 +1570,7 @@ GROUP BY l.id, l.company_id, l.warehouse_id, w.code, w.name, l.code, l.descripti
 -- Compatible con PostgreSQL V4 (Esquema Limpio)
 -- ============================================================================
 
-BEGIN;
+-- (sigue en la misma transaccion abierta al inicio del script)
 
 -- 1. COMPAÑÍA PRINCIPAL
 INSERT INTO companies (id, name, address, city, phone, email, is_active)
@@ -1639,7 +1675,7 @@ FROM (VALUES
     ('transfers', 'Traslados entre bodegas'), ('brands', 'Marcas'), ('categories', 'Categorías'), ('models', 'Modelos'),
     ('stock', 'Inventario, conteos y ubicaciones'), ('credits', 'Créditos y cartera'), ('payments', 'Pagos y conciliación bancaria'),
     ('customers', 'Clientes'), ('employees', 'Empleados'), ('roles', 'Roles y permisos'), ('reports', 'Reportes'),
-    ('audit', 'Auditoría y papelera'), ('warehouses', 'Sedes y series de documentos')
+    ('audit', 'Auditoría y papelera'), ('warehouses', 'Sedes y series de documentos'), ('invoices', 'Facturas de las cajas')
 ) AS m(module, label)
 CROSS JOIN (VALUES
     ('view', 'ver'), ('view_detail', 'ver detalle'), ('create', 'crear'), ('edit', 'editar'), ('change_status', 'cambiar estado'), ('delete', 'borrar')
@@ -1894,8 +1930,6 @@ VALUES
     (1, 'Bancolombia', '01400000369', '2026-10-28', 'IMPTO GOBIERNO 4X1000', 'LA PLAYA', NULL, NULL, NULL, -114.54, FALSE, 'ignored'),
     (1, 'Bancolombia', '01400000369', '2026-10-28', 'COMISION REC CORRESPONSAL', 'LA PLAYA', NULL, NULL, NULL, -24064.45, FALSE, 'ignored'),
     (1, 'Bancolombia', '01400000369', '2026-10-28', 'IVA COMISION REC CORRESPONSAL', 'LA PLAYA', NULL, NULL, NULL, -4572.25, FALSE, 'ignored');
-
-COMMIT;
 
 -- ============================================================================
 -- FIN DE SCRIPT DE SEMILLAS

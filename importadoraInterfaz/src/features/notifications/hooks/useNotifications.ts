@@ -1,4 +1,5 @@
 // useNotifications.ts · hook de estado para listar y marcar notificaciones como leídas
+// ojo: solo los empleados y administradores reciben notificaciones; para el superadmin no se consulta ni se sondea (la API responde 403)
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useAppSelector } from '@/global/hooks/store/useRedux'
 import { selectCurrentUser } from '@/features/auth'
@@ -12,6 +13,7 @@ import {
 
 export const useNotifications = () => {
   const user = useAppSelector(selectCurrentUser)
+  const canReceive = Boolean(user) && user?.userType !== 'superadmin'
   const [notifications, setNotifications] = useState<AppNotification[]>([])
   const [loading, setLoading] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
@@ -19,7 +21,7 @@ export const useNotifications = () => {
   const hasLoadedNotifications = useRef(false)
 
   const loadNotifications = useCallback(async () => {
-    if (!user) {
+    if (!canReceive) {
       setNotifications([])
       seenNotificationIds.current.clear()
       hasLoadedNotifications.current = false
@@ -42,7 +44,7 @@ export const useNotifications = () => {
     } finally {
       setLoading(false)
     }
-  }, [user])
+  }, [canReceive])
 
   useEffect(() => {
     let cancelled = false
@@ -83,6 +85,7 @@ export const useNotifications = () => {
   }
 
   return {
+    canReceive,
     notifications,
     unreadCount,
     loading,

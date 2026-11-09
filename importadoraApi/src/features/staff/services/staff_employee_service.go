@@ -229,6 +229,17 @@ func (s *StaffService) UpdateEmployee(ctx context.Context, actor *middlewares.Ac
 		}
 	}
 
+	inactivating := (req.Status != nil && *req.Status != types.EmployeeActive) ||
+		(req.EmploymentStatus != nil && *req.EmploymentStatus != types.EmploymentActive)
+	auditReason := "Actualización de datos del empleado"
+	if inactivating {
+		r, rerr := utils.ValidateReason(req.Reason)
+		if rerr != nil {
+			return nil, rerr
+		}
+		auditReason = r
+	}
+
 	if req.RoleID != nil {
 		role, err := s.roleRepo.FindByID(ctx, s.pool, *req.RoleID)
 		if err != nil {
@@ -293,7 +304,7 @@ func (s *StaffService) UpdateEmployee(ctx context.Context, actor *middlewares.Ac
 		Entity:    "employees",
 		EntityID:  &current.ID,
 		Action:    "EMPLOYEE_UPDATED",
-		Reason:    "Actualización de datos del empleado",
+		Reason:    auditReason,
 		IPAddress: ip,
 		UserAgent: ua,
 	})
@@ -303,9 +314,13 @@ func (s *StaffService) UpdateEmployee(ctx context.Context, actor *middlewares.Ac
 }
 
 // DeactivateEmployee desactiva el empleado sin borrar su historial.
-func (s *StaffService) DeactivateEmployee(ctx context.Context, actor *middlewares.ActorContext, id int64, ip, ua string) error {
+func (s *StaffService) DeactivateEmployee(ctx context.Context, actor *middlewares.ActorContext, id int64, reason, ip, ua string) error {
 	if actor == nil {
 		return utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
+	}
+	reason, verr := utils.ValidateReason(reason)
+	if verr != nil {
+		return verr
 	}
 
 	current, err := s.employeeRepo.FindByID(ctx, s.pool, id)
@@ -336,7 +351,7 @@ func (s *StaffService) DeactivateEmployee(ctx context.Context, actor *middleware
 		Entity:    "employees",
 		EntityID:  &current.ID,
 		Action:    "EMPLOYEE_DEACTIVATED",
-		Reason:    "Eliminación lógica de empleado",
+		Reason:    reason,
 		IPAddress: ip,
 		UserAgent: ua,
 	})

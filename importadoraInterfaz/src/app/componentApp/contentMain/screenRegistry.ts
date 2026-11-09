@@ -9,6 +9,7 @@ import { ShopCatalogScreen } from '@/features/shop'
 import { NotFoundScreen } from './NotFoundScreen'
 
 const OrdersScreen = lazy(() => import('@/features/orders/screens/OrdersScreen').then((m) => ({ default: m.OrdersScreen })))
+const QuotationCatalogScreen = lazy(() => import('@/features/quotations/screens/QuotationCatalogScreen').then((m) => ({ default: m.QuotationCatalogScreen })))
 const QuotationsScreen = lazy(() => import('@/features/quotations/screens/QuotationsScreen').then((m) => ({ default: m.QuotationsScreen })))
 const BrandsScreen = lazy(() => import('@/features/inventory/screens/CatalogScreens').then((m) => ({ default: m.BrandsScreen })))
 const CategoriesScreen = lazy(() => import('@/features/inventory/screens/CatalogScreens').then((m) => ({ default: m.CategoriesScreen })))
@@ -29,12 +30,13 @@ const SettingsScreen = lazy(() => import('@/features/settings/screens/SettingsSc
 const PurchaseOrdersScreen = lazy(() => import('@/features/purchases/screens/PurchaseOrdersScreen').then((m) => ({ default: m.PurchaseOrdersScreen })))
 const ReceivingScreen = lazy(() => import('@/features/purchases/screens/ReceivingScreen').then((m) => ({ default: m.ReceivingScreen })))
 const BillingSettingsScreen = lazy(() => import('@/features/billing/screens/BillingSettingsScreen').then((m) => ({ default: m.BillingSettingsScreen })))
-const InvoicesScreen = lazy(() => import('@/features/billing/screens/InvoicesScreen').then((m) => ({ default: m.InvoicesScreen })))
+const CashExpensesScreen = lazy(() => import('@/features/cashExpenses/screens/CashExpensesScreen').then((m) => ({ default: m.CashExpensesScreen })))
 const SuppliersScreen = lazy(() => import('@/features/externals/screens/SuppliersScreen').then((m) => ({ default: m.SuppliersScreen })))
 const CarriersScreen = lazy(() => import('@/features/externals/screens/CarriersScreen').then((m) => ({ default: m.CarriersScreen })))
 const GeneralReportScreen = lazy(() => import('@/features/reports/screens/GeneralReportScreen').then((m) => ({ default: m.GeneralReportScreen })))
 const DashboardScreen = lazy(() => import('@/features/reports/screens/DashboardScreen').then((m) => ({ default: m.DashboardScreen })))
 const RecycleBinScreen = lazy(() => import('@/features/recyclebin/screens/RecycleBinScreen').then((m) => ({ default: m.RecycleBinScreen })))
+const BackupsScreen = lazy(() => import('@/features/backups/screens/BackupsScreen').then((m) => ({ default: m.BackupsScreen })))
 const SuperadminAdminsScreen = lazy(() => import('@/features/superadmin/screens/SuperadminAdminsScreen').then((m) => ({ default: m.SuperadminAdminsScreen })))
 
 export interface ScreenEntry {
@@ -46,6 +48,7 @@ export const SCREEN_REGISTRY: Partial<Record<ERPModule, ScreenEntry>> = {
   shop: {
     subitems: {
       catalog: ShopCatalogScreen,
+      quotationCatalog: QuotationCatalogScreen,
       quotations: QuotationsScreen,
       orders: OrdersScreen,
       transfers: TransfersScreen,
@@ -57,7 +60,7 @@ export const SCREEN_REGISTRY: Partial<Record<ERPModule, ScreenEntry>> = {
   cashRegister: {
     subitems: {
       billingHistory: OrdersScreen,
-      invoices: InvoicesScreen,
+      invoices: CashExpensesScreen,
       purchaseOrders: PurchaseOrdersScreen,
       returns: ReturnsScreen,
     },
@@ -103,6 +106,7 @@ export const SCREEN_REGISTRY: Partial<Record<ERPModule, ScreenEntry>> = {
   superadmin: {
     subitems: {
       admins: SuperadminAdminsScreen,
+      backups: BackupsScreen,
     },
   },
 }

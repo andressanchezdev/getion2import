@@ -1,6 +1,6 @@
 // SideMenu · menú lateral: marca, lista de módulos con sus subgestiones y, abajo, el estado de la API y el usuario
 // conecta con: navigation (MENU_ITEMS y acciones del estado ui, incluido sidebarOpen); partes: SideMenuBrand, SideMenuItem, ApiStatus y SideMenuUser
-// ojo: con mouse el menú se abre al pasar el cursor y se contrae al salir (useSideMenuHover, como Grandma's); en pantallas táctiles se contrae a 64 px (solo íconos) con el botón ☰ de su cabecera (SideMenuBrand); elegir un módulo con el menú contraído lo vuelve a abrir
+// ojo: con mouse el menú se abre al pasar el cursor y se contrae al salir (useSideMenuHover, como Grandma's); en pantallas táctiles se contrae a 64 px (solo íconos) y se cierra con la ✕ de su cabecera (SideMenuBrand); elegir un módulo con el menú contraído lo vuelve a abrir
 import React from 'react'
 import './SideMenu.css'
 import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
@@ -17,7 +17,7 @@ export const SideMenu: React.FC = () => {
     const { activeModule, activeSubitem, sidebarOpen } = useAppSelector((state) => state.ui)
     const menuItems = useFilteredMenuItems()
     const { hoverMode, hovered, hoverHandlers } = useSideMenuHover()
-    // con mouse: contraído y se abre al pasar el cursor (como Grandma's); sin mouse: lo decide el botón ☰
+    // con mouse: contraído y se abre al pasar el cursor (como Grandma's); sin mouse: se cierra con la ✕ de su cabecera y se abre eligiendo un módulo
     const isMini = hoverMode ? !hovered : !sidebarOpen
 
     // elegir un módulo con el menú contraído también lo abre (así se ven sus subgestiones)

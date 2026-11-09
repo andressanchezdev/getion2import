@@ -20,8 +20,12 @@ func (ctrl *SaleController) FindInvoiceByID(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+	companyID, err := middlewares.EffectiveCompanyID(c)
+	if err != nil {
+		return err
+	}
 
-	inv, err := ctrl.saleService.FindInvoiceByID(c.Request().Context(), id)
+	inv, err := ctrl.saleService.FindInvoiceByID(c.Request().Context(), companyID, id)
 	if err != nil {
 		return err
 	}

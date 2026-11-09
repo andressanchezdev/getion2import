@@ -7,12 +7,13 @@ import type { ERPModule } from '@/features/navigation'
 // «módulo.subgestión» del menú → módulo de permisos de la API
 export const SCREEN_API_MODULE: Record<string, string | null> = {
   'shop.catalog': 'catalog',
+  'shop.quotationCatalog': 'quotations',
   'shop.quotations': 'quotations',
   'shop.orders': 'orders',
   'shop.cashRegister': 'cash',
   'cashRegister.billingHistory': 'orders',
   'cashRegister.returns': 'returns',
-  'cashRegister.invoices': 'orders', // las facturas salen de los pedidos: quien ve pedidos ve facturas
+  'cashRegister.invoices': 'invoices', // Facturas = lo que pagan las cajas: tiene su propio permiso
   'inventory.stock': 'stock', // existencias por ubicación
   'settings.billing': 'warehouses', // datos fiscales y series de cada bodega
   'purchases.purchaseOrders': 'purchases',

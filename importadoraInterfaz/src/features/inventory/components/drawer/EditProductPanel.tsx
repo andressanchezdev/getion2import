@@ -93,6 +93,14 @@ export const EditProductPanel: React.FC<EditProductPanelProps> = ({ product }) =
           <span className="edit-product-hint">Si está inactivo, el producto no estará disponible para ventas y saldrá de operación.</span>
         </div>
 
+        {form.status === 'inactive' && form.initialStatus !== 'inactive' && (
+          <div className="edit-product-field">
+            <label htmlFor="edit-prod-reason">Motivo de la desactivación *</label>
+            <textarea id="edit-prod-reason" className="edit-product-textarea" rows={2} maxLength={100} placeholder="De 10 a 100 caracteres" value={form.reason} onChange={(e) => form.setReason(e.target.value)} disabled={saving} />
+            <span className="edit-product-hint">{form.reason.trim().length}/100 (mínimo 10)</span>
+          </div>
+        )}
+
         <div className="edit-product-checkbox-row">
           <label className="edit-product-checkbox-label">
             <input type="checkbox" className="edit-product-checkbox" checked={form.isNew} onChange={(e) => form.setIsNew(e.target.checked)} disabled={saving} />

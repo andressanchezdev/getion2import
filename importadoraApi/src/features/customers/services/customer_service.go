@@ -4,8 +4,8 @@ package services
 // conecta con: los repositories y dtos de clientes; los llama el controller y la conexión llega del contenedor
 
 import (
-	recycleBinRepos "importadoraApi/src/features/recyclebin/repositories"
 	"context"
+	recycleBinRepos "importadoraApi/src/features/recyclebin/repositories"
 	"strings"
 
 	"importadoraApi/src/core/config"
@@ -20,11 +20,11 @@ import (
 )
 
 type CustomerService struct {
-	cfg          *config.Config
-	pool         *pgxpool.Pool
-	customerRepo *repositories.CustomerRepository
+	cfg            *config.Config
+	pool           *pgxpool.Pool
+	customerRepo   *repositories.CustomerRepository
 	recycleBinRepo *recycleBinRepos.RecycleBinRepository
-	auditRepo    *authRepos.AuditRepository
+	auditRepo      *authRepos.AuditRepository
 }
 
 // NewCustomerService crea el servicio con las piezas que necesita para funcionar.
@@ -36,11 +36,11 @@ func NewCustomerService(
 	auditRepo *authRepos.AuditRepository,
 ) *CustomerService {
 	return &CustomerService{
-		cfg:          cfg,
-		pool:         pool,
-		customerRepo: customerRepo,
+		cfg:            cfg,
+		pool:           pool,
+		customerRepo:   customerRepo,
 		recycleBinRepo: recycleBinRepo,
-		auditRepo:    auditRepo,
+		auditRepo:      auditRepo,
 	}
 }
 
@@ -69,7 +69,7 @@ func (s *CustomerService) List(ctx context.Context, actor *middlewares.ActorCont
 }
 
 // Search busca clientes por coincidencia de texto rápido.
-func (s *CustomerService) Search(ctx context.Context, actor *middlewares.ActorContext, query string, params utils.PageParams) ([]dtos.CustomerResponse, *utils.PaginatorMetadata, error) {
+func (s *CustomerService) Search(ctx context.Context, actor *middlewares.ActorContext, query string, creditEnabled *bool, params utils.PageParams) ([]dtos.CustomerResponse, *utils.PaginatorMetadata, error) {
 	if actor == nil {
 		return nil, nil, utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
 	}
@@ -80,10 +80,11 @@ func (s *CustomerService) Search(ctx context.Context, actor *middlewares.ActorCo
 	}
 
 	filter := dtos.CustomerFilterQuery{
-		CompanyID: companyID,
-		Search:    strings.TrimSpace(query),
-		Page:      params.Page,
-		PageSize:  params.PageSize,
+		CompanyID:     companyID,
+		Search:        strings.TrimSpace(query),
+		Page:          params.Page,
+		PageSize:      params.PageSize,
+		CreditEnabled: creditEnabled,
 	}
 
 	return s.List(ctx, actor, filter)

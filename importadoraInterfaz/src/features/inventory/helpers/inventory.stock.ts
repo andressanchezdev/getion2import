@@ -36,15 +36,3 @@ export const stockTotals = (rows: InventoryStockRow[]) =>
 
 // opciones distintas (ordenadas) de un campo de las filas, para llenar los filtros
 export const distinctValues = (rows: InventoryStockRow[], field: 'category' | 'brand'): string[] => [...new Set(rows.map((row) => row[field]).filter(Boolean))].sort((a, b) => a.localeCompare(b))
-
-// frase de dónde hay existencias de un producto: «Principal (B1: 15 und, B2: 3 und) y Norte (A1: 8 und)»; vacío si no hay en ninguna bodega
-export const availabilitySummary = (rows: Array<{ warehouseId: number; location?: string | null; available: number }>, warehouses: Array<{ id: string | number; name: string }>): string => {
-  const parts = warehouses
-    .map((warehouse) => {
-      const places = rows.filter((row) => String(row.warehouseId) === String(warehouse.id) && row.available > 0).map((row) => `${row.location || 'sin estante'}: ${row.available} und`)
-      return places.length > 0 ? `${warehouse.name} (${places.join(', ')})` : ''
-    })
-    .filter(Boolean)
-  if (parts.length === 0) return ''
-  return `Disponible en ${parts.length > 1 ? `${parts.slice(0, -1).join(', ')} y ${parts[parts.length - 1]}` : parts[0]}`
-}

@@ -12,7 +12,7 @@ import (
 
 // RegisterRoutes registra las rutas del módulo y los roles o permisos que exige cada una.
 func RegisterRoutes(e *echo.Echo, authMiddleware *middlewares.AuthMiddleware, ctrl *controllers.CartController) {
-	c := e.Group("/carts", authMiddleware.Authenticate())
+	c := e.Group("/carts", authMiddleware.Authenticate(), middlewares.DenySuperadminWrites())
 	{
 		c.GET("/active", ctrl.GetActiveCart)
 		c.POST("", ctrl.Create)

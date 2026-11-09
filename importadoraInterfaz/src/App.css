@@ -1,6 +1,8 @@
 /* App.css · reset y estilos base de la app; importa los tokens · solo usa tokens de styles/tokens.css */
 @import './styles/tokens.css';
 @import './styles/table-scroll.css';
+@import './styles/data-table.css';
+@import './styles/data-table-align.css';
 
 /* ============================================================================
    RESET Y ESTILOS BASE

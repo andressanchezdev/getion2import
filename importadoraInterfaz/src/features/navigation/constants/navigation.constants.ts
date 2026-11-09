@@ -19,6 +19,3 @@ export const INITIAL_NAVIGATION_STATE: NavigationState = {
   drawerForm: null,
   cashRegisterStatus: 'open',
 }
-
-// Retrocompatibilidad
-export const INITIAL_UI_STATE = INITIAL_NAVIGATION_STATE

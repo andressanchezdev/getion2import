@@ -1,11 +1,11 @@
 // useProductsLoader · pide los productos al backend cuando cambia algo que los afecta: filtros, texto (con espera), página o bodega
 // conecta con: ShopCatalogScreen (lo usa al montarse); despacha shop.products.thunks y lee shop.products.selectors, shop.slice (filtros), navigation (bodega) y warehouses (estado de carga)
-// ojo: no pide hasta que haya bodega activa (los productos y su stock dependen de ella), salvo que las bodegas hayan fallado: ahí pide igual para no dejar la pantalla vacía
+// ojo: no pide hasta que haya bodega activa (los productos y su stock dependen de ella), salvo que las bodegas hayan fallado o la compañía no tenga ninguna: ahí pide igual para no dejar la pantalla cargando
 import { useEffect } from 'react'
 import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { useDebouncedValue } from '@/global/hooks/data/useDebouncedValue'
 import { selectCurrentUser } from '@/features/auth'
-import { selectWarehousesStatus } from '@/features/warehouses'
+import { selectWarehouses, selectWarehousesStatus } from '@/features/warehouses'
 import { loadProductsThunk } from '../thunks/shop.products.thunks'
 import { selectProductsPage } from '../selectors/shop.products.selectors'
 
@@ -18,11 +18,14 @@ export const useProductsLoader = (): void => {
   const filters = useAppSelector((state) => state.shop.filters)
   const activeWarehouseId = useAppSelector((state) => state.ui.activeWarehouseId)
   const warehousesStatus = useAppSelector(selectWarehousesStatus)
+  const warehouses = useAppSelector(selectWarehouses)
   const page = useAppSelector(selectProductsPage)
   const debouncedQuery = useDebouncedValue(filters.searchQuery, SEARCH_DEBOUNCE_MS)
 
   const hasSession = Boolean(user) // ojo: el superadmin no tiene compañía (companyId 0); basta con que haya sesión
-  const ready = activeWarehouseId !== '' || warehousesStatus === 'failed'
+  // una compañía recién creada aún no tiene bodegas: no hay nada que esperar, se pide igual y el catálogo queda vacío en vez de «Cargando…» para siempre
+  const withoutWarehouses = warehousesStatus === 'succeeded' && warehouses.length === 0
+  const ready = activeWarehouseId !== '' || warehousesStatus === 'failed' || withoutWarehouses
 
   useEffect(() => {
     if (!hasSession || !ready) return

@@ -11,8 +11,8 @@ export const usePurchaseActions = () => {
   const dispatch = useAppDispatch()
   const saving = useAppSelector(selectPurchasesSaving)
 
-  const voidOrder = async (purchase: Pick<Purchase, 'id' | 'serial'>): Promise<boolean> => {
-    const result = await dispatch(voidPurchaseThunk(purchase.id))
+  const voidOrder = async (purchase: Pick<Purchase, 'id' | 'serial'>, reason: string): Promise<boolean> => {
+    const result = await dispatch(voidPurchaseThunk({ id: purchase.id, reason }))
     if (voidPurchaseThunk.fulfilled.match(result)) {
       toast.success(`Orden ${purchase.serial} anulada`)
       return true

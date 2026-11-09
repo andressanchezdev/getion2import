@@ -1,4 +1,4 @@
-// QuotationsToolbar · barra de la tabla de cotizaciones: búsqueda (40%), rango de fechas en línea y Nueva Cotización
+// QuotationsToolbar · barra de la tabla de cotizaciones: búsqueda (40%) y rango de fechas en línea
 // conecta con: quotations.slice (filtros), quotations.selectors, global SearchBar
 // ojo: sigue estrictamente la línea de diseño canónica basada en ProductsScreen
 import React from 'react'
@@ -8,17 +8,13 @@ import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { selectHasQuotationFilters, selectQuotationFilters } from '../../selectors/quotations.selectors'
 import { resetQuotationFilters, setQuotationFilters } from '../../slices/quotations.slice'
 
-interface QuotationsToolbarProps {
-  onCreateQuotation?: () => void
-}
-
-export const QuotationsToolbar: React.FC<QuotationsToolbarProps> = ({ onCreateQuotation }) => {
+export const QuotationsToolbar: React.FC = () => {
   const dispatch = useAppDispatch()
   const filters = useAppSelector(selectQuotationFilters)
   const hasFilters = useAppSelector(selectHasQuotationFilters)
 
   return (
-    <div className="quotations-toolbar">
+    <div className="data-toolbar quotations-toolbar">
       <SearchBar
         value={filters.search}
         onChange={(search) => dispatch(setQuotationFilters({ search }))}
@@ -49,17 +45,6 @@ export const QuotationsToolbar: React.FC<QuotationsToolbarProps> = ({ onCreateQu
         </label>
       </div>
 
-      {onCreateQuotation && (
-        <div className="quotations-toolbar-actions">
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={onCreateQuotation}
-          >
-            + Crear cotización
-          </button>
-        </div>
-      )}
     </div>
   )
 }

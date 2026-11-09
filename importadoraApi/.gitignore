@@ -17,3 +17,12 @@ uploads/*
 
 # Asegurar que toda la estructura de BD suba al repositorio
 !src/core/db/**
+
+# Variables de entorno (versionar solo .env.example)
+.env
+.env.*
+!.env.example
+
+# Respaldos de la base (contienen datos reales: nunca al repositorio)
+backups/*
+!backups/.gitkeep

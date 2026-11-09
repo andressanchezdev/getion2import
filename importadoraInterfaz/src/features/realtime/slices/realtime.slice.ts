@@ -1,5 +1,5 @@
 // realtime.slice · estado de la conexión en tiempo real: estado y hora del último evento
-// conecta con: realtime.thunks (lo actualiza), realtime.selectors (lectura)
+// conecta con: realtime.thunks (lo actualiza)
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import type { RealtimeState, RealtimeStatus } from '../types/realtime.types'
 

@@ -38,6 +38,8 @@ const SAMPLES: Record<DrawerFormKind, unknown> = {
   cashClose: undefined,
   purchaseDetail: { id: 1 },
   purchaseReceive: { id: 1 },
+  purchasePay: { id: 1 },
+  supplierCatalog: { id: 1, name: 'Proveedor' },
   purchaseForm: undefined,
   billingConfig: undefined,
   docSeriesForm: { id: 1, warehouseId: 1, docType: 'invoice', prefix: 'FE-', nextNumber: 2 },
@@ -60,6 +62,10 @@ const SAMPLES: Record<DrawerFormKind, unknown> = {
   },
   adminForm: undefined,
   registerExpense: undefined,
+  reasonForm: { requestId: 'reason-1', title: 'Desactivar', message: 'Motivo requerido' },
+  verifyGoods: { orderId: 1, serial: 'PD-1', customerName: 'Cliente', total: 0, onVerified: () => undefined },
+  countDetail: { count: { id: 1 } },
+  permissionsHub: 'viewRoles',
 }
 
 describe('formRegistry', () => {
