@@ -148,6 +148,14 @@ func (s *CartService) Create(ctx context.Context, actor *middlewares.ActorContex
 	var empID *int64
 	if actor.ActorType == types.ActorEmployee {
 		empID = &actor.ActorID
+		// Si el empleado ya tiene un carrito abierto en la compañía, reutilizarlo para evitar carritos duplicados
+		existing, err := s.cartRepo.FindActiveByEmployee(ctx, s.pool, *companyID, actor.ActorID)
+		if err == nil && existing != nil {
+			items, err := s.cartRepo.ListItems(ctx, s.pool, existing.ID)
+			if err == nil {
+				return s.buildResponse(existing, items), nil
+			}
+		}
 	}
 
 	entity := &repositories.CartEntity{
@@ -188,7 +196,7 @@ func (s *CartService) ClearCart(ctx context.Context, actor *middlewares.ActorCon
 		return utils.Internal("Error al vaciar carrito.", err)
 	}
 
-	return s.cartRepo.SetStatus(ctx, s.pool, cartID, types.CartAbandoned)
+	return s.cartRepo.Touch(ctx, s.pool, cartID)
 }
 
 // buildResponse arma la respuesta del carrito con sus renglones y totales.

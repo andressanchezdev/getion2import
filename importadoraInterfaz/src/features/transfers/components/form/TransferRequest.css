@@ -442,9 +442,440 @@
   width: 100%;
 }
 
-.transfer-admin-route-field {
+.transfer-admin-route-field,
+.transfer-admin-route-single {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
   min-width: 0;
+  width: 100%;
+}
+
+/* Ficha del repuesto enfocado y miniatura */
+.transfer-focused-main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.transfer-focused-thumb {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  border-radius: var(--radius-sm, 6px);
+  background: var(--bg-card-inner, #f8fafc);
+  border: 1px solid var(--color-border-subtle, #f1f5f9);
+  padding: 2px;
+  flex-shrink: 0;
+}
+
+/* Matriz / Tabla Compacta de Disponibilidad */
+.transfer-wh-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+  background: var(--bg-card, #ffffff);
+  margin-top: var(--space-1);
+}
+
+.transfer-wh-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-xs, 12px);
+  text-align: left;
+}
+
+.transfer-wh-table th {
+  background: var(--bg-card-inner, #f8fafc);
+  padding: 6px 10px;
+  font-size: var(--text-2xs, 11px);
+  font-weight: var(--font-weight-bold, 700);
+  color: var(--color-text-secondary, #64748b);
+  border-bottom: 1px solid var(--color-border, #e2e8f0);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.transfer-wh-table .th-origin {
+  width: 48%;
+}
+
+.transfer-wh-table .th-stock {
+  width: 26%;
+}
+
+.transfer-wh-table .th-qty {
+  width: 26%;
+  text-align: right;
+  padding-right: 12px;
+}
+
+.transfer-wh-row {
+  border-bottom: 1px solid var(--color-border-subtle, #f1f5f9);
+  transition: background-color var(--transition-fast, 150ms ease);
+}
+
+.transfer-wh-row:last-child {
+  border-bottom: none;
+}
+
+.transfer-wh-row.is-selected {
+  background: rgba(37, 99, 235, 0.04);
+}
+
+.transfer-wh-row.is-empty {
+  opacity: 0.6;
+  background: var(--bg-card-inner, #f8fafc);
+}
+
+.transfer-wh-table td {
+  padding: 8px 10px;
+  vertical-align: middle;
+}
+
+.td-origin {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5, 6px);
+  min-width: 0;
+}
+
+.transfer-wh-badge {
+  font-size: 10px;
+  font-weight: var(--font-weight-bold, 700);
+  color: var(--color-primary, #2563eb);
+  background: rgba(37, 99, 235, 0.08);
+  padding: 1px 4px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.transfer-wh-name {
+  font-size: 12px;
+  font-weight: var(--font-weight-medium, 500);
+  color: var(--color-text-primary, #0f172a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.transfer-stock-status {
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold, 600);
+}
+
+.transfer-stock-status.available {
+  color: #059669;
+}
+
+.transfer-stock-status.empty {
+  color: #94a3b8;
+}
+
+.transfer-stock-status.loading {
+  color: #64748b;
+  font-style: italic;
+}
+
+.td-qty {
+  text-align: right;
+}
+
+.transfer-stepper-compact {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--color-border, #cbd5e1);
+  border-radius: var(--radius-sm, 6px);
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.transfer-stepper-compact .stepper-btn {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: var(--color-bg-muted, #f1f5f9);
+  color: var(--color-text-primary, #0f172a);
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.transfer-stepper-compact .stepper-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.transfer-stepper-compact .stepper-btn:not(:disabled):hover {
+  background: #e2e8f0;
+}
+
+.transfer-stepper-compact .stepper-input {
+  width: 38px;
+  height: 24px;
+  border: none;
+  border-left: 1px solid var(--color-border, #cbd5e1);
+  border-right: 1px solid var(--color-border, #cbd5e1);
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  color: var(--color-text-primary, #0f172a);
+  font-variant-numeric: tabular-nums;
+  -webkit-appearance: none;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* Ocultar flechas internas del navegador en inputs numéricos y mantener el contenido centrado */
+.transfer-stepper-compact .stepper-input::-webkit-inner-spin-button,
+.transfer-stepper-compact .stepper-input::-webkit-outer-spin-button,
+.transfer-form input[type="number"]::-webkit-inner-spin-button,
+.transfer-form input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.transfer-form input[type="number"] {
+  -webkit-appearance: none;
+  -moz-appearance: textfield;
+  appearance: textfield;
+  text-align: center;
+}
+
+.transfer-qty-none {
+  color: #cbd5e1;
+  font-size: 12px;
+  display: inline-block;
+  padding-right: 12px;
+}
+
+/* Botón para alternar a agregar más repuestos */
+.transfer-add-more-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 8px 12px;
+  margin-top: var(--space-2);
+  margin-bottom: var(--space-3);
+  border: 1px dashed var(--color-primary, #2563eb);
+  background: rgba(37, 99, 235, 0.04);
+  color: var(--color-primary, #2563eb);
+  font-size: var(--text-xs, 12px);
+  font-weight: var(--font-weight-semibold, 600);
+  border-radius: var(--radius-md, 8px);
+  cursor: pointer;
+  transition: all var(--transition-fast, 150ms ease);
+}
+
+.transfer-add-more-btn:hover {
+  background: rgba(37, 99, 235, 0.08);
+}
+
+.transfer-add-more-btn span {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* Resumen Agrupado por Sede de Origen */
+.transfer-groups-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  background: var(--bg-card-inner, #f8fafc);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+}
+
+.transfer-groups-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.transfer-groups-title {
+  margin: 0;
+  font-size: var(--text-sm, 13px);
+  font-weight: var(--font-weight-bold, 700);
+  color: var(--color-text-primary, #0f172a);
+}
+
+.transfer-groups-subtitle {
+  font-size: var(--text-2xs, 11px);
+  color: var(--color-text-secondary, #64748b);
+}
+
+.transfer-groups-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.transfer-origin-group-card {
+  background: #ffffff;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-sm, 6px);
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.transfer-group-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: #f1f5f9;
+  border-bottom: 1px solid var(--color-border-subtle, #e2e8f0);
+}
+
+.transfer-group-badge-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5, 6px);
+  font-size: var(--text-xs, 12px);
+  color: var(--color-text-primary, #0f172a);
+}
+
+.transfer-group-icon {
+  color: var(--color-primary, #2563eb);
+  display: inline-flex;
+  align-items: center;
+}
+
+.transfer-group-count-tag {
+  font-size: 10px;
+  font-weight: var(--font-weight-bold, 700);
+  color: var(--color-primary, #2563eb);
+  background: rgba(37, 99, 235, 0.08);
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+.transfer-group-lines {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.transfer-group-line-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border-bottom: 1px solid #f8fafc;
+  font-size: var(--text-xs, 12px);
+}
+
+.transfer-group-line-row:last-child {
+  border-bottom: none;
+}
+
+.transfer-group-line-content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  cursor: pointer;
+  flex: 1 1 0%;
+}
+
+.transfer-group-line-content:hover .transfer-line-desc {
+  color: var(--color-primary, #2563eb);
+}
+
+.transfer-line-qty-pill {
+  font-weight: 700;
+  color: var(--color-text-primary, #0f172a);
+  background: #f1f5f9;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.transfer-line-code {
+  color: var(--color-primary, #2563eb);
+  font-size: 11px;
+}
+
+.transfer-line-desc {
+  color: var(--color-text-secondary, #64748b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 11px;
+}
+
+.transfer-line-del {
+  background: none;
+  border: none;
+  color: var(--color-text-tertiary, #94a3b8);
+  cursor: pointer;
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: color var(--transition-fast, 150ms ease), background-color var(--transition-fast, 150ms ease);
+}
+
+.transfer-line-del:hover {
+  color: var(--color-danger, #ef4444);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+/* Callout de Privacidad */
+.transfer-privacy-callout {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: 8px 10px;
+  background: rgba(37, 99, 235, 0.05);
+  border: 1px solid rgba(37, 99, 235, 0.15);
+  border-radius: var(--radius-sm, 6px);
+  margin-top: var(--space-1);
+}
+
+.transfer-privacy-icon {
+  color: var(--color-primary, #2563eb);
+  margin-top: 2px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+}
+
+.transfer-privacy-text strong {
+  display: block;
+  font-size: 11px;
+  color: var(--color-primary, #2563eb);
+  margin-bottom: 2px;
+}
+
+.transfer-privacy-text p {
+  margin: 0;
+  font-size: 11px;
+  color: var(--color-text-secondary, #64748b);
+  line-height: 1.35;
+}
+
+.transfer-empty-alert {
+  padding: var(--space-3);
+  background: var(--bg-card-inner, #f8fafc);
+  border: 1px dashed var(--color-border, #cbd5e1);
+  border-radius: 8px;
+  text-align: center;
+  color: var(--color-text-secondary, #64748b);
+  font-size: 13px;
 }

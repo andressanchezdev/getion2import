@@ -40,6 +40,9 @@ describe('checkoutBlockers', () => {
   it('el administrador debe elegir empleado', () => {
     expect(checkoutBlockers({ ...ok, needsEmployee: true })).toEqual(['Elige el empleado al que se asigna la venta.'])
   })
+  it('avisa si falta elegir bodega específica', () => {
+    expect(checkoutBlockers({ ...ok, warehouseMissing: true })).toContain('Elige una bodega específica para realizar la venta.')
+  })
   it('la transferencia pide comprobante solo en el paso de pago', () => {
     expect(checkoutBlockers({ ...ok, transferMissingProof: true })).toEqual([])
     expect(checkoutBlockers({ ...ok, onPayment: true, transferMissingProof: true })).toEqual(['Adjunta el comprobante de la transferencia.'])

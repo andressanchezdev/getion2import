@@ -55,6 +55,25 @@ func (r *SaleRepository) ActiveEmployeeExists(ctx context.Context, q db.DBExecut
 	return exists, err
 }
 
+// ActiveEmployeeInWarehouseExists dice si el empleado existe, está activo y pertenece a la bodega de la venta (o no tiene bodega fija como administradores)
+func (r *SaleRepository) ActiveEmployeeInWarehouseExists(ctx context.Context, q db.DBExecutor, employeeID, companyID, warehouseID int64) (bool, error) {
+	var exists bool
+	err := q.QueryRow(ctx, `
+		SELECT EXISTS(
+			SELECT 1 FROM employees 
+			WHERE id = $1 AND company_id = $2 AND status = 'active' 
+			  AND (warehouse_id = $3 OR warehouse_id IS NULL)
+		)`, employeeID, companyID, warehouseID).Scan(&exists)
+	return exists, err
+}
+
+// MarkQuotationConverted vincula la cotización a la venta creada y actualiza su estado a 'converted'.
+func (r *SaleRepository) MarkQuotationConverted(ctx context.Context, q db.DBExecutor, quotationID, saleID int64) error {
+	const sql = `UPDATE quotations SET status = 'converted', sale_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`
+	_, err := q.Exec(ctx, sql, saleID, quotationID)
+	return err
+}
+
 // InsertTransferPayment crea el pago por transferencia de un pedido, en revisión, con su comprobante y referencia
 func (r *SaleRepository) InsertTransferPayment(ctx context.Context, q db.DBExecutor, companyID int64, serialCode string, saleID, customerID, employeeID int64, amount float64, proofURL, reference, notes *string) error {
 	const sql = `

@@ -6,9 +6,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { useCashSession } from '@/features/cashRegister'
 import { closeDrawerForm, openDrawerForm } from '@/features/navigation'
 import { toast } from '@/global/helpers/feedback/toast'
-import { useAppDispatch } from '@/global/hooks/store/useRedux'
+import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { useDebouncedValue } from '@/global/hooks/data/useDebouncedValue'
 import { usePermissions } from '@/global/hooks/access/usePermissions'
+import { toWarehouseNumber } from '@/features/shop'
 import { checkoutBlockers, deliveryProblems, generalBlockers, type BlockerInput } from '../helpers/checkout.blockers'
 import { canPayByCredit, computeTotals, initialDelivery, isDeliveryValid } from '../helpers/checkout.adapter'
 import { confirmQuotationThunk, confirmSaleThunk, loadCheckoutCustomerThunk, loadCheckoutLinesThunk, searchCheckoutCustomersThunk } from '../thunks/checkout.thunks'
@@ -101,6 +102,9 @@ export const useCheckoutFlow = (payload: CheckoutPayload) => {
   const transferOk = payment !== 'transfer' || Boolean(transferProof.trim())
   // con la caja de la bodega cerrada no se emite un pedido pagado en efectivo (hay que abrir el turno antes); si no se pudo consultar la caja no se bloquea
   const cashBlocked = !isQuotation && payment === 'cash' && cash.warehouseId > 0 && !cash.loading && !cash.failed && !cash.isOpen
+  const activeWarehouseId = useAppSelector((state) => state.ui.activeWarehouseId)
+  const warehouseNumber = toWarehouseNumber(activeWarehouseId)
+
   // lo que falta para continuar: cada dato de entrega se explica dentro de su campo y lo demás en una línea junto al botón
   const blockerInput: BlockerInput = {
     hasCustomer: Boolean(customer),
@@ -112,6 +116,7 @@ export const useCheckoutFlow = (payload: CheckoutPayload) => {
     onPayment: step === 'payment',
     transferMissingProof: !transferOk,
     cashBlocked,
+    warehouseMissing: !isQuotation && !warehouseNumber,
   }
   const blockers = checkoutBlockers(blockerInput)
   const general = generalBlockers(blockerInput)

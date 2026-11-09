@@ -1,9 +1,15 @@
 // DrawerRight · panel derecho contextual: carrito en el catálogo, detalle del objeto seleccionado o formulario de la acción abierta; se cierra únicamente con la ✕ de su encabezado (ni con clic fuera ni con Esc)
-import React, { useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import './DrawerRight.css'
 import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { useVerticalDrag } from '@/global/hooks/ui/useVerticalDrag'
-import { closeDrawerForm, openDrawerForm, setRightDrawerOpen } from '@/features/navigation'
+import {
+  closeDrawerForm,
+  openDrawerForm,
+  setRightDrawerOpen,
+  setActiveModule,
+  setActiveSubitem,
+} from '@/features/navigation'
 import { selectCartTotals, useCartMenuActions } from '@/features/shop'
 import { selectDraftUnits, useQuotationCartMenuActions } from '@/features/quotations'
 import { DRAWER_REGISTRY, selectDrawerMode } from './drawerRegistry'
@@ -60,12 +66,46 @@ export const DrawerRight: React.FC = () => {
   const dragCoord = useVerticalDrag('ip_cart_tab_top', extraHeight)
 
   // cerrar: el carrito se contrae; un objeto se deselecciona; se apaga rightDrawerOpen
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     dispatch(setRightDrawerOpen(false))
     if (entry?.close) entry.close(dispatch)
     else setIsCartCollapsed(true)
-  }
+  }, [dispatch, entry])
   // ojo: ningún panel se cierra con clic fuera ni con Esc; solo con la ✕ del encabezado (el carrito se contrae y el borrador de traslado se conserva)
+
+  // Atajo de teclado global: Alt + C abre o cierra el carrito de compras (o cotización)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Validar Alt + C (ignorando AltGr en Windows que envía ctrlKey + altKey)
+      if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === 'c' || e.key === 'C' || e.code === 'KeyC')) {
+        e.preventDefault()
+
+        // Si el carrito ya está abierto en pantalla, actuar como toggle y cerrarlo/contraerlo
+        if (isCartDrawerOpen) {
+          handleClose()
+          return
+        }
+
+        // Si no estamos en el catálogo (ventas o cotizaciones), cambiar a ventas para poder mostrar el carrito
+        if (!isInCatalog) {
+          dispatch(setActiveModule('shop'))
+          dispatch(setActiveSubitem('catalog'))
+        }
+
+        // Si hay una acción/formulario abierto (ej. traslado), cerrarlo para priorizar el carrito
+        if (drawerForm) {
+          dispatch(closeDrawerForm())
+        }
+
+        // Abrir y descolapsar el carrito
+        setIsCartCollapsed(false)
+        dispatch(setRightDrawerOpen(true))
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isCartDrawerOpen, isInCatalog, drawerForm, handleClose, dispatch])
 
   // Posiciones verticales calculadas para que NUNCA se sobrepongan entre ellas
   const cartTabTop = isCartTabVisible ? dragCoord.top : null
@@ -95,6 +135,7 @@ export const DrawerRight: React.FC = () => {
             dispatch(setRightDrawerOpen(true))
           }}
           label="carrito"
+          title="Abrir carrito (Alt + C) · arrástralo para moverlo"
           storageKey="ip_cart_tab_top"
           controlledTop={cartTabTop}
           controlledRight={tabRight}

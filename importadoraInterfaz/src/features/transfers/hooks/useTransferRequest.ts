@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react'
 import { closeDrawerForm } from '@/features/navigation'
 import { toast } from '@/global/helpers/feedback/toast'
 import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
-import { totalUnits, validateRequest } from '../helpers/transfers.request'
+import { groupByOrigin, totalUnits, validateRequest } from '../helpers/transfers.request'
 import {
   addTransferDraftLine,
   clearTransferDraft,
@@ -51,8 +51,14 @@ export const useTransferRequest = (initial?: CreateTransferInitialPayload) => {
   const destWarehouse = warehouses.find((w) => Number(w.id) === destWarehouseId)
   const destWarehouseName = destWarehouse ? destWarehouse.name : destWarehouseId > 0 ? `Bodega #${destWarehouseId}` : 'Sin bodega asignada'
 
-  // Producto activo pasado al abrir el drawer desde el catálogo
-  const focusedProduct = initial?.product
+  // Producto activo pasado al abrir el drawer o seleccionado por el usuario en el buscador
+  const [focusedProduct, setFocusedProduct] = useState<CreateTransferInitialPayload['product'] | null>(() => initial?.product ?? null)
+
+  useEffect(() => {
+    if (initial?.product) {
+      setFocusedProduct(initial.product)
+    }
+  }, [initial?.product])
 
   // existencias reales del producto en cada bodega de la compañía (el mapa que trae la tarjeta del catálogo solo conoce la bodega activa)
   const productStock = useProductStockByWarehouse(focusedProduct ? Number(focusedProduct.id) : undefined, focusedProduct?.stockByWarehouse)
@@ -219,7 +225,6 @@ export const useTransferRequest = (initial?: CreateTransferInitialPayload) => {
     isEmployee,
     originWarehouseId,
     setOriginWarehouseId,
-    focusedProduct,
     stockByWarehouse,
     stockLoading: productStock.loading,
     stockError: productStock.error,
@@ -230,7 +235,10 @@ export const useTransferRequest = (initial?: CreateTransferInitialPayload) => {
     products,
     searching: searchStatus === 'loading',
     lines,
+    originGroups: groupByOrigin(lines),
     units: totalUnits(lines),
+    focusedProduct,
+    setFocusedProduct,
     getOriginQty,
     setOriginQty,
     addFrom,
