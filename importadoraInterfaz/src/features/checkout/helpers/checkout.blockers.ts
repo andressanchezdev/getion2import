@@ -22,6 +22,7 @@ export interface BlockerInput {
   transferMissingProof: boolean
   cashBlocked?: boolean
   warehouseMissing?: boolean
+  isSuperadmin?: boolean
 }
 
 const EMPLOYEE_MESSAGE = 'Elige el empleado al que se asigna la venta.'
@@ -36,6 +37,7 @@ export const deliveryProblems = (delivery: DeliveryData): { address?: string; ci
 // lo que falta y no es de un campo en particular: cliente, productos, comprobante y caja
 export const generalBlockers = (input: BlockerInput): string[] => {
   const missing: string[] = []
+  if (input.isSuperadmin) missing.push('El rol Superadmin tiene permisos exclusivos de supervisión y gestión; no está autorizado para emitir pedidos directos.')
   if (input.warehouseMissing) missing.push('Elige una bodega específica para realizar la venta.')
   if (!input.hasCustomer) missing.push('Elige el cliente.')
   if (input.linesCount === null) missing.push('Preparando los productos…')

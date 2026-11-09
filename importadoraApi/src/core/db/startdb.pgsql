@@ -1273,6 +1273,10 @@ CREATE TABLE schema_migrations (
     applied_at          TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+INSERT INTO schema_migrations (version, name, filename, checksum, execution_time_ms)
+VALUES ('20261126', 'close-plan-gaps', '20261126_close-plan-gaps.sql', 'bundled-in-startdb', 0)
+ON CONFLICT (version) DO NOTHING;
+
 
 -- ============================================================
 -- PARTE 3: FUNCIONES LIGERAS, TRIGGERS Y VISTAS OPERATIVAS

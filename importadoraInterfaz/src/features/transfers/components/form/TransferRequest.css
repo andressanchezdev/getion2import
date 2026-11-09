@@ -473,15 +473,15 @@
 /* Matriz / Tabla Compacta de Disponibilidad */
 .transfer-wh-table-wrapper {
   width: 100%;
-  overflow-x: auto;
   border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 8px);
+  border-radius: var(--radius-md, 5px);
   background: var(--bg-card, #ffffff);
   margin-top: var(--space-1);
 }
 
 .transfer-wh-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: var(--text-xs, 12px);
   text-align: left;
@@ -499,15 +499,16 @@
 }
 
 .transfer-wh-table .th-origin {
-  width: 48%;
+  width: 46%;
 }
 
 .transfer-wh-table .th-stock {
   width: 26%;
+  text-align: center;
 }
 
 .transfer-wh-table .th-qty {
-  width: 26%;
+  width: 28%;
   text-align: right;
   padding-right: 12px;
 }
@@ -536,29 +537,29 @@
 }
 
 .td-origin {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1-5, 6px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   min-width: 0;
 }
 
-.transfer-wh-badge {
-  font-size: 10px;
-  font-weight: var(--font-weight-bold, 700);
-  color: var(--color-primary, #2563eb);
-  background: rgba(37, 99, 235, 0.08);
-  padding: 1px 4px;
-  border-radius: 4px;
-  flex-shrink: 0;
-}
-
 .transfer-wh-name {
+  display: block;
   font-size: 12px;
   font-weight: var(--font-weight-medium, 500);
   color: var(--color-text-primary, #0f172a);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.td-stock {
+  text-align: center;
+}
+
+.td-qty {
+  text-align: right;
+  padding-right: 10px;
 }
 
 .transfer-stock-status {

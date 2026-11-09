@@ -67,13 +67,13 @@ export const InventoryCountsTable: React.FC<Props> = ({
     <DataTable tableId="inventory-inventory-counts" className="counts-table">
         <thead>
           <tr>
-            <th># Conteo</th>
-            <th>Bodega</th>
-            <th>Responsable</th>
-            <th>Estado</th>
-            <th>Fecha Inicio</th>
-            <th>Fecha Cierre</th>
-            <th style={{ textAlign: 'center' }}>Acciones</th>
+            <th className="col-priority-high"># Conteo</th>
+            <th className="col-priority-high">Bodega</th>
+            <th className="col-priority-medium">Responsable</th>
+            <th className="col-priority-high">Estado</th>
+            <th className="col-priority-medium">Fecha Inicio</th>
+            <th className="col-priority-low">Fecha Cierre</th>
+            <th className="col-actions" style={{ textAlign: 'center' }}>Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -90,19 +90,19 @@ export const InventoryCountsTable: React.FC<Props> = ({
                 className="counts-table-row"
                 onClick={() => onOpenDetail(count.id)}
               >
-                <td>
+                <td className="col-priority-high">
                   <strong>#{count.id}</strong>
                 </td>
-                <td>{count.warehouseName}</td>
-                <td>{count.employeeName || '—'}</td>
-                <td>
+                <td className="col-priority-high">{count.warehouseName}</td>
+                <td className="col-priority-medium">{count.employeeName || '—'}</td>
+                <td className="col-priority-high">
                   <Pill tone={STATUS_TONES[count.status] || 'gray'}>
                     {STATUS_LABELS[count.status] || count.status}
                   </Pill>
                 </td>
-                <td>{formatDate(count.createdAt)}</td>
-                <td>{count.closedAt ? formatDate(count.closedAt) : '—'}</td>
-                <td style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+                <td className="col-priority-medium">{formatDate(count.createdAt)}</td>
+                <td className="col-priority-low">{count.closedAt ? formatDate(count.closedAt) : '—'}</td>
+                <td className="col-actions" style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
                   <RowActions actions={getActions(count)} />
                 </td>
               </tr>

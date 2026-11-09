@@ -40,13 +40,13 @@ export const BankRecordsTable: React.FC<Props> = ({ records, message }) => {
       <DataTable tableId="bank-bank-records">
           <thead>
             <tr>
-              <th>Fecha</th>
-              <th>Descripción</th>
-              <th>Canal</th>
-              <th>Referencia</th>
-              <th className="bank-num">Valor</th>
-              <th>Estado</th>
-              <th>Acciones</th>
+              <th className="col-priority-medium">Fecha</th>
+              <th className="col-priority-high">Descripción</th>
+              <th className="col-priority-low">Canal</th>
+              <th className="col-priority-low">Referencia</th>
+              <th className="bank-num col-priority-high">Valor</th>
+              <th className="col-priority-high">Estado</th>
+              <th className="col-actions">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -59,16 +59,16 @@ export const BankRecordsTable: React.FC<Props> = ({ records, message }) => {
             ) : (
               records.map((record) => (
                 <tr key={record.id} className={record.isIncome ? '' : 'bank-row-outgoing'}>
-                  <td>{record.date || '—'}</td>
-                  <td className="bank-description">{record.description || '—'}</td>
-                  <td>{record.channel || '—'}</td>
-                  <td>{record.reference || '—'}</td>
-                  <td className="bank-num table-amount">
+                  <td className="col-priority-medium">{record.date || '—'}</td>
+                  <td className="bank-description col-priority-high">{record.description || '—'}</td>
+                  <td className="col-priority-low">{record.channel || '—'}</td>
+                  <td className="col-priority-low">{record.reference || '—'}</td>
+                  <td className="bank-num table-amount col-priority-high">
                     {record.isIncome ? '' : '−'}
                     {formatPesos(record.amount)}
                   </td>
-                  <td>{record.isIncome ? <Pill tone={STATUS_TONE[record.status]}>{STATUS_LABELS[record.status]}</Pill> : <Pill tone="gray">Salida</Pill>}</td>
-                  <td>
+                  <td className="col-priority-high">{record.isIncome ? <Pill tone={STATUS_TONE[record.status]}>{STATUS_LABELS[record.status]}</Pill> : <Pill tone="gray">Salida</Pill>}</td>
+                  <td className="col-actions">
                     <RowActions
                       actions={[
                         {

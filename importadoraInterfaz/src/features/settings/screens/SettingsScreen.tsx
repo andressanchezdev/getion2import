@@ -5,13 +5,14 @@ import { useAppSelector } from '@/global/hooks/store/useRedux'
 import { ScreensaverTab } from './ScreensaverTab'
 import { CompanyTab } from './CompanyTab'
 import { SecurityTab } from './SecurityTab'
+import { BackupTab } from './BackupTab'
 
-type SettingsTab = 'company' | 'screensaver' | 'security' | 'health'
+type SettingsTab = 'company' | 'screensaver' | 'security' | 'health' | 'backups'
 
 export const SettingsScreen: React.FC = () => {
   const activeSubitem = useAppSelector((state) => state.ui.activeSubitem)
   const [currentTab, setCurrentTab] = useState<SettingsTab>(
-    activeSubitem === 'screensaver' || activeSubitem === 'security' || activeSubitem === 'health'
+    activeSubitem === 'screensaver' || activeSubitem === 'security' || activeSubitem === 'health' || activeSubitem === 'backups'
       ? (activeSubitem as SettingsTab)
       : 'company'
   )
@@ -21,6 +22,7 @@ export const SettingsScreen: React.FC = () => {
     { id: 'screensaver', label: 'Protector', desc: 'Gestión y personalización de la imagen animada del protector de pantalla' },
     { id: 'security', label: 'Credenciales y Acceso', desc: 'Perfil del usuario activo, seguridad de acceso y actualización de credenciales' },
     { id: 'health', label: 'Salud del Sistema', desc: 'Estado de conectividad de la API en Railway y PostgreSQL' },
+    { id: 'backups', label: 'Respaldos', desc: 'Copias de seguridad de PostgreSQL, descarga y restauración' },
   ]
 
   return (
@@ -63,6 +65,7 @@ export const SettingsScreen: React.FC = () => {
           {currentTab === 'company' && <CompanyTab />}
           {currentTab === 'screensaver' && <ScreensaverTab />}
           {currentTab === 'security' && <SecurityTab />}
+          {currentTab === 'backups' && <BackupTab />}
           {currentTab === 'health' && (
             <div className="settings-placeholder-box">
               <span className="settings-badge-status">Servicios en Línea</span>

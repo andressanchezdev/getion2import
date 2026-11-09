@@ -18,9 +18,10 @@
 }
 
 .ui-pill-blue {
-  border-color: var(--c-blue-300);
+  border-color: var(--c-blue-200);
   background-color: var(--c-blue-50);
-  color: var(--c-blue-600);
+  color: var(--c-blue-700);
+  font-weight: var(--font-weight-medium);
 }
 
 .ui-pill-green {

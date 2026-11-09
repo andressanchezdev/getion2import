@@ -30,6 +30,7 @@ export const toCheckoutCustomer = (dto: CheckoutCustomerDto, availableCredit: nu
   phone: text(dto.mobile) || text(dto.phone),
   discountPercent: Math.min(100, Math.max(0, Number(dto.discountPercent) || 0)),
   creditEnabled: dto.creditEnabled === true,
+  creditLimit: Number(dto.creditLimit) || 0,
   availableCredit: Math.max(0, availableCredit),
   creditDays: Number(dto.creditDays) || 0,
   deliveries: toDeliveries(dto),
@@ -76,3 +77,28 @@ export const toShippingAddress = (delivery: DeliveryData) => ({ address: deliver
 // la entrega es válida con dirección, ciudad y un teléfono de 10 dígitos
 export const isDeliveryValid = (delivery: DeliveryData): boolean =>
   delivery.address.trim().length >= 5 && delivery.city.trim().length >= 2 && /^\d{10}$/.test(normalizePhone(delivery.phone))
+
+export interface CreditAlertInfo {
+  shouldAlert: boolean
+  usagePercent: number
+  availableCredit: number
+  message: string
+}
+
+// Alerta informativa si el cliente consumió más del 70% de su cupo asignado pero aún le queda saldo disponible
+export const checkCreditUsageAlert = (customer: CheckoutCustomer | null | undefined): CreditAlertInfo | null => {
+  if (!customer || !customer.creditEnabled || !customer.creditLimit || customer.creditLimit <= 0) {
+    return null
+  }
+  const used = Math.max(0, customer.creditLimit - customer.availableCredit)
+  const usagePercent = Math.round((used / customer.creditLimit) * 100)
+  if (usagePercent >= 70 && customer.availableCredit > 0) {
+    return {
+      shouldAlert: true,
+      usagePercent,
+      availableCredit: customer.availableCredit,
+      message: `Aviso de cupo: El cliente ha utilizado el ${usagePercent}% de su cupo de crédito (${customer.availableCredit.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })} restante disponible). Sugiera gestionar un abono pronto.`,
+    }
+  }
+  return null
+}

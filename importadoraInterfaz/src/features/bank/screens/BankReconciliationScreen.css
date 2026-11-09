@@ -53,6 +53,8 @@
   display: flex;
   align-items: center;
   flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: space-between;
   gap: var(--space-3);
   padding: var(--space-4);
   border-bottom: 1px solid var(--color-border);
@@ -61,6 +63,7 @@
 .bank-upload-btn {
   margin-left: auto;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .bank-search {

@@ -11,7 +11,7 @@ import { useDebouncedValue } from '@/global/hooks/data/useDebouncedValue'
 import { usePermissions } from '@/global/hooks/access/usePermissions'
 import { toWarehouseNumber } from '@/features/shop'
 import { checkoutBlockers, deliveryProblems, generalBlockers, type BlockerInput } from '../helpers/checkout.blockers'
-import { canPayByCredit, computeTotals, initialDelivery, isDeliveryValid } from '../helpers/checkout.adapter'
+import { canPayByCredit, checkCreditUsageAlert, computeTotals, initialDelivery, isDeliveryValid } from '../helpers/checkout.adapter'
 import { confirmQuotationThunk, confirmSaleThunk, loadCheckoutCustomerThunk, loadCheckoutLinesThunk, searchCheckoutCustomersThunk } from '../thunks/checkout.thunks'
 import type { CheckoutCustomer, CheckoutLine, CheckoutPayload, DeliveryData, PaymentChoice } from '../types/checkout.types'
 
@@ -86,6 +86,10 @@ export const useCheckoutFlow = (payload: CheckoutPayload) => {
     setCustomer(result.payload)
     setDelivery(initialDelivery(result.payload)) // se cargan los datos guardados; se pueden editar
     setPayment('cash')
+    const alertInfo = checkCreditUsageAlert(result.payload)
+    if (alertInfo?.shouldAlert) {
+      toast.warning(alertInfo.message)
+    }
   }
 
   const clearCustomer = () => {
@@ -117,6 +121,7 @@ export const useCheckoutFlow = (payload: CheckoutPayload) => {
     transferMissingProof: !transferOk,
     cashBlocked,
     warehouseMissing: !isQuotation && !warehouseNumber,
+    isSuperadmin: level === 'superadmin',
   }
   const blockers = checkoutBlockers(blockerInput)
   const general = generalBlockers(blockerInput)
@@ -166,9 +171,19 @@ export const useCheckoutFlow = (payload: CheckoutPayload) => {
     dispatch(closeDrawerForm())
   }
 
+  const changePayment = (choice: PaymentChoice) => {
+    setPayment(choice)
+    if (choice === 'credit') {
+      const alertInfo = checkCreditUsageAlert(customer)
+      if (alertInfo?.shouldAlert) {
+        toast.warning(alertInfo.message)
+      }
+    }
+  }
+
   return {
     isQuotation, needsEmployee, step, setStep, lines, query, setQuery, results, customer, chooseCustomer, clearCustomer,
-    delivery, setDelivery, employeeId, setEmployeeId, payment, setPayment,
+    delivery, setDelivery, employeeId, setEmployeeId, payment, setPayment: changePayment,
     transferProof, setTransferProof, transferReference, setTransferReference, transferBank, setTransferBank,
     immediatePicking, setImmediatePicking,
     total, totals, payable, creditAllowed, canContinue, blockers, generalBlockers: general, problems, attempted, cashBlocked, cashWarehouseName: cash.warehouseName, submitting, error, confirm, notifyBlockers,

@@ -1,6 +1,8 @@
 // LoginForm · formulario del login: marca, saludo, campos, opciones y botones
 // conecta con: useLoginForm (estado y envío) y las partes LoginBrand, LoginWelcome, LoginInput, LoginOptions y LoginActions
-import React from 'react'
+import React, { useState } from 'react'
+import eyeIcon from '@/assets/icons/eye.svg?raw'
+import eyeOffIcon from '@/assets/icons/eye-off.svg?raw'
 import { LOGIN_TEXTS } from '../../constants/auth.constants'
 import { useLoginForm } from '../../hooks/useLoginForm'
 import { LoginBrand } from '../branding/LoginBrand'
@@ -12,6 +14,7 @@ import './LoginForm.css'
 
 export const LoginForm: React.FC = () => {
   const { email, setEmail, password, setPassword, remember, setRemember, isLoading, handleSubmit } = useLoginForm()
+  const [showPassword, setShowPassword] = useState(false)
 
   return (
     <form className="login-form" onSubmit={handleSubmit} noValidate>
@@ -29,11 +32,26 @@ export const LoginForm: React.FC = () => {
         />
         <LoginInput
           name="password"
-          type="password"
+          type={showPassword ? 'text' : 'password'}
           value={password}
           placeholder={LOGIN_TEXTS.passwordPlaceholder}
           autoComplete="current-password"
           onChange={(e) => setPassword(e.target.value)}
+          endAction={
+            <button
+              type="button"
+              className="login-password-toggle"
+              onClick={() => setShowPassword((prev) => !prev)}
+              aria-label={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+              title={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+            >
+              <span
+                className="login-password-toggle-icon"
+                aria-hidden="true"
+                dangerouslySetInnerHTML={{ __html: showPassword ? eyeOffIcon : eyeIcon }}
+              />
+            </button>
+          }
         />
       </div>
 

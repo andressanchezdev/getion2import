@@ -91,6 +91,9 @@ func (c *QuotationController) GetByID(ctx echo.Context) error {
 // Create POST /quotations
 func (c *QuotationController) Create(ctx echo.Context) error {
 	actor := middlewares.GetActor(ctx)
+	if actor != nil && actor.ActorType == types.ActorSuperadmin {
+		return utils.Forbidden("FORBIDDEN_SUPERADMIN_OPERATIONAL", "El rol Superadmin tiene permisos exclusivos de supervisión y gestión global; no está autorizado para crear cotizaciones operativas.")
+	}
 
 	var req dtos.CreateQuotationRequest
 	if err := utils.BindJSON(ctx, &req); err != nil {
@@ -110,6 +113,9 @@ func (c *QuotationController) Create(ctx echo.Context) error {
 // Update PUT /quotations/:id
 func (c *QuotationController) Update(ctx echo.Context) error {
 	actor := middlewares.GetActor(ctx)
+	if actor != nil && actor.ActorType == types.ActorSuperadmin {
+		return utils.Forbidden("FORBIDDEN_SUPERADMIN_OPERATIONAL", "El rol Superadmin tiene permisos exclusivos de supervisión y gestión global; no está autorizado para crear cotizaciones operativas.")
+	}
 	id, err := utils.ParamInt64(ctx, "id")
 	if err != nil {
 		return err

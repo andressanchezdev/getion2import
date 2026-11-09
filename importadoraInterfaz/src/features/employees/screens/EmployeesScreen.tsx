@@ -56,7 +56,7 @@ export const EmployeesScreen: React.FC = () => {
           <div className="employees-toolbar-actions">
             <button
               type="button"
-              className="employees-btn-create"
+              className="btn-primary"
               onClick={() => setIsCreateOpen(true)}
             >
               <Icon svg={plusIcon} /> Registrar Empleado

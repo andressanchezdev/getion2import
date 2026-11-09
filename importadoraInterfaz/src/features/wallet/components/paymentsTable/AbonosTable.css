@@ -2,17 +2,16 @@
 /* ojo: misma tarjeta que créditos, conciliación, proveedores y bodegas; la barra queda arriba y la tabla hace scroll por dentro */
 
 .abonos-search {
-  flex: 0 0 40%;
-  width: 40%;
-  max-width: 40%;
-  min-width: 240px;
+  flex: 1 1 200px;
+  max-width: 360px;
+  min-width: 180px;
 }
 
 .abonos-total {
-  margin-left: auto;
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .abonos-total strong {
@@ -21,6 +20,8 @@
 
 .abonos-create {
   white-space: nowrap;
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .abonos-num {

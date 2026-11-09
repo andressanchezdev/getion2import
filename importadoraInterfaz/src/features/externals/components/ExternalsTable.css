@@ -7,18 +7,21 @@
 }
 .externals-toolbar {
   flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  justify-content: space-between;
 }
 
 .externals-search {
-  flex: 0 0 40%;
-  width: 40%;
-  max-width: 40%;
-  min-width: 240px;
+  flex: 1 1 240px;
+  max-width: 400px;
+  min-width: 200px;
 }
 
 .externals-create {
   margin-left: auto;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .externals-cell {

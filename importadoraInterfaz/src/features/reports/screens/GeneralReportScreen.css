@@ -56,12 +56,6 @@
   border-color: var(--color-primary);
 }
 
-.gen-report-refresh-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
 .gen-report-inline-icon {
   display: inline-flex;
   width: 0.95rem;

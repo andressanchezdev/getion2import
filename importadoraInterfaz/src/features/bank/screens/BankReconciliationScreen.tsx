@@ -11,6 +11,7 @@ import { selectWarehouses } from '@/features/warehouses'
 import { BankRecordsTable } from '../components/table/BankRecordsTable'
 import { BankKpis } from '../components/upload/BankKpis'
 import { BankUploadButton } from '../components/upload/BankUploadButton'
+import { BankDropZone } from '../components/upload/BankDropZone'
 import { BANK_STATUS_OPTIONS, INITIAL_BANK_FILTERS } from '../constants/bank.constants'
 import { useBankRecords } from '../hooks/useBankRecords'
 import type { BankRecordStatus } from '../types/bank.types'
@@ -27,6 +28,16 @@ export const BankReconciliationScreen: React.FC = () => {
     { value: 'all', label: 'Todas las bodegas' },
     ...warehouses.map((wh) => ({ value: String(wh.id), label: wh.name })),
   ]
+
+  const hasLoadedData = bank.items.length > 0 || hasFilters
+
+  if (!hasLoadedData && bank.status !== 'loading') {
+    return (
+      <div className="bank-screen">
+        <BankDropZone />
+      </div>
+    )
+  }
 
   const message =
     bank.status === 'failed'

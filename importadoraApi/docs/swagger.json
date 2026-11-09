@@ -8902,6 +8902,195 @@
           }
         }
       }
+    },
+    "/backups": {
+      "get": {
+        "tags": [
+          "backups"
+        ],
+        "summary": "Listar archivos de respaldo generados",
+        "responses": {
+          "200": {
+            "description": "Lista de respaldos"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "backups"
+        ],
+        "summary": "Crear un nuevo respaldo de la base de datos",
+        "responses": {
+          "201": {
+            "description": "Respaldo creado"
+          }
+        }
+      }
+    },
+    "/backups/{id}/download": {
+      "get": {
+        "tags": [
+          "backups"
+        ],
+        "summary": "Descargar archivo de respaldo",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Archivo binario de respaldo"
+          }
+        }
+      }
+    },
+    "/backups/{id}/restore": {
+      "post": {
+        "tags": [
+          "backups"
+        ],
+        "summary": "Restaurar la base de datos a partir de un respaldo",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Base de datos restaurada"
+          }
+        }
+      }
+    },
+    "/products/thumbnails": {
+      "get": {
+        "tags": [
+          "products"
+        ],
+        "summary": "Obtener miniaturas por lista de IDs de productos",
+        "parameters": [
+          {
+            "name": "ids",
+            "in": "query",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Miniaturas de productos"
+          }
+        }
+      }
+    },
+    "/cash/expenses": {
+      "get": {
+        "tags": [
+          "cash"
+        ],
+        "summary": "Listar egresos y gastos menores de caja",
+        "responses": {
+          "200": {
+            "description": "Lista de gastos de caja"
+          }
+        }
+      }
+    },
+    "/payments/{id}/reject": {
+      "post": {
+        "tags": [
+          "payments"
+        ],
+        "summary": "Rechazar pago en revisión con novedad",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pago rechazado"
+          }
+        }
+      }
+    },
+    "/payments/{id}/reopen": {
+      "post": {
+        "tags": [
+          "payments"
+        ],
+        "summary": "Reabrir pago rechazado para nueva revisión",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pago reabierto"
+          }
+        }
+      }
+    },
+    "/purchases/{id}/pay": {
+      "post": {
+        "tags": [
+          "purchases"
+        ],
+        "summary": "Registrar pago de recepción de compra desde caja",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pago de compra registrado"
+          }
+        }
+      }
+    },
+    "/purchases/suppliers/{supplierId}/products/{productId}": {
+      "delete": {
+        "tags": [
+          "purchases"
+        ],
+        "summary": "Desvincular producto del catálogo de un proveedor",
+        "parameters": [
+          {
+            "name": "supplierId",
+            "in": "path",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "name": "productId",
+            "in": "path",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Producto desvinculado"
+          }
+        }
+      }
     }
   }
 }

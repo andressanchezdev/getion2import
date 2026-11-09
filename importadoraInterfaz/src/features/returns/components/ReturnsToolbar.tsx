@@ -25,7 +25,7 @@ interface Props {
 export const ReturnsToolbar: React.FC<Props> = ({ query, status, warehouseId, counts, hasFilters, onQuery, onStatus, onWarehouse, onClear, onCreate }) => {
   const warehouses = useAppSelector(selectWarehouses)
   return (
-    <div className="returns-toolbar">
+    <div className="data-toolbar returns-toolbar">
       <SearchBar
         value={query}
         onChange={onQuery}

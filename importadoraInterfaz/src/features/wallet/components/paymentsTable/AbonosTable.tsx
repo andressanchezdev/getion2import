@@ -83,16 +83,16 @@ export const AbonosTable: React.FC = () => {
       <DataTable tableId="wallet-abonos">
           <thead>
             <tr>
-              <th>Recibo</th>
-              <th>Fecha</th>
-              <th>Cliente</th>
-              <th>Identificación</th>
-              <th>Doc. / Venta</th>
-              <th>Método</th>
-              <th>Referencia</th>
-              <th className="abonos-num">Monto</th>
-              <th>Estado</th>
-              <th>Acciones</th>
+              <th className="col-priority-high">Recibo</th>
+              <th className="col-priority-medium">Fecha</th>
+              <th className="col-priority-high">Cliente</th>
+              <th className="col-priority-low">Identificación</th>
+              <th className="col-priority-medium">Doc. / Venta</th>
+              <th className="col-priority-high">Método</th>
+              <th className="col-priority-low">Referencia</th>
+              <th className="abonos-num col-priority-high">Monto</th>
+              <th className="col-priority-high">Estado</th>
+              <th className="col-actions">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -103,15 +103,15 @@ export const AbonosTable: React.FC = () => {
             ) : (
               pageItems.map((abono) => (
                 <tr key={abono.id}>
-                  <td><strong>{abono.serialCode}</strong></td>
-                  <td>{abono.date}</td>
-                  <td>{abono.customerName}</td>
-                  <td>{abono.customerDoc}</td>
-                  <td>{abono.saleSerial || '—'}</td>
-                  <td><Pill tone={abono.method === 'cash' ? 'green' : 'blue'}>{abono.method === 'cash' ? 'Efectivo' : 'Transferencia'}</Pill></td>
-                  <td>{abono.reference || '—'}</td>
-                  <td className="abonos-num table-amount">{formatCOP(abono.amount)}</td>
-                  <td>
+                  <td className="col-priority-high"><strong>{abono.serialCode}</strong></td>
+                  <td className="col-priority-medium">{abono.date}</td>
+                  <td className="col-priority-high">{abono.customerName}</td>
+                  <td className="col-priority-low">{abono.customerDoc}</td>
+                  <td className="col-priority-medium">{abono.saleSerial || '—'}</td>
+                  <td className="col-priority-high"><Pill tone={abono.method === 'cash' ? 'green' : 'blue'}>{abono.method === 'cash' ? 'Efectivo' : 'Transferencia'}</Pill></td>
+                  <td className="col-priority-low">{abono.reference || '—'}</td>
+                  <td className="abonos-num table-amount col-priority-high">{formatCOP(abono.amount)}</td>
+                  <td className="col-priority-high">
                     {canEditStatus && statusChoices(abono) ? (
                       <select className={`ui-pill ui-pill-${STATUS[abono.status].tone} abonos-status-select`} value={abono.status} aria-label={`Estado del recibo ${abono.serialCode}`} onChange={(event) => changeStatus(abono, event.target.value as AbonoRecord['status'])}>
                         {statusChoices(abono)?.map((status) => (
@@ -122,7 +122,7 @@ export const AbonosTable: React.FC = () => {
                       <Pill tone={STATUS[abono.status].tone}>{STATUS[abono.status].label}</Pill>
                     )}
                   </td>
-                  <td>
+                  <td className="col-actions">
                     <RowActions actions={[{ key: 'detail', label: `Ver detalle del recibo ${abono.serialCode}`, icon: eyeIcon, onClick: () => dispatch(openDrawerForm({ kind: 'abonoDetail', payload: abono })) }]} />
                   </td>
                 </tr>

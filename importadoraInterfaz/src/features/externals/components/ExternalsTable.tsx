@@ -66,14 +66,14 @@ export const ExternalsTable: React.FC<{ kind: ExternalKind }> = ({ kind }) => {
         <DataTable tableId="externals-externals">
             <thead>
               <tr>
-                <th>Razón social</th>
-                <th>Identificación</th>
-                <th>Contacto</th>
-                <th>Teléfono y correo</th>
-                <th>{isSupplier ? 'Ciudad y dirección' : 'Ciudad y cobertura'}</th>
-                {isSupplier && <th>Plazo y cupo</th>}
-                <th>Estado</th>
-                <th>Acciones</th>
+                <th className="col-priority-high">Razón social</th>
+                <th className="col-priority-medium">Identificación</th>
+                <th className="col-priority-low">Contacto</th>
+                <th className="col-priority-medium">Teléfono y correo</th>
+                <th className="col-priority-low">{isSupplier ? 'Ciudad y dirección' : 'Ciudad y cobertura'}</th>
+                {isSupplier && <th className="col-priority-medium">Plazo y cupo</th>}
+                <th className="col-priority-high">Estado</th>
+                <th className="col-actions">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -84,59 +84,59 @@ export const ExternalsTable: React.FC<{ kind: ExternalKind }> = ({ kind }) => {
               ) : (
                 pageItems.map((item) => (
                   <tr key={item.id}>
-                    <td>
+                  <td className="col-priority-high">
+                    <div className="externals-cell">
+                      <strong>{item.name}</strong>
+                      {item.category && <small>{item.category}</small>}
+                    </div>
+                  </td>
+                  <td className="col-priority-medium">
+                    <div className="externals-cell">
+                      <span>{item.document || '—'}</span>
+                      <small>{item.documentType}</small>
+                    </div>
+                  </td>
+                  <td className="col-priority-low">
+                    <div className="externals-cell">
+                      <span>{item.contactName || '—'}</span>
+                      {item.contactPhone && <small>{item.contactPhone}</small>}
+                    </div>
+                  </td>
+                  <td className="col-priority-medium">
+                    <div className="externals-cell">
+                      <span>{item.phone || '—'}</span>
+                      {item.email && <small>{item.email}</small>}
+                    </div>
+                  </td>
+                  <td className="col-priority-low">
+                    <div className="externals-cell">
+                      <strong>{item.city || '—'}</strong>
+                      <small>{isSupplier ? item.address : item.coverage || 'Nacional'}</small>
+                    </div>
+                  </td>
+                  {isSupplier && (
+                    <td className="col-priority-medium">
                       <div className="externals-cell">
-                        <strong>{item.name}</strong>
-                        {item.category && <small>{item.category}</small>}
+                        <span>{item.termsDays ? `${item.termsDays} días` : 'Contado'}</span>
+                        <small className="table-amount">{formatCOP(item.creditLimit || 0)}</small>
                       </div>
                     </td>
-                    <td>
-                      <div className="externals-cell">
-                        <span>{item.document || '—'}</span>
-                        <small>{item.documentType}</small>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="externals-cell">
-                        <span>{item.contactName || '—'}</span>
-                        {item.contactPhone && <small>{item.contactPhone}</small>}
-                      </div>
-                    </td>
-                    <td>
-                      <div className="externals-cell">
-                        <span>{item.phone || '—'}</span>
-                        {item.email && <small>{item.email}</small>}
-                      </div>
-                    </td>
-                    <td>
-                      <div className="externals-cell">
-                        <strong>{item.city || '—'}</strong>
-                        <small>{isSupplier ? item.address : item.coverage || 'Nacional'}</small>
-                      </div>
-                    </td>
-                    {isSupplier && (
-                      <td>
-                        <div className="externals-cell">
-                          <span>{item.termsDays ? `${item.termsDays} días` : 'Contado'}</span>
-                          <small className="table-amount">{formatCOP(item.creditLimit || 0)}</small>
-                        </div>
-                      </td>
-                    )}
-                    <td>
-                      <select
-                        className={`inv-status-select is-${item.isActive ? 'active' : 'inactive'}`}
-                        value={item.isActive ? 'active' : 'inactive'}
-                        disabled={actions.saving}
-                        aria-label={`Estado de ${item.name}`}
-                        title="Cambiar estado"
-                        onChange={(event) => actions.setActive(item, event.target.value === 'active')}
-                      >
-                        <option value="active">Activo</option>
-                        <option value="inactive">Inactivo</option>
-                      </select>
-                    </td>
-                    <td>
-                      <RowActions
+                  )}
+                  <td className="col-priority-high">
+                    <select
+                      className={`inv-status-select is-${item.isActive ? 'active' : 'inactive'}`}
+                      value={item.isActive ? 'active' : 'inactive'}
+                      disabled={actions.saving}
+                      aria-label={`Estado de ${item.name}`}
+                      title="Cambiar estado"
+                      onChange={(event) => actions.setActive(item, event.target.value === 'active')}
+                    >
+                      <option value="active">Activo</option>
+                      <option value="inactive">Inactivo</option>
+                    </select>
+                  </td>
+                  <td className="col-actions">
+                    <RowActions
                         actions={[
                           { key: 'catalog', label: `Catálogo de productos de ${item.name}`, icon: listIcon, visible: isSupplier, onClick: () => dispatch(openDrawerForm({ kind: 'supplierCatalog', payload: { id: item.id, name: item.name } })) },
                           { key: 'edit', label: `Editar ${labels.article}`, icon: editIcon, onClick: () => openForm(item) },

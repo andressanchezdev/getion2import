@@ -181,7 +181,8 @@ CREATE TABLE companies (
     logo_url                    TEXT,
     is_active                   BOOLEAN NOT NULL DEFAULT TRUE,
     created_at                  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at                  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    updated_at                  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at                  TIMESTAMPTZ
 );
 
 -- 3. TABLA: warehouses (Bodegas únicas por compañía, todas al mismo nivel, sin is_main)
@@ -226,6 +227,7 @@ CREATE TABLE warehouse_facturation (
     invoice_prefix      VARCHAR(20),
     resolution_number   VARCHAR(60),
     resolution_date     DATE,
+    resolution_valid_until DATE,
     range_from          BIGINT,
     range_to            BIGINT,
     is_active           BOOLEAN NOT NULL DEFAULT TRUE,
@@ -235,6 +237,34 @@ CREATE TABLE warehouse_facturation (
 );
 
 CREATE INDEX idx_warehouse_facturation_company ON warehouse_facturation (company_id);
+
+CREATE OR REPLACE FUNCTION prevent_cross_company_nit_duplicate() RETURNS trigger AS $$
+DECLARE
+    normalized_nit TEXT;
+BEGIN
+    normalized_nit := regexp_replace(NEW.nit, '[^0-9]', '', 'g');
+    IF normalized_nit = '' OR normalized_nit = '0' THEN
+        RETURN NEW;
+    END IF;
+
+    PERFORM pg_advisory_xact_lock(hashtextextended(normalized_nit, 0));
+    IF EXISTS (
+        SELECT 1
+        FROM warehouse_facturation existing
+        WHERE existing.company_id <> NEW.company_id
+          AND existing.warehouse_id <> NEW.warehouse_id
+          AND regexp_replace(existing.nit, '[^0-9]', '', 'g') = normalized_nit
+    ) THEN
+        RAISE EXCEPTION 'NIT already belongs to another company'
+            USING ERRCODE = '23505', CONSTRAINT = 'warehouse_facturation_company_nit_unique';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_warehouse_facturation_nit_unique
+BEFORE INSERT OR UPDATE OF nit, company_id ON warehouse_facturation
+FOR EACH ROW EXECUTE FUNCTION prevent_cross_company_nit_duplicate();
 
 -- 5. TABLA: warehouse_locations (Ubicaciones físicas administrables por bodega)
 CREATE TABLE warehouse_locations (
@@ -610,13 +640,14 @@ CREATE TABLE transfers (
     transfer_type               VARCHAR(40) NOT NULL DEFAULT 'standard',
     origin_warehouse_id         BIGINT NOT NULL REFERENCES warehouses(id) ON DELETE RESTRICT,
     destination_warehouse_id    BIGINT NOT NULL REFERENCES warehouses(id) ON DELETE RESTRICT,
-    employee_id                 BIGINT NOT NULL REFERENCES employees(id) ON DELETE RESTRICT,
+    employee_id                 BIGINT REFERENCES employees(id) ON DELETE RESTRICT,
     dispatched_by_employee_id   BIGINT REFERENCES employees(id) ON DELETE SET NULL,
     received_by_employee_id     BIGINT REFERENCES employees(id) ON DELETE SET NULL,
     status                      VARCHAR(20) NOT NULL DEFAULT 'pending'
         CHECK (status IN ('pending', 'in_transit', 'received', 'with_novelty', 'cancelled')),
     priority                    VARCHAR(20) NOT NULL DEFAULT 'normal',
     notes                       TEXT,
+    is_priority                 BOOLEAN NOT NULL DEFAULT FALSE,
     novelty_notes               TEXT,
     cancel_reason               TEXT,
     dispatched_at               TIMESTAMPTZ,
@@ -726,7 +757,7 @@ CREATE TABLE carts (
         CHECK (price_tier IN ('p1', 'p2', 'p3', 'p4')),
     status          VARCHAR(20) NOT NULL DEFAULT 'open'
         CHECK (status IN ('open', 'converted', 'abandoned')),
-    expires_at      TIMESTAMPTZ NOT NULL DEFAULT (CURRENT_TIMESTAMP + INTERVAL '1 hour'),
+    expires_at      TIMESTAMPTZ,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -868,7 +899,7 @@ CREATE TABLE quotations (
     company_id      BIGINT NOT NULL REFERENCES companies(id) ON DELETE RESTRICT,
     serial_code     VARCHAR(40) NOT NULL,
     customer_id     BIGINT NOT NULL REFERENCES customers(id) ON DELETE RESTRICT,
-    employee_id     BIGINT NOT NULL REFERENCES employees(id) ON DELETE RESTRICT,
+    employee_id     BIGINT REFERENCES employees(id) ON DELETE RESTRICT,
     cart_id         BIGINT REFERENCES carts(id) ON DELETE SET NULL,
     sale_id         BIGINT REFERENCES sales(id) ON DELETE SET NULL,
     status          VARCHAR(20) NOT NULL DEFAULT 'draft'
@@ -918,7 +949,10 @@ CREATE TABLE returns (
     replacement_stock_id        BIGINT REFERENCES stock(id) ON DELETE SET NULL,
     status                      VARCHAR(20) NOT NULL DEFAULT 'pending'
         CHECK (status IN ('pending', 'approved', 'rejected')),
+    reject_reason               TEXT,
     total                       NUMERIC(14,2) NOT NULL CHECK (total > 0),
+    evidence_url                TEXT,
+    receipt_url                 TEXT,
     approved_at                 TIMESTAMPTZ,
     created_at                  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -965,10 +999,15 @@ CREATE TABLE cash_sessions (
     counted_cash            NUMERIC(14,2) CHECK (counted_cash IS NULL OR counted_cash >= 0),
     difference              NUMERIC(14,2),
     notes                   TEXT,
+    abonos_total            NUMERIC(14,2),
+    counted_transfer        NUMERIC(14,2) CHECK (counted_transfer IS NULL OR counted_transfer >= 0),
+    counted_abonos          NUMERIC(14,2) CHECK (counted_abonos IS NULL OR counted_abonos >= 0),
     CHECK (status = 'open' OR closed_at IS NOT NULL)
 );
 
-CREATE UNIQUE INDEX idx_cash_sessions_one_open_per_warehouse ON cash_sessions (warehouse_id) WHERE status = 'open';
+CREATE UNIQUE INDEX idx_cash_sessions_one_open_per_actor 
+    ON cash_sessions (warehouse_id, opened_by_actor_type, opened_by_actor_id) 
+    WHERE status = 'open';
 CREATE INDEX idx_cash_sessions_company_opened ON cash_sessions (company_id, opened_at DESC);
 
 -- 36c. TABLA: cash_session_expenses (gastos menores y operativos pagados desde la caja/tienda)
@@ -1081,7 +1120,7 @@ CREATE TABLE purchases (
     serial_code     VARCHAR(40) NOT NULL,
     supplier_id     BIGINT NOT NULL REFERENCES externals(id) ON DELETE RESTRICT,
     warehouse_id    BIGINT NOT NULL REFERENCES warehouses(id) ON DELETE RESTRICT,
-    employee_id     BIGINT NOT NULL REFERENCES employees(id) ON DELETE RESTRICT,
+    employee_id     BIGINT REFERENCES employees(id) ON DELETE RESTRICT,
     status          VARCHAR(20) NOT NULL DEFAULT 'draft'
         CHECK (status IN ('draft', 'ordered', 'partial', 'received', 'voided')),
     supplier_ref    VARCHAR(80),
@@ -1089,6 +1128,7 @@ CREATE TABLE purchases (
     subtotal        NUMERIC(14,2) NOT NULL DEFAULT 0 CHECK (subtotal >= 0),
     iva_total       NUMERIC(14,2) NOT NULL DEFAULT 0 CHECK (iva_total >= 0),
     total           NUMERIC(14,2) NOT NULL DEFAULT 0 CHECK (total >= 0),
+    paid_total      NUMERIC(14,2) NOT NULL DEFAULT 0 CHECK (paid_total >= 0), -- lo que la caja ya pagó de esta recepción
     notes           TEXT,
     received_at     TIMESTAMPTZ,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -1097,6 +1137,10 @@ CREATE TABLE purchases (
 );
 
 CREATE INDEX idx_purchases_company_status ON purchases (company_id, status);
+
+-- el gasto de caja que paga una recepción de compra queda ligado a esa orden
+ALTER TABLE cash_session_expenses ADD COLUMN purchase_id BIGINT REFERENCES purchases(id) ON DELETE SET NULL;
+CREATE INDEX idx_cash_session_expenses_purchase ON cash_session_expenses (purchase_id);
 
 -- 39. TABLA: purchase_items
 CREATE TABLE purchase_items (
@@ -1163,22 +1207,41 @@ CREATE INDEX idx_audit_logs_company_created ON audit_logs (company_id, created_a
 CREATE INDEX idx_audit_logs_entity ON audit_logs (entity, entity_id);
 CREATE INDEX idx_audit_logs_employee ON audit_logs (employee_id, created_at DESC);
 
+CREATE TABLE audit_context_change (
+    id                  BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    actor_id            BIGINT NOT NULL,
+    actor_type          VARCHAR(20) NOT NULL CHECK (actor_type = 'superadmin'),
+    from_company_id     BIGINT REFERENCES companies(id) ON DELETE SET NULL,
+    to_company_id       BIGINT REFERENCES companies(id) ON DELETE SET NULL,
+    to_all_companies    BOOLEAN NOT NULL DEFAULT FALSE,
+    ip                  VARCHAR(64),
+    user_agent          TEXT,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK ((to_all_companies AND to_company_id IS NULL) OR (NOT to_all_companies AND to_company_id IS NOT NULL))
+);
+CREATE INDEX idx_audit_context_change_actor_created ON audit_context_change (actor_id, created_at DESC);
+
 -- 42. TABLA: notifications
 CREATE TABLE notifications (
     id              BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    employee_id     BIGINT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    employee_id     BIGINT REFERENCES employees(id) ON DELETE CASCADE,
+    admin_id        BIGINT REFERENCES admins(id) ON DELETE CASCADE,
     kind            VARCHAR(20) NOT NULL DEFAULT 'info'
-        CHECK (kind IN ('info', 'success', 'warning', 'error')),
+        CHECK (kind IN ('info', 'success', 'warning', 'error', 'restore_record')),
     title           VARCHAR(160) NOT NULL,
     body            TEXT,
     entity          VARCHAR(60),
     entity_id       BIGINT,
     read_at         TIMESTAMPTZ,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT notifications_recipient_check CHECK (num_nonnulls(employee_id, admin_id) = 1)
 );
 
 CREATE INDEX idx_notifications_employee_unread
     ON notifications (employee_id, created_at DESC)
+    WHERE read_at IS NULL;
+CREATE INDEX idx_notifications_admin_unread
+    ON notifications (admin_id, created_at DESC)
     WHERE read_at IS NULL;
 
 -- 43. TABLA: recycle_bin (Papelera de reciclaje y recuperación de entidades)
@@ -1209,6 +1272,10 @@ CREATE TABLE schema_migrations (
     execution_time_ms   INTEGER NOT NULL DEFAULT 0,
     applied_at          TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+INSERT INTO schema_migrations (version, name, filename, checksum, execution_time_ms)
+VALUES ('20261126', 'close-plan-gaps', '20261126_close-plan-gaps.sql', 'bundled-in-startdb', 0)
+ON CONFLICT (version) DO NOTHING;
 
 
 -- ============================================================
@@ -1290,6 +1357,20 @@ CREATE TRIGGER trg_purchases_updated_at
 CREATE TRIGGER trg_warehouse_locations_updated_at
     BEFORE UPDATE ON warehouse_locations
     FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
+
+-- 43. TABLA (se crea aquí, antes de su trigger y de la semilla): screensaver_settings (Configuración de protector de pantalla por empresa)
+CREATE TABLE IF NOT EXISTS screensaver_settings (
+    id              BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    company_id      BIGINT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    image_url       TEXT NOT NULL,
+    is_active       BOOLEAN NOT NULL DEFAULT TRUE,
+    updated_by      BIGINT REFERENCES employees(id) ON DELETE SET NULL,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_screensaver_settings_company ON screensaver_settings(company_id, is_active);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_screensaver_settings_company_unique ON screensaver_settings(company_id);
 
 CREATE TRIGGER trg_screensaver_settings_updated_at
     BEFORE UPDATE ON screensaver_settings
@@ -1457,6 +1538,32 @@ LEFT JOIN stock s ON s.warehouse_id = l.warehouse_id AND s.location = l.code
 GROUP BY l.id, l.company_id, l.warehouse_id, w.code, w.name, l.code, l.description, l.qr_code, l.is_active;
 
 
+-- Busquedas instantaneas y tolerantes a errores (pg_trgm): un indice GIN por columna que se consulta con ILIKE o con el operador <%
+CREATE INDEX IF NOT EXISTS idx_customers_name_trgm ON customers USING gin (name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_customers_last_name_trgm ON customers USING gin (last_name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_customers_trade_name_trgm ON customers USING gin (trade_name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_customers_document_trgm ON customers USING gin (document gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_customers_email_trgm ON customers USING gin ((email::text) gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_customers_phone_trgm ON customers USING gin (phone gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_customers_mobile_trgm ON customers USING gin (mobile gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_products_name_trgm ON products USING gin (name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_products_easysearch_trgm ON products USING gin (easysearch gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_products_code_trgm ON products USING gin (code gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_employees_full_name_trgm ON employees USING gin (full_name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_employees_email_trgm ON employees USING gin ((email::text) gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_employees_document_trgm ON employees USING gin (document gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_externals_name_trgm ON externals USING gin (name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_externals_document_trgm ON externals USING gin (document gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_externals_contact_trgm ON externals USING gin (contact_name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_externals_email_trgm ON externals USING gin ((email::text) gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_externals_phone_trgm ON externals USING gin (phone gin_trgm_ops);
+
+-- Umbral de parecido para el operador <% (0.4 tolera errores de ortografia; solo se usa como respaldo cuando la busqueda exacta no encuentra nada)
+DO $$
+BEGIN
+    EXECUTE format('ALTER DATABASE %I SET pg_trgm.word_similarity_threshold = 0.4', current_database());
+END $$;
+
 -- ============================================================
 -- PARTE 4: DATOS SEMILLA LIMPIOS DE OPERACIÓN (SEED DEMO)
 -- ============================================================
@@ -1467,7 +1574,7 @@ GROUP BY l.id, l.company_id, l.warehouse_id, w.code, w.name, l.code, l.descripti
 -- Compatible con PostgreSQL V4 (Esquema Limpio)
 -- ============================================================================
 
-BEGIN;
+-- (sigue en la misma transaccion abierta al inicio del script)
 
 -- 1. COMPAÑÍA PRINCIPAL
 INSERT INTO companies (id, name, address, city, phone, email, is_active)
@@ -1572,7 +1679,7 @@ FROM (VALUES
     ('transfers', 'Traslados entre bodegas'), ('brands', 'Marcas'), ('categories', 'Categorías'), ('models', 'Modelos'),
     ('stock', 'Inventario, conteos y ubicaciones'), ('credits', 'Créditos y cartera'), ('payments', 'Pagos y conciliación bancaria'),
     ('customers', 'Clientes'), ('employees', 'Empleados'), ('roles', 'Roles y permisos'), ('reports', 'Reportes'),
-    ('audit', 'Auditoría y papelera'), ('warehouses', 'Sedes y series de documentos')
+    ('audit', 'Auditoría y papelera'), ('warehouses', 'Sedes y series de documentos'), ('invoices', 'Facturas de las cajas')
 ) AS m(module, label)
 CROSS JOIN (VALUES
     ('view', 'ver'), ('view_detail', 'ver detalle'), ('create', 'crear'), ('edit', 'editar'), ('change_status', 'cambiar estado'), ('delete', 'borrar')
@@ -1828,8 +1935,6 @@ VALUES
     (1, 'Bancolombia', '01400000369', '2026-10-28', 'COMISION REC CORRESPONSAL', 'LA PLAYA', NULL, NULL, NULL, -24064.45, FALSE, 'ignored'),
     (1, 'Bancolombia', '01400000369', '2026-10-28', 'IVA COMISION REC CORRESPONSAL', 'LA PLAYA', NULL, NULL, NULL, -4572.25, FALSE, 'ignored');
 
-COMMIT;
-
 -- ============================================================================
 -- FIN DE SCRIPT DE SEMILLAS
 -- ============================================================================
@@ -1943,7 +2048,7 @@ WHERE p.id = x.id;
 
 -- 2) Facturación por bodega (sin esto no se puede facturar) y series de consecutivos
 INSERT INTO warehouse_facturation (company_id, warehouse_id, type_facturation, document_type, nit, legal_name, trade_name, billing_email, billing_phone, billing_address, billing_city, invoice_prefix, resolution_number, resolution_date, range_from, range_to)
-SELECT w.company_id, w.id, 'juridica', 'NIT', '900111222-' || w.id, 'IMPORTADORA PREMIUM S.A.S.', w.name, 'facturacion@importadora.com', '3000000000', COALESCE(w.address, 'Sin dirección'), COALESCE(w.city, 'Cali'), 'FE', '18760000' || LPAD(w.id::text, 4, '0'), DATE '2026-01-15', 1, 5000
+SELECT w.company_id, w.id, 'juridica', 'NIT', '900111222-1', 'IMPORTADORA PREMIUM S.A.S.', w.name, 'facturacion@importadora.com', '3000000000', COALESCE(w.address, 'Sin dirección'), COALESCE(w.city, 'Cali'), 'FE', '18760000' || LPAD(w.id::text, 4, '0'), DATE '2026-01-15', 1, 5000
 FROM warehouses w
 WHERE NOT EXISTS (SELECT 1 FROM warehouse_facturation f WHERE f.warehouse_id = w.id);
 
@@ -2414,20 +2519,30 @@ FROM carts c
 JOIN (SELECT id, product_id FROM stock WHERE warehouse_id = 1 AND product_id BETWEEN 20 AND 400 AND product_id % 3 = 2 AND available >= 20 ORDER BY product_id DESC LIMIT 2) s ON TRUE
 WHERE c.employee_id = 3 AND c.warehouse_id = 1 AND c.status = 'open'
 ON CONFLICT (cart_id, stock_id) DO NOTHING;
--- 43. TABLA: screensaver_settings (Configuración de protector de pantalla por empresa)
-CREATE TABLE IF NOT EXISTS screensaver_settings (
-    id              BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    company_id      BIGINT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
-    image_url       TEXT NOT NULL,
-    is_active       BOOLEAN NOT NULL DEFAULT TRUE,
-    updated_by      BIGINT REFERENCES employees(id) ON DELETE SET NULL,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_screensaver_settings_company ON screensaver_settings(company_id, is_active);
+-- 9) IVA por producto: la mayoría al 19 %, algunos al 5 % y otros exentos (0 %), para probar los tres casos al vender
+-- ojo: las tarifas son valores netos; el IVA se suma aparte al vender
+UPDATE products SET iva = 0 WHERE iva = 19 AND id % 10 = 0;
+UPDATE products SET iva = 5 WHERE iva = 19 AND id % 10 = 5;
 
 -- Limpieza de funciones temporales de semilla
 DROP FUNCTION IF EXISTS seed_product CASCADE;
+
+-- 10) Sincronización universal de todas las secuencias IDENTITY/SERIAL al máximo ID existente
+DO $sync_all_sequences$
+DECLARE
+    r RECORD;
+BEGIN
+    FOR r IN (
+        SELECT table_name, column_name, pg_get_serial_sequence(quote_ident(table_name), quote_ident(column_name)) AS seq
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND (column_default LIKE 'nextval%' OR is_identity = 'YES')
+    ) LOOP
+        IF r.seq IS NOT NULL THEN
+            EXECUTE format('SELECT setval(%L, GREATEST(COALESCE((SELECT MAX(%I) FROM %I), 1), 1))', r.seq, r.column_name, r.table_name);
+        END IF;
+    END LOOP;
+END
+$sync_all_sequences$;
 
 COMMIT;

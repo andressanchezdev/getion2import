@@ -64,7 +64,6 @@ export const TransferWarehouseStockList: React.FC<Props> = ({
                   className={`transfer-wh-row ${hasStock ? 'is-available' : 'is-empty'} ${requestedQty > 0 ? 'is-selected' : ''}`}
                 >
                   <td className="td-origin">
-                    <span className="transfer-wh-badge">{wh.code || `B-${originId}`}</span>
                     <span className="transfer-wh-name" title={wh.name}>{wh.name}</span>
                   </td>
 

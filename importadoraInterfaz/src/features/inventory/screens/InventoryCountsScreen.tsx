@@ -82,17 +82,19 @@ export const InventoryCountsScreen: React.FC = () => {
             </select>
           </div>
 
-          {canCreate && (
-            <button
-              type="button"
-              className="btn-primary"
-              disabled={!activeWarehouseId}
-              title={!activeWarehouseId ? 'Selecciona una bodega activa para iniciar un conteo' : undefined}
-              onClick={() => setCreateModalOpen(true)}
-            >
-              <Icon svg={plusIcon} /> Nuevo Conteo Físico
-            </button>
-          )}
+          <div className="toolbar-actions" style={{ marginLeft: 'auto', flexShrink: 0 }}>
+            {canCreate && (
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={!activeWarehouseId}
+                title={!activeWarehouseId ? 'Selecciona una bodega activa para iniciar un conteo' : undefined}
+                onClick={() => setCreateModalOpen(true)}
+              >
+                <Icon svg={plusIcon} /> Nuevo Conteo Físico
+              </button>
+            )}
+          </div>
         </div>
 
         <InventoryCountsTable

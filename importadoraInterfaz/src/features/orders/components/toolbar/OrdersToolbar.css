@@ -70,15 +70,10 @@
   white-space: nowrap;
 }
 
-.orders-toolbar-actions .btn-primary,
-.orders-toolbar-actions .btn-secondary {
-  white-space: nowrap;
-}
-
 @media (max-width: 768px) {
-.orders-toolbar {
-  flex-direction: row;
-}
+  .orders-toolbar {
+    flex-direction: row;
+  }
 
   .orders-toolbar-search {
     flex: 1 1 100%;

@@ -48,7 +48,7 @@ export const selectDrawerMode = (state: RootState): DrawerMode | null => {
   // Modos automáticos por contexto
   if (activeModule === 'shop' && activeSubitem === 'catalog') return 'cart'
   if (activeModule === 'shop' && activeSubitem === 'quotationCatalog') return 'quotationCart'
-  if (activeModule === 'shop' && activeSubitem === 'orders' && selectHasOpenOrder(state)) return 'order'
+  if (((activeModule === 'shop' && activeSubitem === 'orders') || (activeModule === 'cashRegister' && activeSubitem === 'billingHistory')) && selectHasOpenOrder(state)) return 'order'
   if (activeModule === 'wallet' && selectHasSelectedCustomer(state)) return 'object'
   if (activeModule === 'thirdParties' && activeSubitem === 'customers' && selectHasOpenCustomer(state)) return 'customer'
   return null

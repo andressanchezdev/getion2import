@@ -17,6 +17,7 @@ export interface CheckoutCustomer {
   phone: string
   discountPercent: number // descuento general del cliente en todas sus compras (porcentaje)
   creditEnabled: boolean
+  creditLimit?: number
   availableCredit: number // cupo que le queda (solo cuenta si tiene crédito habilitado)
   creditDays: number
   deliveries: DeliveryData[] // direcciones guardadas del cliente (puede no tener ninguna)

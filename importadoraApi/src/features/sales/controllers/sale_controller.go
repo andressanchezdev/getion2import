@@ -26,6 +26,11 @@ func NewSaleController(saleService *services.SaleService) *SaleController {
 
 // Create POST /sales
 func (ctrl *SaleController) Create(c echo.Context) error {
+	actor := middlewares.GetActor(c)
+	if actor != nil && actor.ActorType == types.ActorSuperadmin {
+		return utils.Forbidden("FORBIDDEN_SUPERADMIN_OPERATIONAL", "El rol Superadmin tiene permisos exclusivos de supervisión y gestión global; no está autorizado para crear pedidos ni operaciones directas de venta.")
+	}
+
 	var req dtos.CreateSaleRequest
 	if err := utils.BindJSON(c, &req); err != nil {
 		return err
