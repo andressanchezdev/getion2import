@@ -7,7 +7,8 @@ export const AUTH_ENDPOINTS = {
     LOGIN: '/auth/login',
     REFRESH: '/auth/refresh',
     LOGOUT: '/auth/logout',
-    ME: '/auth/me',
+    ME: '/auth/me', // GET perfil y permisos; PUT edita los datos propios
+    ME_PASSWORD: '/auth/me/password', // PUT cambia la clave propia pidiendo la actual
   },
   // Salud del backend (GET, sin sesión)
   HEALTH: {
@@ -17,5 +18,9 @@ export const AUTH_ENDPOINTS = {
   // Documentación Swagger
   DOCS: {
     SWAGGER_DOC: '/swagger/doc.json',
+  },
+  // Ticket de un solo uso para el websocket de tiempo real
+  REALTIME: {
+    TICKET: '/realtime/ticket',
   },
 } as const

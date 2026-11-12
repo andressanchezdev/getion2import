@@ -3,7 +3,7 @@
 // ojo: si el backend rechaza el guardado se avisa con su mensaje; nunca se dice «guardado» cuando no lo está
 import { createAsyncThunk } from '@reduxjs/toolkit'
 import { getErrorMessage } from '@/api'
-import { selectCurrentUser, selectRequestContext, type AuthState } from '@/features/auth'
+import { selectCurrentUser, selectRequestContext, setCurrentUser, type AuthState } from '@/features/auth'
 import { toast } from '@/global/helpers/feedback/toast'
 import { fetchCompany, fetchScreensaver, saveScreensaver, updateCompany, updatePassword, updateProfile } from '../services/settings.service'
 import type { CompanyInput, CompanyProfile, ProfileInput } from '../types/settings.types'
@@ -45,12 +45,13 @@ export const saveCompanyThunk = createAsyncThunk<CompanyProfile, CompanyInput, C
   }
 })
 
-export const saveAccountThunk = createAsyncThunk<void, ProfileInput & { password: string }, Config>('settings/saveAccount', async ({ password, ...profile }, { getState, rejectWithValue }) => {
+export const saveAccountThunk = createAsyncThunk<void, ProfileInput & { currentPassword?: string; password: string }, Config>('settings/saveAccount', async ({ currentPassword, password, ...profile }, { getState, dispatch, rejectWithValue }) => {
   const user = selectCurrentUser(getState())
   if (!user) return rejectWithValue('No hay una sesión activa.')
   try {
-    await updateProfile(user.userId, profile)
-    if (password) await updatePassword(user.userId, password)
+    const updatedUser = await updateProfile(profile)
+    if (password) await updatePassword(currentPassword ?? '', password)
+    dispatch(setCurrentUser(updatedUser))
     toast.success('¡Perfil y credenciales actualizadas con éxito!')
   } catch (error) {
     const message = getErrorMessage(error, 'No se pudieron guardar los cambios de la cuenta.')

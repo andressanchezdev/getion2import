@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"importadoraApi/src/core/config"
+	"importadoraApi/src/core/events"
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
@@ -25,6 +26,7 @@ type CustomerService struct {
 	customerRepo   *repositories.CustomerRepository
 	recycleBinRepo *recycleBinRepos.RecycleBinRepository
 	auditRepo      *authRepos.AuditRepository
+	events         *events.Recorder
 }
 
 // NewCustomerService crea el servicio con las piezas que necesita para funcionar.
@@ -34,13 +36,19 @@ func NewCustomerService(
 	customerRepo *repositories.CustomerRepository,
 	recycleBinRepo *recycleBinRepos.RecycleBinRepository,
 	auditRepo *authRepos.AuditRepository,
+	eventsRecorder ...*events.Recorder,
 ) *CustomerService {
+	var rec *events.Recorder
+	if len(eventsRecorder) > 0 {
+		rec = eventsRecorder[0]
+	}
 	return &CustomerService{
 		cfg:            cfg,
 		pool:           pool,
 		customerRepo:   customerRepo,
 		recycleBinRepo: recycleBinRepo,
 		auditRepo:      auditRepo,
+		events:         rec,
 	}
 }
 

@@ -1,7 +1,8 @@
 // employees.slice · estado de empleados y roles: la lista de empleados (con la bodega por la que se pidió) y la lista de roles
 // conecta con: employees.thunks (lo llenan), employees.selectors (lecturas) y rootReducer (clave 'employees'; NO se guarda en el navegador)
 // ojo: se vacía al cerrar sesión; al saltar de compañía rootReducer lo reinicia; la lista de empleados descarta respuestas de cargas anteriores (requestId)
-import { createSlice } from '@reduxjs/toolkit'
+import { applyVersionedStatus, mergeVersionedList } from '@/global/helpers/realtime/applyVersioned'
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import { logoutThunk } from '@/features/auth'
 import { INITIAL_EMPLOYEES_STATE } from '../constants/employees.constants'
 import { loadEmployeesThunk, loadRolesThunk, setEmployeeStatusThunk } from '../thunks/employees.thunks'
@@ -9,7 +10,18 @@ import { loadEmployeesThunk, loadRolesThunk, setEmployeeStatusThunk } from '../t
 export const employeesSlice = createSlice({
   name: 'employees',
   initialState: INITIAL_EMPLOYEES_STATE,
-  reducers: {},
+  reducers: {
+    // tiempo real (entity.status_changed de empleado): cambia el estado de la fila si ya está cargada
+    employeeStatusFromEvent: (state, action: PayloadAction<{ id: number; isActive: boolean; version?: string }>) => {
+      const row = state.directory.items.find((employee) => employee.employeeId === action.payload.id)
+      if (row) applyVersionedStatus(row, action.payload.isActive, action.payload.version)
+    },
+    // tiempo real (entity.status_changed de rol)
+    roleStatusFromEvent: (state, action: PayloadAction<{ id: number; isActive: boolean; version?: string }>) => {
+      const row = state.roles.items.find((role) => role.roleId === action.payload.id)
+      if (row) applyVersionedStatus(row, action.payload.isActive, action.payload.version)
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(loadEmployeesThunk.pending, (state, action) => {
@@ -20,7 +32,7 @@ export const employeesSlice = createSlice({
       })
       .addCase(loadEmployeesThunk.fulfilled, (state, action) => {
         if (state.directory.requestId !== action.meta.requestId) return
-        state.directory.items = action.payload
+        state.directory.items = mergeVersionedList(state.directory.items, action.payload, (e) => e.employeeId)
         state.directory.status = 'succeeded'
       })
       .addCase(loadEmployeesThunk.rejected, (state, action) => {
@@ -34,7 +46,7 @@ export const employeesSlice = createSlice({
         state.roles.error = null
       })
       .addCase(loadRolesThunk.fulfilled, (state, action) => {
-        state.roles.items = action.payload
+        state.roles.items = mergeVersionedList(state.roles.items, action.payload, (r) => r.roleId)
         state.roles.status = 'succeeded'
       })
       .addCase(loadRolesThunk.rejected, (state, action) => {
@@ -49,5 +61,6 @@ export const employeesSlice = createSlice({
   },
 })
 
+export const { employeeStatusFromEvent, roleStatusFromEvent } = employeesSlice.actions
 export const employeesReducer = employeesSlice.reducer
 export default employeesSlice.reducer

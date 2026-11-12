@@ -1,4 +1,4 @@
-// FilterSelect · lista desplegable de filtro de la barra de una tabla: solo muestra estados permitidos y opciones por defecto, sin placeholder seleccionable
+// FilterSelect · lista desplegable de filtro de la barra de una tabla: primera opción seleccionable para «Todos»
 import React from 'react'
 import './FilterSelect.css'
 
@@ -8,10 +8,13 @@ export interface FilterSelectOption {
 }
 
 interface FilterSelectProps {
-  label: string // texto accesible y placeholder inicial cuando no hay valor
+  label: string // texto accesible
   value: string
   options: FilterSelectOption[]
   emptyValue?: string // valor que significa «sin filtro» (por defecto '')
+  allLabel?: string // etiqueta de la opción «Todos»
+  className?: string
+  disabled?: boolean
   onChange: (value: string) => void
 }
 
@@ -20,20 +23,25 @@ export const FilterSelect: React.FC<FilterSelectProps> = ({
   value,
   options,
   emptyValue = '',
+  allLabel,
+  className = '',
+  disabled = false,
   onChange,
 }) => {
   const hasEmptyInOptions = options.some((opt) => opt.value === emptyValue)
+  const defaultAllLabel = allLabel || (label.toLowerCase().startsWith('tod') ? label : `Todos (${label})`)
 
   return (
     <select
       aria-label={label}
-      className={`filter-select ${value !== emptyValue ? 'filter-select-on' : ''}`}
+      className={`filter-select ${value !== emptyValue && value !== 'all' ? 'filter-select-on' : ''} ${className}`.trim()}
       value={value}
+      disabled={disabled}
       onChange={(e) => onChange(e.target.value)}
     >
       {!hasEmptyInOptions && (
-        <option value={emptyValue} disabled hidden>
-          {label}
+        <option value={emptyValue}>
+          {defaultAllLabel}
         </option>
       )}
       {options.map((option) => (

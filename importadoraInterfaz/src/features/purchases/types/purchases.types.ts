@@ -129,4 +129,5 @@ export interface PurchasesState {
   saving: boolean // se está creando, recibiendo o anulando
   detail: { id: number | null; data: Purchase | null; status: LoadStatus; error: string | null; requestId: string | null }
   suppliers: SupplierOption[]
+  catalogTicks: Record<number, number> // por proveedor: sube cuando llega por tiempo real una importación de su catálogo
 }

@@ -17,17 +17,17 @@ func RegisterRoutes(e *echo.Echo, authMiddleware *middlewares.AuthMiddleware, ct
 	{
 		wh.POST("", ctrl.Create, authMiddleware.RequirePermission("warehouses", "create"))
 		wh.GET("", ctrl.Get)
-		wh.GET("/search", ctrl.Search)
-		wh.GET("/:id", ctrl.GetByID)
+		wh.GET("/search", ctrl.Search, authMiddleware.RequirePermission("warehouses", "view"))
+		wh.GET("/:id", ctrl.GetByID, authMiddleware.RequirePermission("warehouses", "view_detail"))
 		wh.PUT("/:id", ctrl.Update, authMiddleware.RequirePermission("warehouses", "edit"))
 		wh.DELETE("/:id", ctrl.Deactivate, authMiddleware.RequirePermission("warehouses", "delete"))
 
 		// Sub-rutas de facturación fiscal por bodega
-		wh.GET("/:id/facturation", ctrl.GetFacturation)
+		wh.GET("/:id/facturation", ctrl.GetFacturation, authMiddleware.RequireAnyPermission("warehouses:view", "orders:invoice"))
 		wh.PUT("/:id/facturation", ctrl.UpdateFacturation, authMiddleware.RequirePermission("warehouses", "edit"))
 
 		// Sub-rutas de ubicaciones físicas de bodega
-		wh.GET("/:id/locations", ctrl.ListLocations)
+		wh.GET("/:id/locations", ctrl.ListLocations, authMiddleware.RequireAnyPermission("stock:view", "products:view", "transfers:view", "transfers:create", "stock:relocate"))
 		wh.POST("/:id/locations", ctrl.CreateLocation, authMiddleware.RequirePermission("stock", "edit"))
 		wh.PUT("/:id/locations/:locId", ctrl.UpdateLocation, authMiddleware.RequirePermission("stock", "edit"))
 		wh.DELETE("/:id/locations/:locId", ctrl.DeleteLocation, authMiddleware.RequirePermission("stock", "edit"))
@@ -36,7 +36,7 @@ func RegisterRoutes(e *echo.Echo, authMiddleware *middlewares.AuthMiddleware, ct
 	// Grupo /doc-series
 	ds := e.Group("/doc-series", authMiddleware.Authenticate())
 	{
-		ds.GET("", ctrl.ListDocSeries)
+		ds.GET("", ctrl.ListDocSeries, authMiddleware.RequireAnyPermission("warehouses:view", "orders:invoice"))
 		ds.PUT("/:id", ctrl.UpdateDocSeries, authMiddleware.RequirePermission("warehouses", "edit"))
 	}
 }

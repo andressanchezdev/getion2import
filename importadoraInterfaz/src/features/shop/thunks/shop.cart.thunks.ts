@@ -1,6 +1,6 @@
 // shop.cart.thunks · acciones del carrito contra el backend: leer y agregar (cambiar cantidad, quitar y vaciar están en shop.cart.update.thunks)
-// conecta con: shop.cart.service y shop.stock.service (llamadas), auth (selectRequestContext), shop.slice (niveles y uuid), navigation (bodega activa), shop.products.thunks (recargar stock) y shop.cart.slice
-// ojo: el backend es la fuente de verdad: después de cada cambio se vuelve a leer el carrito (no se suma a mano) y se recarga el catálogo porque el backend descuenta o devuelve stock
+// conecta con: shop.cart.service (llamadas), auth (selectRequestContext), shop.slice (niveles y uuid), navigation (bodega activa) y shop.cart.slice
+// ojo: el servidor resuelve el stockId a partir de productId + warehouseId y responde el carrito actualizado en una sola petición (sin recargar el catálogo)
 // ojo: solo se acepta un cambio a la vez (condition); así un doble clic no agrega dos veces. Los errores de un cambio se avisan con una alerta (toast)
 import { createAsyncThunk } from '@reduxjs/toolkit'
 import { getErrorMessage } from '@/api'
@@ -9,8 +9,6 @@ import type { NavigationState } from '@/features/navigation'
 import { selectRequestContext, type AuthState } from '@/features/auth'
 import { getPriceByLevel, toWarehouseNumber } from '../helpers/shop.helpers'
 import { addCartItem, fetchActiveCart, updateCartItemQuantity } from '../services/shop.cart.service'
-import { findStockId } from '../services/shop.stock.service'
-import { loadProductsThunk } from './shop.products.thunks'
 import type { CartSnapshot, CartState } from '../types/shop.cart.api.types'
 import type { ProductsState } from '../types/shop.api.types'
 import type { PriceLevelKey, Product, ShopState } from '../types/shop.types'
@@ -39,6 +37,15 @@ export const knownProducts = (state: ThunkState): Record<string, Product> => {
     return known
 }
 
+// aplica los productos completos conocidos sobre un CartSnapshot devuelto por la API
+export const enrichCartSnapshot = (snapshot: CartSnapshot, known: Record<string, Product>): CartSnapshot => ({
+    ...snapshot,
+    items: snapshot.items.map((item) => {
+        const knownProd = known[item.productId]
+        return knownProd ? { ...item, product: knownProd } : item
+    }),
+})
+
 // el id del carrito activo (el que ya se leyó); si todavía no se leyó se pide
 export const resolveCartId = async (state: ThunkState): Promise<number> => state.cart.cartId ?? (await fetchActiveCart()).cartId
 
@@ -63,10 +70,10 @@ export interface AddToCartInput {
     priceLevel: PriceLevelKey
 }
 
-// agrega un producto: si ya está en el carrito suma a su renglón (mantiene su precio); si no, busca la ubicación de la bodega con stock y crea el renglón
+// agrega un producto: si ya está en el carrito suma a su renglón (mantiene su precio); si no, el servidor resuelve el stock por productId + warehouseId
 export const addToCartThunk = createAsyncThunk<CartSnapshot, AddToCartInput, ThunkConfig>(
     'shop/cart/add',
-    async ({ product, quantity, priceLevel }, { getState, dispatch, rejectWithValue }) => {
+    async ({ product, quantity, priceLevel }, { getState, rejectWithValue }) => {
         const state = getState()
         const ctx = selectRequestContext(state)
         if (!ctx) return rejectWithValue(NO_SESSION)
@@ -75,15 +82,18 @@ export const addToCartThunk = createAsyncThunk<CartSnapshot, AddToCartInput, Thu
 
         try {
             const cartId = await resolveCartId(state)
+            const known = { ...knownProducts(state), [product.id]: product }
             const existing = state.cart.items.find((item) => item.productId === product.id)
-            if (existing) {
-                await updateCartItemQuantity(cartId, existing.cartId, existing.quantity + quantity)
-            } else {
-                const stockId = await findStockId(ctx, warehouseId, Number(product.id), quantity)
-                await addCartItem({ cartId, stockId, quantity, price: getPriceByLevel(product, priceLevel) })
-            }
-            const snapshot = await fetchActiveCart({ ...knownProducts(state), [product.id]: product })
-            dispatch(loadProductsThunk()) // el backend descontó stock: se refresca el catálogo
+            const direct = existing
+                ? await updateCartItemQuantity(cartId, existing.cartId, existing.quantity + quantity)
+                : await addCartItem({
+                      cartId,
+                      productId: Number(product.id),
+                      warehouseId,
+                      quantity,
+                      price: getPriceByLevel(product, priceLevel),
+                  })
+            const snapshot = direct ? enrichCartSnapshot(direct, known) : await fetchActiveCart(known)
             return snapshot
         } catch (error) {
             return rejectWithValue(failWith(error, 'No se pudo agregar el producto al carrito.'))

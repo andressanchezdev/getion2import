@@ -1,5 +1,6 @@
 // CatalogItemDetailPanel · panel lateral para ver detalles de una marca, categoría o modelo
 import React from 'react'
+import '@/global/components/UI/molecules/form/DrawerFormShell.css'
 import './CatalogItemDetailPanel.css'
 import { useAppDispatch } from '@/global/hooks/store/useRedux'
 import { closeDrawerForm, openDrawerForm } from '@/features/navigation'
@@ -16,8 +17,8 @@ export const CatalogItemDetailPanel: React.FC<CatalogItemDetailPanelProps> = ({ 
   if (!item) return null
 
   return (
-    <div className="catalog-detail-panel">
-      <div className="catalog-detail-body">
+    <div className="drawer-form catalog-detail-panel">
+      <div className="drawer-form-body catalog-detail-body">
         <div className="catalog-detail-header-card">
           <div className="catalog-detail-id-badge">ID #{item.id}</div>
           <h3 className="catalog-detail-title">{item.name}</h3>
@@ -41,7 +42,7 @@ export const CatalogItemDetailPanel: React.FC<CatalogItemDetailPanelProps> = ({ 
         )}
       </div>
 
-      <div className="catalog-detail-footer">
+      <div className="drawer-form-footer catalog-detail-footer">
         <button
           type="button"
           className="btn-secondary"

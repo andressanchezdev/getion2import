@@ -408,6 +408,71 @@
             "description": "Error interno del servidor"
           }
         }
+      },
+      "put": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "PUT /auth/me",
+        "description": "Edita los datos del propio actor (empleado, admin o superadmin) según el token; no recibe id. phone ausente conserva el guardado.",
+        "operationId": "put__auth_me",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operación ejecutada con éxito"
+          },
+          "400": {
+            "description": "Solicitud inválida o error en parámetros de negocio"
+          },
+          "401": {
+            "description": "No autenticado o token JWT inválido/expirado"
+          },
+          "403": {
+            "description": "Acceso denegado: falta de permisos o acceso a otra compañía"
+          },
+          "404": {
+            "description": "Recurso no encontrado"
+          },
+          "409": {
+            "description": "Conflicto con el estado actual del recurso"
+          },
+          "500": {
+            "description": "Error interno del servidor"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "firstName",
+                  "email"
+                ],
+                "properties": {
+                  "firstName": {
+                    "type": "string"
+                  },
+                  "lastName": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "phone": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/bank-statements/upload-pdf": {
@@ -7941,145 +8006,6 @@
         }
       }
     },
-    "/staff": {
-      "get": {
-        "tags": [
-          "staff"
-        ],
-        "summary": "GET /staff",
-        "description": "Operación sobre el módulo staff. Requiere permisos operativos correspondientes.",
-        "operationId": "get__staff",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Operación ejecutada con éxito"
-          },
-          "400": {
-            "description": "Solicitud inválida o error en parámetros de negocio"
-          },
-          "401": {
-            "description": "No autenticado o token JWT inválido/expirado"
-          },
-          "403": {
-            "description": "Acceso denegado: falta de permisos o acceso a otra compañía"
-          },
-          "404": {
-            "description": "Recurso no encontrado"
-          },
-          "409": {
-            "description": "Conflicto con el estado actual del recurso"
-          },
-          "500": {
-            "description": "Error interno del servidor"
-          }
-        }
-      }
-    },
-    "/staff/{id}": {
-      "get": {
-        "tags": [
-          "staff"
-        ],
-        "summary": "GET /staff/:id",
-        "description": "Operación sobre el módulo staff. Requiere permisos operativos correspondientes.",
-        "operationId": "get__staff__id_",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "integer",
-            "description": "Identificador de id"
-          }
-        ],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Operación ejecutada con éxito"
-          },
-          "400": {
-            "description": "Solicitud inválida o error en parámetros de negocio"
-          },
-          "401": {
-            "description": "No autenticado o token JWT inválido/expirado"
-          },
-          "403": {
-            "description": "Acceso denegado: falta de permisos o acceso a otra compañía"
-          },
-          "404": {
-            "description": "Recurso no encontrado"
-          },
-          "409": {
-            "description": "Conflicto con el estado actual del recurso"
-          },
-          "500": {
-            "description": "Error interno del servidor"
-          }
-        }
-      },
-      "put": {
-        "tags": [
-          "staff"
-        ],
-        "summary": "PUT /staff/:id",
-        "description": "Operación sobre el módulo staff. Requiere permisos operativos correspondientes.",
-        "operationId": "put__staff__id_",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "integer",
-            "description": "Identificador de id"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "type": "object"
-            },
-            "description": "Datos de la petición"
-          }
-        ],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Operación ejecutada con éxito"
-          },
-          "400": {
-            "description": "Solicitud inválida o error en parámetros de negocio"
-          },
-          "401": {
-            "description": "No autenticado o token JWT inválido/expirado"
-          },
-          "403": {
-            "description": "Acceso denegado: falta de permisos o acceso a otra compañía"
-          },
-          "404": {
-            "description": "Recurso no encontrado"
-          },
-          "409": {
-            "description": "Conflicto con el estado actual del recurso"
-          },
-          "500": {
-            "description": "Error interno del servidor"
-          }
-        }
-      }
-    },
     "/wallet/summary/{customerId}": {
       "get": {
         "tags": [
@@ -9088,6 +9014,167 @@
         "responses": {
           "200": {
             "description": "Producto desvinculado"
+          }
+        }
+      }
+    },
+    "/auth/me/password": {
+      "put": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "PUT /auth/me/password",
+        "description": "Cambia la clave propia pidiendo la actual; cierra las demás sesiones del actor y conserva la actual.",
+        "operationId": "put__auth_me_password",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operación ejecutada con éxito"
+          },
+          "400": {
+            "description": "Solicitud inválida o error en parámetros de negocio"
+          },
+          "401": {
+            "description": "No autenticado o token JWT inválido/expirado"
+          },
+          "403": {
+            "description": "Acceso denegado: falta de permisos o acceso a otra compañía"
+          },
+          "404": {
+            "description": "Recurso no encontrado"
+          },
+          "409": {
+            "description": "Conflicto con el estado actual del recurso"
+          },
+          "500": {
+            "description": "Error interno del servidor"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "currentPassword",
+                  "newPassword"
+                ],
+                "properties": {
+                  "currentPassword": {
+                    "type": "string"
+                  },
+                  "newPassword": {
+                    "type": "string",
+                    "minLength": 8
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/customers/{id}/documents/{docId}/file": {
+      "get": {
+        "tags": [
+          "customers"
+        ],
+        "summary": "GET /customers/{id}/documents/{docId}/file",
+        "description": "Entrega el archivo del documento con sesión. Permiso: customers:view_detail y alcance de compañía. Reemplaza el /uploads público.",
+        "operationId": "get__customers_id_documents_docId_file",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operación ejecutada con éxito"
+          },
+          "400": {
+            "description": "Solicitud inválida o error en parámetros de negocio"
+          },
+          "401": {
+            "description": "No autenticado o token JWT inválido/expirado"
+          },
+          "403": {
+            "description": "Acceso denegado: falta de permisos o acceso a otra compañía"
+          },
+          "404": {
+            "description": "Recurso no encontrado"
+          },
+          "409": {
+            "description": "Conflicto con el estado actual del recurso"
+          },
+          "500": {
+            "description": "Error interno del servidor"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "docId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
+      }
+    },
+    "/realtime/ticket": {
+      "post": {
+        "tags": [
+          "realtime"
+        ],
+        "summary": "POST /realtime/ticket",
+        "description": "Ticket de un solo uso para abrir el websocket de importadoraRealtime. Requiere sesión (sin permiso: lo que se recibe se filtra por evento). Responde { ticket, wsUrl, expiresAt }; vence a los REALTIME_TICKET_TTL_SEC segundos. Máximo 5 por minuto por sesión (429 TOO_MANY_TICKETS).",
+        "operationId": "post__realtime_ticket",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operación ejecutada con éxito"
+          },
+          "400": {
+            "description": "Solicitud inválida o error en parámetros de negocio"
+          },
+          "401": {
+            "description": "No autenticado o token JWT inválido/expirado"
+          },
+          "403": {
+            "description": "Acceso denegado: falta de permisos o acceso a otra compañía"
+          },
+          "404": {
+            "description": "Recurso no encontrado"
+          },
+          "409": {
+            "description": "Conflicto con el estado actual del recurso"
+          },
+          "500": {
+            "description": "Error interno del servidor"
+          },
+          "201": {
+            "description": "Ticket emitido"
+          },
+          "429": {
+            "description": "Demasiados tickets en el último minuto"
           }
         }
       }

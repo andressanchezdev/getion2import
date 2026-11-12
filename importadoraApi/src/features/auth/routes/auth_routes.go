@@ -23,6 +23,8 @@ func RegisterRoutes(e *echo.Echo, authMiddleware *middlewares.AuthMiddleware, ct
 		{
 			protected.POST("/logout", ctrl.Logout)
 			protected.GET("/me", ctrl.GetMe)
+			protected.PUT("/me", ctrl.UpdateMe)
+			protected.PUT("/me/password", ctrl.UpdatePassword)
 		}
 	}
 }

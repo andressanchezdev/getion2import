@@ -16,6 +16,7 @@ import { CreditClientsToolbar } from './CreditClientsToolbar'
 import { CreditClientRow } from '../clientRow/CreditClientRow'
 import { WalletKpiHeader } from '../kpis/WalletKpiHeader'
 import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
+import { ActionsHeader } from '@/global/components/UI/molecules/table/ActionsHeader'
 
 export const CreditClientsTable: React.FC = () => {
   const dispatch = useAppDispatch()
@@ -45,7 +46,7 @@ export const CreditClientsTable: React.FC = () => {
               <th>Cupo Total</th>
               <th>Saldo Adeudado</th>
               <th>Disponible</th>
-              <th>Acciones</th>
+              <ActionsHeader />
             </tr>
           </thead>
           <tbody>

@@ -4,6 +4,7 @@
 import React, { useEffect } from 'react'
 import './CashRegisterScreen.css'
 import { openDrawerForm, setActiveWarehouse } from '@/features/navigation'
+import { usePermissions } from '@/global/hooks/access/usePermissions'
 import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { selectWarehouses } from '@/features/warehouses'
 import { toast } from '@/global/helpers/feedback/toast'
@@ -14,6 +15,8 @@ import { useCashSession } from '../hooks/useCashSession'
 
 export const CashRegisterScreen: React.FC = () => {
   const dispatch = useAppDispatch()
+  const { can } = usePermissions()
+  const canShift = can('cash:open_close') // abrir y cerrar turno (y los gastos que se cierran con él)
   const cash = useCashSession()
   const warehouses = useAppSelector(selectWarehouses)
 
@@ -38,27 +41,27 @@ export const CashRegisterScreen: React.FC = () => {
       <CashOrdersPanel
         shiftActions={
           <>
-            <button
+            {canShift && <button
               type="button"
               className="btn-secondary"
               onClick={() => dispatch(openDrawerForm({ kind: 'registerExpense' }))}
               title="Registrar fletes, nómina, aseo u otros gastos menores"
             >
               Registrar Gasto
-            </button>
-            <button
+            </button>}
+            {can('payments:create') && <button
               type="button"
               className="btn-secondary"
               onClick={() => dispatch(openDrawerForm({ kind: 'createAbono', payload: { onDone: cash.reload } }))}
               title="Registrar el abono de un cliente a su crédito"
             >
               Registrar abono
-            </button>
+            </button>}
             <CashShiftSlider
               isOpen={cash.isOpen}
               loading={cash.loading || cash.saving}
-              disabled={cash.warehouseId <= 0}
-              disabledReason="Elige una bodega para gestionar su turno de caja"
+              disabled={cash.warehouseId <= 0 || !canShift}
+              disabledReason={canShift ? 'Elige una bodega para gestionar su turno de caja' : 'No tienes permiso para abrir o cerrar la caja'}
               onRequestOpen={cash.requestOpen}
               onRequestClose={cash.requestClose}
             />

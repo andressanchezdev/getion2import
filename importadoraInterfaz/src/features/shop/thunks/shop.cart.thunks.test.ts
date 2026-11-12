@@ -77,9 +77,9 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(fetchActiveCart).mockResolvedValue(snapshot(line(2)))
   vi.mocked(findStockId).mockResolvedValue(21)
-  vi.mocked(addCartItem).mockResolvedValue(undefined)
-  vi.mocked(updateCartItemQuantity).mockResolvedValue(undefined)
-  vi.mocked(deleteCartItem).mockResolvedValue(undefined)
+  vi.mocked(addCartItem).mockResolvedValue(null)
+  vi.mocked(updateCartItemQuantity).mockResolvedValue(null)
+  vi.mocked(deleteCartItem).mockResolvedValue(null)
   vi.mocked(clearCart).mockResolvedValue(undefined)
   vi.mocked(fetchProductsPage).mockResolvedValue({
     items: [],
@@ -111,12 +111,13 @@ describe('fetchCartThunk', () => {
 })
 
 describe('addToCartThunk', () => {
-  it('renglón nuevo: busca la ubicación con stock, agrega con el precio del nivel y relee el carrito', async () => {
+  it('renglón nuevo: envía productId + warehouseId con el precio del nivel sin recargar el catálogo', async () => {
     const { store, dispatch } = makeStore()
     await dispatch(addToCartThunk({ product, quantity: 3, priceLevel: 'P1' }))
-    expect(findStockId).toHaveBeenCalledWith(ctx, 4, 5, 3)
-    expect(addCartItem).toHaveBeenCalledWith({ cartId: 9, stockId: 21, quantity: 3, price: 900 })
+    expect(findStockId).not.toHaveBeenCalled()
+    expect(addCartItem).toHaveBeenCalledWith({ cartId: 9, productId: 5, warehouseId: 4, quantity: 3, price: 900 })
     expect(updateCartItemQuantity).not.toHaveBeenCalled()
+    expect(fetchProductsPage).not.toHaveBeenCalled()
     expect(store.getState().cart.items).toHaveLength(1)
     expect(store.getState().shop.cartLevels).toEqual({ '5': 'P1' })
     expect(store.getState().shop.cartUuid).toBe('u-9')
@@ -129,10 +130,14 @@ describe('addToCartThunk', () => {
     expect(store.getState().cart.products['5']).toEqual(product)
   })
 
-  it('refresca el catálogo porque el backend descuenta stock', async () => {
-    const { dispatch } = makeStore()
-    await dispatch(addToCartThunk({ product, quantity: 1, priceLevel: 'P0' }))
-    expect(fetchProductsPage).toHaveBeenCalled()
+  it('usa el carrito devuelto por addCartItem sin hacer otro GET /carts/active', async () => {
+    vi.mocked(addCartItem).mockResolvedValue(snapshot(line(3)))
+    const { store, dispatch } = makeStore()
+    await dispatch(fetchCartThunk())
+    vi.mocked(fetchActiveCart).mockClear()
+    await dispatch(addToCartThunk({ product: { ...product, id: '8' }, quantity: 3, priceLevel: 'P0' }))
+    expect(fetchActiveCart).not.toHaveBeenCalled()
+    expect(store.getState().cart.items).toHaveLength(1)
   })
 
   it('si el producto ya está en el carrito suma a su renglón en vez de crear otro', async () => {
@@ -152,11 +157,10 @@ describe('addToCartThunk', () => {
     expect(result.type).toContain('rejected')
   })
 
-  it('si ninguna ubicación tiene stock suficiente avisa y no agrega', async () => {
-    vi.mocked(findStockId).mockRejectedValue({ userFriendlyMessage: 'No hay stock suficiente de este producto en la bodega elegida.' })
+  it('si ninguna ubicación tiene stock suficiente el servidor rechaza y avisa', async () => {
+    vi.mocked(addCartItem).mockRejectedValue({ userFriendlyMessage: 'No hay stock suficiente de este producto en la bodega elegida.' })
     const { store, dispatch } = makeStore()
     await dispatch(addToCartThunk({ product, quantity: 99, priceLevel: 'P0' }))
-    expect(addCartItem).not.toHaveBeenCalled()
     expect(toast.error).toHaveBeenCalledWith('No hay stock suficiente de este producto en la bodega elegida.')
     expect(store.getState().cart.mutating).toBe(false)
   })
@@ -171,13 +175,13 @@ describe('addToCartThunk', () => {
   })
 
   it('no acepta otro cambio mientras uno está en curso', async () => {
-    let release: () => void = () => undefined
-    vi.mocked(addCartItem).mockReturnValue(new Promise<void>((resolve) => (release = resolve)))
+    let release: (val: CartSnapshot | null) => void = () => undefined
+    vi.mocked(addCartItem).mockReturnValue(new Promise<CartSnapshot | null>((resolve) => (release = resolve)))
     const { store, dispatch } = makeStore()
     const first = dispatch(addToCartThunk({ product, quantity: 1, priceLevel: 'P0' }))
     expect(store.getState().cart.mutating).toBe(true)
     await dispatch(addToCartThunk({ product, quantity: 1, priceLevel: 'P0' })) // ignorado
-    release()
+    release(null)
     await first
     expect(addCartItem).toHaveBeenCalledTimes(1)
     expect(store.getState().cart.mutating).toBe(false)

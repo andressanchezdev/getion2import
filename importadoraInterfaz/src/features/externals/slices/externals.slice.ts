@@ -1,7 +1,8 @@
 // externals.slice · estado de proveedores y transportadoras: la lista del tipo abierto y si hay un cambio en curso
 // conecta con: externals.thunks (lo llenan), externals.selectors (lecturas) y rootReducer (clave 'externals'; NO se guarda en el navegador)
 // ojo: al cambiar de proveedores a transportadoras la lista se vacía para no mostrar por un instante la del otro tipo
-import { createSlice, isAnyOf } from '@reduxjs/toolkit'
+import { applyVersionedStatus, mergeVersionedList } from '@/global/helpers/realtime/applyVersioned'
+import { createSlice, isAnyOf, type PayloadAction } from '@reduxjs/toolkit'
 import { INITIAL_EXTERNALS_STATE } from '../constants/externals.constants'
 import { deleteExternalThunk, loadExternalsThunk, saveExternalThunk, setExternalActiveThunk } from '../thunks/externals.thunks'
 
@@ -10,7 +11,13 @@ const changes = [saveExternalThunk, setExternalActiveThunk, deleteExternalThunk]
 export const externalsSlice = createSlice({
   name: 'externals',
   initialState: INITIAL_EXTERNALS_STATE,
-  reducers: {},
+  reducers: {
+    // tiempo real (entity.status_changed de proveedor o transportadora): cambia el estado de la fila si ya está cargada
+    externalStatusFromEvent: (state, action: PayloadAction<{ id: number; isActive: boolean; version?: string }>) => {
+      const row = state.items.find((item) => item.id === action.payload.id)
+      if (row) applyVersionedStatus(row, action.payload.isActive, action.payload.version)
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(loadExternalsThunk.pending, (state, action) => {
@@ -22,7 +29,7 @@ export const externalsSlice = createSlice({
       })
       .addCase(loadExternalsThunk.fulfilled, (state, action) => {
         if (state.requestId !== action.meta.requestId) return
-        state.items = action.payload
+        state.items = mergeVersionedList(state.items, action.payload, (e) => e.id)
         state.status = 'succeeded'
       })
       .addCase(loadExternalsThunk.rejected, (state, action) => {
@@ -50,5 +57,6 @@ export const externalsSlice = createSlice({
   },
 })
 
+export const { externalStatusFromEvent } = externalsSlice.actions
 export const externalsReducer = externalsSlice.reducer
 export default externalsSlice.reducer

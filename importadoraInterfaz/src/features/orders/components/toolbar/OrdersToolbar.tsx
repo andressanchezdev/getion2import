@@ -4,6 +4,7 @@
 import React from 'react'
 import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { SearchBar } from '@/global/components/UI/molecules/filters/SearchBar'
+import { FilterSelect } from '@/global/components/UI/molecules/filters/FilterSelect'
 import { selectWarehouses } from '@/features/warehouses'
 import { ORDER_CHANNELS } from '../../constants/orders.constants'
 import { selectOrderStageChips, selectVisibleOrders } from '../../selectors/orders.selectors'
@@ -60,55 +61,33 @@ export const OrdersToolbar: React.FC<OrdersToolbarProps> = ({ hideWarehouseFilte
 
       <div className="orders-toolbar-middle">
         {!hideWarehouseFilter && (
-          <label className="orders-toolbar-filter">
-            <span>Bodega:</span>
-            <select
-              className="orders-toolbar-select"
-              value={selectedWarehouseId ? String(selectedWarehouseId) : 'all'}
-              onChange={(e) => handleWarehouseChange(e.target.value)}
-            >
-              <option value="all">Todas las bodegas</option>
-              {warehouses.map((wh) => (
-                <option key={wh.id} value={String(wh.id)}>
-                  {wh.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <FilterSelect
+            label="Bodega"
+            allLabel="Todas las bodegas"
+            emptyValue="all"
+            value={selectedWarehouseId ? String(selectedWarehouseId) : 'all'}
+            options={warehouses.map((wh) => ({ value: String(wh.id), label: wh.name }))}
+            onChange={handleWarehouseChange}
+          />
         )}
 
-        <label className="orders-toolbar-filter">
-          <span>Etapa:</span>
-          <select
-            className="orders-toolbar-select"
-            value={stage}
-            onChange={(e) => {
-              if (e.target.value) dispatch(setOrderStage(e.target.value as OrderStageKey))
-            }}
-          >
-            {chips.map((chip) => (
-              <option key={chip.key} value={chip.key}>
-                {chip.label} ({chip.count ?? '–'})
-              </option>
-            ))}
-          </select>
-        </label>
+        <FilterSelect
+          label="Etapa"
+          value={stage}
+          options={chips.map((chip) => ({ value: chip.key, label: `${chip.label} (${chip.count ?? '–'})` }))}
+          onChange={(val) => {
+            if (val) dispatch(setOrderStage(val as OrderStageKey))
+          }}
+        />
 
-        <label className="orders-toolbar-filter">
-          <span>Canal:</span>
-          <select
-            className="orders-toolbar-select"
-            value={channel}
-            onChange={(e) => dispatch(setOrderChannel(e.target.value as OrderChannelFilter))}
-          >
-            <option value="all">Todos los canales</option>
-            {ORDER_CHANNELS.map((ch) => (
-              <option key={ch.key} value={ch.key}>
-                {ch.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <FilterSelect
+          label="Canal"
+          allLabel="Todos los canales"
+          emptyValue="all"
+          value={channel}
+          options={ORDER_CHANNELS.map((ch) => ({ value: ch.key, label: ch.label }))}
+          onChange={(val) => dispatch(setOrderChannel(val as OrderChannelFilter))}
+        />
       </div>
 
       <div className="orders-toolbar-actions">

@@ -5,7 +5,6 @@ import React, { useState } from 'react'
 import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { usePermissions } from '@/global/hooks/access/usePermissions'
 import { Button } from '@/global/components/UI/atoms/Button'
-import { copyOrderSerial } from '../../helpers/orders.clipboard'
 import { useOpenOrderDetail } from '../../hooks/useOpenOrderDetail'
 import { selectOpenOrderId, selectOrderDetail } from '../../selectors/orders.selectors'
 import { loadOrderDetailThunk, verifyTransferPaymentThunk } from '../../thunks/orders.thunks'
@@ -22,9 +21,10 @@ export const OrderDrawer: React.FC = () => {
   useOpenOrderDetail()
   const openId = useAppSelector(selectOpenOrderId)
   const { data: order, status, error } = useAppSelector(selectOrderDetail)
-  const { level, canPerformAction } = usePermissions()
-  const canCancel = canPerformAction('shop', 'orders', 'delete')
-  const canVerifyPayment = level === 'admin' || level === 'superadmin' || canPerformAction('shop', 'orders', 'update')
+  const { can } = usePermissions()
+  // ojo: mismas llaves que exige la API (el superadmin solo lee: no ve estos botones)
+  const canCancel = can('orders:delete')
+  const canVerifyPayment = can('orders:verify_payment')
   const [isCancelOpen, setIsCancelOpen] = useState(false)
   const [verifying, setVerifying] = useState(false)
 
@@ -68,7 +68,6 @@ export const OrderDrawer: React.FC = () => {
 
       {order && (
         <div className="order-drawer-foot">
-          <Button onClick={() => copyOrderSerial(order.serial)}>Copiar número</Button>
           {isTransferPending && canVerifyPayment && (
             <Button
               variant="primary"

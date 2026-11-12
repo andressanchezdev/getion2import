@@ -8,8 +8,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/events"
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
@@ -148,7 +150,7 @@ func (s *ProductService) Create(ctx context.Context, actor *middlewares.ActorCon
 
 	// el producto, sus precios y su ubicación inicial se crean juntos: si algo falla no queda un producto a medias
 	var created *repositories.ProductEntity
-	err = db.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
 		saved, err := s.productRepo.Create(ctx, tx, entity)
 		if err != nil {
 			return err
@@ -157,7 +159,15 @@ func (s *ProductService) Create(ctx context.Context, actor *middlewares.ActorCon
 		if err := s.productRepo.UpsertPrices(ctx, tx, *companyID, created.ID, req.Prices.ToMap()); err != nil {
 			return err
 		}
-		return s.assignInitialStock(ctx, tx, actor, *companyID, created.ID, req.InitialStock)
+		if err := s.assignInitialStock(ctx, tx, actor, *companyID, created.ID, req.InitialStock); err != nil {
+			return err
+		}
+		// se relee para que el evento lleve los precios ya guardados
+		if fresh, err := s.productRepo.FindByID(ctx, tx, created.ID); err == nil && fresh != nil {
+			created = fresh
+		}
+		s.events.Record(ctx, events.NewEntityCreated(*companyID, nil, events.EntityRef{Kind: events.KindProduct, ID: created.ID, Version: created.UpdatedAt}, s.mapProductToDTO(created, nil, nil)))
+		return nil
 	})
 	if err != nil {
 		return nil, utils.NormalizeDBError(err, "")
@@ -185,6 +195,8 @@ func (s *ProductService) Update(ctx context.Context, actor *middlewares.ActorCon
 	}
 
 	current, err := s.productRepo.FindByID(ctx, s.pool, id)
+	// foto del registro antes de editarlo: de aquí sale changedFields
+	beforeSnap := events.Snapshot(current)
 	if err != nil {
 		return nil, utils.Internal("Error al consultar producto.", err)
 	}
@@ -266,12 +278,18 @@ func (s *ProductService) Update(ctx context.Context, actor *middlewares.ActorCon
 	if req.IVA != nil {
 		current.IVA = req.IVA
 	}
+	pricesDidChange := false
 	if req.Prices != nil {
 		for tier, price := range *req.Prices {
 			if price < 0 {
 				return nil, utils.BadRequest("INVALID_PRICE", fmt.Sprintf("El precio de la tarifa %s no puede ser negativo.", tier))
 			}
 		}
+		// ojo: el formulario siempre manda los precios; solo se exige edit_prices si de verdad cambian
+		if pricesChanged(current.Prices, *req.Prices) && !middlewares.ActorCan(actor, "products:edit_prices", "catalog:edit_prices") {
+			return nil, utils.Forbidden("INSUFFICIENT_PERMISSIONS", "No tienes el permiso requerido: products:edit_prices")
+		}
+		pricesDidChange = pricesChanged(current.Prices, *req.Prices)
 		current.Prices = req.Prices.ToJSON()
 	}
 	if req.LastCost != nil {
@@ -286,6 +304,7 @@ func (s *ProductService) Update(ctx context.Context, actor *middlewares.ActorCon
 	if req.Images != nil {
 		current.Images = req.Images
 	}
+	prevStatus := current.Status
 	deactivationReason := ""
 	if req.Status != nil {
 		leaving := *req.Status == types.ProductInactive || *req.Status == types.ProductDiscontinued
@@ -309,37 +328,80 @@ func (s *ProductService) Update(ctx context.Context, actor *middlewares.ActorCon
 	easysearchUpdated := s.buildEasysearch(current.Code, current.Name, bName, mName, current.CategoryName, current.Description)
 	current.Easysearch = &easysearchUpdated
 
-	updated, err := s.productRepo.Update(ctx, s.pool, current)
-	if err != nil {
-		return nil, utils.Internal("Error al actualizar producto.", err)
-	}
-
-	// los precios viven en product_prices (una fila por tarifa): se guardan aparte y se relee el producto
-	// para responder con TODAS las tarifas (si se cambio solo una, las demas no deben desaparecer de la respuesta)
-	if req.Prices != nil {
-		if err := s.productRepo.UpsertPrices(ctx, s.pool, current.CompanyID, current.ID, req.Prices.ToMap()); err != nil {
-			return nil, utils.Internal("Error al actualizar los precios del producto.", err)
+	var resp *dtos.ProductResponse
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		updated, err := s.productRepo.Update(ctx, tx, current)
+		if err != nil {
+			return utils.Internal("Error al actualizar producto.", err)
 		}
-		if fresh, err := s.productRepo.FindByID(ctx, s.pool, current.ID); err == nil && fresh != nil {
-			updated = fresh
-		}
-	}
 
-	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
-		CompanyID: &current.CompanyID,
-		ActorType: actor.ActorType,
-		ActorID:   actor.ActorID,
-		Entity:    "products",
-		EntityID:  &current.ID,
-		Action:    "PRODUCT_UPDATED",
-		Reason:    utils.ReasonOrDefault(deactivationReason, "Actualización de producto"),
-		IPAddress: ip,
-		UserAgent: ua,
+		// los precios viven en product_prices (una fila por tarifa): se guardan aparte y se relee el producto
+		// para responder con TODAS las tarifas (si se cambio solo una, las demas no deben desaparecer de la respuesta)
+		if req.Prices != nil {
+			if err := s.productRepo.UpsertPrices(ctx, tx, current.CompanyID, current.ID, req.Prices.ToMap()); err != nil {
+				return utils.Internal("Error al actualizar los precios del producto.", err)
+			}
+			if fresh, err := s.productRepo.FindByID(ctx, tx, current.ID); err == nil && fresh != nil {
+				updated = fresh
+			}
+		}
+
+		_ = s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
+			CompanyID: &current.CompanyID,
+			ActorType: actor.ActorType,
+			ActorID:   actor.ActorID,
+			Entity:    "products",
+			EntityID:  &current.ID,
+			Action:    "PRODUCT_UPDATED",
+			Reason:    utils.ReasonOrDefault(deactivationReason, "Actualización de producto"),
+			IPAddress: ip,
+			UserAgent: ua,
+		})
+
+		codes, _ := s.productRepo.ListCodes(ctx, tx, current.ID)
+		suppliers, _ := s.productRepo.ListSuppliers(ctx, tx, current.ID)
+		resp = s.mapProductToDTO(updated, codes, suppliers)
+
+		if prevStatus != updated.Status {
+			var rPtr *string
+			if deactivationReason != "" {
+				rPtr = &deactivationReason
+			}
+			s.events.Record(ctx, events.NewEntityStatus(
+				current.CompanyID,
+				nil,
+				events.EntityRef{Kind: events.KindProduct, ID: updated.ID, Version: updated.UpdatedAt},
+				string(prevStatus),
+				string(updated.Status),
+				rPtr,
+				resp,
+			))
+		} else {
+			// edición sin cambio de estado: viaja la fila ya guardada para que las tablas abiertas se actualicen sin pedirla
+			s.events.Record(ctx, events.NewEntityUpdated(current.CompanyID, nil, events.EntityRef{Kind: events.KindProduct, ID: updated.ID, Version: updated.UpdatedAt}, resp, events.ChangedFields(beforeSnap, updated)))
+		}
+		// los precios tienen su propio evento: tienda, carrito y cotizaciones solo necesitan las tarifas nuevas
+		if pricesDidChange {
+			tiers := map[string]float64{}
+			_ = json.Unmarshal(updated.Prices, &tiers)
+			iva := 0.0
+			if updated.IVA != nil {
+				iva = *updated.IVA
+			}
+			s.events.Record(ctx, events.NewProductPricesChanged(current.CompanyID, events.ProductPricesChangedData{
+				ProductID: updated.ID,
+				Prices:    events.TierPrices{P1: tiers["p1"], P2: tiers["p2"], P3: tiers["p3"], P4: tiers["p4"]},
+				IvaRate:   iva,
+				Version:   updated.UpdatedAt,
+			}))
+		}
+		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
 
-	codes, _ := s.productRepo.ListCodes(ctx, s.pool, current.ID)
-	suppliers, _ := s.productRepo.ListSuppliers(ctx, s.pool, current.ID)
-	return s.mapProductToDTO(updated, codes, suppliers), nil
+	return resp, nil
 }
 
 // Delete retira de la operación al producto (soft-delete).
@@ -370,32 +432,45 @@ func (s *ProductService) Delete(ctx context.Context, actor *middlewares.ActorCon
 	if err != nil {
 		return utils.Internal("No se pudo preparar el registro del producto para la papelera.", err)
 	}
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		return utils.Internal("No se pudo iniciar la eliminación del producto.", err)
+	return db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		binID, err := s.recycleBinRepo.Insert(ctx, tx, &current.CompanyID, "products", current.ID, fmt.Sprintf("%s (%s)", current.Name, current.Code), currentBytes, string(actor.ActorType), actor.ActorID)
+		if err != nil {
+			return utils.Internal("No se pudo guardar el producto en la papelera.", err)
+		}
+		if err := s.productRepo.SoftDelete(ctx, tx, id); err != nil {
+			return utils.Internal("Error al eliminar producto.", err)
+		}
+		if err := s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
+			CompanyID: &current.CompanyID,
+			ActorType: actor.ActorType,
+			ActorID:   actor.ActorID,
+			Entity:    "products",
+			EntityID:  &current.ID,
+			Action:    "PRODUCT_DEACTIVATED",
+			Reason:    reason,
+			IPAddress: ip,
+			UserAgent: ua,
+		}); err != nil {
+			return utils.Internal("No se pudo registrar la eliminación del producto en auditoría.", err)
+		}
+		s.events.Record(ctx, events.NewEntityArchived(current.CompanyID, nil, events.EntityRef{Kind: events.KindProduct, ID: current.ID, Version: time.Now().UTC()}, reason, binID))
+		return nil
+	})
+}
+
+// pricesChanged compara los precios guardados (JSON) con los recibidos; una tarifa nueva, quitada o distinta cuenta como cambio.
+func pricesChanged(stored []byte, incoming dtos.ProductPrices) bool {
+	var current map[string]float64
+	if len(stored) > 0 {
+		_ = json.Unmarshal(stored, &current)
 	}
-	defer tx.Rollback(ctx)
-	if _, err := s.recycleBinRepo.Insert(ctx, tx, &current.CompanyID, "products", current.ID, fmt.Sprintf("%s (%s)", current.Name, current.Code), currentBytes, string(actor.ActorType), actor.ActorID); err != nil {
-		return utils.Internal("No se pudo guardar el producto en la papelera.", err)
+	if len(current) != len(incoming) {
+		return true
 	}
-	if err := s.productRepo.SoftDelete(ctx, tx, id); err != nil {
-		return utils.Internal("Error al eliminar producto.", err)
+	for tier, price := range incoming {
+		if old, ok := current[tier]; !ok || old != price {
+			return true
+		}
 	}
-	if err := s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
-		CompanyID: &current.CompanyID,
-		ActorType: actor.ActorType,
-		ActorID:   actor.ActorID,
-		Entity:    "products",
-		EntityID:  &current.ID,
-		Action:    "PRODUCT_DEACTIVATED",
-		Reason:    reason,
-		IPAddress: ip,
-		UserAgent: ua,
-	}); err != nil {
-		return utils.Internal("No se pudo registrar la eliminación del producto en auditoría.", err)
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return utils.Internal("No se pudo completar la eliminación del producto.", err)
-	}
-	return nil
+	return false
 }

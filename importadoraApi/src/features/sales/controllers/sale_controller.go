@@ -158,11 +158,12 @@ func (ctrl *SaleController) AdvanceToVerification(c echo.Context) error {
 		return err
 	}
 
-	if err := ctrl.saleService.AdvanceToVerification(c.Request().Context(), companyID, id, empID); err != nil {
+	sale, err := ctrl.saleService.AdvanceToVerification(c.Request().Context(), companyID, id, empID)
+	if err != nil {
 		return err
 	}
 
-	return utils.RespondOK[any](c, "Venta avanzada a etapa de verificación", nil)
+	return utils.RespondOK(c, "Venta avanzada a etapa de verificación", sale)
 }
 
 // AdvanceToPicking POST /sales/:id/pick
@@ -181,11 +182,12 @@ func (ctrl *SaleController) AdvanceToPicking(c echo.Context) error {
 		return err
 	}
 
-	if err := ctrl.saleService.AdvanceToPicking(c.Request().Context(), companyID, id, empID); err != nil {
+	sale, err := ctrl.saleService.AdvanceToPicking(c.Request().Context(), companyID, id, empID)
+	if err != nil {
 		return err
 	}
 
-	return utils.RespondOK[any](c, "Venta avanzada a etapa de picking", nil)
+	return utils.RespondOK(c, "Venta avanzada a etapa de picking", sale)
 }
 
 // AdvanceToPacking POST /sales/:id/pack
@@ -204,11 +206,12 @@ func (ctrl *SaleController) AdvanceToPacking(c echo.Context) error {
 		return err
 	}
 
-	if err := ctrl.saleService.AdvanceToPacking(c.Request().Context(), companyID, id, empID); err != nil {
+	sale, err := ctrl.saleService.AdvanceToPacking(c.Request().Context(), companyID, id, empID)
+	if err != nil {
 		return err
 	}
 
-	return utils.RespondOK[any](c, "Venta avanzada a etapa de empaque", nil)
+	return utils.RespondOK(c, "Venta avanzada a etapa de empaque", sale)
 }
 
 // IssueInvoice POST /sales/:id/invoice
@@ -254,11 +257,12 @@ func (ctrl *SaleController) AdvanceToDispatch(c echo.Context) error {
 		return err
 	}
 
-	if err := ctrl.saleService.AdvanceToDispatch(c.Request().Context(), companyID, id, empID, req); err != nil {
+	sale, err := ctrl.saleService.AdvanceToDispatch(c.Request().Context(), companyID, id, empID, req)
+	if err != nil {
 		return err
 	}
 
-	return utils.RespondOK[any](c, "Pedido despachado y stock descontado con éxito", nil)
+	return utils.RespondOK(c, "Pedido despachado y stock descontado con éxito", sale)
 }
 
 // AdvanceToSend POST /sales/:id/send
@@ -277,11 +281,12 @@ func (ctrl *SaleController) AdvanceToSend(c echo.Context) error {
 		return err
 	}
 
-	if err := ctrl.saleService.AdvanceToSend(c.Request().Context(), companyID, id, empID); err != nil {
+	sale, err := ctrl.saleService.AdvanceToSend(c.Request().Context(), companyID, id, empID)
+	if err != nil {
 		return err
 	}
 
-	return utils.RespondOK[any](c, "Pedido marcado como enviado y venta completada", nil)
+	return utils.RespondOK(c, "Pedido marcado como enviado y venta completada", sale)
 }
 
 // CancelSale POST /sales/:id/cancel
@@ -305,10 +310,11 @@ func (ctrl *SaleController) CancelSale(c echo.Context) error {
 		return err
 	}
 
-	if err := ctrl.saleService.CancelSale(c.Request().Context(), companyID, id, empID, req); err != nil {
+	sale, err := ctrl.saleService.CancelSale(c.Request().Context(), companyID, id, empID, req)
+	if err != nil {
 		return err
 	}
 
-	return utils.RespondOK[any](c, "Venta cancelada y reservas de stock liberadas", nil)
+	return utils.RespondOK(c, "Venta cancelada y reservas de stock liberadas", sale)
 }
 

@@ -25,6 +25,8 @@ export const useCashExpenses = () => {
   const [page, setPage] = useState(1)
   const [loaded, setLoaded] = useState<LoadedPage | null>(null)
   const query = useDebouncedValue(filters.query, SEARCH_DELAY_MS)
+  // tiempo real: al cerrar un turno (cash_session.status_changed) sus gastos entran a esta lista; el contador hace que se vuelva a pedir
+  const closedTick = useAppSelector((state) => (state as { cash?: { closedTick?: number } }).cash?.closedTick ?? 0)
   const key = JSON.stringify([query, filters.warehouseId, filters.from, filters.to, page])
 
   const setFilter = <K extends keyof CashExpenseFilters>(name: K, value: CashExpenseFilters[K]) => {
@@ -47,7 +49,7 @@ export const useCashExpenses = () => {
     }
     // filters.query se reemplaza por query (con espera): el resto de filtros sí dispara la consulta al instante
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasSession, key])
+  }, [hasSession, key, closedTick])
 
   const current = loaded && loaded.key === key ? loaded : null
   return {

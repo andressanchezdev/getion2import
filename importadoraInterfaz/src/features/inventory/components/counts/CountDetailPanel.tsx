@@ -6,6 +6,7 @@ import { closeDrawerForm } from '@/features/navigation'
 import { Pill, type PillTone } from '@/global/components/UI/atoms/Pill'
 import { ProductLine, ProductLineList } from '@/global/components/UI/molecules/product/ProductLine'
 import { formatDate } from '@/global/helpers/formatting/format'
+import { usePermissions } from '@/global/hooks/access/usePermissions'
 import { useAppDispatch } from '@/global/hooks/store/useRedux'
 import type { InventoryCount, UpdateCountItemInput } from '../../types/inventory.counts.types'
 import './CountDetailPanel.css'
@@ -30,6 +31,9 @@ const initialQuantities = (count: InventoryCount): Record<number, number> => {
 
 export const CountDetailPanel: React.FC<{ payload: CountDetailPayload }> = ({ payload }) => {
   const dispatch = useAppDispatch()
+  const { can } = usePermissions()
+  const canCount = can('stock:count') // PUT /counts/:id/items
+  const canVerify = can('stock:count_verify') // verificar y corroborar
   const { count, onSaveItems, onVerify, onCorroborate } = payload
   const [quantities, setQuantities] = useState<Record<number, number>>(() => initialQuantities(count))
   const [saving, setSaving] = useState(false)
@@ -101,11 +105,11 @@ export const CountDetailPanel: React.FC<{ payload: CountDetailPayload }> = ({ pa
         <button type="button" className="btn-secondary" onClick={() => dispatch(closeDrawerForm())}>Cerrar</button>
         {isPending && (
           <>
-            <button type="button" className="btn-secondary" disabled={saving} onClick={save}>{saving ? 'Guardando…' : 'Guardar cantidades'}</button>
-            <button type="button" className="btn-primary" disabled={saving} onClick={() => onVerify(count.id)}>Verificar conteo</button>
+            {canCount && <button type="button" className="btn-secondary" disabled={saving} onClick={save}>{saving ? 'Guardando…' : 'Guardar cantidades'}</button>}
+            {canVerify && <button type="button" className="btn-primary" disabled={saving} onClick={() => onVerify(count.id)}>Verificar conteo</button>}
           </>
         )}
-        {isVerified && <button type="button" className="btn-primary" onClick={() => onCorroborate(count.id)}>Corroborar y ajustar stock</button>}
+        {isVerified && canVerify && <button type="button" className="btn-primary" onClick={() => onCorroborate(count.id)}>Corroborar y ajustar stock</button>}
       </div>
     </div>
   )

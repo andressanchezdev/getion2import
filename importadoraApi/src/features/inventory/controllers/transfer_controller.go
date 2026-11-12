@@ -115,10 +115,11 @@ func (c *InventoryController) DispatchTransfer(ctx echo.Context) error {
 	ip := utils.EchoClientIP(ctx)
 	ua := ctx.Request().UserAgent()
 
-	if err := c.service.DispatchTransfer(ctx.Request().Context(), actor, id, ip, ua); err != nil {
+	res, err := c.service.DispatchTransfer(ctx.Request().Context(), actor, id, ip, ua)
+	if err != nil {
 		return err
 	}
-	return utils.RespondOK[any](ctx, "Traslado despachado exitosamente", nil)
+	return utils.RespondOK(ctx, "Traslado despachado exitosamente", res)
 }
 
 // ReceiveTransfer POST /transfers/:id/receive
@@ -135,10 +136,11 @@ func (c *InventoryController) ReceiveTransfer(ctx echo.Context) error {
 	ip := utils.EchoClientIP(ctx)
 	ua := ctx.Request().UserAgent()
 
-	if err := c.service.ReceiveTransfer(ctx.Request().Context(), actor, id, req, ip, ua); err != nil {
+	res, err := c.service.ReceiveTransfer(ctx.Request().Context(), actor, id, req, ip, ua)
+	if err != nil {
 		return err
 	}
-	return utils.RespondOK[any](ctx, "Traslado recibido e ingresado al inventario exitosamente", nil)
+	return utils.RespondOK(ctx, "Traslado recibido e ingresado al inventario exitosamente", res)
 }
 
 // CancelTransfer POST /transfers/:id/cancel
@@ -157,9 +159,10 @@ func (c *InventoryController) CancelTransfer(ctx echo.Context) error {
 	ip := utils.EchoClientIP(ctx)
 	ua := ctx.Request().UserAgent()
 
-	if err := c.service.CancelTransfer(ctx.Request().Context(), actor, id, req, ip, ua); err != nil {
+	res, err := c.service.CancelTransfer(ctx.Request().Context(), actor, id, req, ip, ua)
+	if err != nil {
 		return err
 	}
-	return utils.RespondOK[any](ctx, "Traslado cancelado y reservas liberadas", nil)
+	return utils.RespondOK(ctx, "Traslado cancelado y reservas liberadas", res)
 }
 

@@ -1,15 +1,26 @@
 // billing.slice · datos fiscales y series de consecutivos de la bodega
 // conecta con: billing.thunks (lo llenan) y billing.selectors (lo leen); clave 'billing' en rootReducer (NO se guarda en el navegador)
 // ojo: se vacía al cerrar sesión; al cambiar de compañía rootReducer lo reinicia
-import { createSlice } from '@reduxjs/toolkit'
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import { logoutThunk } from '@/features/auth'
 import { INITIAL_BILLING_STATE } from '../constants/billing.constants'
+import type { DocSeriesType } from '../types/billing.types'
 import { loadBillingSettingsThunk, saveBillingConfigThunk, saveDocSeriesThunk } from '../thunks/billing.thunks'
 
 export const billingSlice = createSlice({
   name: 'billing',
   initialState: INITIAL_BILLING_STATE,
-  reducers: {},
+  reducers: {
+    // tiempo real (sale.created, invoice.issued): otro usuario consumió un consecutivo de esta bodega; el siguiente número nunca retrocede
+    docSeriesUsedFromEvent: (state, action: PayloadAction<{ docType: DocSeriesType; warehouseIds: readonly number[]; serial: string }>) => {
+      const { docType, warehouseIds, serial } = action.payload
+      if (state.warehouseId === null || !warehouseIds.includes(state.warehouseId)) return
+      const used = Number(/(\d+)\s*$/.exec(serial)?.[1])
+      if (!Number.isFinite(used)) return
+      const item = state.series.find((s) => s.docType === docType)
+      if (item && used + 1 > item.nextNumber) item.nextNumber = used + 1
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(loadBillingSettingsThunk.pending, (state, action) => {
@@ -61,4 +72,5 @@ export const billingSlice = createSlice({
   },
 })
 
+export const { docSeriesUsedFromEvent } = billingSlice.actions
 export const billingReducer = billingSlice.reducer

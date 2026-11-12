@@ -4,6 +4,8 @@ import React, { useState } from 'react'
 import { ReasonPrompt } from '@/features/reasonPrompt'
 import { RowActions } from '@/global/components/UI/molecules/table/RowActions'
 import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
+import { ActionsHeader } from '@/global/components/UI/molecules/table/ActionsHeader'
+import { CopyableCell } from '@/global/components/UI/molecules/table/CopyableCell'
 import { formatDate } from '@/global/helpers/formatting/format'
 import editIcon from '@/assets/icons/edit.svg?raw'
 import powerIcon from '@/assets/icons/check.svg?raw'
@@ -32,7 +34,7 @@ export const AdminsTable: React.FC<Props> = ({ admins, loading, hasFilters, onEd
         <thead>
           <tr>
             {COLUMNS.map((name) => <th key={name}>{name}</th>)}
-            <th className="superadmin-actions-header">Acciones</th>
+            <ActionsHeader className="superadmin-actions-header" />
           </tr>
         </thead>
         <tbody>
@@ -41,7 +43,7 @@ export const AdminsTable: React.FC<Props> = ({ admins, loading, hasFilters, onEd
           ) : (
             admins.map((admin) => (
               <tr key={admin.id}>
-                <td><span className="superadmin-id-badge">#{admin.id}</span></td>
+                <td><CopyableCell text={admin.id} prefix="#" /></td>
                 <td>
                   <div className="superadmin-user-cell">
                     <strong>{admin.fullName || `${admin.firstName} ${admin.lastName || ''}`.trim()}</strong>
@@ -49,7 +51,7 @@ export const AdminsTable: React.FC<Props> = ({ admins, loading, hasFilters, onEd
                   </div>
                 </td>
                 <td><span className="superadmin-company-tag">{admin.companyName || `Empresa #${admin.companyId}`}</span></td>
-                <td>{admin.document ? <span>{admin.documentType || 'CC'} {admin.document}</span> : '—'}</td>
+                <td>{admin.document ? <span>{admin.documentType || 'CC'} <CopyableCell text={admin.document} /></span> : '—'}</td>
                 <td>{admin.phone || '—'}</td>
                 <td><span className={`superadmin-status-pill ${admin.isActive ? 'is-active' : 'is-inactive'}`}>{admin.isActive ? 'Activo' : 'Inactivo'}</span></td>
                 <td>{admin.createdAt ? formatDate(admin.createdAt) : '—'}</td>

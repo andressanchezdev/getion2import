@@ -23,7 +23,10 @@ def main():
     cust = d(call('POST', '/customers', ad, {'documentType': 'CC', 'document': '7' + sfx, 'personType': 'natural', 'name': 'Cliente Abonos'}))['id']
     stock_id = items_of(call('GET', f'/stock?productId={pid}&warehouseId={wa}', ad))[0].get('stockId')
     rid = d(call('POST', '/roles', ad, {'code': 'VP' + sfx, 'name': 'Vendedor'}))['id']
-    perms = perm_ids(ad, {'orders': None, 'payments': ['view', 'edit'], 'transfers': None, 'quotations': ['view']})
+    # catálogo de la Fase 8: verificar, rechazar y reabrir abonos es payments:verify; ver un registro (GET /:id) es view_detail;
+    # el detalle de producto lo lee quien vende (catalog:view)
+    perms = perm_ids(ad, {'orders': None, 'payments': ['view', 'view_detail', 'edit', 'verify'], 'transfers': None,
+                          'quotations': ['view', 'view_detail'], 'catalog': ['view']})
     r = call('POST', '/employees', ad, {'roleId': rid, 'warehouseId': wb, 'email': f'p{sfx}@e2e.com', 'password': 'Emp12345678', 'firstName': 'Pedro', 'lastName': 'Vende', 'documentType': 'CC', 'document': '6' + sfx, 'initialPermissions': perms})
     emp = d(r)['id']
     # el vendedor de una venta debe ser de la bodega de la venta (la A)

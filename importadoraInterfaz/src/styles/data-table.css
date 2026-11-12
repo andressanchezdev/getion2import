@@ -42,7 +42,7 @@
   font-family: inherit;
   font-size: var(--text-xs);
   font-weight: var(--font-weight-semibold);
-  line-height: 1;
+  line-height: var(--leading-none);
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
@@ -219,4 +219,16 @@
 .data-table-reset:hover {
   color: var(--c-slate-700);
   border-color: var(--c-slate-700);
+}
+
+/* Resaltado breve (1,5 s) cuando una fila o campo cambia por un evento en tiempo real (sección 16.6) */
+.is-recently-changed {
+  background-color: var(--color-highlight-bg);
+  transition: background-color var(--duration-enter) var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .is-recently-changed {
+    transition: none;
+  }
 }

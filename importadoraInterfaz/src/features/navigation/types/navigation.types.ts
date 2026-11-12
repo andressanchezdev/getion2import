@@ -35,6 +35,8 @@ export interface HistoryTarget {
 
 export type DrawerFormKind =
   | 'createCustomer'
+  | 'createEmployee'
+  | 'createReturn'
   | 'createTransfer'
   | 'receiveTransfer'
   | 'auditDetail'
@@ -80,6 +82,7 @@ export type DrawerFormKind =
   | 'verifyGoods'
   | 'countDetail'
   | 'permissionsHub'
+  | 'userProfile'
 
 export interface DrawerForm {
   kind: DrawerFormKind

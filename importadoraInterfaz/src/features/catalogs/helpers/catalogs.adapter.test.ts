@@ -38,8 +38,8 @@ describe('toCategories', () => {
         { id: 9, name: 'Cerrada', isActive: false },
       ])
     ).toEqual([
-      { id: 7, name: 'Frenos', description: undefined, isActive: true },
-      { id: 9, name: 'Cerrada', description: undefined, isActive: false },
+      { id: 7, name: 'Frenos', description: undefined, isActive: true, parentId: null },
+      { id: 9, name: 'Cerrada', description: undefined, isActive: false, parentId: null },
     ])
   })
 })

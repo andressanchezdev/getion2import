@@ -1,9 +1,10 @@
 package middlewares
 
 // context.go · ActorContext: quién hace la petición (tipo, id y compañía), guardado en el contexto de Echo, y la compañía efectiva para consultar
-// conecta con: auth_middleware.go (lo llena) y los controllers y services (lo leen)
+// conecta con: auth_middleware.go (lo llena) y los controllers y services (lo leen); core/events lo lee del context.Context (ActorFrom, RequestIDFrom)
 
 import (
+	"context"
 	"strconv"
 	"strings"
 
@@ -87,3 +88,30 @@ func EffectiveCompanyIDFromContext(actor *ActorContext) (int64, error) {
 	return 0, utils.Forbidden("FORBIDDEN_NO_COMPANY", "El usuario no pertenece a ninguna compañía activa.")
 }
 
+
+// actorCtxKey y requestIDCtxKey guardan el actor y el id de la petición también en el context.Context de la petición,
+// para que las capas que no conocen Echo (core/events al guardar eventos del websocket) los lean
+type actorCtxKey struct{}
+type requestIDCtxKey struct{}
+
+// WithActor devuelve el contexto con el actor de la petición (lo usa Authenticate).
+func WithActor(ctx context.Context, actor *ActorContext) context.Context {
+	return context.WithValue(ctx, actorCtxKey{}, actor)
+}
+
+// ActorFrom lee el actor de un context.Context (nil si la petición no está autenticada).
+func ActorFrom(ctx context.Context) *ActorContext {
+	actor, _ := ctx.Value(actorCtxKey{}).(*ActorContext)
+	return actor
+}
+
+// WithRequestID devuelve el contexto con el id de la petición (X-Request-ID), que viaja como correlationId de los eventos.
+func WithRequestID(ctx context.Context, id string) context.Context {
+	return context.WithValue(ctx, requestIDCtxKey{}, id)
+}
+
+// RequestIDFrom lee el id de la petición ("" si no hay).
+func RequestIDFrom(ctx context.Context) string {
+	id, _ := ctx.Value(requestIDCtxKey{}).(string)
+	return id
+}

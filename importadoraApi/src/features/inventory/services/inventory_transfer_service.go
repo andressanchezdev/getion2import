@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/events"
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
@@ -132,7 +133,7 @@ func (s *InventoryService) CreateTransfer(ctx context.Context, actor *middleware
 	var createdTransfer *repositories.TransferEntity
 	var createdItems []repositories.TransferItemEntity
 
-	err = db.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
 		// Generar serial de traslado atómicamente
 		serialCode, err := utils.NextSerialCode(ctx, tx, companyID, &req.OriginWarehouseID, types.SeriesTransfer, "TRA-")
 		if err != nil {
@@ -175,6 +176,7 @@ func (s *InventoryService) CreateTransfer(ctx context.Context, actor *middleware
 			if err := s.inventoryRepo.ReserveStock(ctx, tx, stock.ID, item.Quantity); err != nil {
 				return utils.BadRequest("INSUFFICIENT_STOCK", fmt.Sprintf("Stock vendible insuficiente para el producto %s en ubicación '%s'.", product.Code, stock.Location))
 			}
+			s.events.Stock(ctx, stock.ID, events.CauseTransferReservation(t.ID, t.SerialCode))
 
 			detail := &repositories.TransferItemEntity{
 				TransferID:          t.ID,
@@ -194,6 +196,20 @@ func (s *InventoryService) CreateTransfer(ctx context.Context, actor *middleware
 			}
 			createdItems = append(createdItems, *createdItem)
 		}
+
+		s.events.Record(ctx, events.NewTransferCreated(companyID, events.TransferRow{
+			ID:                     t.ID,
+			Serial:                 t.SerialCode,
+			Status:                 string(t.Status),
+			IsPriority:             t.IsPriority,
+			Notes:                  t.Notes,
+			OriginWarehouseID:      t.OriginWarehouseID,
+			DestinationWarehouseID: t.DestinationWarehouseID,
+			Lines:                  toTransferEventLines(createdItems),
+			CreatedBy:              s.events.Actor(ctx, tx),
+			CreatedAt:              t.CreatedAt,
+			Version:                t.UpdatedAt,
+		}))
 		return nil
 	})
 
@@ -251,6 +267,7 @@ func (s *InventoryService) mapTransferToDTO(t *repositories.TransferEntity, item
 		Status:                   t.Status,
 		IsPriority:               t.IsPriority,
 		Notes:                    t.Notes,
+		NoveltyNotes:             t.NoveltyNotes,
 		CancelReason:             t.CancelReason,
 		DispatchedAt:             t.DispatchedAt,
 		ReceivedAt:               t.ReceivedAt,
@@ -258,6 +275,22 @@ func (s *InventoryService) mapTransferToDTO(t *repositories.TransferEntity, item
 		UpdatedAt:                t.UpdatedAt,
 		Items:                    itemsDTO,
 	}
+}
+
+func toTransferEventLines(items []repositories.TransferItemEntity) []events.TransferLine {
+	lines := make([]events.TransferLine, 0, len(items))
+	for _, it := range items {
+		lines = append(lines, events.TransferLine{
+			LineID:              it.ID,
+			ProductID:           it.ProductID,
+			ProductCode:         it.ProductCode,
+			ProductName:         it.ProductName,
+			Quantity:            it.Quantity,
+			ReceivedQty:         it.ReceivedQty,
+			DestinationLocation: it.DestinationLocation,
+		})
+	}
+	return lines
 }
 
 // requesterEmployeeID es el empleado que pide el traslado: el propio si es empleado; un administrador no es empleado, así que queda vacío

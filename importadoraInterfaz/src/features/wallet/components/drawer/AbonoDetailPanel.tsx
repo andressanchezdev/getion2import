@@ -6,6 +6,7 @@ import './AbonoDetailPanel.css'
 import { Pill, type PillTone } from '@/global/components/UI/atoms/Pill'
 import { InlineReason } from '@/global/components/UI/molecules/dialogs/InlineReason'
 import { formatCOP } from '@/global/helpers/formatting/format'
+import { usePermissions } from '@/global/hooks/access/usePermissions'
 import { useAppDispatch } from '@/global/hooks/store/useRedux'
 import { closeDrawerForm } from '@/features/navigation'
 import { verifyPaymentThunk, voidPaymentThunk } from '../../thunks/wallet.payments.thunks'
@@ -20,6 +21,7 @@ const STATUS: Record<AbonoRecord['status'], { label: string; tone: PillTone }> =
 
 export const AbonoDetailPanel: React.FC<{ abono: AbonoRecord }> = ({ abono }) => {
   const dispatch = useAppDispatch()
+  const { can } = usePermissions()
   const [isProcessing, setIsProcessing] = useState(false)
   const [askingVoid, setAskingVoid] = useState(false)
   const status = STATUS[abono.status]
@@ -80,7 +82,7 @@ export const AbonoDetailPanel: React.FC<{ abono: AbonoRecord }> = ({ abono }) =>
         )}
       </div>
       <div className="drawer-form-footer" style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-        {abono.status === 'pending' && (
+        {abono.status === 'pending' && can('payments:verify') && (
           <button
             type="button"
             className="btn-primary"
@@ -91,7 +93,7 @@ export const AbonoDetailPanel: React.FC<{ abono: AbonoRecord }> = ({ abono }) =>
             {isProcessing ? 'Verificando...' : 'Verificar Pago'}
           </button>
         )}
-        {abono.status !== 'void' && (
+        {abono.status !== 'void' && can('payments:edit') && (
           <button
             type="button"
             className="btn-danger"

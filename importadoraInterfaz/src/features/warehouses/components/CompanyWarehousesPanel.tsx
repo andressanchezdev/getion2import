@@ -2,6 +2,7 @@
 // conecta con: formRegistry (lo muestra), warehouses.thunks (loadCompanyWarehousesThunk) y navigation (closeDrawerForm)
 // ojo: la lista es local del panel (no toca la lista de bodegas de la compañía activa)
 import React, { useEffect, useState } from 'react'
+import '@/global/components/UI/molecules/form/DrawerFormShell.css'
 import './CompanyWarehousesPanel.css'
 import { closeDrawerForm } from '@/features/navigation'
 import { useAppDispatch } from '@/global/hooks/store/useRedux'
@@ -30,8 +31,8 @@ export const CompanyWarehousesPanel: React.FC<CompanyWarehousesPanelProps> = ({ 
     }, [dispatch, company.id])
 
     return (
-        <div className="company-sites">
-            <div className="company-sites-body">
+        <div className="drawer-form company-sites">
+            <div className="drawer-form-body company-sites-body">
                 <p className="company-sites-title">Sedes de <strong>{company.name}</strong></p>
                 {error && <div className="form-field-error-msg">{error}</div>}
                 {!error && sites === null && <p className="company-sites-empty">Cargando sedes…</p>}
@@ -50,7 +51,7 @@ export const CompanyWarehousesPanel: React.FC<CompanyWarehousesPanelProps> = ({ 
                     </ul>
                 )}
             </div>
-            <div className="company-sites-footer">
+            <div className="drawer-form-footer company-sites-footer">
                 <button type="button" className="btn-secondary" onClick={() => dispatch(closeDrawerForm())}>Cerrar</button>
             </div>
         </div>

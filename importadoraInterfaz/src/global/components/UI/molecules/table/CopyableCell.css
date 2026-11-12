@@ -1,0 +1,28 @@
+/* CopyableCell.css · celda copiable con apariencia de texto y cursor copy */
+
+.copyable-cell {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: copy;
+  text-align: inherit;
+  display: inline;
+  border-radius: var(--radius-sm, 3px);
+  transition: opacity var(--duration-fast, 0.15s), color var(--duration-fast, 0.15s);
+}
+
+.copyable-cell:hover {
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 3px;
+  color: var(--color-primary);
+}
+
+.copyable-cell:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+

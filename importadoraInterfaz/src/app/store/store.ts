@@ -16,6 +16,7 @@ import { setUnauthorizedHandler } from '@/api'
 import { logoutThunk, selectIsAuthenticated } from '@/features/auth'
 import { isAccountUnavailable } from '@/features/auth/types/auth.types'
 
+import { crossSliceMiddleware } from './crossSliceInvalidationMiddleware'
 import { rootReducer } from './rootReducer'
 
 // ============================================================================
@@ -36,7 +37,7 @@ export const store = configureStore({
       serializableCheck: {
         ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
       },
-    }),
+    }).prepend(crossSliceMiddleware.middleware),
 })
 
 persistStore(store)

@@ -7,16 +7,21 @@ import (
 	"context"
 	"errors"
 
+	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/events"
 	"importadoraApi/src/features/screensaver/dtos"
 	"importadoraApi/src/features/screensaver/repositories"
+
+	"github.com/jackc/pgx/v5"
 )
 
 type ScreensaverService struct {
-	repo *repositories.ScreensaverRepository
+	repo   *repositories.ScreensaverRepository
+	events *events.Recorder
 }
 
-func NewScreensaverService(repo *repositories.ScreensaverRepository) *ScreensaverService {
-	return &ScreensaverService{repo: repo}
+func NewScreensaverService(repo *repositories.ScreensaverRepository, recorder *events.Recorder) *ScreensaverService {
+	return &ScreensaverService{repo: repo, events: recorder}
 }
 
 func (s *ScreensaverService) GetSettings(ctx context.Context, companyID int64) (*dtos.ScreensaverSettingsResponse, error) {
@@ -39,5 +44,13 @@ func (s *ScreensaverService) UpdateSettings(ctx context.Context, companyID int64
 		isActive = *req.IsActive
 	}
 
-	return s.repo.Upsert(ctx, companyID, *req.ImageURL, isActive, employeeID)
+	// el guardado y su evento van en la misma transacción: todas las sesiones de la compañía cambian la imagen sin recargar
+	return db.WithTxValue(ctx, s.repo.Pool(), func(ctx context.Context, tx pgx.Tx) (*dtos.ScreensaverSettingsResponse, error) {
+		saved, err := s.repo.Upsert(ctx, tx, companyID, *req.ImageURL, isActive, employeeID)
+		if err != nil {
+			return nil, err
+		}
+		s.events.Record(ctx, events.NewEntityUpdated(companyID, nil, events.EntityRef{Kind: events.KindScreensaverSettings, ID: saved.ID, Version: saved.UpdatedAt}, saved, []string{"imageUrl", "isActive"}))
+		return saved, nil
+	})
 }

@@ -7,6 +7,10 @@ package services
 import (
 	"context"
 	"fmt"
+	"github.com/jackc/pgx/v5"
+	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/events"
+	"time"
 
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
@@ -53,7 +57,15 @@ func (s *PurchaseService) SaveSupplierProduct(ctx context.Context, actor *middle
 	if err != nil || companyID != supplier.CompanyID {
 		return nil, utils.NotFound("PRODUCT_NOT_FOUND", "El producto no existe o no pertenece a la compañía.")
 	}
-	if err := s.purchaseRepo.UpsertSupplierProduct(ctx, s.pool, req.ProductID, supplierID, req.Cost, req.SupplierCode); err != nil {
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		if err := s.purchaseRepo.UpsertSupplierProduct(ctx, tx, req.ProductID, supplierID, req.Cost, req.SupplierCode); err != nil {
+			return err
+		}
+		row := map[string]any{"productId": req.ProductID, "supplierId": supplierID, "cost": req.Cost, "supplierCode": req.SupplierCode}
+		s.events.Record(ctx, events.NewEntityUpdated(supplier.CompanyID, nil, events.EntityRef{Kind: events.KindProductSupplier, ID: req.ProductID, Version: time.Now().UTC()}, row, []string{"cost", "supplierCode"}))
+		return nil
+	})
+	if err != nil {
 		return nil, utils.Internal("Error al guardar el producto del proveedor.", err)
 	}
 	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
@@ -70,7 +82,18 @@ func (s *PurchaseService) DeleteSupplierProduct(ctx context.Context, actor *midd
 	if err != nil {
 		return err
 	}
-	removed, err := s.purchaseRepo.DeleteSupplierProduct(ctx, s.pool, supplierID, productID)
+	removed := false
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		ok, err := s.purchaseRepo.DeleteSupplierProduct(ctx, tx, supplierID, productID)
+		if err != nil {
+			return err
+		}
+		removed = ok
+		if ok {
+			s.events.Record(ctx, events.NewEntityDeleted(supplier.CompanyID, nil, events.EntityRef{Kind: events.KindProductSupplier, ID: productID, Version: time.Now().UTC()}, &events.EntityParent{Kind: events.KindSupplier, ID: supplierID}))
+		}
+		return nil
+	})
 	if err != nil {
 		return utils.Internal("Error al quitar el producto del proveedor.", err)
 	}

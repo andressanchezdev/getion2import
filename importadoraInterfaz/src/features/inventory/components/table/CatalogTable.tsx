@@ -12,6 +12,7 @@ import { usePagedList } from '@/global/hooks/data/usePagedList'
 import { Pagination } from '@/global/components/UI/molecules/table/Pagination'
 import { ReasonPrompt } from '@/features/reasonPrompt'
 import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
+import { ActionsHeader } from '@/global/components/UI/molecules/table/ActionsHeader'
 import { Icon } from '@/global/components/UI/atoms/Icon'
 import plusIcon from '@/assets/icons/plus.svg?raw'
 
@@ -132,42 +133,42 @@ export const CatalogTable: React.FC<CatalogTableProps> = ({ type, noun, rows, lo
         </div>
 
         <DataTable tableId="inventory-catalog">
-            <thead>
+          <thead>
+            <tr>
+              {withImage && <th>Logo</th>}
+              <th>N.º</th>
+              <th>Nombre</th>
+              <th>Estado</th>
+              <ActionsHeader className="inv-actions-header" />
+            </tr>
+          </thead>
+          <tbody>
+            {message ? (
               <tr>
-                {withImage && <th>Logo</th>}
-                <th>N.º</th>
-                <th>Nombre</th>
-                <th>Estado</th>
-                <th className="inv-actions-header">Acciones</th>
+                <td colSpan={withImage ? 5 : 4} className="inv-message">
+                  {message}
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {message ? (
-                <tr>
-                  <td colSpan={withImage ? 5 : 4} className="inv-message">
-                    {message}
-                  </td>
-                </tr>
-              ) : (
-                pageItems.map((row) => (
-                  <CatalogTableRow
-                    key={row.id}
-                    row={row}
-                    singular={singular}
-                    withImage={withImage}
-                    deleting={deleting && toDelete?.id === row.id}
-                    cloning={cloningId === row.id}
-                    toggling={togglingId === row.id}
-                    onView={(item) => openItem('catalogDetail', item)}
-                    onEdit={(item) => openItem('catalogItem', item)}
-                    onClone={handleClone}
-                    onDelete={setToDelete}
-                    onToggleStatus={handleToggleStatus}
-                  />
-                ))
-              )}
-            </tbody>
-          </DataTable>
+            ) : (
+              pageItems.map((row) => (
+                <CatalogTableRow
+                  key={row.id}
+                  row={row}
+                  singular={singular}
+                  withImage={withImage}
+                  deleting={deleting && toDelete?.id === row.id}
+                  cloning={cloningId === row.id}
+                  toggling={togglingId === row.id}
+                  onView={(item) => openItem('catalogDetail', item)}
+                  onEdit={(item) => openItem('catalogItem', item)}
+                  onClone={handleClone}
+                  onDelete={setToDelete}
+                  onToggleStatus={handleToggleStatus}
+                />
+              ))
+            )}
+          </tbody>
+        </DataTable>
         <Pagination meta={meta} label="Paginación del catálogo" onPageChange={setPage} />
       </div>
 

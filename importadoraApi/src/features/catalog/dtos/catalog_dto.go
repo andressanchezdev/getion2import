@@ -13,6 +13,7 @@ type BrandResponse struct {
 	ImageURL  *string   `json:"imageUrl,omitempty"`
 	IsActive  bool      `json:"isActive"`
 	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
 }
 
 type CreateBrandRequest struct {
@@ -40,6 +41,7 @@ type ModelResponse struct {
 	Description *string   `json:"description,omitempty"`
 	IsActive    bool      `json:"isActive"`
 	CreatedAt   time.Time `json:"createdAt"`
+	UpdatedAt   time.Time `json:"updatedAt"`
 }
 
 type CreateModelRequest struct {
@@ -69,6 +71,7 @@ type CategoryResponse struct {
 	Description *string            `json:"description,omitempty"`
 	IsActive    bool               `json:"isActive"`
 	CreatedAt   time.Time          `json:"createdAt"`
+	UpdatedAt   time.Time          `json:"updatedAt"`
 	Children    []CategoryResponse `json:"children,omitempty"`
 }
 

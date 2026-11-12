@@ -2,10 +2,13 @@
 // conecta con: shop.cart.thunks (lo llenan), shop.selectors (lecturas: líneas, cantidades, totales) y rootReducer (clave 'cart'; NO se guarda en el navegador)
 // ojo: antes el carrito era local y se guardaba en shop.slice; ahora el backend manda y aquí solo se refleja lo que devuelve (GET /carts/active)
 import { createSlice, isAnyOf, type PayloadAction } from '@reduxjs/toolkit'
+import { isNewer } from '@/global/helpers/realtime/applyVersioned'
+import { toCartSnapshot } from '../helpers/shop.adapter'
 import { addToCartThunk, fetchCartThunk } from '../thunks/shop.cart.thunks'
 import { clearCartThunk, removeCartItemThunk, updateCartQuantityThunk } from '../thunks/shop.cart.update.thunks'
 import { setCartCustomerThunk } from '../thunks/shop.cart.customer.thunks'
-import type { CartSnapshot, CartState } from '../types/shop.cart.api.types'
+import type { CartDto, CartSnapshot, CartState } from '../types/shop.cart.api.types'
+import type { Product } from '../types/shop.types'
 
 export const INITIAL_CART_STATE: CartState = {
     cartId: null,
@@ -14,6 +17,7 @@ export const INITIAL_CART_STATE: CartState = {
     status: 'idle',
     error: null,
     mutating: false,
+    version: null,
 }
 
 // el carrito leído del backend: su id y sus renglones
@@ -21,6 +25,7 @@ const applySnapshot = (state: CartState, snapshot: CartSnapshot): void => {
     state.cartId = snapshot.cartId
     state.items = snapshot.items
     state.status = 'succeeded'
+    if (snapshot.version) state.version = snapshot.version
 }
 
 const mutations = [addToCartThunk, updateCartQuantityThunk, removeCartItemThunk, clearCartThunk, setCartCustomerThunk] as const
@@ -31,6 +36,47 @@ export const cartSlice = createSlice({
     reducers: {
         // al cerrar sesión se olvida el carrito de ese usuario
         resetCart: () => INITIAL_CART_STATE,
+        // tiempo real: sincroniza el carrito entre pestañas del mismo actor (cart.updated)
+        cartUpdatedFromEvent: (state, action: PayloadAction<{ cart: CartDto | null; version: string }>) => {
+            const { cart, version } = action.payload
+            if (!isNewer(version, state.version)) return
+            state.version = version
+            if (!cart) {
+                state.items = []
+                return
+            }
+            applySnapshot(state, toCartSnapshot(cart, state.products, version))
+        },
+        // tiempo real: actualiza el tope vendible (maxAvailable) de los renglones afectados por stock.changed
+        cartStockChangedFromEvent: (
+            state,
+            action: PayloadAction<Array<{ stockId: number; productId: number; sellable: number }>>
+        ) => {
+            for (const row of action.payload) {
+                for (const item of state.items) {
+                    if (item.stockId === row.stockId || (!item.stockId && Number(item.productId) === row.productId)) {
+                        item.maxAvailable = Math.max(0, row.sellable)
+                    }
+                }
+            }
+        },
+        // tiempo real: marca o desmarca como no disponible el renglón cuyo producto cambia de estado
+        cartProductStatusFromEvent: (
+            state,
+            action: PayloadAction<{ productId: string; status: string }>
+        ) => {
+            const { productId, status } = action.payload
+            const unavailable = status !== 'active'
+            for (const item of state.items) {
+                if (item.productId === productId) {
+                    item.unavailable = unavailable
+                    item.product.status = status as Product['status']
+                }
+            }
+            if (state.products[productId]) {
+                state.products[productId].status = status as Product['status']
+            }
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -71,6 +117,11 @@ export const cartSlice = createSlice({
     },
 })
 
-export const { resetCart } = cartSlice.actions
+export const {
+    resetCart,
+    cartUpdatedFromEvent,
+    cartStockChangedFromEvent,
+    cartProductStatusFromEvent,
+} = cartSlice.actions
 export const cartReducer = cartSlice.reducer
 export default cartSlice.reducer

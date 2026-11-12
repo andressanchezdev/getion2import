@@ -5,6 +5,7 @@ import { createAsyncThunk } from '@reduxjs/toolkit'
 import { getErrorMessage } from '@/api'
 import { toast } from '@/global/helpers/feedback/toast'
 import type { NavigationState } from '@/features/navigation'
+import { closeDrawerForm, setRightDrawerOpen } from '@/features/navigation'
 import { selectRequestContext, type AuthState } from '@/features/auth'
 import { cancelSale, type CancelSaleInput } from '@/features/shop'
 import { advanceSale, fetchOrderCounts, fetchOrderDetail, fetchOrders, verifyTransferPayment, type OrdersResult } from '../services/orders.service'
@@ -53,49 +54,66 @@ export const loadOrderDetailThunk = createAsyncThunk<OrderDetail, number, Config
   }
 })
 
-export const cancelOrderThunk = createAsyncThunk<void, CancelSaleInput, Config>('orders/cancel', async (input, { getState, dispatch, rejectWithValue }) => {
-  const ctx = selectRequestContext(getState())
-  if (!ctx) return rejectWithValue(NO_SESSION)
-  try {
-    await cancelSale(ctx, input)
-    toast.success('Pedido anulado exitosamente.')
-    dispatch(loadOrdersThunk())
-    dispatch(loadOrderCountsThunk())
-  } catch (error) {
-    return rejectWithValue(getErrorMessage(error, 'No se pudo anular el pedido.'))
+export const cancelOrderThunk = createAsyncThunk<number, CancelSaleInput, Config>(
+  'orders/cancel',
+  async (input, { getState, rejectWithValue }) => {
+    const ctx = selectRequestContext(getState())
+    if (!ctx) return rejectWithValue(NO_SESSION)
+    try {
+      await cancelSale(ctx, input)
+      toast.success('Pedido anulado exitosamente.')
+      return input.saleId
+    } catch (error) {
+      return rejectWithValue(getErrorMessage(error, 'No se pudo anular el pedido.'))
+    }
+  },
+  {
+    condition: (input, { getState }) => !(getState().orders.processingIds ?? []).includes(input.saleId),
   }
-})
+)
 
 const ADVANCE_DONE = { pick: 'Pedido en alistamiento.', pack: 'Pedido en empaque.', invoice: 'Factura emitida.', dispatch: 'Pedido despachado.', send: 'Pedido marcado como enviado.' } as const
 
-// lleva el pedido a la siguiente etapa y recarga la bandeja y los conteos; el mensaje de Go (409, 400) llega tal cual
-export const advanceOrderThunk = createAsyncThunk<void, { saleId: number; action: keyof typeof ADVANCE_DONE }, Config>('orders/advance', async ({ saleId, action }, { dispatch, rejectWithValue }) => {
-  try {
-    const warnings = await advanceSale(saleId, action)
-    if (warnings.length > 0) {
-      toast.warning(`${ADVANCE_DONE[action]} ${warnings.join(' ')}`)
-    } else {
-      toast.success(ADVANCE_DONE[action])
+// lleva el pedido a la siguiente etapa; el mensaje de Go (409, 400) llega tal cual
+export const advanceOrderThunk = createAsyncThunk<number, { saleId: number; action: keyof typeof ADVANCE_DONE }, Config>(
+  'orders/advance',
+  async ({ saleId, action }, { rejectWithValue }) => {
+    try {
+      const warnings = await advanceSale(saleId, action)
+      if (warnings.length > 0) {
+        toast.warning(`${ADVANCE_DONE[action]} ${warnings.join(' ')}`)
+      } else {
+        toast.success(ADVANCE_DONE[action])
+      }
+      return saleId
+    } catch (error) {
+      const message = getErrorMessage(error, 'No se pudo avanzar el pedido.')
+      toast.error(message)
+      return rejectWithValue(message)
     }
-    dispatch(loadOrdersThunk())
-    dispatch(loadOrderCountsThunk())
-  } catch (error) {
-    const message = getErrorMessage(error, 'No se pudo avanzar el pedido.')
-    toast.error(message)
-    return rejectWithValue(message)
+  },
+  {
+    condition: ({ saleId }, { getState }) => !(getState().orders.processingIds ?? []).includes(saleId),
   }
-})
+)
 
 export const verifyTransferPaymentThunk = createAsyncThunk<void, OrderDetail, Config>(
   'orders/verifyTransfer',
-  async (order, { dispatch, rejectWithValue }) => {
+  async (order, { rejectWithValue }) => {
     try {
       await verifyTransferPayment(order)
       toast.success('Comprobante verificado exitosamente.')
-      dispatch(loadOrdersThunk())
-      dispatch(loadOrderCountsThunk())
     } catch (error) {
       return rejectWithValue(getErrorMessage(error, 'No se pudo verificar el comprobante.'))
     }
+  }
+)
+
+export const openOrderDetailThunk = createAsyncThunk<void, number, Config>(
+  'orders/openDetail',
+  async (orderId, { dispatch }) => {
+    dispatch(closeDrawerForm())
+    dispatch({ type: 'orders/openOrder', payload: orderId })
+    dispatch(setRightDrawerOpen(true))
   }
 )

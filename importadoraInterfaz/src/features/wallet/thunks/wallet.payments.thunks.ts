@@ -1,6 +1,7 @@
 // wallet.payments.thunks · cambios de cartera: abonar, verificar transferencia, anular pago, ajustes y cupo/plazo
 // conecta con: wallet.payments.service, wallet.service (releer facturas), wallet.thunks (recargar lista y totales) y wallet.slice (reacciona)
 // ojo: después de cambiar algo se vuelven a leer facturas, lista y totales (el backend calcula los saldos, no se suman a mano)
+import { isRealtimeLive } from '@/features/realtime/helpers/realtime.guards'
 import { createAsyncThunk } from '@reduxjs/toolkit'
 import { getErrorMessage } from '@/api'
 import { formatCOP } from '@/global/helpers/formatting/format'
@@ -18,6 +19,13 @@ const noOtherChangeRunning = (_: unknown, { getState }: { getState: () => { wall
   !getState().wallet.invoices.saving
 
 // avisa el error al usuario y lo devuelve como rechazo del thunk
+// con el socket en vivo el historial y los totales se actualizan por evento (wallet.realtime); sin socket se recargan aquí
+const refreshIfOffline = (dispatch: (action: never) => unknown, getState: () => unknown): void => {
+  if (isRealtimeLive(getState())) return
+  void dispatch(loadPaymentsHistoryThunk() as never)
+  void dispatch(loadWalletSummaryThunk() as never)
+}
+
 const failWith = (error: unknown, fallback: string) => {
   const message = getErrorMessage(error, fallback)
   toast.error(message)
@@ -57,9 +65,13 @@ export const payThunk = createAsyncThunk<CreditInvoice[], PayInput, WalletThunkC
     }
 
     try {
-      const refreshed = await fetchCustomerInvoices(ctx, customerId)
-      dispatch(loadWalletThunk())
-      dispatch(loadWalletSummaryThunk())
+      // en vivo, sale.payment_changed y credit.balance_changed ya dejaron al día facturas, cliente y totales; sin socket se relee todo
+      const live = isRealtimeLive(getState())
+      const refreshed = live ? getState().wallet.invoices.items : await fetchCustomerInvoices(ctx, customerId)
+      if (!live) {
+        dispatch(loadWalletThunk())
+        dispatch(loadWalletSummaryThunk())
+      }
       if (failure) return rejectWithValue(failure)
       toast.success(`¡Abono de ${formatCOP(payments.reduce((sum, p) => sum + p.amount, 0))} registrado!`)
       return refreshed
@@ -87,12 +99,11 @@ export const updateCreditThunk = createAsyncThunk<void, CreditUpdateInput, Walle
 // verifica / aprueba formalmente un pago en revisión (POST /payments/:id/verify)
 export const verifyPaymentThunk = createAsyncThunk<void, { paymentId: number }, WalletThunkConfig>(
   'wallet/verifyPayment',
-  async ({ paymentId }, { dispatch, rejectWithValue }) => {
+  async ({ paymentId }, { dispatch, getState, rejectWithValue }) => {
     try {
       await verifyPayment(paymentId)
       toast.success('Pago verificado y aprobado exitosamente')
-      dispatch(loadPaymentsHistoryThunk())
-      dispatch(loadWalletSummaryThunk())
+      refreshIfOffline(dispatch, getState)
     } catch (error) {
       return rejectWithValue(failWith(error, 'No se pudo verificar el pago.'))
     }
@@ -102,12 +113,11 @@ export const verifyPaymentThunk = createAsyncThunk<void, { paymentId: number }, 
 // anula un pago con motivo explícito (POST /payments/:id/void)
 export const voidPaymentThunk = createAsyncThunk<void, { paymentId: number; reason: string }, WalletThunkConfig>(
   'wallet/voidPayment',
-  async ({ paymentId, reason }, { dispatch, rejectWithValue }) => {
+  async ({ paymentId, reason }, { dispatch, getState, rejectWithValue }) => {
     try {
       await voidPayment(paymentId, reason)
       toast.success('Pago anulado exitosamente')
-      dispatch(loadPaymentsHistoryThunk())
-      dispatch(loadWalletSummaryThunk())
+      refreshIfOffline(dispatch, getState)
     } catch (error) {
       return rejectWithValue(failWith(error, 'No se pudo anular el pago.'))
     }
@@ -117,12 +127,11 @@ export const voidPaymentThunk = createAsyncThunk<void, { paymentId: number; reas
 // rechaza un pago en revisión con motivo (POST /payments/:id/reject)
 export const rejectPaymentThunk = createAsyncThunk<void, { paymentId: number; reason: string }, WalletThunkConfig>(
   'wallet/rejectPayment',
-  async ({ paymentId, reason }, { dispatch, rejectWithValue }) => {
+  async ({ paymentId, reason }, { dispatch, getState, rejectWithValue }) => {
     try {
       await rejectPayment(paymentId, reason)
       toast.success('Pago rechazado')
-      dispatch(loadPaymentsHistoryThunk())
-      dispatch(loadWalletSummaryThunk())
+      refreshIfOffline(dispatch, getState)
     } catch (error) {
       return rejectWithValue(failWith(error, 'No se pudo rechazar el pago.'))
     }
@@ -132,12 +141,11 @@ export const rejectPaymentThunk = createAsyncThunk<void, { paymentId: number; re
 // devuelve un pago rechazado a revisión (POST /payments/:id/reopen)
 export const reopenPaymentThunk = createAsyncThunk<void, { paymentId: number }, WalletThunkConfig>(
   'wallet/reopenPayment',
-  async ({ paymentId }, { dispatch, rejectWithValue }) => {
+  async ({ paymentId }, { dispatch, getState, rejectWithValue }) => {
     try {
       await reopenPayment(paymentId)
       toast.success('Pago devuelto a revisión')
-      dispatch(loadPaymentsHistoryThunk())
-      dispatch(loadWalletSummaryThunk())
+      refreshIfOffline(dispatch, getState)
     } catch (error) {
       return rejectWithValue(failWith(error, 'No se pudo devolver el pago a revisión.'))
     }

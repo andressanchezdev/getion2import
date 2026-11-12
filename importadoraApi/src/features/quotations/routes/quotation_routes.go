@@ -15,7 +15,7 @@ func RegisterRoutes(e *echo.Echo, authMiddleware *middlewares.AuthMiddleware, ct
 	q := e.Group("/quotations", authMiddleware.Authenticate())
 	{
 		q.GET("", ctrl.List, authMiddleware.RequirePermission("quotations", "view"))
-		q.GET("/:id", ctrl.GetByID, authMiddleware.RequirePermission("quotations", "view"))
+		q.GET("/:id", ctrl.GetByID, authMiddleware.RequirePermission("quotations", "view_detail"))
 		q.POST("", ctrl.Create, authMiddleware.RequirePermission("quotations", "create"))
 		q.PUT("/:id", ctrl.Update, authMiddleware.RequirePermission("quotations", "edit"))
 	}

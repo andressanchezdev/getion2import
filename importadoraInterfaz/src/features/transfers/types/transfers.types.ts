@@ -26,6 +26,7 @@ export interface TransferProductItem {
   code?: string
   description: string
   quantity: number
+  receivedQty?: number
   destinationLocation: string
 }
 
@@ -53,8 +54,10 @@ export interface TrasladeItem {
   createdAt?: string
   dispatchedAt?: string
   receivedAt?: string
+  updatedAt?: string
   notes?: string
   noveltyNotes?: string
+  cancelReason?: string
 }
 
 // un traslado con varios productos que salen de UNA misma bodega
@@ -83,6 +86,7 @@ export interface TransferRequestLine {
   quantity: number
   max: number
   availableOrigins?: TransferRequestOriginOption[]
+  unavailable?: boolean
 }
 
 // lo que pasó con cada bodega de origen al enviar el pedido: el traslado creado o por qué falló

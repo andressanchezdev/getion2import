@@ -1,7 +1,9 @@
 // ReturnRow · una fila de la tabla de devoluciones, con la insignia de resolución, el estado y las acciones aprobar o rechazar heredadas de RowActions
 // conecta con: ReturnsTable, RowActions; formatea con global/helpers/formatting/format y etiquetas de returns.constants
+import { usePermissions } from '@/global/hooks/access/usePermissions'
 import React from 'react'
 import { RowActions } from '@/global/components/UI/molecules/table/RowActions'
+import { CopyableCell } from '@/global/components/UI/molecules/table/CopyableCell'
 import { formatCurrency, formatDate } from '@/global/helpers/formatting/format'
 import checkIcon from '@/assets/icons/check.svg?raw'
 import banIcon from '@/assets/icons/ban.svg?raw'
@@ -15,11 +17,12 @@ interface Props {
 }
 
 export const ReturnRow: React.FC<Props> = ({ ret, onApprove, onReject }) => {
+  const canApprove = usePermissions().can('returns:approve') // aprobar y rechazar
   const resolution = RESOLUTION_LABELS[ret.resolutionType]
   return (
     <tr>
-      <td><strong>#{ret.id}</strong></td>
-      <td><span className="ret-serial-pill">{ret.saleSerial || `VTA-${ret.saleId}`}</span></td>
+      <td><CopyableCell text={ret.id} prefix="#" /></td>
+      <td><span className="ret-serial-pill"><CopyableCell text={ret.saleSerial || `VTA-${ret.saleId}`} /></span></td>
       <td><strong className="returns-table-wh">{ret.warehouseName || (ret.warehouseId ? `Bodega #${ret.warehouseId}` : 'Sede Principal')}</strong></td>
       <td>{formatDate(ret.createdAt)}</td>
       <td><span className="ret-customer-name">{ret.customerName || 'Cliente General'}</span></td>
@@ -39,7 +42,7 @@ export const ReturnRow: React.FC<Props> = ({ ret, onApprove, onReject }) => {
               label: `Aprobar devolución #${ret.id}`,
               icon: checkIcon,
               tone: 'success',
-              visible: ret.status === 'pending',
+              visible: ret.status === 'pending' && canApprove,
               onClick: () => onApprove(ret),
             },
             {
@@ -47,7 +50,7 @@ export const ReturnRow: React.FC<Props> = ({ ret, onApprove, onReject }) => {
               label: `Rechazar devolución #${ret.id}`,
               icon: banIcon,
               tone: 'danger',
-              visible: ret.status === 'pending',
+              visible: ret.status === 'pending' && canApprove,
               onClick: () => onReject(ret),
             },
           ]}

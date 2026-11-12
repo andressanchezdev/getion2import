@@ -103,3 +103,17 @@ type AuthMeResponse struct {
 	Permissions []PermissionDTO `json:"permissions"`
 }
 
+// UpdateMeRequest entrada de PUT /auth/me para actualizar datos del propio actor.
+type UpdateMeRequest struct {
+	FirstName string `json:"firstName" validate:"required,min=2,max=100"`
+	LastName  string `json:"lastName" validate:"max=100"`
+	Email     string `json:"email" validate:"required,email"`
+	Phone     *string `json:"phone" validate:"omitempty,max=30"` // ojo: nil conserva el teléfono guardado; "" lo borra
+}
+
+// UpdatePasswordRequest entrada de PUT /auth/me/password para cambio seguro de contraseña.
+type UpdatePasswordRequest struct {
+	CurrentPassword string `json:"currentPassword" validate:"required"`
+	NewPassword     string `json:"newPassword" validate:"required,min=8"`
+}
+

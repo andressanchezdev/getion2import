@@ -29,21 +29,38 @@ export interface CustomerDto {
   mobile?: string | null
   address?: string | null
   city?: string | null
+  vatResponsible?: boolean
+  fiscalRespCodes?: string[]
   addresses?: AddressDto[] | null
   priceTier?: string // 'p1'..'p4'
   discountPercent?: number
   creditEnabled?: boolean
   creditLimit?: number
   creditDays?: number
+  creditWarningPct?: number
+  docsValidityMonths?: number
   status?: string
 }
 
 // lo que se manda a PUT /customers/:id para editar (solo se envía lo que se cambia)
 export interface UpdateCustomerBody {
+  documentType?: string
+  document?: string
+  personType?: string
   name?: string
-  lastName?: string
-  email?: string
-  phone?: string
+  lastName?: string | null
+  tradeName?: string | null
+  legalRepresentative?: string | null
+  email?: string | null
+  phone?: string | null
+  mobile?: string | null
+  address?: string | null
+  city?: string | null
+  vatResponsible?: boolean
+  fiscalRespCodes?: string[]
+  priceTier?: string
+  discountPercent?: number
+  docsValidityMonths?: number
   status?: string
 }
 
@@ -53,8 +70,19 @@ export interface CreateCustomerBody {
   document: string
   personType: string
   name: string
-  email?: string
-  phone?: string
+  lastName?: string | null
+  tradeName?: string | null
+  legalRepresentative?: string | null
+  email?: string | null
+  phone?: string | null
+  mobile?: string | null
+  address?: string | null
+  city?: string | null
+  vatResponsible?: boolean
+  fiscalRespCodes?: string[]
+  priceTier?: string
+  discountPercent?: number
+  docsValidityMonths?: number
 }
 
 // un documento adjunto del cliente (GET /customers/:id/documents): la API calcula cuándo vence y su estado

@@ -17,6 +17,10 @@ import { RowActions, type RowAction } from '@/global/components/UI/molecules/tab
 import { ReasonPrompt } from '@/features/reasonPrompt'
 import { openDrawerForm } from '@/features/navigation'
 import { toast } from '@/global/helpers/feedback/toast'
+import { usePermissions } from '@/global/hooks/access/usePermissions'
+import { ActionsHeader } from '@/global/components/UI/molecules/table/ActionsHeader'
+import { CopyableCell } from '@/global/components/UI/molecules/table/CopyableCell'
+import { StatusSelect } from '@/global/components/UI/molecules/table/StatusSelect'
 import eyeIcon from '@/assets/icons/eye.svg?raw'
 import editIcon from '@/assets/icons/edit.svg?raw'
 import trashIcon from '@/assets/icons/trash.svg?raw'
@@ -31,6 +35,9 @@ export const CustomersTable: React.FC = () => {
   const error = useAppSelector(selectCustomersError)
   const openId = useAppSelector(selectOpenCustomerId)
   const docAlerts = useDocumentAlerts()
+  const { can } = usePermissions()
+  const canUpdate = can('customers:edit')
+  const canDelete = can('customers:delete')
 
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null)
   const [toDeactivate, setToDeactivate] = useState<Customer | null>(null)
@@ -90,6 +97,7 @@ export const CustomersTable: React.FC = () => {
       key: 'edit',
       label: 'Editar',
       icon: editIcon,
+      visible: canUpdate,
       onClick: () => dispatch(openDrawerForm({ kind: 'editCustomer', payload: customer.id })),
     },
     {
@@ -97,6 +105,7 @@ export const CustomersTable: React.FC = () => {
       label: 'Eliminar',
       icon: trashIcon,
       tone: 'danger',
+      visible: canDelete,
       onClick: () => setCustomerToDelete(customer),
     },
   ]
@@ -111,7 +120,7 @@ export const CustomersTable: React.FC = () => {
               <th>Correo</th>
               <th className="table-cell-center">Tipo</th>
               <th className="table-cell-center">Estado</th>
-              <th className="table-cell-center">Acciones</th>
+              <ActionsHeader />
             </tr>
           </thead>
           <tbody>
@@ -148,7 +157,7 @@ export const CustomersTable: React.FC = () => {
                   </td>
                   <td className="table-cell-center">
                     <span className="table-badge-bg is-document">
-                      {customer.identification || '—'}
+                      <CopyableCell text={customer.identification} label="Documento" />
                     </span>
                     {docAlerts[customer.id] === 'expired' && (
                       <span className="badge-doc-alert is-expired" title="Documentos legales vencidos">
@@ -170,14 +179,11 @@ export const CustomersTable: React.FC = () => {
                     </span>
                   </td>
                   <td className="table-cell-center" onClick={(e) => e.stopPropagation()}>
-                    <select
-                      className={`inv-status-select ${customer.isActive ? 'is-active' : 'is-inactive'}`}
+                    <StatusSelect
                       value={customer.isActive ? 'active' : 'inactive'}
-                      onChange={(e) => handleToggleStatus(customer, e.target.value)}
-                    >
-                      <option value="active">Activo</option>
-                      <option value="inactive">Inactivo</option>
-                    </select>
+                      disabled={!canUpdate}
+                      onChange={(val) => handleToggleStatus(customer, val)}
+                    />
                   </td>
                   <td className="table-cell-center" onClick={(e) => e.stopPropagation()}>
                     <RowActions actions={getRowActions(customer)} />

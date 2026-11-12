@@ -10,6 +10,9 @@ import { usePermissions } from '@/global/hooks/access/usePermissions'
 import { ReasonPrompt } from '@/features/reasonPrompt'
 import { RowActions } from '@/global/components/UI/molecules/table/RowActions'
 import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
+import { ActionsHeader } from '@/global/components/UI/molecules/table/ActionsHeader'
+import { CopyableCell } from '@/global/components/UI/molecules/table/CopyableCell'
+import { StatusSelect } from '@/global/components/UI/molecules/table/StatusSelect'
 import { getAvailableLevels, getPriceByLevel, getWarehouseStock, type Product } from '@/features/shop'
 import { selectProductsTable } from '../../selectors/inventory.selectors'
 import { useProductStatus } from '../../hooks/useProductStatus'
@@ -22,11 +25,11 @@ export const ProductsTable: React.FC = () => {
   const dispatch = useAppDispatch()
   const { items, status, error, page, query } = useAppSelector(selectProductsTable)
   const warehouseId = useAppSelector((state) => state.ui.activeWarehouseId)
-  const { canPerformAction, isAdmin } = usePermissions()
+  const { can } = usePermissions()
   const { updatingId, changeStatus } = useProductStatus()
   const [toDeactivate, setToDeactivate] = useState<Product | null>(null)
 
-  const canManage = isAdmin || canPerformAction('inventory', 'products', 'update')
+  const canManage = can('products:edit') // ojo: el superadmin solo lee; can() ya da todo al admin
 
   const message =
     status === 'failed'
@@ -68,7 +71,7 @@ export const ProductsTable: React.FC = () => {
             <th className="inv-num">Precio</th>
             <th className="inv-num">Vendible</th>
             <th>Estado</th>
-            <th className="inv-actions-header">Acciones</th>
+            <ActionsHeader className="inv-actions-header" />
           </tr>
         </thead>
         <tbody>
@@ -91,7 +94,7 @@ export const ProductsTable: React.FC = () => {
                 <tr key={product.id} className={isInactive ? 'inv-row-inactive' : ''}>
                   <td>{product.imageUrl ? <img className="inv-thumb" src={product.imageUrl} alt="" loading="lazy" /> : <span className="inv-thumb-empty">—</span>}</td>
                   <td>
-                    <span className="inv-code">{product.code}</span>
+                    <CopyableCell text={product.code} />
                   </td>
                   <td className="inv-name">{product.name}</td>
                   <td>{product.brand || '—'}</td>
@@ -107,17 +110,13 @@ export const ProductsTable: React.FC = () => {
                     <b>{getWarehouseStock(product, warehouseId)}</b>
                   </td>
                   <td>
-                    <select
-                      className={`inv-status-select is-${isInactive ? 'inactive' : 'active'}`}
+                    <StatusSelect
                       value={isInactive ? 'inactive' : 'active'}
                       disabled={!canManage || updatingId === product.id}
-                      aria-label={`Estado de ${product.code}`}
+                      ariaLabel={`Estado de ${product.code}`}
                       title={canManage ? 'Cambiar estado' : 'Solo administradores o usuarios con permiso pueden modificar el estado'}
-                      onChange={(event) => (event.target.value === 'inactive' ? setToDeactivate(product) : changeStatus(product, 'active'))}
-                    >
-                      <option value="active">Activo</option>
-                      <option value="inactive">Inactivo</option>
-                    </select>
+                      onChange={(val) => (val === 'inactive' ? setToDeactivate(product) : changeStatus(product, 'active'))}
+                    />
                   </td>
                   <td>
                     <RowActions actions={actionsOf(product)} />

@@ -3,6 +3,7 @@
 // ojo: lo que falta de cada dato se explica dentro de su campo; lo demás (cliente, productos, comprobante, caja) va en una línea bajo el formulario
 // ojo: la cotización termina en el paso del cliente; la venta sigue al paso de pago; una cotización que se continúa llega con sus renglones (payload.quotationId)
 import React from 'react'
+import '@/global/components/UI/molecules/form/DrawerFormShell.css'
 import './CheckoutPanel.css'
 import { closeDrawerForm } from '@/features/navigation'
 import { useAppDispatch } from '@/global/hooks/store/useRedux'
@@ -17,8 +18,8 @@ export const CheckoutPanel: React.FC<{ payload: CheckoutPayload }> = ({ payload 
   const onPayment = flow.step === 'payment'
 
   return (
-    <div className="checkout">
-      <div className="checkout-body">
+    <div className="drawer-form checkout">
+      <div className="drawer-form-body checkout-body">
         {flow.lines === null && !flow.error && <p className="checkout-hint">Preparando la compra…</p>}
         {flow.lines?.length === 0 && <p className="checkout-hint">No hay productos para continuar.</p>}
         {onPayment ? <PaymentStep flow={flow} /> : <CustomerStep flow={flow} />}
@@ -28,7 +29,7 @@ export const CheckoutPanel: React.FC<{ payload: CheckoutPayload }> = ({ payload 
         )}
       </div>
 
-      <div className="checkout-footer">
+      <div className="drawer-form-footer checkout-footer">
         {onPayment ? (
           <button type="button" className="btn-secondary" onClick={() => flow.setStep('customer')}>← Atrás</button>
         ) : (

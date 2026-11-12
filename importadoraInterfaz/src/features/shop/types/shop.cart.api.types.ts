@@ -31,12 +31,15 @@ export interface CartDto {
     subtotal?: number
     discountTotal?: number
     total?: number
+    updatedAt?: string
 }
 
 // lo que hace falta para agregar un producto al carrito
 export interface CartAddInput {
     cartId: number
-    stockId: number // la ubicación de la bodega de la que sale el producto
+    stockId?: number // la ubicación de la bodega de la que sale el producto (opcional si se pasa productId + warehouseId)
+    productId?: number
+    warehouseId?: number
     quantity: number
     price: number
 }
@@ -46,6 +49,7 @@ export interface CartSnapshot {
     cartId: number
     uuid: string
     items: CartItem[]
+    version?: string
 }
 
 // estado del slice del carrito (no se guarda en el navegador: el carrito vive en el backend)
@@ -56,4 +60,5 @@ export interface CartState {
     status: LoadStatus // de la lectura del carrito (GET /carts/active)
     error: string | null
     mutating: boolean // hay un cambio en curso (agregar, cambiar cantidad, quitar o vaciar); mientras tanto no se aceptan otros
+    version?: string | null // última versión recibida del carrito (para applyVersioned)
 }

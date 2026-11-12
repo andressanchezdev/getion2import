@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"importadoraApi/src/core/config"
+	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/utils"
 
 	"github.com/labstack/echo/v4"
@@ -32,11 +33,17 @@ func NewServer(cfg *config.Config) *Server {
 
 	// Middlewares globales estándar
 	e.Use(middleware.Recover())
+	// id de cada petición (cabecera X-Request-ID): se responde al cliente y viaja como correlationId de los eventos del websocket
+	e.Use(middleware.RequestIDWithConfig(middleware.RequestIDConfig{
+		RequestIDHandler: func(c echo.Context, id string) {
+			c.SetRequest(c.Request().WithContext(middlewares.WithRequestID(c.Request().Context(), id)))
+		},
+	}))
 	e.Use(middleware.GzipWithConfig(middleware.GzipConfig{
 		Level: 5,
 	}))
 	e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
-		Format: "${time_rfc3339} | ${status} | ${latency_human} | ${remote_ip} | ${method} ${uri}\n",
+		Format: "${time_rfc3339} | ${status} | ${latency_human} | ${remote_ip} | ${method} ${uri} | ${id}\n",
 	}))
 
 	// Configuración de CORS
@@ -52,9 +59,8 @@ func NewServer(cfg *config.Config) *Server {
 		AllowCredentials: true,
 	}))
 
-	// Servir archivos estáticos de subidas
-	_ = os.MkdirAll("./uploads", 0755)
-	e.Static("/uploads", "./uploads")
+	// ojo: /uploads ya no se sirve en público (8.2-11); los documentos de clientes salen por GET /customers/:id/documents/:docId/file con sesión y permiso
+	_ = os.MkdirAll(cfg.UploadsDir, 0755)
 
 	return &Server{
 		echo: e,

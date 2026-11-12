@@ -6,8 +6,10 @@ package services
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/events"
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
@@ -87,18 +89,18 @@ func (s *InventoryService) CreateCount(ctx context.Context, actor *middlewares.A
 	var createdCount *repositories.CountEntity
 	var preloadedItems []repositories.CountItemEntity
 
-	err = db.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
 		var empID *int64
 		if actor.ActorType == types.ActorEmployee {
 			empID = &actor.ActorID
 		}
 
 		cEntity := &repositories.CountEntity{
-			CompanyID:     wh.CompanyID,
-			WarehouseID:   req.WarehouseID,
-			EmployeeID:    empID,
-			Status:        types.CountPending,
-			Notes:         req.Notes,
+			CompanyID:   wh.CompanyID,
+			WarehouseID: req.WarehouseID,
+			EmployeeID:  empID,
+			Status:      types.CountPending,
+			Notes:       req.Notes,
 		}
 
 		c, err := s.inventoryRepo.CreateCount(ctx, tx, cEntity)
@@ -132,12 +134,21 @@ func (s *InventoryService) CreateCount(ctx context.Context, actor *middlewares.A
 			preloadedItems = append(preloadedItems, repositories.CountItemEntity{
 				CountID:     c.ID,
 				StockID:     st.StockID,
+				ProductID:   st.ProductID,
 				ProductCode: st.ProductCode,
 				ProductName: st.ProductName,
 				Location:    st.Location,
 				ExpectedQty: st.Available,
 			})
 		}
+		s.events.Record(ctx, events.NewCountCreated(wh.CompanyID, req.WarehouseID, events.CountRow{
+			ID:            c.ID,
+			WarehouseID:   req.WarehouseID,
+			WarehouseName: wh.Name,
+			Status:        string(types.CountPending),
+			Items:         toEventCountItems(preloadedItems),
+			Version:       time.Now().UTC(),
+		}))
 		return nil
 	})
 
@@ -186,12 +197,37 @@ func (s *InventoryService) UpdateCountItems(ctx context.Context, actor *middlewa
 		empID = &actor.ActorID
 	}
 
-	err = db.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
 		for _, item := range req.Items {
 			if err := s.inventoryRepo.UpdateCountItemQty(ctx, tx, countID, item.StockID, item.CountedQty, empID); err != nil {
 				return err
 			}
 		}
+		// avance del conteo: viajan los renglones que se acaban de contar y cuántos van del total
+		all, err := s.inventoryRepo.ListCountItems(ctx, tx, countID)
+		if err != nil {
+			return err
+		}
+		touched := make(map[int64]bool, len(req.Items))
+		for _, item := range req.Items {
+			touched[item.StockID] = true
+		}
+		changedItems := make([]repositories.CountItemEntity, 0, len(req.Items))
+		counted := 0
+		for _, it := range all {
+			if it.CountedQty != nil {
+				counted++
+			}
+			if touched[it.StockID] {
+				changedItems = append(changedItems, it)
+			}
+		}
+		s.events.Record(ctx, events.NewCountProgressChanged(count.CompanyID, count.WarehouseID, events.CountProgressChangedData{
+			Entity:       events.EntityRef{Kind: "count", ID: countID, Version: time.Now().UTC()},
+			Items:        toEventCountItems(changedItems),
+			CountedLines: counted,
+			TotalLines:   len(all),
+		}))
 		return nil
 	})
 
@@ -219,22 +255,33 @@ func (s *InventoryService) VerifyCount(ctx context.Context, actor *middlewares.A
 		}
 	}
 
-	if err := s.inventoryRepo.VerifyCount(ctx, s.pool, countID); err != nil {
+	// la verificación, su auditoría y su evento van en la misma transacción
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		if err := s.inventoryRepo.VerifyCount(ctx, tx, countID); err != nil {
+			return err
+		}
+		_ = s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
+			CompanyID: &count.CompanyID,
+			ActorType: actor.ActorType,
+			ActorID:   actor.ActorID,
+			Entity:    "counts",
+			EntityID:  &countID,
+			Action:    "COUNT_VERIFIED",
+			Reason:    "Verificación preliminar de conteo físico",
+			IPAddress: ip,
+			UserAgent: ua,
+		})
+		s.events.Record(ctx, events.NewCountStatusChanged(count.CompanyID, count.WarehouseID, events.CountStatusChangedData{
+			Entity:      events.EntityRef{Kind: "count", ID: countID, Version: time.Now().UTC()},
+			From:        string(count.Status),
+			To:          string(types.CountVerified),
+			Differences: []events.CountDifference{},
+		}))
+		return nil
+	})
+	if err != nil {
 		return utils.Internal("Error al verificar conteo.", err)
 	}
-
-	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
-		CompanyID: &count.CompanyID,
-		ActorType: actor.ActorType,
-		ActorID:   actor.ActorID,
-		Entity:    "counts",
-		EntityID:  &countID,
-		Action:    "COUNT_VERIFIED",
-		Reason:    "Verificación preliminar de conteo físico",
-		IPAddress: ip,
-		UserAgent: ua,
-	})
-
 	return nil
 }
 
@@ -269,7 +316,7 @@ func (s *InventoryService) CorroborateCount(ctx context.Context, actor *middlewa
 		empID = &actor.ActorID
 	}
 
-	err = db.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
 		// Ajustar las diferencias en stock y generar movimientos de auditoría
 		for _, item := range items {
 			if item.CountedQty != nil && *item.CountedQty != item.ExpectedQty {
@@ -281,6 +328,7 @@ func (s *InventoryService) CorroborateCount(ctx context.Context, actor *middlewa
 				if _, err := s.inventoryRepo.SetStockAvailable(ctx, tx, item.StockID, newQty); err != nil {
 					return err
 				}
+				s.events.Stock(ctx, item.StockID, events.CauseCountAdjust(countID))
 
 				// Asiento en audit_movements
 				reason := fmt.Sprintf("Ajuste por conteo físico #%d (Esperado: %d, Contado: %d)", countID, item.ExpectedQty, newQty)
@@ -301,7 +349,22 @@ func (s *InventoryService) CorroborateCount(ctx context.Context, actor *middlewa
 			}
 		}
 
-		return s.inventoryRepo.CorroborateCount(ctx, tx, countID)
+		if err := s.inventoryRepo.CorroborateCount(ctx, tx, countID); err != nil {
+			return err
+		}
+		differences := make([]events.CountDifference, 0)
+		for _, item := range items {
+			if item.CountedQty != nil && *item.CountedQty != item.ExpectedQty {
+				differences = append(differences, events.CountDifference{ProductID: item.ProductID, Location: item.Location, ExpectedQty: item.ExpectedQty, CountedQty: *item.CountedQty})
+			}
+		}
+		s.events.Record(ctx, events.NewCountStatusChanged(count.CompanyID, count.WarehouseID, events.CountStatusChangedData{
+			Entity:      events.EntityRef{Kind: "count", ID: countID, Version: time.Now().UTC()},
+			From:        string(count.Status),
+			To:          string(types.CountCorroborated),
+			Differences: differences,
+		}))
+		return nil
 	})
 
 	if err != nil {
@@ -359,4 +422,22 @@ func (s *InventoryService) mapCountToDTO(c *repositories.CountEntity, items []re
 		ClosedAt:      c.ClosedAt,
 		Items:         itemsDTO,
 	}
+}
+
+// toEventCountItems pasa los renglones del conteo a la forma que viaja en los eventos count.*
+func toEventCountItems(items []repositories.CountItemEntity) []events.CountItem {
+	out := make([]events.CountItem, 0, len(items))
+	for _, it := range items {
+		stockID := it.StockID
+		out = append(out, events.CountItem{
+			ProductID:   it.ProductID,
+			ProductCode: it.ProductCode,
+			ProductName: it.ProductName,
+			Location:    it.Location,
+			ExpectedQty: it.ExpectedQty,
+			CountedQty:  it.CountedQty,
+			StockID:     &stockID,
+		})
+	}
+	return out
 }

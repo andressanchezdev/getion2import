@@ -4,6 +4,7 @@ import React from 'react'
 import { useAppDispatch } from '@/global/hooks/store/useRedux'
 import { openDrawerForm } from '@/features/navigation'
 import { RowActions } from '@/global/components/UI/molecules/table/RowActions'
+import { CopyableCell } from '@/global/components/UI/molecules/table/CopyableCell'
 import { usePermissions } from '@/global/hooks/access/usePermissions'
 import eyeIcon from '@/assets/icons/eye.svg?raw'
 import editIcon from '@/assets/icons/edit.svg?raw'
@@ -21,9 +22,9 @@ interface WarehouseStockRowProps {
 // fila con sus acciones según los permisos
 export const WarehouseStockRow: React.FC<WarehouseStockRowProps> = ({ row, warehouseId, onRelocated }) => {
   const dispatch = useAppDispatch()
-  const { canPerformAction } = usePermissions()
-  const canCreate = canPerformAction('shop', 'transfers', 'create')
-  const canMove = canPerformAction('shop', 'transfers', 'update')
+  const { can } = usePermissions()
+  const canCreate = can('transfers:create')
+  const canMove = can('stock:relocate')
 
   const open = (kind: 'productDetail' | 'relocateStock' | 'createTransfer', payload: unknown) =>
     dispatch(openDrawerForm({ kind, payload } as Parameters<typeof openDrawerForm>[0]))
@@ -31,7 +32,9 @@ export const WarehouseStockRow: React.FC<WarehouseStockRowProps> = ({ row, wareh
   return (
     <tr>
       <td>
-        <span className="inv-code">{row.productCode}</span>
+        <span className="inv-code">
+          <CopyableCell text={row.productCode ?? ''} label="Código de producto" />
+        </span>
       </td>
       <td className="inv-name">{row.productName}</td>
       <td>{row.brandName || '—'}</td>

@@ -1,4 +1,5 @@
 // transfers.adapter · convierte lo que responde la API a lo que usa la app
+import type { TransferRow } from '@/features/realtime'
 import type { TransferDto, TransferProductDto, TransferStockRowDto } from '../types/transfers.api.types'
 import type { ProductStockMatrix, TransferStatus, TrasladeItem, WarehouseStockLocation } from '../types/transfers.types'
 
@@ -40,6 +41,7 @@ export const toTrasladeItem = (dto: TransferDto): TrasladeItem => {
       code: item.productCode,
       description: item.productName || item.productCode || 'Repuesto',
       quantity: item.quantity,
+      receivedQty: item.receivedQty,
       destinationLocation: item.destinationLocation ?? '',
     })),
     employeeId: dto.employeeId,
@@ -51,8 +53,41 @@ export const toTrasladeItem = (dto: TransferDto): TrasladeItem => {
     createdAt: dto.createdAt,
     dispatchedAt: dto.dispatchedAt,
     receivedAt: dto.receivedAt,
+    updatedAt: dto.updatedAt || dto.receivedAt || dto.dispatchedAt || dto.createdAt,
     notes: dto.notes || undefined,
     noveltyNotes: dto.noveltyNotes || undefined,
+    cancelReason: dto.cancelReason || undefined,
+  }
+}
+
+export const toTransferFromEvent = (
+  row: TransferRow,
+  warehouseName: (id: number) => string = (id) => `Bodega #${id}`
+): TrasladeItem => {
+  const status = toTransferStatus(row.status)
+  return {
+    id: row.id,
+    serialCode: row.serial,
+    type: 'standard',
+    typeLabel: getTransferTypeLabel('standard'),
+    status,
+    priority: status === 'with_novelty' || row.isPriority ? 'high' : 'normal',
+    originWarehouse: { id: row.originWarehouseId, name: warehouseName(row.originWarehouseId) },
+    destWarehouse: { id: row.destinationWarehouseId, name: warehouseName(row.destinationWarehouseId) },
+    products: row.lines.map((line) => ({
+      itemId: line.lineId,
+      productId: line.productId,
+      code: line.productCode,
+      description: line.productName || line.productCode || 'Repuesto',
+      quantity: line.quantity,
+      receivedQty: line.receivedQty,
+      destinationLocation: line.destinationLocation ?? '',
+    })),
+    employeeId: row.createdBy?.id ?? undefined,
+    employeeName: row.createdBy?.name,
+    createdAt: row.createdAt,
+    updatedAt: row.version,
+    notes: row.notes || undefined,
   }
 }
 

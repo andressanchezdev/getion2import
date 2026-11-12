@@ -7,6 +7,7 @@ import { selectActiveBrands, selectActiveCategories, selectActiveMotoModels, use
 import { productLabel, useLocations } from '@/features/locations'
 import { useWarehouses } from '@/features/warehouses'
 import type { ProductPrices } from '@/features/shop'
+import { isRealtimeLive } from '@/features/realtime/helpers/realtime.guards'
 import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { toast } from '@/global/helpers/feedback/toast'
 import { DEFAULT_IVA } from '../constants/inventory.constants'
@@ -17,6 +18,7 @@ const EMPTY_PRICES: ProductPrices = { p0: 0, p1: 0, p2: 0, p3: 0 }
 export const useCreateProductForm = () => {
   const dispatch = useAppDispatch()
   useLoadCatalogs()
+  const live = useAppSelector(isRealtimeLive)
   const brands = useAppSelector(selectActiveBrands)
   const categories = useAppSelector(selectActiveCategories)
   const models = useAppSelector(selectActiveMotoModels)
@@ -113,7 +115,8 @@ export const useCreateProductForm = () => {
         })
       ).unwrap()
       toast.success(`Producto ${created.code} creado`)
-      dispatch(loadProductsTableThunk({ page: 1, query: '' }))
+      // en vivo, entity.created vuelve a pedir la tabla (masterData.realtime); sin socket se recarga aquí
+      if (!live) dispatch(loadProductsTableThunk({ page: 1, query: '' }))
       if (chosen.length > 0) {
         const warehouseName = warehouses.find((warehouse) => Number(warehouse.id) === warehouseId)?.name ?? ''
         const labels = chosen.map((place) => productLabel(warehouseId, place.location, created.code, created.name, warehouseName))

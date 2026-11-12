@@ -1,14 +1,20 @@
 // auth.slice · estado de la sesión: usuario, estado (anónimo, ingresando, autenticado) y último error
 // conecta con: auth.thunks (login/logout/fetchMe), auth.selectors (lecturas) y AuthGate (decide login o ERP)
-import { createSlice } from '@reduxjs/toolkit'
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import { toPermissionMatrix } from '../helpers/auth.permissions'
 import { getInitialAuthState } from '../helpers/auth.session'
 import { fetchCurrentUserThunk, loginThunk, logoutThunk } from '../thunks/auth.thunks'
+import type { AuthUser } from '../types/auth.types'
 
 export const authSlice = createSlice({
   name: 'auth',
   initialState: getInitialAuthState(),
-  reducers: {},
+  reducers: {
+    setCurrentUser: (state, action: PayloadAction<AuthUser>) => {
+      state.user = action.payload
+      state.permissions = toPermissionMatrix(action.payload)
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(loginThunk.pending, (state) => {
@@ -37,5 +43,6 @@ export const authSlice = createSlice({
   },
 })
 
+export const { setCurrentUser } = authSlice.actions
 export const authReducer = authSlice.reducer
 export default authSlice.reducer

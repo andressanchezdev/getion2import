@@ -15,19 +15,37 @@ export const fetchActiveCart = async (known: Record<string, Product> = {}): Prom
     return toCartSnapshot(data.data, known)
 }
 
-// agrega un producto desde una ubicación de la bodega (stockId); el precio es el del nivel elegido en la pantalla
-export const addCartItem = async ({ cartId, stockId, quantity, price }: CartAddInput): Promise<void> => {
-    await apiClient.post(CARTS.ITEMS(cartId), { stockId, quantity, unitPrice: price })
+// agrega un producto (por productId + warehouseId, o por stockId); devuelve el carrito actualizado si la respuesta lo trae
+export const addCartItem = async (
+    { cartId, stockId, productId, warehouseId, quantity, price }: CartAddInput,
+    known: Record<string, Product> = {}
+): Promise<CartSnapshot | null> => {
+    const payload = stockId !== undefined
+        ? { stockId, quantity, unitPrice: price }
+        : { productId, warehouseId, quantity, unitPrice: price }
+    const res = await apiClient.post<APIResponse<CartDto>>(CARTS.ITEMS(cartId), payload)
+    return res?.data?.data ? toCartSnapshot(res.data.data, known) : null
 }
 
-// cambia la cantidad de un renglón
-export const updateCartItemQuantity = async (cartId: number, itemId: number, quantity: number): Promise<void> => {
-    await apiClient.put(CARTS.ITEM(cartId, itemId), { quantity })
+// cambia la cantidad de un renglón; devuelve el carrito actualizado si la respuesta lo trae
+export const updateCartItemQuantity = async (
+    cartId: number,
+    itemId: number,
+    quantity: number,
+    known: Record<string, Product> = {}
+): Promise<CartSnapshot | null> => {
+    const res = await apiClient.put<APIResponse<CartDto>>(CARTS.ITEM(cartId, itemId), { quantity })
+    return res?.data?.data ? toCartSnapshot(res.data.data, known) : null
 }
 
-// quita un renglón
-export const deleteCartItem = async (cartId: number, itemId: number): Promise<void> => {
-    await apiClient.delete(CARTS.ITEM(cartId, itemId))
+// quita un renglón; devuelve el carrito actualizado si la respuesta lo trae
+export const deleteCartItem = async (
+    cartId: number,
+    itemId: number,
+    known: Record<string, Product> = {}
+): Promise<CartSnapshot | null> => {
+    const res = await apiClient.delete<APIResponse<CartDto>>(CARTS.ITEM(cartId, itemId))
+    return res?.data?.data ? toCartSnapshot(res.data.data, known) : null
 }
 
 // vacía todo el carrito

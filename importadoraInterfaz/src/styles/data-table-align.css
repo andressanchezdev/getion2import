@@ -19,3 +19,9 @@
 .data-table td[data-align="center"] > * {
   margin-inline: auto;
 }
+
+.table-th-actions {
+  text-align: center;
+  white-space: nowrap;
+  width: 1%;
+}

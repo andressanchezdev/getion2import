@@ -63,6 +63,11 @@ func Unprocessable(code, message string) *AppError {
 	return &AppError{Status: http.StatusUnprocessableEntity, Code: code, Message: message}
 }
 
+// TooManyRequests crea un error 429: se pasó del límite de peticiones permitidas.
+func TooManyRequests(code, message string) *AppError {
+	return &AppError{Status: http.StatusTooManyRequests, Code: code, Message: message}
+}
+
 // Internal crea un error 500: falla inesperada, con el error original adentro.
 func Internal(message string, err error) *AppError {
 	return &AppError{Status: http.StatusInternalServerError, Code: "INTERNAL_ERROR", Message: message, Err: err}

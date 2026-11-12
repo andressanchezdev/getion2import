@@ -1,7 +1,10 @@
 // SettingsScreen · pantalla principal de administración y configuración del ERP
+// conecta con: CompanyTab, ScreensaverTab, SecurityTab, BackupTab y usePermissions (qué pestañas ve cada quien)
+// ojo: la pantalla la ve todo el personal porque aloja la cuenta propia; cada pestaña exige su permiso (las mismas reglas de la API)
 import React, { useState } from 'react'
 import './SettingsScreen.css'
 import { useAppSelector } from '@/global/hooks/store/useRedux'
+import { usePermissions } from '@/global/hooks/access/usePermissions'
 import { ScreensaverTab } from './ScreensaverTab'
 import { CompanyTab } from './CompanyTab'
 import { SecurityTab } from './SecurityTab'
@@ -11,19 +14,22 @@ type SettingsTab = 'company' | 'screensaver' | 'security' | 'health' | 'backups'
 
 export const SettingsScreen: React.FC = () => {
   const activeSubitem = useAppSelector((state) => state.ui.activeSubitem)
-  const [currentTab, setCurrentTab] = useState<SettingsTab>(
-    activeSubitem === 'screensaver' || activeSubitem === 'security' || activeSubitem === 'health' || activeSubitem === 'backups'
-      ? (activeSubitem as SettingsTab)
-      : 'company'
-  )
+  const userId = useAppSelector((state) => state.auth.user?.userId)
+  const { can, level } = usePermissions()
 
-  const TABS: { id: SettingsTab; label: string; desc: string }[] = [
-    { id: 'company', label: 'Empresa', desc: 'Razón social, NIT, representación legal, datos fiscales y documentos comerciales' },
-    { id: 'screensaver', label: 'Protector', desc: 'Gestión y personalización de la imagen animada del protector de pantalla' },
-    { id: 'security', label: 'Credenciales y Acceso', desc: 'Perfil del usuario activo, seguridad de acceso y actualización de credenciales' },
-    { id: 'health', label: 'Salud del Sistema', desc: 'Estado de conectividad de la API en Railway y PostgreSQL' },
-    { id: 'backups', label: 'Respaldos', desc: 'Copias de seguridad de PostgreSQL, descarga y restauración' },
+  // visible: misma regla que la ruta de la API de cada pestaña
+  const ALL_TABS: { id: SettingsTab; label: string; desc: string; visible: boolean }[] = [
+    { id: 'company', label: 'Empresa', desc: 'Razón social, NIT, representación legal, datos fiscales y documentos comerciales', visible: can('warehouses:view') }, // GET /companies/:id
+    { id: 'screensaver', label: 'Protector', desc: 'Gestión y personalización de la imagen animada del protector de pantalla', visible: can('screensaver:edit') }, // admin y superadmin
+    { id: 'security', label: 'Credenciales y Acceso', desc: 'Perfil del usuario activo, seguridad de acceso y actualización de credenciales', visible: true }, // la cuenta propia
+    { id: 'health', label: 'Salud del Sistema', desc: 'Estado de conectividad de la API en Railway y PostgreSQL', visible: true },
+    { id: 'backups', label: 'Respaldos', desc: 'Copias de seguridad de PostgreSQL, descarga y restauración', visible: level === 'superadmin' }, // /backups es solo del superadmin
   ]
+  const TABS = ALL_TABS.filter((tab) => tab.visible)
+  const requested = TABS.find((tab) => tab.id === activeSubitem)?.id
+  const [chosenTab, setCurrentTab] = useState<SettingsTab>(requested ?? TABS[0].id)
+  // ojo: si la pestaña elegida deja de estar permitida (cambian los permisos) se muestra la primera permitida
+  const currentTab = TABS.some((tab) => tab.id === chosenTab) ? chosenTab : TABS[0].id
 
   return (
     <div className="settings-screen">
@@ -64,7 +70,7 @@ export const SettingsScreen: React.FC = () => {
         <div className="settings-section-body">
           {currentTab === 'company' && <CompanyTab />}
           {currentTab === 'screensaver' && <ScreensaverTab />}
-          {currentTab === 'security' && <SecurityTab />}
+          {currentTab === 'security' && <SecurityTab key={userId ?? 'anon'} />}
           {currentTab === 'backups' && <BackupTab />}
           {currentTab === 'health' && (
             <div className="settings-placeholder-box">

@@ -1,18 +1,4 @@
 /* CompanyWarehousesPanel.css · sedes de una compañía dentro del panel derecho · solo usa tokens de styles/tokens.css */
-.company-sites {
-    display: flex;
-    flex-direction: column;
-    min-height: 100%;
-}
-
-.company-sites-body {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    gap: 1rem;
-    padding: 1.25rem;
-}
-
 .company-sites-title {
     margin: 0;
     font-size: var(--text-sm);

@@ -3,6 +3,8 @@
 import React from 'react'
 import { RowActions } from '@/global/components/UI/molecules/table/RowActions'
 import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
+import { ActionsHeader } from '@/global/components/UI/molecules/table/ActionsHeader'
+import { CopyableCell } from '@/global/components/UI/molecules/table/CopyableCell'
 import eyeIcon from '@/assets/icons/eye.svg?raw'
 import { formatAuditDate } from '../helpers/audit.format'
 import type { AuditEntry } from '../types/audit.types'
@@ -21,7 +23,7 @@ export const AuditTable: React.FC<AuditTableProps> = ({ entries, onOpen }) => (
         <th>Acción</th>
         <th>Quién</th>
         <th>Registro</th>
-        <th>Acciones</th>
+        <ActionsHeader />
       </tr>
     </thead>
     <tbody>
@@ -31,7 +33,7 @@ export const AuditTable: React.FC<AuditTableProps> = ({ entries, onOpen }) => (
           <td>{entry.entityLabel}</td>
           <td><span className="audit-action-chip">{entry.actionLabel}</span></td>
           <td>{entry.actorLabel}</td>
-          <td>{entry.entityId ? `#${entry.entityId}` : '—'}</td>
+          <td>{entry.entityId ? <CopyableCell text={entry.entityId} prefix="#" /> : '—'}</td>
           <td>
             <RowActions actions={[{ key: 'detail', label: 'Ver detalle', icon: eyeIcon, onClick: () => onOpen(entry) }]} />
           </td>

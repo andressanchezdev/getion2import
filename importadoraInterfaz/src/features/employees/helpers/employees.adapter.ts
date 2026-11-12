@@ -3,7 +3,7 @@
 // ojo: la API da permisos planos (módulo + acción); la pantalla muestra una matriz por módulo del menú y subgestión (ver, crear, editar, anular, editar precios)
 // ojo: al guardar se conservan los permisos que la matriz no maneja (tomar etapas, verificar pagos, módulos que no están en el menú…)
 import type { NavItem } from '@/features/navigation'
-import { apiModuleOf, MATRIX_ACTIONS, MATRIX_MANAGED_ACTIONS, type MatrixFlag } from '../constants/employees.permissions.constants'
+import { apiModuleOf, MATRIX_ACTIONS, MATRIX_MANAGED_ACTIONS, SPECIAL_ACTION_KEYS, type MatrixFlag } from '../constants/employees.permissions.constants'
 import type { EmployeeDto, PermissionDto, RoleDto } from '../types/employees.api.types'
 import type { EmployeeRole, ModulePermission, ScreenPermission, SimpleEmployee } from '../types/employees.types'
 
@@ -69,8 +69,13 @@ export const toModulePermissions = (permissions: PermissionDto[], menu: NavItem[
   })
 }
 
-// los ids de permisos que se guardan: lo que marca la matriz + lo que el empleado ya tenía y la matriz no maneja
-export const toPermissionIds = (modules: ModulePermission[], catalog: PermissionDto[], current: PermissionDto[]): number[] => {
+// las acciones especiales que tiene el empleado («modulo:accion»), para las casillas del panel
+export const toSpecialKeys = (permissions: PermissionDto[]): string[] =>
+  permissions.map((item) => `${item.module}:${item.action}`).filter((key) => SPECIAL_ACTION_KEYS.has(key))
+
+// los ids de permisos que se guardan: lo que marca la matriz + las acciones especiales marcadas + lo que el empleado ya tenía y nadie maneja
+// ojo: si specials es undefined las especiales se conservan tal cual (pantallas que solo editan la matriz)
+export const toPermissionIds = (modules: ModulePermission[], catalog: PermissionDto[], current: PermissionDto[], specials?: string[]): number[] => {
   const idOf = new Map(catalog.map((item) => [`${item.module}:${item.action}`, item.id]))
   const ids = new Set<number>()
   const managedModules = new Set<string>()
@@ -89,8 +94,17 @@ export const toPermissionIds = (modules: ModulePermission[], catalog: Permission
       }
     }
   }
-  // lo que la matriz no maneja se conserva tal cual
+  for (const key of specials ?? []) {
+    const id = idOf.get(key)
+    if (id !== undefined) ids.add(id)
+  }
+  // lo que nadie maneja se conserva tal cual (las especiales solo cuando el panel no las mandó)
   for (const item of current) {
+    const key = `${item.module}:${item.action}`
+    if (SPECIAL_ACTION_KEYS.has(key)) {
+      if (specials === undefined) ids.add(item.id)
+      continue
+    }
     if (!managedModules.has(item.module) || !MATRIX_MANAGED_ACTIONS.has(item.action)) ids.add(item.id)
   }
   return [...ids].sort((a, b) => a - b)

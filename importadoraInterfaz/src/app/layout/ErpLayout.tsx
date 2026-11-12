@@ -1,10 +1,11 @@
 // ErpLayout · layout del ERP: menú lateral, columna central (cabecera y contenido) y drawer derecho
-// conecta con: componentApp/* (header, sideMenu, contentMain, drawerRight) y features/realtime (useRealtime) y features/auth (useSessionActivity) y features/shop (useCartSync) y features/screensaver (protector de pantalla); lo muestra AuthGate cuando hay sesión
+// conecta con: componentApp/* (header, sideMenu, contentMain, drawerRight) y features/realtime (useRealtime) y features/auth (useSessionActivity, useCurrentUserRefresh) y global/hooks/access (useScreenAccessGuard) y features/shop (useCartSync) y features/screensaver (protector de pantalla); lo muestra AuthGate cuando hay sesión
 // ojo: antes este layout vivía dentro de StoreApp; StoreApp ahora solo pone el Provider y la puerta de entrada
 // ojo: como en la maqueta, la cabecera ya no cruza todo el ancho: va dentro de la columna central y la marca pasó al menú lateral
 import './ErpLayout.css'
 import { useRealtime } from '@/features/realtime'
-import { useSessionActivity } from '@/features/auth'
+import { useCurrentUserRefresh, useSessionActivity } from '@/features/auth'
+import { useScreenAccessGuard } from '@/global/hooks/access/useScreenAccessGuard'
 import { useCartSync } from '@/features/shop'
 import { useRouteSync } from '@/features/navigation'
 import { IdleScreensaver } from '@/features/screensaver'
@@ -25,6 +26,10 @@ export function ErpLayout() {
 
   // ojo: la URL del navegador refleja la pantalla activa (/módulo/subgestión) y al revés
   useRouteSync()
+
+  // ojo: trae perfil y permisos frescos al entrar (la sesión rehidratada puede traerlos viejos) y saca al usuario de una pantalla que ya no tiene permitida
+  useCurrentUserRefresh()
+  useScreenAccessGuard()
 
   return (
     <div className="store-app-layout">

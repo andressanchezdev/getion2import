@@ -16,7 +16,7 @@ import plusIcon from '@/assets/icons/plus.svg?raw'
 
 export const LocationsScreen: React.FC = () => {
   const dispatch = useAppDispatch()
-  const canCreate = usePermissions().canPerformAction('inventory', 'locations', 'create')
+  const canCreate = usePermissions().can('stock:edit')
   const { warehouseId, warehouseName, items, status, error, reload } = useLocations()
   const [query, setQuery] = useState('')
 

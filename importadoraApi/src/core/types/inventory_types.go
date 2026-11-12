@@ -4,10 +4,11 @@ package types
 type TransferStatus string
 
 const (
-	TransferPending   TransferStatus = "pending"
-	TransferInTransit TransferStatus = "in_transit"
-	TransferReceived  TransferStatus = "received"
-	TransferCancelled TransferStatus = "cancelled"
+	TransferPending     TransferStatus = "pending"
+	TransferInTransit   TransferStatus = "in_transit"
+	TransferReceived    TransferStatus = "received"
+	TransferWithNovelty TransferStatus = "with_novelty"
+	TransferCancelled   TransferStatus = "cancelled"
 )
 
 // MovementType coincide con audit_movements.movement_type.

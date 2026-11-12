@@ -7,6 +7,8 @@ import { getFormEntry } from './formRegistry'
 // payload de ejemplo de cada acción (lo mínimo que usa su título)
 const SAMPLES: Record<DrawerFormKind, unknown> = {
   createCustomer: undefined,
+  createEmployee: undefined,
+  createReturn: undefined,
   editCustomer: 7,
   createTransfer: undefined,
   receiveTransfer: { id: 1, serialCode: 'TR-1', products: [] },
@@ -66,6 +68,7 @@ const SAMPLES: Record<DrawerFormKind, unknown> = {
   verifyGoods: { orderId: 1, serial: 'PD-1', customerName: 'Cliente', total: 0, onVerified: () => undefined },
   countDetail: { count: { id: 1 } },
   permissionsHub: 'viewRoles',
+  userProfile: undefined,
 }
 
 describe('formRegistry', () => {

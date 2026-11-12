@@ -102,3 +102,21 @@ func (c *CustomerController) DeleteDocument(ctx echo.Context) error {
 
 	return utils.RespondNoContent(ctx)
 }
+
+// DownloadDocument GET /customers/:id/documents/:docId/file · entrega el archivo con la sesión (el front lo pide como blob)
+func (c *CustomerController) DownloadDocument(ctx echo.Context) error {
+	actor := middlewares.GetActor(ctx)
+	id, err := utils.ParamInt64(ctx, "id")
+	if err != nil {
+		return err
+	}
+	docID, err := utils.ParamInt64(ctx, "docId")
+	if err != nil {
+		return err
+	}
+	path, name, err := c.service.DocumentFile(ctx.Request().Context(), actor, id, docID)
+	if err != nil {
+		return err
+	}
+	return ctx.Inline(path, name)
+}

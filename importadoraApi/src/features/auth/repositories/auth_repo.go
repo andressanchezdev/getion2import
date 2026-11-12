@@ -6,6 +6,7 @@ package repositories
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"importadoraApi/src/core/db"
@@ -327,4 +328,43 @@ func (r *AuthRepository) LoadPermissionsForActor(ctx context.Context, q db.DBExe
 		list = append(list, p)
 	}
 	return list, rows.Err()
+}
+
+// UpdateActorProfile actualiza los datos básicos del perfil (nombre, apellido, email, teléfono) del actor autenticado.
+func (r *AuthRepository) UpdateActorProfile(ctx context.Context, q db.DBExecutor, actorType types.ActorType, actorID int64, firstName, lastName, email string, phone *string) error {
+	var table string
+	switch actorType {
+	case types.ActorSuperadmin:
+		table = "superadmins"
+	case types.ActorAdmin:
+		table = "admins"
+	case types.ActorEmployee:
+		table = "employees"
+	default:
+		return errors.New("tipo de actor inválido")
+	}
+
+	// ojo: phone nil conserva el valor actual (el formulario de Configuración no lo envía)
+	sqlQuery := fmt.Sprintf(`UPDATE %s SET first_name = $1, last_name = $2, email = $3, phone = COALESCE($4, phone), updated_at = CURRENT_TIMESTAMP WHERE id = $5`, table)
+	_, err := q.Exec(ctx, sqlQuery, firstName, lastName, email, phone, actorID)
+	return err
+}
+
+// UpdateActorPassword actualiza la contraseña del actor con su nuevo hash.
+func (r *AuthRepository) UpdateActorPassword(ctx context.Context, q db.DBExecutor, actorType types.ActorType, actorID int64, newHash string) error {
+	var table string
+	switch actorType {
+	case types.ActorSuperadmin:
+		table = "superadmins"
+	case types.ActorAdmin:
+		table = "admins"
+	case types.ActorEmployee:
+		table = "employees"
+	default:
+		return errors.New("tipo de actor inválido")
+	}
+
+	sqlQuery := fmt.Sprintf(`UPDATE %s SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, table)
+	_, err := q.Exec(ctx, sqlQuery, newHash, actorID)
+	return err
 }

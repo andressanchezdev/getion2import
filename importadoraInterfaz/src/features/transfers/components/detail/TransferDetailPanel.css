@@ -1,18 +1,4 @@
 /* TransferDetailPanel.css · detalle de un traslado dentro del panel derecho · solo usa tokens de styles/tokens.css */
-.transfer-detail {
-  display: flex;
-  flex-direction: column;
-  min-height: 100%;
-}
-
-.transfer-detail-body {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 1rem;
-  padding: 1.25rem;
-}
-
 .transfer-detail-alert {
   padding: var(--space-3) var(--space-4);
   font-size: var(--text-sm);

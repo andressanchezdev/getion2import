@@ -2,6 +2,7 @@
 // conecta con: formRegistry (lo muestra), quotations.thunks (detalle y marcar como enviada), quotations.selectors, quotations.adapter (enlace de WhatsApp) y navigation (closeDrawerForm)
 // ojo: «Enviar por WhatsApp» abre WhatsApp con el mensaje armado (la persona lo envía allí) y deja la cotización como «Enviada»; sin número del cliente el botón no aparece
 import React, { useEffect } from 'react'
+import '@/global/components/UI/molecules/form/DrawerFormShell.css'
 import './QuotationDetailPanel.css'
 import { formatPesos } from '@/global/helpers/formatting/format'
 import { ProductLine, ProductLineList } from '@/global/components/UI/molecules/product/ProductLine'
@@ -26,9 +27,9 @@ export const QuotationDetailPanel: React.FC<QuotationDetailPanelProps> = ({ quot
     dispatch(loadQuotationDetailThunk(quotationId))
   }, [dispatch, quotationId])
 
-  if (detail.status === 'failed') return <div className="quotation-detail-body"><div className="form-field-error-msg">{detail.error}</div></div>
+  if (detail.status === 'failed') return <div className="drawer-form quotation-detail"><div className="drawer-form-body quotation-detail-body"><div className="form-field-error-msg">{detail.error}</div></div></div>
   const quotation = detail.data
-  if (!quotation || quotation.id !== quotationId) return <div className="quotation-detail-body">Cargando cotización…</div>
+  if (!quotation || quotation.id !== quotationId) return <div className="drawer-form quotation-detail"><div className="drawer-form-body quotation-detail-body">Cargando cotización…</div></div>
 
   const whatsappUrl = toWhatsappUrl(quotation)
   const sendWhatsapp = () => {
@@ -46,8 +47,8 @@ export const QuotationDetailPanel: React.FC<QuotationDetailPanelProps> = ({ quot
   ]
 
   return (
-    <div className="quotation-detail">
-      <div className="quotation-detail-body">
+    <div className="drawer-form quotation-detail">
+      <div className="drawer-form-body quotation-detail-body">
         <dl className="quotation-detail-facts">
           {facts.map(([label, value]) => (
             <div key={label} className="quotation-detail-fact">
@@ -67,7 +68,7 @@ export const QuotationDetailPanel: React.FC<QuotationDetailPanelProps> = ({ quot
         {quotation.notes && <p className="quotation-detail-notes">{quotation.notes}</p>}
       </div>
 
-      <div className="quotation-detail-footer">
+      <div className="drawer-form-footer quotation-detail-footer">
         <button type="button" className="btn-secondary" onClick={() => dispatch(closeDrawerForm())}>Cerrar</button>
         {whatsappUrl && (
           <button type="button" className="btn-secondary" onClick={sendWhatsapp}>Enviar por WhatsApp</button>

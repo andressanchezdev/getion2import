@@ -6,12 +6,51 @@ import { INITIAL_WALLET_STATE } from '../constants/wallet.constants'
 import { loadInvoicesThunk, loadWalletSummaryThunk, loadWalletThunk } from '../thunks/wallet.thunks'
 import { payThunk, updateCreditThunk } from '../thunks/wallet.payments.thunks'
 import { loadPaymentsHistoryThunk, searchCreditCustomersThunk } from '../thunks/wallet.history.thunks'
-import type { CreditStatus, CustomerCreditProfile } from '../types/wallet.types'
+import type { AbonoRecord, CreditStatus, CustomerCreditProfile } from '../types/wallet.types'
+
+// aplica a un cliente de cartera el cupo y el disponible que llegaron por evento
+const applyCredit = (profile: CustomerCreditProfile, creditLimit: number, available: number): void => {
+  profile.creditLimit = creditLimit
+  profile.availableCredit = Math.min(creditLimit, Math.max(0, available))
+  profile.usedCredit = Math.max(0, creditLimit - profile.availableCredit)
+  profile.creditStatus = !profile.isCredit ? 'blocked' : profile.usedCredit > 0 ? 'withBalance' : 'upToDate'
+}
 
 export const walletSlice = createSlice({
   name: 'wallet',
   initialState: INITIAL_WALLET_STATE,
   reducers: {
+    // tiempo real (payment.created): el abono entra arriba del historial si ya está cargado; uno repetido solo se actualiza
+    paymentCreatedFromEvent: (state, action: PayloadAction<AbonoRecord>) => {
+      if (state.history.status !== 'succeeded') return
+      const idx = state.history.items.findIndex((p) => p.id === action.payload.id)
+      if (idx >= 0) state.history.items[idx] = { ...state.history.items[idx], ...action.payload }
+      else state.history.items.unshift(action.payload)
+    },
+    // tiempo real (payment.status_changed): cambia el estado del abono en el historial
+    paymentStatusFromEvent: (state, action: PayloadAction<{ id: number; status: AbonoRecord['status']; verifiedByName?: string; note?: string }>) => {
+      const row = state.history.items.find((p) => p.id === action.payload.id)
+      if (!row) return
+      row.status = action.payload.status
+      if (action.payload.verifiedByName) row.verifiedByName = action.payload.verifiedByName
+      if (action.payload.note) row.note = action.payload.note
+    },
+    // tiempo real (credit.balance_changed): cupo y disponible del cliente en la tabla y en el panel abierto
+    creditBalanceFromEvent: (state, action: PayloadAction<{ customerId: number; creditLimit: number; available: number }>) => {
+      const { customerId, creditLimit, available } = action.payload
+      const row = state.list.items.find((c) => c.id === customerId)
+      if (row) applyCredit(row, creditLimit, available)
+      if (state.selectedCustomer?.id === customerId) applyCredit(state.selectedCustomer, creditLimit, available)
+    },
+    // tiempo real (sale.payment_changed): lo pagado y el saldo de la factura del cliente abierto
+    invoicePaymentFromEvent: (state, action: PayloadAction<{ saleId: number; paidTotal: number }>) => {
+      const invoice = state.invoices.items.find((i) => i.saleId === action.payload.saleId)
+      if (!invoice) return
+      invoice.paidAmount = action.payload.paidTotal
+      invoice.pendingBalance = Math.max(0, invoice.totalAmount - action.payload.paidTotal)
+      if (invoice.pendingBalance <= 0) invoice.status = 'paid'
+      else if (invoice.status === 'paid') invoice.status = invoice.daysOverdue > 0 ? 'overdue' : 'current'
+    },
     setSearchQuery: (state, action: PayloadAction<string>) => {
       state.filters.searchQuery = action.payload
     },
@@ -147,7 +186,6 @@ export const walletSlice = createSlice({
   },
 })
 
-export const { setSearchQuery, setStatusFilter, resetFilters, setWalletPage, setSelectedCustomer, setAccountDrawerOpen } =
-  walletSlice.actions
+export const { setSearchQuery, setStatusFilter, resetFilters, setWalletPage, setSelectedCustomer, setAccountDrawerOpen, paymentCreatedFromEvent, paymentStatusFromEvent, creditBalanceFromEvent, invoicePaymentFromEvent } = walletSlice.actions
 export const walletReducer = walletSlice.reducer
 export default walletSlice.reducer

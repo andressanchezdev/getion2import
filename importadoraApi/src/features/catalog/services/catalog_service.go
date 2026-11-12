@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"importadoraApi/src/core/config"
+	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/events"
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
@@ -15,6 +17,7 @@ import (
 	"importadoraApi/src/features/catalog/dtos"
 	"importadoraApi/src/features/catalog/repositories"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -25,6 +28,7 @@ type CatalogService struct {
 	modelRepo    *repositories.ModelRepository
 	categoryRepo *repositories.CategoryRepository
 	auditRepo    *authRepos.AuditRepository
+	events       *events.Recorder
 }
 
 // NewCatalogService crea el servicio con las piezas que necesita para funcionar.
@@ -35,7 +39,12 @@ func NewCatalogService(
 	modelRepo *repositories.ModelRepository,
 	categoryRepo *repositories.CategoryRepository,
 	auditRepo *authRepos.AuditRepository,
+	eventsRecorder ...*events.Recorder,
 ) *CatalogService {
+	var rec *events.Recorder
+	if len(eventsRecorder) > 0 {
+		rec = eventsRecorder[0]
+	}
 	return &CatalogService{
 		cfg:          cfg,
 		pool:         pool,
@@ -43,6 +52,7 @@ func NewCatalogService(
 		modelRepo:    modelRepo,
 		categoryRepo: categoryRepo,
 		auditRepo:    auditRepo,
+		events:       rec,
 	}
 }
 
@@ -77,6 +87,7 @@ func (s *CatalogService) ListBrands(ctx context.Context, actor *middlewares.Acto
 			ImageURL:  entities[i].ImageURL,
 			IsActive:  entities[i].IsActive,
 			CreatedAt: entities[i].CreatedAt,
+			UpdatedAt: entities[i].UpdatedAt,
 		})
 	}
 	return result, nil
@@ -109,6 +120,7 @@ func (s *CatalogService) GetBrandByID(ctx context.Context, actor *middlewares.Ac
 		ImageURL:  entity.ImageURL,
 		IsActive:  entity.IsActive,
 		CreatedAt: entity.CreatedAt,
+		UpdatedAt: entity.UpdatedAt,
 	}, nil
 }
 
@@ -151,7 +163,23 @@ func (s *CatalogService) CreateBrand(ctx context.Context, actor *middlewares.Act
 		IsActive:  isActive,
 	}
 
-	created, err := s.brandRepo.Create(ctx, s.pool, entity)
+	// la creación y su evento van en la misma transacción: nadie recibe el aviso de un registro que no se guardó
+	created, err := db.WithTxValue(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) (*repositories.BrandEntity, error) {
+		row, err := s.brandRepo.Create(ctx, tx, entity)
+		if err != nil {
+			return nil, err
+		}
+		s.events.Record(ctx, events.NewEntityCreated(row.CompanyID, nil, events.EntityRef{Kind: events.KindBrand, ID: row.ID, Version: row.UpdatedAt}, &dtos.BrandResponse{
+			ID:        row.ID,
+			CompanyID: row.CompanyID,
+			Name:      row.Name,
+			ImageURL:  row.ImageURL,
+			IsActive:  row.IsActive,
+			CreatedAt: row.CreatedAt,
+			UpdatedAt: row.UpdatedAt,
+		}))
+		return row, nil
+	})
 	if err != nil {
 		return nil, utils.Internal("Error al registrar marca.", err)
 	}
@@ -175,6 +203,7 @@ func (s *CatalogService) CreateBrand(ctx context.Context, actor *middlewares.Act
 		ImageURL:  created.ImageURL,
 		IsActive:  created.IsActive,
 		CreatedAt: created.CreatedAt,
+		UpdatedAt: created.UpdatedAt,
 	}, nil
 }
 
@@ -185,6 +214,8 @@ func (s *CatalogService) UpdateBrand(ctx context.Context, actor *middlewares.Act
 	}
 
 	current, err := s.brandRepo.FindByID(ctx, s.pool, id)
+	// foto del registro antes de editarlo: de aquí sale changedFields
+	beforeSnap := events.Snapshot(current)
 	if err != nil {
 		return nil, utils.Internal("Error al consultar marca.", err)
 	}
@@ -215,38 +246,70 @@ func (s *CatalogService) UpdateBrand(ctx context.Context, actor *middlewares.Act
 	if req.ImageURL != nil {
 		current.ImageURL = req.ImageURL
 	}
-	if _, rerr := utils.ReasonOnDeactivation(current.IsActive, req.IsActive, req.Reason); rerr != nil {
+	oldActive := current.IsActive
+	reason, rerr := utils.ReasonOnDeactivation(current.IsActive, req.IsActive, req.Reason)
+	if rerr != nil {
 		return nil, rerr
 	}
 	if req.IsActive != nil {
 		current.IsActive = *req.IsActive
 	}
 
-	updated, err := s.brandRepo.Update(ctx, s.pool, current)
+	var resp *dtos.BrandResponse
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		updated, err := s.brandRepo.Update(ctx, tx, current)
+		if err != nil {
+			return utils.Internal("Error al actualizar marca.", err)
+		}
+
+		_ = s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
+			CompanyID: &current.CompanyID,
+			ActorType: actor.ActorType,
+			ActorID:   actor.ActorID,
+			Entity:    "brands",
+			EntityID:  &current.ID,
+			Action:    "BRAND_UPDATED",
+			Reason:    utils.ReasonOrDefault(reason, "Actualización de marca"),
+			IPAddress: ip,
+			UserAgent: ua,
+		})
+
+		resp = &dtos.BrandResponse{
+			ID:        updated.ID,
+			CompanyID: updated.CompanyID,
+			Name:      updated.Name,
+			ImageURL:  updated.ImageURL,
+			IsActive:  updated.IsActive,
+			CreatedAt: updated.CreatedAt,
+			UpdatedAt: updated.UpdatedAt,
+		}
+		if s.events != nil && oldActive != updated.IsActive {
+			var reasonPtr *string
+			if reason != "" {
+				reasonPtr = &reason
+			}
+			ref := events.EntityRef{
+				Kind:    events.KindBrand,
+				ID:      updated.ID,
+				Version: updated.UpdatedAt,
+			}
+			s.events.Record(ctx, events.NewEntityStatus(updated.CompanyID, nil, ref, catalogActiveLabel(oldActive), catalogActiveLabel(updated.IsActive), reasonPtr, resp))
+		} else {
+			// edición sin cambio de estado: viaja la fila ya guardada para que las tablas abiertas se actualicen sin pedirla
+			ref := events.EntityRef{
+				Kind:    events.KindBrand,
+				ID:      updated.ID,
+				Version: updated.UpdatedAt,
+			}
+			s.events.Record(ctx, events.NewEntityUpdated(updated.CompanyID, nil, ref, resp, events.ChangedFields(beforeSnap, updated)))
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, utils.Internal("Error al actualizar marca.", err)
+		return nil, err
 	}
 
-	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
-		CompanyID: &current.CompanyID,
-		ActorType: actor.ActorType,
-		ActorID:   actor.ActorID,
-		Entity:    "brands",
-		EntityID:  &current.ID,
-		Action:    "BRAND_UPDATED",
-		Reason:    "Actualización de marca",
-		IPAddress: ip,
-		UserAgent: ua,
-	})
-
-	return &dtos.BrandResponse{
-		ID:        updated.ID,
-		CompanyID: updated.CompanyID,
-		Name:      updated.Name,
-		ImageURL:  updated.ImageURL,
-		IsActive:  updated.IsActive,
-		CreatedAt: updated.CreatedAt,
-	}, nil
+	return resp, nil
 }
 
 // DeleteBrand elimina la marca validando que sea de la compañía del usuario.
@@ -273,23 +336,55 @@ func (s *CatalogService) DeleteBrand(ctx context.Context, actor *middlewares.Act
 		}
 	}
 
-	if err := s.brandRepo.SoftDelete(ctx, s.pool, id); err != nil {
-		return utils.Internal("Error al desactivar marca.", err)
-	}
+	return db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		if err := s.brandRepo.SoftDelete(ctx, tx, id); err != nil {
+			return utils.Internal("Error al desactivar marca.", err)
+		}
 
-	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
-		CompanyID: &current.CompanyID,
-		ActorType: actor.ActorType,
-		ActorID:   actor.ActorID,
-		Entity:    "brands",
-		EntityID:  &current.ID,
-		Action:    "BRAND_DEACTIVATED",
-		Reason:    reason,
-		IPAddress: ip,
-		UserAgent: ua,
+		_ = s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
+			CompanyID: &current.CompanyID,
+			ActorType: actor.ActorType,
+			ActorID:   actor.ActorID,
+			Entity:    "brands",
+			EntityID:  &current.ID,
+			Action:    "BRAND_DEACTIVATED",
+			Reason:    reason,
+			IPAddress: ip,
+			UserAgent: ua,
+		})
+
+		if s.events != nil && current.IsActive {
+			updated, err := s.brandRepo.FindByID(ctx, tx, id)
+			if err != nil {
+				return utils.Internal("Error al recargar marca desactivada.", err)
+			}
+			if updated != nil {
+				resp := &dtos.BrandResponse{
+					ID:        updated.ID,
+					CompanyID: updated.CompanyID,
+					Name:      updated.Name,
+					ImageURL:  updated.ImageURL,
+					IsActive:  updated.IsActive,
+					CreatedAt: updated.CreatedAt,
+					UpdatedAt: updated.UpdatedAt,
+				}
+				ref := events.EntityRef{
+					Kind:    events.KindBrand,
+					ID:      updated.ID,
+					Version: updated.UpdatedAt,
+				}
+				s.events.Record(ctx, events.NewEntityStatus(updated.CompanyID, nil, ref, "active", "inactive", &reason, resp))
+			}
+		}
+		return nil
 	})
+}
 
-	return nil
+func catalogActiveLabel(active bool) string {
+	if active {
+		return "active"
+	}
+	return "inactive"
 }
 
 // ==========================================
@@ -299,4 +394,3 @@ func (s *CatalogService) DeleteBrand(ctx context.Context, actor *middlewares.Act
 // ==========================================
 // MÉTODOS PARA CATEGORÍAS
 // ==========================================
-

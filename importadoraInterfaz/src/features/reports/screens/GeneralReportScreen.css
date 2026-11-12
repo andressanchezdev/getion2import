@@ -124,7 +124,7 @@
   font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
+  letter-spacing: var(--tracking-tight);
 }
 
 .gen-report-kpi-amount small {
@@ -222,7 +222,7 @@
 }
 
 .gen-report-code {
-  font-family: var(--font-family-mono, monospace);
+  font-family: var(--font-family-mono);
   font-size: var(--text-xs);
   font-weight: var(--font-weight-bold);
   color: var(--color-primary);

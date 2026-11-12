@@ -1,6 +1,7 @@
 // customers.slice · estado de clientes: lista paginada, cliente abierto, su detalle, sus direcciones y sus descuentos
 // conecta con: customers.thunks y customers.details.thunks (lo llenan), customers.selectors (lecturas) y rootReducer (clave 'customers'; NO se guarda en el navegador)
 // ojo: al abrir otro cliente se limpian detalle, direcciones y descuentos para no mostrar por un instante los del anterior
+import { applyVersionedStatus, mergeVersionedList } from '@/global/helpers/realtime/applyVersioned'
 import { createSlice, isAnyOf, type PayloadAction } from '@reduxjs/toolkit'
 import { INITIAL_CUSTOMERS_STATE } from '../constants/customers.constants'
 import { loadCustomerDetailThunk, loadCustomersThunk } from '../thunks/customers.thunks'
@@ -41,6 +42,13 @@ export const customersSlice = createSlice({
         item.isActive = action.payload.isActive
       }
     },
+    // tiempo real (entity.status_changed de cliente): cambia el estado en la lista y en el detalle abierto, si están cargados
+    customerStatusFromEvent: (state, action: PayloadAction<{ id: number; isActive: boolean; version?: string }>) => {
+      const { id, isActive, version } = action.payload
+      const item = state.list.items.find((c) => c.id === id)
+      if (item) applyVersionedStatus(item, isActive, version)
+      if (state.detail.data && state.detail.data.id === id) applyVersionedStatus(state.detail.data, isActive, version)
+    },
   },
   extraReducers: (builder) => {
     addDocumentCases(builder)
@@ -53,7 +61,7 @@ export const customersSlice = createSlice({
       })
       .addCase(loadCustomersThunk.fulfilled, (state, action) => {
         if (state.list.requestId !== action.meta.requestId) return
-        state.list.items = action.payload.customers
+        state.list.items = mergeVersionedList(state.list.items, action.payload.customers, (c) => c.id)
         state.list.meta = action.payload.meta
         state.list.status = 'succeeded'
       })
@@ -135,6 +143,6 @@ export const customersSlice = createSlice({
   },
 })
 
-export const { setCustomersPage, setCustomersQuery, selectCustomer, updateCustomerStatusLocally } = customersSlice.actions
+export const { setCustomersPage, setCustomersQuery, selectCustomer, updateCustomerStatusLocally, customerStatusFromEvent } = customersSlice.actions
 export const customersReducer = customersSlice.reducer
 export default customersSlice.reducer

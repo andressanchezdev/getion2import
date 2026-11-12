@@ -7,6 +7,7 @@ import { Pill, type PillTone } from '@/global/components/UI/atoms/Pill'
 import { STOCK_LEVEL_LABEL } from '../../constants/inventory.constants'
 import type { InventoryStockRow, StockLevel } from '../../types/inventory.types'
 import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
+import { CopyableCell } from '@/global/components/UI/molecules/table/CopyableCell'
 
 const LEVEL_TONE: Record<StockLevel, PillTone> = { out: 'red', low: 'amber', ok: 'green' }
 
@@ -47,7 +48,7 @@ export const StockTable: React.FC<Props> = ({ rows, message, locationCounts, pro
             return (
               <tr key={row.id}>
                 <td>
-                  <span className="inv-code">{row.productCode}</span>
+                  <CopyableCell text={row.productCode} />
                 </td>
                 <td className="inv-name">
                   {row.productName}

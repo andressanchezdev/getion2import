@@ -29,12 +29,12 @@
   font-weight: var(--font-weight-medium);
   color: var(--c-slate-500);
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: var(--tracking-wide);
 }
 
 .returns-kpi-value {
-  font-size: 1.6rem;
-  font-weight: 800;
+  font-size: var(--text-2xl);
+  font-weight: var(--font-weight-extrabold);
   color: var(--c-slate-900);
 }
 
@@ -151,7 +151,7 @@
   padding: 3px 8px;
   border-radius: 6px;
   font-size: var(--text-xs);
-  font-family: monospace;
+  font-family: var(--font-family-mono);
   font-weight: var(--font-weight-bold);
   background: var(--c-slate-100);
   color: var(--c-slate-700);

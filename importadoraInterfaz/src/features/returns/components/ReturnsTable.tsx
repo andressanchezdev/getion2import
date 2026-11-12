@@ -6,6 +6,7 @@ import { usePagedList } from '@/global/hooks/data/usePagedList'
 import type { ReturnDto } from '../types/returns.types'
 import { ReturnRow } from './ReturnRow'
 import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
+import { ActionsHeader } from '@/global/components/UI/molecules/table/ActionsHeader'
 
 interface Props {
   rows: ReturnDto[]
@@ -23,20 +24,20 @@ export const ReturnsTable: React.FC<Props> = ({ rows, loading, resetKey, onAppro
   return (
     <>
       <DataTable tableId="returns-returns" className="returns-table">
-          <thead>
-            <tr>
-              {COLUMNS.map((name) => <th key={name}>{name}</th>)}
-              <th className="returns-th-actions">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {message ? (
-              <tr><td colSpan={COLUMNS.length + 1} className="returns-empty">{message}</td></tr>
-            ) : (
-              pageItems.map((ret) => <ReturnRow key={ret.id} ret={ret} onApprove={onApprove} onReject={onReject} />)
-            )}
-          </tbody>
-        </DataTable>
+        <thead>
+          <tr>
+            {COLUMNS.map((name) => <th key={name}>{name}</th>)}
+            <ActionsHeader className="returns-th-actions" />
+          </tr>
+        </thead>
+        <tbody>
+          {message ? (
+            <tr><td colSpan={COLUMNS.length + 1} className="returns-empty">{message}</td></tr>
+          ) : (
+            pageItems.map((ret) => <ReturnRow key={ret.id} ret={ret} onApprove={onApprove} onReject={onReject} />)
+          )}
+        </tbody>
+      </DataTable>
       <Pagination meta={meta} label="Paginación de devoluciones" onPageChange={setPage} />
     </>
   )

@@ -52,6 +52,19 @@ const toCompany = (dto: CustomerDto): CustomerCompany => ({
 export const toCustomerDetail = (dto: CustomerDto): CustomerDetail => ({
   ...toCustomer(dto),
   company: toCompany(dto),
+  documentType: dto.documentType,
+  personType: dto.personType,
+  lastName: text(dto.lastName),
+  tradeName: text(dto.tradeName),
+  legalRepresentative: text(dto.legalRepresentative),
+  mobile: text(dto.mobile),
+  address: text(dto.address),
+  city: text(dto.city),
+  vatResponsible: dto.vatResponsible ?? false,
+  fiscalRespCodes: dto.fiscalRespCodes ?? ['R-99-PN'],
+  priceTier: dto.priceTier || 'p1',
+  discountPercent: dto.discountPercent ?? 0,
+  docsValidityMonths: dto.docsValidityMonths ?? 12,
 })
 
 // la dirección de la lista de direcciones del cliente; si no trae id se le da su posición (1, 2, 3…)

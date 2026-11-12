@@ -7,5 +7,6 @@ export interface FormEntry {
   title: (payload: unknown) => string
   subtitle?: string
   wide?: boolean // true: el panel se abre más ancho (listas y tablas)
+  permission?: string[] // llaves «modulo:accion» de la API; basta una. Sin ninguna, FormDrawerBody muestra «Sin acceso» (8.4)
   render: (payload: unknown) => ReactNode
 }

@@ -20,6 +20,7 @@ type ModelEntity struct {
 	Description *string
 	IsActive    bool
 	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 type ModelRepository struct{}
@@ -31,9 +32,9 @@ func NewModelRepository() *ModelRepository {
 
 // FindByID busca el modelo de moto por su id (nil si no existe).
 func (r *ModelRepository) FindByID(ctx context.Context, q db.DBExecutor, id int64) (*ModelEntity, error) {
-	const sql = `SELECT id, company_id, name, description, is_active, created_at FROM models WHERE id = $1`
+	const sql = `SELECT id, company_id, name, description, is_active, created_at, updated_at FROM models WHERE id = $1`
 	var m ModelEntity
-	err := q.QueryRow(ctx, sql, id).Scan(&m.ID, &m.CompanyID, &m.Name, &m.Description, &m.IsActive, &m.CreatedAt)
+	err := q.QueryRow(ctx, sql, id).Scan(&m.ID, &m.CompanyID, &m.Name, &m.Description, &m.IsActive, &m.CreatedAt, &m.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
@@ -45,9 +46,9 @@ func (r *ModelRepository) FindByID(ctx context.Context, q db.DBExecutor, id int6
 
 // FindByCompanyAndName busca el modelo de moto por compañía y nombre (nil si no existe).
 func (r *ModelRepository) FindByCompanyAndName(ctx context.Context, q db.DBExecutor, companyID int64, name string) (*ModelEntity, error) {
-	const sql = `SELECT id, company_id, name, description, is_active, created_at FROM models WHERE company_id = $1 AND LOWER(name) = LOWER($2)`
+	const sql = `SELECT id, company_id, name, description, is_active, created_at, updated_at FROM models WHERE company_id = $1 AND LOWER(name) = LOWER($2)`
 	var m ModelEntity
-	err := q.QueryRow(ctx, sql, companyID, name).Scan(&m.ID, &m.CompanyID, &m.Name, &m.Description, &m.IsActive, &m.CreatedAt)
+	err := q.QueryRow(ctx, sql, companyID, name).Scan(&m.ID, &m.CompanyID, &m.Name, &m.Description, &m.IsActive, &m.CreatedAt, &m.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
@@ -59,7 +60,7 @@ func (r *ModelRepository) FindByCompanyAndName(ctx context.Context, q db.DBExecu
 
 // ListByCompany lista los modelos de moto de una compañía.
 func (r *ModelRepository) ListByCompany(ctx context.Context, q db.DBExecutor, companyID int64, activeOnly bool) ([]ModelEntity, error) {
-	sql := `SELECT id, company_id, name, description, is_active, created_at FROM models WHERE company_id = $1`
+	sql := `SELECT id, company_id, name, description, is_active, created_at, updated_at FROM models WHERE company_id = $1`
 	if activeOnly {
 		sql += " AND is_active = TRUE"
 	}
@@ -74,7 +75,7 @@ func (r *ModelRepository) ListByCompany(ctx context.Context, q db.DBExecutor, co
 	list := make([]ModelEntity, 0)
 	for rows.Next() {
 		var m ModelEntity
-		if err := rows.Scan(&m.ID, &m.CompanyID, &m.Name, &m.Description, &m.IsActive, &m.CreatedAt); err != nil {
+		if err := rows.Scan(&m.ID, &m.CompanyID, &m.Name, &m.Description, &m.IsActive, &m.CreatedAt, &m.UpdatedAt); err != nil {
 			return nil, err
 		}
 		list = append(list, m)
@@ -87,9 +88,9 @@ func (r *ModelRepository) Create(ctx context.Context, q db.DBExecutor, m *ModelE
 	const sql = `
 		INSERT INTO models (company_id, name, description, is_active)
 		VALUES ($1, $2, $3, $4)
-		RETURNING id, created_at
+		RETURNING id, created_at, updated_at
 	`
-	err := q.QueryRow(ctx, sql, m.CompanyID, m.Name, m.Description, m.IsActive).Scan(&m.ID, &m.CreatedAt)
+	err := q.QueryRow(ctx, sql, m.CompanyID, m.Name, m.Description, m.IsActive).Scan(&m.ID, &m.CreatedAt, &m.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -98,20 +99,20 @@ func (r *ModelRepository) Create(ctx context.Context, q db.DBExecutor, m *ModelE
 
 // Update actualiza los datos de el modelo de moto.
 func (r *ModelRepository) Update(ctx context.Context, q db.DBExecutor, m *ModelEntity) (*ModelEntity, error) {
-	const sql = `UPDATE models SET name = $1, description = $2, is_active = $3 WHERE id = $4`
-	cmdTag, err := q.Exec(ctx, sql, m.Name, m.Description, m.IsActive, m.ID)
+	const sql = `UPDATE models SET name = $1, description = $2, is_active = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4 RETURNING updated_at`
+	err := q.QueryRow(ctx, sql, m.Name, m.Description, m.IsActive, m.ID).Scan(&m.UpdatedAt)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, errors.New("modelo no encontrado")
+		}
 		return nil, err
-	}
-	if cmdTag.RowsAffected() == 0 {
-		return nil, errors.New("modelo no encontrado")
 	}
 	return m, nil
 }
 
 // SoftDelete marca el modelo de moto como eliminado (borrado lógico: no se pierde el registro).
 func (r *ModelRepository) SoftDelete(ctx context.Context, q db.DBExecutor, id int64) error {
-	const sql = `UPDATE models SET is_active = FALSE WHERE id = $1`
+	const sql = `UPDATE models SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP WHERE id = $1`
 	cmdTag, err := q.Exec(ctx, sql, id)
 	if err != nil {
 		return err

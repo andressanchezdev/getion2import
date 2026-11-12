@@ -2,7 +2,7 @@
 // conecta con: formRegistry (lo muestra), employees.thunks (saveRoleThunk: POST /roles o PUT /roles/:id), navigation (closeDrawerForm) y ValidatedInput
 // ojo: el código identifica al rol y no se cambia después; la lista de roles se vuelve a pedir sola cuando el panel se cierra
 import React, { useState } from 'react'
-import '../permissions/EmployeePermissionsPanel.css'
+import '@/global/components/UI/molecules/form/DrawerFormShell.css'
 import { closeDrawerForm } from '@/features/navigation'
 import { useAppDispatch } from '@/global/hooks/store/useRedux'
 import { ValidatedInput } from '@/global/components/UI/molecules/form'
@@ -48,8 +48,8 @@ export const RoleForm: React.FC<RoleFormProps> = ({ role, onClose }) => {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="employee-permissions">
-      <div className="employee-permissions-body">
+    <form onSubmit={handleSubmit} className="drawer-form role-form">
+      <div className="drawer-form-body role-form-body">
         <ValidatedInput
           id="role-code"
           label="Código (minúsculas, números o guion bajo)"
@@ -82,7 +82,7 @@ export const RoleForm: React.FC<RoleFormProps> = ({ role, onClose }) => {
         {error && <div className="form-field-error-msg">{error}</div>}
       </div>
 
-      <div className="employee-permissions-footer">
+      <div className="drawer-form-footer role-form-footer">
         <button type="button" className="btn-secondary" onClick={close}>Cancelar</button>
         <button type="submit" className="btn-primary" disabled={!canSubmit}>{saving ? 'Guardando...' : isEdit ? 'Guardar cambios' : 'Crear rol'}</button>
       </div>

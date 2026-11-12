@@ -40,7 +40,7 @@ def main():
 
     r = call('POST', '/roles', ad, {'code': 'VEN' + sfx, 'name': 'Vendedor'})
     rid = d(r)['id']
-    r = call('POST', '/employees', ad, {'roleId': rid, 'warehouseId': wid, 'email': f'v{sfx}@e2e.com', 'password': 'Emp12345678', 'firstName': 'Pedro', 'lastName': 'Vende', 'documentType': 'CC', 'document': '4' + sfx, 'initialPermissions': perm_ids(ad, {'orders': None, 'payments': ['view', 'edit']})})
+    r = call('POST', '/employees', ad, {'roleId': rid, 'warehouseId': wid, 'email': f'v{sfx}@e2e.com', 'password': 'Emp12345678', 'firstName': 'Pedro', 'lastName': 'Vende', 'documentType': 'CC', 'document': '4' + sfx, 'initialPermissions': perm_ids(ad, {'orders': None, 'payments': ['view', 'view_detail', 'edit', 'verify']})})  # Fase 8: verificar es payments:verify
     check('vendedor', r[0] in (200, 201), r)
     emp = d(r)['id']
     r = call('POST', '/sales', ad, {'salespersonEmployeeId': emp, 'customerId': cust, 'warehouseId': wid, 'paymentMethod': 'transfer', 'paymentReference': 'REF-E2E-001', 'items': [{'stockId': stock_id, 'quantity': 3}]})

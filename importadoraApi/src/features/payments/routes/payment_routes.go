@@ -17,10 +17,10 @@ func RegisterRoutes(e *echo.Echo, authMiddleware *middlewares.AuthMiddleware, ct
 		g.POST("", ctrl.Create, authMiddleware.RequirePermission("payments", "create"))
 		g.POST("/batch", ctrl.CreateBatch, authMiddleware.RequirePermission("payments", "create"))
 		g.GET("", ctrl.List, authMiddleware.RequirePermission("payments", "view"))
-		g.GET("/:id", ctrl.FindByID, authMiddleware.RequirePermission("payments", "view"))
-		g.POST("/:id/verify", ctrl.Verify, authMiddleware.RequirePermission("payments", "edit"))
+		g.GET("/:id", ctrl.FindByID, authMiddleware.RequirePermission("payments", "view_detail"))
+		g.POST("/:id/verify", ctrl.Verify, authMiddleware.RequirePermission("payments", "verify"))
 		g.POST("/:id/void", ctrl.Void, authMiddleware.RequirePermission("payments", "edit"))
-		g.POST("/:id/reject", ctrl.Reject, authMiddleware.RequirePermission("payments", "edit"))
-		g.POST("/:id/reopen", ctrl.Reopen, authMiddleware.RequirePermission("payments", "edit"))
+		g.POST("/:id/reject", ctrl.Reject, authMiddleware.RequirePermission("payments", "verify"))
+		g.POST("/:id/reopen", ctrl.Reopen, authMiddleware.RequirePermission("payments", "verify"))
 	}
 }

@@ -38,7 +38,7 @@ type PaymentEntity struct {
 	VoidReason           *string
 	VerifiedAt           *time.Time
 	CreatedAt            time.Time
-	WarehouseID          int64  // bodega de la venta a la que se abona
+	WarehouseID          int64 // bodega de la venta a la que se abona
 	WarehouseCode        string
 	WarehouseName        string
 }
@@ -100,7 +100,7 @@ func (r *PaymentRepository) FindByID(ctx context.Context, q db.DBExecutor, id in
 		&entity.VerifiedByEmployeeID, &entity.VerifiedByName,
 		&entity.Method, &entity.Amount, &entity.Status, &entity.ProofURL, &entity.Reference,
 		&entity.IssueNote, &entity.VoidReason, &entity.VerifiedAt, &entity.CreatedAt,
-			&entity.WarehouseID, &entity.WarehouseCode, &entity.WarehouseName,
+		&entity.WarehouseID, &entity.WarehouseCode, &entity.WarehouseName,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

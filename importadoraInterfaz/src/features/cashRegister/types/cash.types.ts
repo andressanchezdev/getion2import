@@ -68,6 +68,7 @@ export interface CashState {
   error: string | null
   saving: boolean // se está abriendo o cerrando el turno
   requestId: string | null // la última carga lanzada: una respuesta anterior se descarta
+  closedTick: number // sube cada vez que llega por tiempo real el cierre de un turno: la lista de Facturas (gastos de cajas cerradas) se vuelve a pedir
 }
 
 // el resultado del cierre: lo que debería haber en la gaveta contra lo contado

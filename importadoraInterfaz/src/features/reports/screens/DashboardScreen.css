@@ -22,23 +22,23 @@
 }
 
 .dashboard-empty-icon {
-  font-size: 3rem;
+  font-size: var(--text-icon-lg);
   margin-bottom: 1rem;
   opacity: 0.85;
 }
 
 .dashboard-empty-title {
-  font-size: var(--text-lg, 18px);
+  font-size: var(--text-lg);
   font-weight: var(--font-weight-bold);
   color: var(--c-slate-900);
   margin: 0 0 0.5rem;
 }
 
 .dashboard-empty-desc {
-  font-size: var(--text-sm, 14px);
+  font-size: var(--text-sm);
   color: var(--c-slate-500);
   max-width: 480px;
-  line-height: 1.5;
+  line-height: var(--leading-relaxed);
   margin: 0;
 }
 

@@ -14,6 +14,7 @@ export interface Category {
   id: number
   name: string
   description?: string
+  parentId?: number | null
   isActive?: boolean
 }
 
@@ -71,6 +72,7 @@ export interface CatalogRow {
   name: string
   image?: string
   description?: string
+  parentId?: number | null
   isActive?: boolean
 }
 
@@ -88,5 +90,6 @@ export interface CatalogItemInput {
   name: string
   imageUrl?: string
   description?: string
+  parentId?: number | null
   isActive?: boolean
 }

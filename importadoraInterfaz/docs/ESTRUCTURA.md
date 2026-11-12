@@ -165,7 +165,7 @@ Documento maestro generado mediante el estudio integral de **todos los archivos*
 | `ApiStatus.css` | ApiStatus.css · estilos del estado de la API en el footer del menú (línea de texto con punto de color) · solo usa tokens de styles/tokens.css | ApiStatus.tsx |
 | `ApiStatus.tsx` | estado de la conexión con la API en el footer del menú (conectando, en línea con ms, o sin conexión) | global useApiHealth (consulta), SideMenu (le pasa si el menú está contraído); ojo: antes este indicador estaba en el header |
 | `SideMenuUser.css` | SideMenuUser.css · estilos de la tarjeta de usuario del menú lateral (avatar azul, nombre y rol) · solo usa tokens de styles/tokens.css | SideMenuUser.tsx |
-| `SideMenuUser.tsx` | tarjeta del usuario en el footer del menú (avatar con iniciales, nombre, rol, modal de perfil y botón de cerrar sesión) | features/auth (usuario de la sesión, logoutThunk, UserProfileModal); las iniciales salen de global/helpers/format; la confirmación es global/.../ConfirmDialog; SideMenu le pasa si el menú está contraído |
+| `SideMenuUser.tsx` | tarjeta del usuario en el footer del menú (avatar con iniciales, nombre, rol, perfil en el panel derecho y botón de cerrar sesión) | features/auth (usuario de la sesión, logoutThunk), navigation (openDrawerForm «userProfile»); las iniciales salen de global/helpers/format; la confirmación es global/.../ConfirmDialog; SideMenu le pasa si el menú está contraído |
 
 ### `importadoraInterfaz/src/app/componentApp/sideMenu/item/`
 
@@ -354,8 +354,8 @@ Documento maestro generado mediante el estudio integral de **todos los archivos*
 
 | Archivo | Qué hace | Conecta con |
 |---|---|---|
-| `UserProfileModal.css` | Estilos del componente o módulo UserProfileModal | UserProfileModal.tsx |
-| `UserProfileModal.tsx` | modal con el perfil completo del usuario activo y sus permisos | auth/thunks (fetchCurrentUserThunk para refrescar con GET /auth/me) y auth/selectors |
+| `profile/UserProfilePanel.tsx` | perfil del usuario en sesión en el panel derecho (reemplaza al modal flotante): datos de la cuenta, empresa, sede y permisos | formRegistry («userProfile»), SideMenuUser, auth/selectors, navigation (closeDrawerForm) |
+| `profile/UserProfilePanel.css` | estilos del perfil en el panel derecho, solo tokens | UserProfilePanel.tsx |
 
 ### `importadoraInterfaz/src/features/auth/constants/`
 

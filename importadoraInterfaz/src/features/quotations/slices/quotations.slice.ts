@@ -5,7 +5,7 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import { logoutThunk } from '@/features/auth'
 import { INITIAL_QUOTATION_FILTERS, INITIAL_QUOTATIONS_STATE } from '../constants/quotations.constants'
 import { loadQuotationDetailThunk, loadQuotationsThunk, markQuotationSentThunk } from '../thunks/quotations.thunks'
-import type { QuotationFilters } from '../types/quotations.types'
+import type { QuotationFilters, QuotationStatus } from '../types/quotations.types'
 
 export const quotationsSlice = createSlice({
   name: 'quotations',
@@ -21,6 +21,18 @@ export const quotationsSlice = createSlice({
     },
     setQuotationsPage: (state, action: PayloadAction<number>) => {
       state.list.page = Math.max(1, action.payload)
+    },
+    // tiempo real (quotation.status_changed): enviada, aceptada, rechazada, vencida o convertida en pedido
+    quotationStatusFromEvent: (state, action: PayloadAction<{ id: number; to: QuotationStatus }>) => {
+      const row = state.list.items.find((item) => item.id === action.payload.id)
+      if (row) row.status = action.payload.to
+      if (state.detail.data?.id === action.payload.id) state.detail.data.status = action.payload.to
+    },
+    // tiempo real (quotation.updated): por ahora solo se editan las notas y la vigencia; la tabla muestra las notas
+    quotationUpdatedFromEvent: (state, action: PayloadAction<{ id: number; notes: string }>) => {
+      const row = state.list.items.find((item) => item.id === action.payload.id)
+      if (row) row.notes = action.payload.notes
+      if (state.detail.data?.id === action.payload.id) state.detail.data.notes = action.payload.notes
     },
   },
   extraReducers: (builder) => {
@@ -60,6 +72,6 @@ export const quotationsSlice = createSlice({
   },
 })
 
-export const { setQuotationFilters, resetQuotationFilters, setQuotationsPage } = quotationsSlice.actions
+export const { setQuotationFilters, resetQuotationFilters, setQuotationsPage, quotationStatusFromEvent, quotationUpdatedFromEvent } = quotationsSlice.actions
 export const quotationsReducer = quotationsSlice.reducer
 export default quotationsSlice.reducer

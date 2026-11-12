@@ -39,8 +39,12 @@ export const SecurityTab: React.FC = () => {
           <p className="sec-password-note">Deja estos campos vacíos si solo deseas actualizar tu nombre o correo.</p>
           <div className="sec-form-row">
             <div className="sec-form-group">
+              <label htmlFor="sec-current-pass">Contraseña Actual</label>
+              <input id="sec-current-pass" type="password" value={form.currentPassword} onChange={(e) => form.setCurrentPassword(e.target.value)} placeholder="Tu contraseña actual" />
+            </div>
+            <div className="sec-form-group">
               <label htmlFor="sec-new-pass">Nueva Contraseña</label>
-              <input id="sec-new-pass" type="password" value={form.newPassword} onChange={(e) => form.setNewPassword(e.target.value)} placeholder="Mínimo 6 caracteres" />
+              <input id="sec-new-pass" type="password" value={form.newPassword} onChange={(e) => form.setNewPassword(e.target.value)} placeholder="Mínimo 8 caracteres" />
             </div>
             <div className="sec-form-group">
               <label htmlFor="sec-confirm-pass">Confirmar Nueva Contraseña</label>

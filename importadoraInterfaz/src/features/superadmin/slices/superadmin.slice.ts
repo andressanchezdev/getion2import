@@ -1,6 +1,7 @@
 // superadmin.slice · estado de la gestión de administradores (clave 'superadmin'): lista, carga, paginación y filtros
 // conecta con: superadmin.thunks (la llenan), superadmin.selectors (lecturas) y rootReducer (clave 'superadmin'; NO se guarda en el navegador)
 // ojo: cualquier cambio de filtro vuelve a la página 1; la lista se pide al servidor (los filtros viajan en la petición)
+import { applyVersionedStatus, mergeVersionedList } from '@/global/helpers/realtime/applyVersioned'
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import { logoutThunk } from '@/features/auth'
 import { INITIAL_SUPERADMIN_STATE } from '../constants/superadmin.constants'
@@ -29,6 +30,11 @@ export const superadminSlice = createSlice({
     clearAdminFilters: (state) => {
       state.filters = INITIAL_SUPERADMIN_STATE.filters
     },
+    // tiempo real (entity.status_changed de administrador): cambia el estado de la fila si ya está cargada
+    adminStatusFromEvent: (state, action: PayloadAction<{ id: number; isActive: boolean; version?: string }>) => {
+      const row = state.items.find((admin) => admin.id === action.payload.id)
+      if (row) applyVersionedStatus(row, action.payload.isActive, action.payload.version)
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -38,7 +44,7 @@ export const superadminSlice = createSlice({
       })
       .addCase(loadAdminsThunk.fulfilled, (state, action) => {
         state.loading = false
-        state.items = action.payload.items
+        state.items = mergeVersionedList(state.items, action.payload.items, (a) => a.id)
         state.meta = action.payload.meta
       })
       .addCase(loadAdminsThunk.rejected, (state, action) => {
@@ -50,5 +56,5 @@ export const superadminSlice = createSlice({
   },
 })
 
-export const { setAdminQuery, setAdminCompany, setAdminStatus, setAdminPage, clearAdminFilters } = superadminSlice.actions
+export const { setAdminQuery, setAdminCompany, setAdminStatus, setAdminPage, clearAdminFilters, adminStatusFromEvent } = superadminSlice.actions
 export const superadminReducer = superadminSlice.reducer

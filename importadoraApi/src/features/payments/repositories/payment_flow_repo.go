@@ -16,6 +16,7 @@ import (
 type SaleCoverage struct {
 	CompanyID     int64
 	WarehouseID   int64
+	SerialCode    string
 	CustomerID    *int64
 	Status        string
 	Stage         string
@@ -31,7 +32,7 @@ type SaleCoverage struct {
 func (r *PaymentRepository) FindSaleCoverage(ctx context.Context, q db.DBExecutor, saleID int64) (*SaleCoverage, error) {
 	const sql = `
 		SELECT
-			s.company_id, s.warehouse_id, s.customer_id, s.status, s.current_stage, s.payment_method,
+			s.company_id, s.warehouse_id, s.serial_code, s.customer_id, s.status, s.current_stage, s.payment_method,
 			s.total::float8, s.paid_total::float8, s.credit_amount::float8,
 			COALESCE((SELECT COUNT(*) FROM payments p WHERE p.sale_id = s.id AND p.status = 'review'), 0)::int,
 			COALESCE((SELECT SUM(p.amount) FROM payments p WHERE p.sale_id = s.id AND p.status = 'review'), 0)::float8
@@ -41,7 +42,7 @@ func (r *PaymentRepository) FindSaleCoverage(ctx context.Context, q db.DBExecuto
 	`
 	var c SaleCoverage
 	err := q.QueryRow(ctx, sql, saleID).Scan(
-		&c.CompanyID, &c.WarehouseID, &c.CustomerID, &c.Status, &c.Stage, &c.PaymentMethod,
+		&c.CompanyID, &c.WarehouseID, &c.SerialCode, &c.CustomerID, &c.Status, &c.Stage, &c.PaymentMethod,
 		&c.Total, &c.PaidTotal, &c.CreditAmount, &c.ReviewCount, &c.ReviewAmount,
 	)
 	if err != nil {

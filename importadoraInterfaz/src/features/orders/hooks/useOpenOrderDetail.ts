@@ -9,8 +9,11 @@ import { selectOpenOrderId } from '../selectors/orders.selectors'
 export const useOpenOrderDetail = (): void => {
   const dispatch = useAppDispatch()
   const openId = useAppSelector(selectOpenOrderId)
+  const detailStatus = useAppSelector((state) => state.orders.detail.status)
 
   useEffect(() => {
-    if (openId !== null) dispatch(loadOrderDetailThunk(openId))
-  }, [dispatch, openId])
+    if (openId !== null && detailStatus === 'idle') {
+      dispatch(loadOrderDetailThunk(openId))
+    }
+  }, [dispatch, openId, detailStatus])
 }

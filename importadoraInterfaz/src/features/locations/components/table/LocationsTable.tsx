@@ -18,6 +18,9 @@ import { hasStock, locationLabel } from '../../helpers/locations.adapter'
 import { useLocationActions } from '../../hooks/useLocationActions'
 import type { WarehouseLocation } from '../../types/locations.types'
 import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
+import { ActionsHeader } from '@/global/components/UI/molecules/table/ActionsHeader'
+import { CopyableCell } from '@/global/components/UI/molecules/table/CopyableCell'
+import { StatusSelect } from '@/global/components/UI/molecules/table/StatusSelect'
 
 interface LocationsTableProps {
   locations: WarehouseLocation[]
@@ -30,9 +33,9 @@ interface LocationsTableProps {
 
 export const LocationsTable: React.FC<LocationsTableProps> = ({ locations, warehouseId, warehouseName, message, resetKey, onChanged }) => {
   const dispatch = useAppDispatch()
-  const { canPerformAction } = usePermissions()
-  const canUpdate = canPerformAction('inventory', 'locations', 'update')
-  const canDelete = canPerformAction('inventory', 'locations', 'delete')
+  const { can } = usePermissions()
+  const canUpdate = can('stock:edit')
+  const canDelete = can('stock:edit')
   const actions = useLocationActions(warehouseId)
   const { pageItems, meta, setPage } = usePagedList(locations, resetKey)
   const [toDelete, setToDelete] = useState<WarehouseLocation | null>(null)
@@ -59,78 +62,76 @@ export const LocationsTable: React.FC<LocationsTableProps> = ({ locations, wareh
   return (
     <>
       <DataTable tableId="locations-locations">
-          <thead>
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Descripción</th>
+            <th className="inv-num">Productos</th>
+            <th className="inv-num">Unidades</th>
+            <th>Estado</th>
+            <ActionsHeader className="inv-actions-header" />
+          </tr>
+        </thead>
+        <tbody>
+          {message ? (
             <tr>
-              <th>Código</th>
-              <th>Descripción</th>
-              <th className="inv-num">Productos</th>
-              <th className="inv-num">Unidades</th>
-              <th>Estado</th>
-              <th className="inv-actions-header">Acciones</th>
+              <td colSpan={6} className="inv-message">
+                <p>{message}</p>
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {message ? (
-              <tr>
-                <td colSpan={6} className="inv-message">
-                  <p>{message}</p>
+          ) : (
+            pageItems.map((location) => (
+              <tr key={location.id} className={location.isActive ? '' : 'inv-row-inactive'}>
+                <td>
+                  <span className="inv-code">
+                    <CopyableCell text={location.code} label="Ubicación" />
+                  </span>
+                </td>
+                <td className="inv-name">{location.description || '—'}</td>
+                <td className="inv-num">{location.productCount}</td>
+                <td className="inv-num">
+                  <b>{location.units}</b>
+                </td>
+                <td>
+                  <StatusSelect
+                    value={location.isActive}
+                    disabled={!canUpdate}
+                    ariaLabel={`Estado de ${location.code}`}
+                    title={canUpdate ? 'Cambiar estado' : 'No tienes permiso para cambiar el estado'}
+                    onChange={(next) => changeStatus(location, next === 'active')}
+                  />
+                </td>
+                <td>
+                  <RowActions
+                    actions={[
+                      {
+                        key: 'detail',
+                        label: 'Ver productos de la ubicación',
+                        icon: eyeIcon,
+                        onClick: () => dispatch(openDrawerForm({ kind: 'locationDetail', payload: { location, warehouseName, onChanged } })),
+                      },
+                      {
+                        key: 'qr',
+                        label: 'Imprimir QR de la ubicación',
+                        icon: qrIcon,
+                        onClick: () => dispatch(openDrawerForm({ kind: 'qrLabels', payload: { heading: `Etiqueta de ${location.code}`, labels: [locationLabel(location, warehouseName)] } })),
+                      },
+                      {
+                        key: 'edit',
+                        label: 'Editar ubicación',
+                        icon: editIcon,
+                        visible: canUpdate,
+                        onClick: () => dispatch(openDrawerForm({ kind: 'locationForm', payload: { warehouseId, warehouseName, location } })),
+                      },
+                      { key: 'delete', label: 'Eliminar ubicación (solo si está vacía)', icon: trashIcon, tone: 'danger', visible: canDelete, onClick: () => setToDelete(location) },
+                    ]}
+                  />
                 </td>
               </tr>
-            ) : (
-              pageItems.map((location) => (
-                <tr key={location.id} className={location.isActive ? '' : 'inv-row-inactive'}>
-                  <td>
-                    <span className="inv-code">{location.code}</span>
-                  </td>
-                  <td className="inv-name">{location.description || '—'}</td>
-                  <td className="inv-num">{location.productCount}</td>
-                  <td className="inv-num">
-                    <b>{location.units}</b>
-                  </td>
-                  <td>
-                    <select
-                      className={`inv-status-select is-${location.isActive ? 'active' : 'inactive'}`}
-                      value={location.isActive ? 'active' : 'inactive'}
-                      disabled={!canUpdate}
-                      aria-label={`Estado de ${location.code}`}
-                      title={canUpdate ? 'Cambiar estado' : 'No tienes permiso para cambiar el estado'}
-                      onChange={(event) => changeStatus(location, event.target.value === 'active')}
-                    >
-                      <option value="active">Activa</option>
-                      <option value="inactive">Inactiva</option>
-                    </select>
-                  </td>
-                  <td>
-                    <RowActions
-                      actions={[
-                        {
-                          key: 'detail',
-                          label: 'Ver productos de la ubicación',
-                          icon: eyeIcon,
-                          onClick: () => dispatch(openDrawerForm({ kind: 'locationDetail', payload: { location, warehouseName, onChanged } })),
-                        },
-                        {
-                          key: 'qr',
-                          label: 'Imprimir QR de la ubicación',
-                          icon: qrIcon,
-                          onClick: () => dispatch(openDrawerForm({ kind: 'qrLabels', payload: { heading: `Etiqueta de ${location.code}`, labels: [locationLabel(location, warehouseName)] } })),
-                        },
-                        {
-                          key: 'edit',
-                          label: 'Editar ubicación',
-                          icon: editIcon,
-                          visible: canUpdate,
-                          onClick: () => dispatch(openDrawerForm({ kind: 'locationForm', payload: { warehouseId, warehouseName, location } })),
-                        },
-                        { key: 'delete', label: 'Eliminar ubicación (solo si está vacía)', icon: trashIcon, tone: 'danger', visible: canDelete, onClick: () => setToDelete(location) },
-                      ]}
-                    />
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </DataTable>
+            ))
+          )}
+        </tbody>
+      </DataTable>
       <Pagination meta={meta} label="Paginación de ubicaciones" onPageChange={setPage} />
 
       <ReasonPrompt

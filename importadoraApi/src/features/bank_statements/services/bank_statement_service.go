@@ -5,7 +5,10 @@ package services
 
 import (
 	"context"
+	"time"
 
+	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/events"
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
@@ -15,6 +18,7 @@ import (
 	paymentDtos "importadoraApi/src/features/payments/dtos"
 	paymentRepos "importadoraApi/src/features/payments/repositories"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -29,6 +33,7 @@ type BankStatementService struct {
 	repo            *repositories.BankStatementRepository
 	paymentRepo     *paymentRepos.PaymentRepository
 	paymentVerifier PaymentVerifier
+	events          *events.Recorder
 }
 
 // NewBankStatementService crea el servicio con las piezas que necesita para funcionar.
@@ -37,12 +42,14 @@ func NewBankStatementService(
 	repo *repositories.BankStatementRepository,
 	paymentRepo *paymentRepos.PaymentRepository,
 	paymentVerifier PaymentVerifier,
+	events *events.Recorder,
 ) *BankStatementService {
 	return &BankStatementService{
 		pool:            pool,
 		repo:            repo,
 		paymentRepo:     paymentRepo,
 		paymentVerifier: paymentVerifier,
+		events:          events,
 	}
 }
 
@@ -130,7 +137,19 @@ func (s *BankStatementService) ConfirmRecord(
 		}
 	}
 
-	err = s.repo.UpdateStatus(ctx, s.pool, companyID, recordID, "confirmed", &actor.ActorID, req.Notes)
+	// el cambio de estado y su evento van en la misma transacción: si no se guarda, nadie recibe el aviso
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		if err := s.repo.UpdateStatus(ctx, tx, companyID, recordID, "confirmed", &actor.ActorID, req.Notes); err != nil {
+			return err
+		}
+		s.events.Record(ctx, events.NewBankRecordStatusChanged(companyID, events.BankRecordStatusChangedData{
+			Entity:    events.EntityRef{Kind: "bank_record", ID: recordID, Version: time.Now().UTC()},
+			From:      record.Status,
+			To:        "confirmed",
+			PaymentID: req.PaymentID,
+		}))
+		return nil
+	})
 	if err != nil {
 		return nil, utils.Internal("Error al confirmar registro bancario.", err)
 	}
@@ -174,7 +193,17 @@ func (s *BankStatementService) IgnoreRecord(
 		return verr
 	}
 
-	return s.repo.UpdateStatus(ctx, s.pool, companyID, recordID, "ignored", &actor.ActorID, &reason)
+	return db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		if err := s.repo.UpdateStatus(ctx, tx, companyID, recordID, "ignored", &actor.ActorID, &reason); err != nil {
+			return err
+		}
+		s.events.Record(ctx, events.NewBankRecordStatusChanged(companyID, events.BankRecordStatusChangedData{
+			Entity: events.EntityRef{Kind: "bank_record", ID: recordID, Version: time.Now().UTC()},
+			From:   record.Status,
+			To:     "ignored",
+		}))
+		return nil
+	})
 }
 
 // mapEntityToDTO convierte el registro bancario de la base en la respuesta que sale por la API.

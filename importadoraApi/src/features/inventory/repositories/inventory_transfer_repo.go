@@ -31,14 +31,15 @@ type TransferEntity struct {
 	DispatchedByName       *string
 	ReceivedByEmployeeID   *int64
 	ReceivedByName         *string
-	Status                 types.TransferStatus
-	IsPriority             bool
-	Notes                  *string
-	CancelReason           *string
-	DispatchedAt           *time.Time
-	ReceivedAt             *time.Time
-	CreatedAt              time.Time
-	UpdatedAt              time.Time
+	Status                   types.TransferStatus
+	IsPriority               bool
+	Notes                    *string
+	NoveltyNotes             *string
+	CancelReason             *string
+	DispatchedAt             *time.Time
+	ReceivedAt               *time.Time
+	CreatedAt                time.Time
+	UpdatedAt                time.Time
 }
 
 type TransferItemEntity struct {
@@ -65,7 +66,7 @@ func (r *InventoryRepository) FindTransferByID(ctx context.Context, q db.DBExecu
 			t.employee_id, COALESCE(emp.full_name, ''),
 			t.dispatched_by_employee_id, disp.full_name,
 			t.received_by_employee_id, recv.full_name,
-			t.status, t.is_priority, t.notes, t.cancel_reason,
+			t.status, t.is_priority, t.notes, t.novelty_notes, t.cancel_reason,
 			t.dispatched_at, t.received_at, t.created_at, t.updated_at
 		FROM transfers t
 		LEFT JOIN warehouses ow ON ow.id = t.origin_warehouse_id
@@ -83,7 +84,7 @@ func (r *InventoryRepository) FindTransferByID(ctx context.Context, q db.DBExecu
 		&t.EmployeeID, &t.EmployeeName,
 		&t.DispatchedByEmployeeID, &t.DispatchedByName,
 		&t.ReceivedByEmployeeID, &t.ReceivedByName,
-		&t.Status, &t.IsPriority, &t.Notes, &t.CancelReason,
+		&t.Status, &t.IsPriority, &t.Notes, &t.NoveltyNotes, &t.CancelReason,
 		&t.DispatchedAt, &t.ReceivedAt, &t.CreatedAt, &t.UpdatedAt,
 	)
 	if err != nil {
@@ -160,7 +161,7 @@ func (r *InventoryRepository) ListTransfers(ctx context.Context, q db.DBExecutor
 			t.employee_id, COALESCE(emp.full_name, ''),
 			t.dispatched_by_employee_id, disp.full_name,
 			t.received_by_employee_id, recv.full_name,
-			t.status, t.is_priority, t.notes, t.cancel_reason,
+			t.status, t.is_priority, t.notes, t.novelty_notes, t.cancel_reason,
 			t.dispatched_at, t.received_at, t.created_at, t.updated_at
 		FROM transfers t
 		LEFT JOIN warehouses ow ON ow.id = t.origin_warehouse_id
@@ -191,7 +192,7 @@ func (r *InventoryRepository) ListTransfers(ctx context.Context, q db.DBExecutor
 			&t.EmployeeID, &t.EmployeeName,
 			&t.DispatchedByEmployeeID, &t.DispatchedByName,
 			&t.ReceivedByEmployeeID, &t.ReceivedByName,
-			&t.Status, &t.IsPriority, &t.Notes, &t.CancelReason,
+			&t.Status, &t.IsPriority, &t.Notes, &t.NoveltyNotes, &t.CancelReason,
 			&t.DispatchedAt, &t.ReceivedAt, &t.CreatedAt, &t.UpdatedAt,
 		); err != nil {
 			return nil, 0, err
@@ -314,7 +315,7 @@ func (r *InventoryRepository) ListTransferItemsByTransferIDs(ctx context.Context
 }
 
 // DispatchTransfer marca el traslado como despachado (en tránsito) y guarda quién lo hizo.
-func (r *InventoryRepository) DispatchTransfer(ctx context.Context, q db.DBExecutor, transferID, employeeID int64) error {
+func (r *InventoryRepository) DispatchTransfer(ctx context.Context, q db.DBExecutor, transferID, employeeID int64) (time.Time, error) {
 	const sql = `
 		UPDATE transfers SET
 			status = 'in_transit',
@@ -322,64 +323,72 @@ func (r *InventoryRepository) DispatchTransfer(ctx context.Context, q db.DBExecu
 			dispatched_at = CURRENT_TIMESTAMP,
 			updated_at = CURRENT_TIMESTAMP
 		WHERE id = $2 AND status = 'pending'
+		RETURNING updated_at
 	`
-	cmdTag, err := q.Exec(ctx, sql, employeeID, transferID)
+	var updatedAt time.Time
+	err := q.QueryRow(ctx, sql, employeeID, transferID).Scan(&updatedAt)
 	if err != nil {
-		return err
+		if errors.Is(err, pgx.ErrNoRows) {
+			return time.Time{}, errors.New("el traslado no está en estado 'pending' o no existe")
+		}
+		return time.Time{}, err
 	}
-	if cmdTag.RowsAffected() == 0 {
-		return errors.New("el traslado no está en estado 'pending' o no existe")
-	}
-	return nil
+	return updatedAt, nil
 }
 
 // ReceiveTransfer marca el traslado como recibido, con o sin novedad, y guarda quién lo hizo.
-func (r *InventoryRepository) ReceiveTransfer(ctx context.Context, q db.DBExecutor, transferID, employeeID int64) error {
+func (r *InventoryRepository) ReceiveTransfer(ctx context.Context, q db.DBExecutor, transferID, employeeID int64, status types.TransferStatus, noveltyNotes *string) (time.Time, error) {
 	const sql = `
 		UPDATE transfers SET
-			status = 'received',
+			status = $3,
+			novelty_notes = COALESCE($4, novelty_notes),
 			received_by_employee_id = $1,
 			received_at = CURRENT_TIMESTAMP,
 			updated_at = CURRENT_TIMESTAMP
 		WHERE id = $2 AND status = 'in_transit'
+		RETURNING updated_at
 	`
-	cmdTag, err := q.Exec(ctx, sql, employeeID, transferID)
+	var updatedAt time.Time
+	err := q.QueryRow(ctx, sql, employeeID, transferID, status, noveltyNotes).Scan(&updatedAt)
 	if err != nil {
-		return err
+		if errors.Is(err, pgx.ErrNoRows) {
+			return time.Time{}, errors.New("el traslado no está en estado 'in_transit' o no existe")
+		}
+		return time.Time{}, err
 	}
-	if cmdTag.RowsAffected() == 0 {
-		return errors.New("el traslado no está en estado 'in_transit' o no existe")
-	}
-	return nil
+	return updatedAt, nil
 }
 
 // CancelTransfer marca el traslado como anulado con su motivo.
-func (r *InventoryRepository) CancelTransfer(ctx context.Context, q db.DBExecutor, transferID int64, reason string) error {
+func (r *InventoryRepository) CancelTransfer(ctx context.Context, q db.DBExecutor, transferID int64, reason string) (time.Time, error) {
 	const sql = `
 		UPDATE transfers SET
 			status = 'cancelled',
 			cancel_reason = $1,
 			updated_at = CURRENT_TIMESTAMP
 		WHERE id = $2 AND status = 'pending'
+		RETURNING updated_at
 	`
-	cmdTag, err := q.Exec(ctx, sql, reason, transferID)
+	var updatedAt time.Time
+	err := q.QueryRow(ctx, sql, reason, transferID).Scan(&updatedAt)
 	if err != nil {
-		return err
+		if errors.Is(err, pgx.ErrNoRows) {
+			return time.Time{}, errors.New("solo se pueden cancelar traslados en estado 'pending'")
+		}
+		return time.Time{}, err
 	}
-	if cmdTag.RowsAffected() == 0 {
-		return errors.New("solo se pueden cancelar traslados en estado 'pending'")
-	}
-	return nil
+	return updatedAt, nil
 }
 
 // UpdateTransferItemReceived guarda la cantidad recibida y la ubicación de destino de un renglón del traslado.
-func (r *InventoryRepository) UpdateTransferItemReceived(ctx context.Context, q db.DBExecutor, itemID, destinationStockID int64, receivedQty int) error {
+func (r *InventoryRepository) UpdateTransferItemReceived(ctx context.Context, q db.DBExecutor, itemID, destinationStockID int64, destinationLocation string, receivedQty int) error {
 	const sql = `
 		UPDATE details_transfer SET
 			destination_stock_id = $1,
-			received_qty = $2
-		WHERE id = $3
+			destination_location = $2,
+			received_qty = $3
+		WHERE id = $4
 	`
-	_, err := q.Exec(ctx, sql, destinationStockID, receivedQty, itemID)
+	_, err := q.Exec(ctx, sql, destinationStockID, destinationLocation, receivedQty, itemID)
 	return err
 }

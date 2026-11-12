@@ -6,8 +6,11 @@ package services
 import (
 	"context"
 	"strings"
+	"time"
 
 	"importadoraApi/src/core/config"
+	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/events"
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
@@ -15,6 +18,7 @@ import (
 	"importadoraApi/src/features/staff/dtos"
 	"importadoraApi/src/features/staff/repositories"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -27,6 +31,7 @@ type StaffService struct {
 	employeeRepo   *repositories.EmployeeRepository
 	auditRepo      *authRepos.AuditRepository
 	authRepo       *authRepos.AuthRepository
+	events         *events.Recorder
 }
 
 // NewStaffService crea el servicio con las piezas que necesita para funcionar.
@@ -39,6 +44,7 @@ func NewStaffService(
 	employeeRepo *repositories.EmployeeRepository,
 	auditRepo *authRepos.AuditRepository,
 	authRepo *authRepos.AuthRepository,
+	events *events.Recorder,
 ) *StaffService {
 	return &StaffService{
 		cfg:            cfg,
@@ -49,6 +55,7 @@ func NewStaffService(
 		employeeRepo:   employeeRepo,
 		auditRepo:      auditRepo,
 		authRepo:       authRepo,
+		events:         events,
 	}
 }
 
@@ -150,7 +157,15 @@ func (s *StaffService) CreateAdmin(ctx context.Context, actor *middlewares.Actor
 		IsActive:              true,
 	}
 
-	created, err := s.adminRepo.Create(ctx, s.pool, entity)
+	// la creación y su evento van en la misma transacción: nadie recibe el aviso de un registro que no se guardó
+	created, err := db.WithTxValue(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) (*repositories.AdminEntity, error) {
+		row, err := s.adminRepo.Create(ctx, tx, entity)
+		if err != nil {
+			return nil, err
+		}
+		s.events.Record(ctx, events.NewEntityCreated(row.CompanyID, nil, events.EntityRef{Kind: events.KindAdmin, ID: row.ID, Version: row.UpdatedAt}, s.mapAdminToDTO(row)))
+		return row, nil
+	})
 	if err != nil {
 		return nil, utils.Internal("Error al registrar administrador.", err)
 	}
@@ -177,6 +192,8 @@ func (s *StaffService) UpdateAdmin(ctx context.Context, actor *middlewares.Actor
 	}
 
 	current, err := s.adminRepo.FindByID(ctx, s.pool, id)
+	// foto del registro antes de editarlo: de aquí sale changedFields
+	beforeSnap := events.Snapshot(current)
 	if err != nil {
 		return nil, utils.Internal("Error al consultar administrador.", err)
 	}
@@ -205,6 +222,7 @@ func (s *StaffService) UpdateAdmin(ctx context.Context, actor *middlewares.Actor
 	if req.Phone != nil {
 		current.Phone = req.Phone
 	}
+	wasActive := current.IsActive
 	deactivationReason, rerr := utils.ReasonOnDeactivation(current.IsActive, req.IsActive, req.Reason)
 	if rerr != nil {
 		return nil, rerr
@@ -223,31 +241,65 @@ func (s *StaffService) UpdateAdmin(ctx context.Context, actor *middlewares.Actor
 		current.PasswordHash = hash
 	}
 
-	updated, err := s.adminRepo.Update(ctx, s.pool, current)
-	if err != nil {
-		return nil, utils.Internal("Error al actualizar administrador.", err)
-	}
-
-	// Si se inactiva el admin, revocar sus sesiones inmediatamente
-	if req.IsActive != nil && !*req.IsActive && s.authRepo != nil {
-		if err := s.authRepo.RevokeAllActorSessions(ctx, s.pool, types.ActorAdmin, current.ID); err != nil {
-			return nil, utils.Internal("El administrador fue desactivado, pero no se pudieron cerrar sus sesiones.", err)
+	var resp *dtos.AdminResponse
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		updated, err := s.adminRepo.Update(ctx, tx, current)
+		if err != nil {
+			return utils.Internal("Error al actualizar administrador.", err)
 		}
+
+		// Si se inactiva el admin, revocar sus sesiones inmediatamente
+		if wasActive && !updated.IsActive && s.authRepo != nil {
+			if err := s.authRepo.RevokeAllActorSessions(ctx, tx, types.ActorAdmin, current.ID); err != nil {
+				return utils.Internal("El administrador fue desactivado, pero no se pudieron cerrar sus sesiones.", err)
+			}
+			s.events.Record(ctx, events.NewPersonal(
+				events.SessionRevoked,
+				&current.CompanyID,
+				string(types.ActorAdmin),
+				current.ID,
+				events.SessionRevokedData{Reason: "account_inactive"},
+			))
+		}
+
+		_ = s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
+			CompanyID: &current.CompanyID,
+			ActorType: actor.ActorType,
+			ActorID:   actor.ActorID,
+			Entity:    "admins",
+			EntityID:  &current.ID,
+			Action:    "ADMIN_UPDATED",
+			Reason:    utils.ReasonOrDefault(deactivationReason, "Actualización de administrador"),
+			IPAddress: ip,
+			UserAgent: ua,
+		})
+
+		resp = s.mapAdminToDTO(updated)
+		if wasActive != updated.IsActive {
+			var rPtr *string
+			if deactivationReason != "" {
+				rPtr = &deactivationReason
+			}
+			s.events.Record(ctx, events.NewEntityStatus(
+				updated.CompanyID,
+				nil,
+				events.EntityRef{Kind: events.KindAdmin, ID: updated.ID, Version: updated.UpdatedAt},
+				activeStatus(wasActive),
+				activeStatus(updated.IsActive),
+				rPtr,
+				resp,
+			))
+		} else {
+			// edición sin cambio de estado: viaja la fila ya guardada para que las tablas abiertas se actualicen sin pedirla
+			s.events.Record(ctx, events.NewEntityUpdated(updated.CompanyID, nil, events.EntityRef{Kind: events.KindAdmin, ID: updated.ID, Version: updated.UpdatedAt}, resp, events.ChangedFields(beforeSnap, updated)))
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 
-	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
-		CompanyID: &current.CompanyID,
-		ActorType: actor.ActorType,
-		ActorID:   actor.ActorID,
-		Entity:    "admins",
-		EntityID:  &current.ID,
-		Action:    "ADMIN_UPDATED",
-		Reason:    utils.ReasonOrDefault(deactivationReason, "Actualización de administrador"),
-		IPAddress: ip,
-		UserAgent: ua,
-	})
-
-	return s.mapAdminToDTO(updated), nil
+	return resp, nil
 }
 
 // DeactivateAdmin desactiva el administrador sin borrar su historial.
@@ -278,26 +330,57 @@ func (s *StaffService) DeactivateAdmin(ctx context.Context, actor *middlewares.A
 		}
 	}
 
-	if err := s.adminRepo.SoftDelete(ctx, s.pool, id); err != nil {
-		return utils.Internal("Error al desactivar administrador.", err)
-	}
-	if err := s.authRepo.RevokeAllActorSessions(ctx, s.pool, types.ActorAdmin, id); err != nil {
-		return utils.Internal("El administrador fue desactivado, pero no se pudieron cerrar sus sesiones.", err)
-	}
+	wasActive := current.IsActive
+	return db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		if err := s.adminRepo.SoftDelete(ctx, tx, id); err != nil {
+			return utils.Internal("Error al desactivar administrador.", err)
+		}
+		if s.authRepo != nil {
+			if err := s.authRepo.RevokeAllActorSessions(ctx, tx, types.ActorAdmin, id); err != nil {
+				return utils.Internal("El administrador fue desactivado, pero no se pudieron cerrar sus sesiones.", err)
+			}
+			s.events.Record(ctx, events.NewPersonal(
+				events.SessionRevoked,
+				&current.CompanyID,
+				string(types.ActorAdmin),
+				id,
+				events.SessionRevokedData{Reason: "account_inactive"},
+			))
+		}
 
-	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
-		CompanyID: &current.CompanyID,
-		ActorType: actor.ActorType,
-		ActorID:   actor.ActorID,
-		Entity:    "admins",
-		EntityID:  &current.ID,
-		Action:    "ADMIN_DEACTIVATED",
-		Reason:    reason,
-		IPAddress: ip,
-		UserAgent: ua,
+		_ = s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
+			CompanyID: &current.CompanyID,
+			ActorType: actor.ActorType,
+			ActorID:   actor.ActorID,
+			Entity:    "admins",
+			EntityID:  &current.ID,
+			Action:    "ADMIN_DEACTIVATED",
+			Reason:    reason,
+			IPAddress: ip,
+			UserAgent: ua,
+		})
+
+		now := time.Now().UTC()
+		current.IsActive = false
+		current.UpdatedAt = now
+		s.events.Record(ctx, events.NewEntityStatus(
+			current.CompanyID,
+			nil,
+			events.EntityRef{Kind: events.KindAdmin, ID: id, Version: now},
+			activeStatus(wasActive),
+			"inactive",
+			&reason,
+			s.mapAdminToDTO(current),
+		))
+		return nil
 	})
+}
 
-	return nil
+func activeStatus(active bool) string {
+	if active {
+		return "active"
+	}
+	return "inactive"
 }
 
 // mapAdminToDTO convierte el miembro del personal de la base en la respuesta que sale por la API.

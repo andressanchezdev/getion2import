@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/events"
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
@@ -70,12 +71,13 @@ func (s *InventoryService) AssignStock(ctx context.Context, actor *middlewares.A
 	}
 
 	var stock *repositories.StockEntity
-	err = db.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
 		up, err := s.inventoryRepo.UpsertStockDelta(ctx, tx, warehouse.CompanyID, product.ID, warehouse.ID, location, req.Quantity, 0)
 		if err != nil {
 			return err
 		}
 		stock = up
+		s.events.Stock(ctx, up.ID, events.CauseAdjustment())
 		previous := up.Available - req.Quantity
 		current := up.Available
 		_, err = s.inventoryRepo.RecordMovement(ctx, tx, &repositories.AuditMovementEntity{

@@ -33,4 +33,5 @@ export const INITIAL_PURCHASES_STATE: PurchasesState = {
   saving: false,
   detail: { id: null, data: null, status: 'idle', error: null, requestId: null },
   suppliers: [],
+  catalogTicks: {},
 }

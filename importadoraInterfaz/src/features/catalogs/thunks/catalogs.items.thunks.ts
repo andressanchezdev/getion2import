@@ -1,5 +1,6 @@
 // catalogs.items.thunks · acciones que crean, editan y eliminan un registro de marcas, categorías o modelos y recargan ese catálogo
 // conecta con: catalogs.service (llamadas), auth (selectRequestContext) y catalogs.thunks (recarga); las despachan useCatalogItemForm y CatalogTable
+import { isRealtimeLive } from '@/features/realtime/helpers/realtime.guards'
 import { createAsyncThunk } from '@reduxjs/toolkit'
 import { getErrorMessage } from '@/api'
 import { selectRequestContext, type AuthState } from '@/features/auth'
@@ -30,17 +31,28 @@ export const saveCatalogItemThunk = createAsyncThunk<void, CatalogItemInput, Thu
     const ctx = selectRequestContext(getState())
     if (!ctx) return rejectWithValue('No hay una sesión activa.')
     try {
-      const { type, id, name, imageUrl, description, isActive } = input
+      const { type, id, name, imageUrl, description, parentId, isActive } = input
       if (type === 'brand') {
         const body = { name, imageUrl, ...(isActive !== undefined ? { isActive } : {}) }
         await (id ? updateBrand(id, body) : createBrand(ctx, body))
+      } else if (type === 'category') {
+        const body = {
+          name,
+          description: description !== undefined ? description : '',
+          parentId: parentId !== undefined ? parentId : (id ? 0 : null),
+          ...(isActive !== undefined ? { isActive } : {}),
+        }
+        await (id ? updateCategory(id, body) : createCategory(ctx, body))
       } else {
-        const body = { name, description, ...(isActive !== undefined ? { isActive } : {}) }
-        const update = type === 'category' ? updateCategory : updateModel
-        const create = type === 'category' ? createCategory : createModel
-        await (id ? update(id, body) : create(ctx, body))
+        const body = {
+          name,
+          description: description !== undefined ? description : '',
+          ...(isActive !== undefined ? { isActive } : {}),
+        }
+        await (id ? updateModel(id, body) : createModel(ctx, body))
       }
-      dispatch(reloadFor(type))
+      // en vivo, entity.created / updated / status_changed dejan el catálogo al día; sin socket se recarga aquí
+      if (!isRealtimeLive(getState())) dispatch(reloadFor(type))
     } catch (error) {
       return rejectWithValue(getErrorMessage(error, 'Error al guardar el registro.'))
     }
@@ -50,10 +62,11 @@ export const saveCatalogItemThunk = createAsyncThunk<void, CatalogItemInput, Thu
 // elimina un registro y recarga el catálogo
 export const deleteCatalogItemThunk = createAsyncThunk<void, { type: CatalogType; id: number; reason: string }, ThunkConfig>(
   'catalogs/deleteItem',
-  async ({ type, id, reason }, { dispatch, rejectWithValue }) => {
+  async ({ type, id, reason }, { dispatch, getState, rejectWithValue }) => {
     try {
       await (type === 'brand' ? deleteBrand(id, reason) : type === 'category' ? deleteCategory(id, reason) : deleteModel(id, reason))
-      dispatch(reloadFor(type))
+      // en vivo, entity.created / updated / status_changed dejan el catálogo al día; sin socket se recarga aquí
+      if (!isRealtimeLive(getState())) dispatch(reloadFor(type))
     } catch (error) {
       return rejectWithValue(getErrorMessage(error, 'Error al eliminar el registro.'))
     }

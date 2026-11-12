@@ -7,6 +7,7 @@ import (
 	"context"
 	"time"
 
+	"importadoraApi/src/core/db"
 	"importadoraApi/src/features/screensaver/dtos"
 
 	"github.com/jackc/pgx/v5"
@@ -48,7 +49,11 @@ func (r *ScreensaverRepository) Get(ctx context.Context, companyID int64) (*dtos
 	return &res, nil
 }
 
-func (r *ScreensaverRepository) Upsert(ctx context.Context, companyID int64, imageURL string, isActive bool, employeeID *int64) (*dtos.ScreensaverSettingsResponse, error) {
+// Pool devuelve la conexión del repositorio, para que el servicio abra la transacción del guardado.
+func (r *ScreensaverRepository) Pool() *pgxpool.Pool { return r.pool }
+
+// Upsert guarda la imagen del protector con la conexión o la transacción que reciba.
+func (r *ScreensaverRepository) Upsert(ctx context.Context, q db.DBExecutor, companyID int64, imageURL string, isActive bool, employeeID *int64) (*dtos.ScreensaverSettingsResponse, error) {
 	query := `
 		INSERT INTO screensaver_settings (company_id, image_url, is_active, updated_by, updated_at)
 		VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
@@ -60,7 +65,7 @@ func (r *ScreensaverRepository) Upsert(ctx context.Context, companyID int64, ima
 		RETURNING id, company_id, image_url, is_active, updated_at;
 	`
 	var res dtos.ScreensaverSettingsResponse
-	err := r.pool.QueryRow(ctx, query, companyID, imageURL, isActive, employeeID).
+	err := q.QueryRow(ctx, query, companyID, imageURL, isActive, employeeID).
 		Scan(&res.ID, &res.CompanyID, &res.ImageURL, &res.IsActive, &res.UpdatedAt)
 	if err != nil {
 		return nil, err

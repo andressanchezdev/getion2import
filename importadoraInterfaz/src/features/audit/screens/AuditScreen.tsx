@@ -3,6 +3,7 @@
 import React from 'react'
 import './AuditScreen.css'
 import { Pagination } from '@/global/components/UI/molecules/table/Pagination'
+import { FilterSelect } from '@/global/components/UI/molecules/filters/FilterSelect'
 import {
   AUDIT_ACTION_OPTIONS,
   AUDIT_ENTITIES,
@@ -36,48 +37,29 @@ export const AuditScreen: React.FC = () => {
       <div className="data-card">
         <div className="data-toolbar audit-toolbar">
           <div className="audit-toolbar-filters">
-            {/* Filtro rápido por Rol */}
-            <label className="audit-filter">
-              <span>Rol:</span>
-              <select
-                className="audit-select"
-                value={filters.role || ''}
-                onChange={(e) => changeFilters({ ...filters, role: e.target.value })}
-              >
-                {AUDIT_ROLE_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            </label>
+            <FilterSelect
+              label="Rol"
+              allLabel="Todos los roles"
+              value={filters.role || ''}
+              options={AUDIT_ROLE_OPTIONS}
+              onChange={(val) => changeFilters({ ...filters, role: val })}
+            />
 
-            {/* Filtro rápido por Tipo de Acción */}
-            <label className="audit-filter">
-              <span>Tipo de Acción:</span>
-              <select
-                className="audit-select"
-                value={filters.action || ''}
-                onChange={(e) => changeFilters({ ...filters, action: e.target.value })}
-              >
-                {AUDIT_ACTION_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            </label>
+            <FilterSelect
+              label="Tipo de Acción"
+              allLabel="Todas las acciones"
+              value={filters.action || ''}
+              options={AUDIT_ACTION_OPTIONS}
+              onChange={(val) => changeFilters({ ...filters, action: val })}
+            />
 
-            {/* Filtro por Gestión */}
-            <label className="audit-filter">
-              <span>Gestión:</span>
-              <select
-                className="audit-select"
-                value={filters.entity}
-                onChange={(e) => changeFilters({ ...filters, entity: e.target.value, entityId: undefined })}
-              >
-                <option value="">Todas las gestiones</option>
-                {Object.entries(AUDIT_ENTITIES).map(([key, label]) => (
-                  <option key={key} value={key}>{label}</option>
-                ))}
-              </select>
-            </label>
+            <FilterSelect
+              label="Gestión"
+              allLabel="Todas las gestiones"
+              value={filters.entity}
+              options={Object.entries(AUDIT_ENTITIES).map(([key, label]) => ({ value: key, label }))}
+              onChange={(val) => changeFilters({ ...filters, entity: val, entityId: undefined })}
+            />
 
             {/* Rango de Fechas: Desde */}
             <label className="audit-filter">

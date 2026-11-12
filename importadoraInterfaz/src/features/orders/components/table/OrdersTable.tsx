@@ -8,11 +8,9 @@ import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { usePermissions } from '@/global/hooks/access/usePermissions'
 import { Pill } from '@/global/components/UI/atoms/Pill'
 import { ORDER_STAGES } from '../../constants/orders.constants'
-import type { OrderActionKey } from '../../helpers/orders.actions'
-import { copyOrderSerial } from '../../helpers/orders.clipboard'
+import type { AdvanceActionKey, OrderActionKey } from '../../helpers/orders.actions'
 import { selectOpenOrderId, selectOrdersList, selectVisibleOrders } from '../../selectors/orders.selectors'
-import { openOrder } from '../../slices/orders.slice'
-import { advanceOrderThunk, loadOrdersThunk } from '../../thunks/orders.thunks'
+import { advanceOrderThunk, loadOrdersThunk, openOrderDetailThunk } from '../../thunks/orders.thunks'
 import type { OrderRow } from '../../types/orders.types'
 import { dateLabel, paymentLabel } from '../../helpers/orders.labels'
 import { OrderRowActions } from './OrderRowActions'
@@ -20,6 +18,8 @@ import './OrdersTable.css'
 import { usePagedList } from '@/global/hooks/data/usePagedList'
 import { Pagination } from '@/global/components/UI/molecules/table/Pagination'
 import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
+import { ActionsHeader } from '@/global/components/UI/molecules/table/ActionsHeader'
+import { CopyableCell } from '@/global/components/UI/molecules/table/CopyableCell'
 
 const COLUMNS = 7
 
@@ -38,9 +38,12 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({ onCancel, extraActions
   const orders = useAppSelector(selectVisibleOrders)
   const { pageItems, meta, setPage } = usePagedList(orders, orders)
   const openId = useAppSelector(selectOpenOrderId)
-  const { canPerformAction } = usePermissions()
-  const canCancel = canPerformAction('shop', 'orders', 'delete')
-  const canAdvance = canPerformAction('shop', 'orders', 'update')
+  const processingIds = useAppSelector((state) => state.orders.processingIds ?? [])
+  const { can } = usePermissions()
+  // ojo: se lee la llave de la API y no la matriz de la pantalla: la tabla se usa en Pedidos y en Caja › Historial
+  const canCancel = can('orders:delete')
+  // ojo: cada etapa tiene su llave en la API (sale_routes): facturar orders:invoice, las demás orders:advance_stage
+  const canAdvance = (key: AdvanceActionKey) => can(key === 'invoice' ? 'orders:invoice' : 'orders:advance_stage')
 
   // lo que se dice en lugar de las filas: cargando, error, nada en la etapa o nada que coincida con la búsqueda
   const message = (() => {
@@ -52,8 +55,7 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({ onCancel, extraActions
   })()
 
   const handleAction = (key: OrderActionKey, order: OrderRow) => {
-    if (key === 'detail') dispatch(openOrder(order.id))
-    else if (key === 'copy') copyOrderSerial(order.serial)
+    if (key === 'detail') dispatch(openOrderDetailThunk(order.id))
     else if (key === 'cancel') onCancel(order)
     else dispatch(advanceOrderThunk({ saleId: order.id, action: key }))
   }
@@ -69,7 +71,7 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({ onCancel, extraActions
               <th>Pago</th>
               <th className="orders-table-num">Total</th>
               <th>Fecha</th>
-              <th aria-label="Acciones" />
+              <ActionsHeader />
             </tr>
           </thead>
           <tbody>
@@ -90,13 +92,15 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({ onCancel, extraActions
                   key={order.id}
                   className={order.id === openId ? 'orders-table-row orders-table-row-open' : 'orders-table-row'}
                   tabIndex={0}
-                  onClick={() => dispatch(openOrder(order.id))}
+                  onClick={() => dispatch(openOrderDetailThunk(order.id))}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' && e.target === e.currentTarget) dispatch(openOrder(order.id))
+                    if (e.key === 'Enter' && e.target === e.currentTarget) dispatch(openOrderDetailThunk(order.id))
                   }}
                 >
                   <td>
-                    <b className="orders-table-strong">{order.serial}</b>
+                    <b className="orders-table-strong">
+                      <CopyableCell text={order.serial} label="Número de pedido" />
+                    </b>
                     {order.channel === 'immediate' ? (
                       <span className="orders-badge-immediate">Picking inmediato</span>
                     ) : (
@@ -128,7 +132,7 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({ onCancel, extraActions
                   <td className="orders-table-actions">
                     <div className="orders-table-actions-inline">
                       {extraActions && <span className="orders-table-extra" onClick={(e) => e.stopPropagation()}>{extraActions(order)}</span>}
-                      <OrderRowActions order={order} canCancel={canCancel} canAdvance={canAdvance} onAction={(key) => handleAction(key, order)} />
+                      <OrderRowActions order={order} canCancel={canCancel} canAdvance={canAdvance} busy={processingIds.includes(order.id)} onAction={(key) => handleAction(key, order)} />
                     </div>
                   </td>
                 </tr>

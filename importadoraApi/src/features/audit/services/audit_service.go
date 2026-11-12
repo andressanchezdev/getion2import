@@ -77,7 +77,7 @@ func (s *AuditService) LogContextChange(ctx context.Context, actor *middlewares.
 		}
 	}
 
-	err := db.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
 		if err := s.contextRepo.Insert(ctx, tx, actor.ActorID, string(actor.ActorType), req.FromCompanyID, req.ToCompanyID, req.ToAllCompanies, ip, ua); err != nil {
 			return err
 		}

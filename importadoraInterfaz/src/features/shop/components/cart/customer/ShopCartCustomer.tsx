@@ -15,10 +15,11 @@ export const ShopCartCustomer: React.FC = () => {
   if (!customer) return null
 
   return (
-    <div className="shop-cart-customer">
+    <div className={`shop-cart-customer${customer.unavailable ? ' shop-cart-customer--warning' : ''}`}>
       <div className="shop-cart-customer-text">
         <span className="shop-cart-customer-label">Venta a nombre de</span>
         <span className="shop-cart-customer-name">{customer.name}</span>
+        {customer.unavailable && <span className="shop-cart-customer-alert">Cliente no disponible — cámbialo o quítalo</span>}
       </div>
       <button
         type="button"

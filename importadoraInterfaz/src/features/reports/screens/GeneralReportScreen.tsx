@@ -3,9 +3,9 @@ import React, { useState } from 'react'
 import { formatCOP } from '@/global/helpers/formatting/format'
 import { Pill } from '@/global/components/UI/atoms/Pill'
 import { SearchBar } from '@/global/components/UI/molecules/filters/SearchBar'
+import { FilterSelect } from '@/global/components/UI/molecules/filters/FilterSelect'
 import { useAppSelector } from '@/global/hooks/store/useRedux'
 import { selectWarehouses } from '@/features/warehouses'
-import refreshIcon from '@/assets/icons/refresh.svg?raw'
 import receiptIcon from '@/assets/icons/receipt.svg?raw'
 import walletIcon from '@/assets/icons/wallet.svg?raw'
 import buildingIcon from '@/assets/icons/building.svg?raw'
@@ -19,7 +19,7 @@ import './GeneralReportScreen.css'
 import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
 
 export const GeneralReportScreen: React.FC = () => {
-  const { report, loading, reload } = useGeneralReport()
+  const { report, loading } = useGeneralReport()
   const warehouses = useAppSelector(selectWarehouses)
   const [search, setSearch] = useState('')
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>('all')
@@ -69,30 +69,14 @@ export const GeneralReportScreen: React.FC = () => {
             className="gen-report-search"
           />
 
-          <label className="gen-report-toolbar-filter">
-            <span>Sede / Bodega:</span>
-            <select
-              className="gen-report-toolbar-select"
-              value={selectedWarehouse}
-              onChange={(e) => setSelectedWarehouse(e.target.value)}
-            >
-              <option value="all">Todas las sedes</option>
-              {warehouses.map((wh) => (
-                <option key={wh.id} value={String(wh.id)}>{wh.name}</option>
-              ))}
-            </select>
-          </label>
-
-          <button
-            type="button"
-            className="btn-secondary gen-report-refresh-btn"
-            onClick={reload}
-            disabled={loading}
-            title="Actualizar reporte general"
-          >
-            <span className="gen-report-inline-icon" aria-hidden="true" dangerouslySetInnerHTML={{ __html: refreshIcon }} />
-            <span>{loading ? 'Actualizando…' : 'Actualizar'}</span>
-          </button>
+          <FilterSelect
+            label="Sede / Bodega"
+            allLabel="Todas las sedes"
+            emptyValue="all"
+            value={selectedWarehouse}
+            options={warehouses.map((wh) => ({ value: String(wh.id), label: wh.name }))}
+            onChange={setSelectedWarehouse}
+          />
         </div>
       </div>
 

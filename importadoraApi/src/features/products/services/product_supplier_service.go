@@ -6,6 +6,10 @@ package services
 import (
 	"context"
 	"fmt"
+	"github.com/jackc/pgx/v5"
+	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/events"
+	"time"
 
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
@@ -111,7 +115,14 @@ func (s *ProductService) RemoveSupplier(ctx context.Context, actor *middlewares.
 		}
 	}
 
-	if err := s.productRepo.RemoveSupplier(ctx, s.pool, productID, supplierID); err != nil {
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		if err := s.productRepo.RemoveSupplier(ctx, tx, productID, supplierID); err != nil {
+			return err
+		}
+		s.events.Record(ctx, events.NewEntityDeleted(product.CompanyID, nil, events.EntityRef{Kind: events.KindProductSupplier, ID: productID, Version: time.Now().UTC()}, &events.EntityParent{Kind: events.KindSupplier, ID: supplierID}))
+		return nil
+	})
+	if err != nil {
 		return utils.Internal("Error al desvincular proveedor.", err)
 	}
 

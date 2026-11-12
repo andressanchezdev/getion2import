@@ -60,6 +60,29 @@ func (r *InventoryRepository) FindStockByID(ctx context.Context, q db.DBExecutor
 	return &s, nil
 }
 
+// FindBestStockForProduct busca la fila de stock con más unidades vendibles (available - reserved) de un producto en una bodega.
+func (r *InventoryRepository) FindBestStockForProduct(ctx context.Context, q db.DBExecutor, companyID, productID, warehouseID int64) (*StockEntity, error) {
+	const sql = `
+		SELECT id, company_id, product_id, warehouse_id, location, available, reserved, min_stock, max_stock, updated_at
+		FROM stock
+		WHERE company_id = $1 AND product_id = $2 AND warehouse_id = $3
+		ORDER BY (available - reserved) DESC, id ASC
+		LIMIT 1
+	`
+	var s StockEntity
+	err := q.QueryRow(ctx, sql, companyID, productID, warehouseID).Scan(
+		&s.ID, &s.CompanyID, &s.ProductID, &s.WarehouseID, &s.Location,
+		&s.Available, &s.Reserved, &s.MinStock, &s.MaxStock, &s.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &s, nil
+}
+
 // ListWarehouseStock lista las existencias de las bodegas según los filtros, con su total para paginar.
 func (r *InventoryRepository) ListWarehouseStock(ctx context.Context, q db.DBExecutor, f dtos.StockFilterQuery) ([]dtos.WarehouseStockResponse, int, error) {
 	where := make([]string, 0)

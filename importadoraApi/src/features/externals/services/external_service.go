@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"importadoraApi/src/core/config"
+	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/events"
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
@@ -15,6 +17,7 @@ import (
 	"importadoraApi/src/features/externals/dtos"
 	"importadoraApi/src/features/externals/repositories"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -23,6 +26,7 @@ type ExternalService struct {
 	pool         *pgxpool.Pool
 	externalRepo *repositories.ExternalRepository
 	auditRepo    *authRepos.AuditRepository
+	events       *events.Recorder
 }
 
 // NewExternalService crea el servicio con las piezas que necesita para funcionar.
@@ -31,12 +35,18 @@ func NewExternalService(
 	pool *pgxpool.Pool,
 	externalRepo *repositories.ExternalRepository,
 	auditRepo *authRepos.AuditRepository,
+	eventsRecorder ...*events.Recorder,
 ) *ExternalService {
+	var rec *events.Recorder
+	if len(eventsRecorder) > 0 {
+		rec = eventsRecorder[0]
+	}
 	return &ExternalService{
 		cfg:          cfg,
 		pool:         pool,
 		externalRepo: externalRepo,
 		auditRepo:    auditRepo,
+		events:       rec,
 	}
 }
 
@@ -180,7 +190,15 @@ func (s *ExternalService) Create(ctx context.Context, actor *middlewares.ActorCo
 		IsActive:     isActive,
 	}
 
-	created, err := s.externalRepo.Create(ctx, s.pool, entity)
+	// la creación y su evento van en la misma transacción: nadie recibe el aviso de un registro que no se guardó
+	created, err := db.WithTxValue(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) (*repositories.ExternalEntity, error) {
+		row, err := s.externalRepo.Create(ctx, tx, entity)
+		if err != nil {
+			return nil, err
+		}
+		s.events.Record(ctx, events.NewEntityCreated(row.CompanyID, nil, events.EntityRef{Kind: externalEventKind(row.Kind), ID: row.ID, Version: row.UpdatedAt}, s.mapExternalToDTO(row)))
+		return row, nil
+	})
 	if err != nil {
 		return nil, utils.NormalizeDBError(err, "")
 	}
@@ -207,6 +225,8 @@ func (s *ExternalService) Update(ctx context.Context, actor *middlewares.ActorCo
 	}
 
 	current, err := s.externalRepo.FindByID(ctx, s.pool, id)
+	// foto del registro antes de editarlo: de aquí sale changedFields
+	beforeSnap := events.Snapshot(current)
 	if err != nil {
 		return nil, utils.Internal("Error al consultar externo.", err)
 	}
@@ -275,31 +295,62 @@ func (s *ExternalService) Update(ctx context.Context, actor *middlewares.ActorCo
 	if req.Coverage != nil {
 		current.Coverage = req.Coverage
 	}
-	if _, rerr := utils.ReasonOnDeactivation(current.IsActive, req.IsActive, req.Reason); rerr != nil {
+	oldActive := current.IsActive
+	reason, rerr := utils.ReasonOnDeactivation(current.IsActive, req.IsActive, req.Reason)
+	if rerr != nil {
 		return nil, rerr
 	}
 	if req.IsActive != nil {
 		current.IsActive = *req.IsActive
 	}
 
-	updated, err := s.externalRepo.Update(ctx, s.pool, current)
+	var resp *dtos.ExternalResponse
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		updated, err := s.externalRepo.Update(ctx, tx, current)
+		if err != nil {
+			return utils.NormalizeDBError(err, "El proveedor o transportadora no existe.")
+		}
+
+		_ = s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
+			CompanyID: &current.CompanyID,
+			ActorType: actor.ActorType,
+			ActorID:   actor.ActorID,
+			Entity:    "externals",
+			EntityID:  &current.ID,
+			Action:    "EXTERNAL_UPDATED",
+			Reason:    utils.ReasonOrDefault(reason, "Actualización de datos de externo"),
+			IPAddress: ip,
+			UserAgent: ua,
+		})
+
+		resp = s.mapExternalToDTO(updated)
+		if s.events != nil && oldActive != updated.IsActive {
+			var reasonPtr *string
+			if reason != "" {
+				reasonPtr = &reason
+			}
+			ref := events.EntityRef{
+				Kind:    externalEventKind(updated.Kind),
+				ID:      updated.ID,
+				Version: updated.UpdatedAt,
+			}
+			s.events.Record(ctx, events.NewEntityStatus(updated.CompanyID, nil, ref, externalActiveLabel(oldActive), externalActiveLabel(updated.IsActive), reasonPtr, resp))
+		} else {
+			// edición sin cambio de estado: viaja la fila ya guardada para que las tablas abiertas se actualicen sin pedirla
+			ref := events.EntityRef{
+				Kind:    externalEventKind(updated.Kind),
+				ID:      updated.ID,
+				Version: updated.UpdatedAt,
+			}
+			s.events.Record(ctx, events.NewEntityUpdated(updated.CompanyID, nil, ref, resp, events.ChangedFields(beforeSnap, updated)))
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, utils.NormalizeDBError(err, "El proveedor o transportadora no existe.")
+		return nil, err
 	}
 
-	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
-		CompanyID: &current.CompanyID,
-		ActorType: actor.ActorType,
-		ActorID:   actor.ActorID,
-		Entity:    "externals",
-		EntityID:  &current.ID,
-		Action:    "EXTERNAL_UPDATED",
-		Reason:    "Actualización de datos de externo",
-		IPAddress: ip,
-		UserAgent: ua,
-	})
-
-	return s.mapExternalToDTO(updated), nil
+	return resp, nil
 }
 
 // Delete elimina el tercero validando que sea de la compañía del usuario.
@@ -326,23 +377,53 @@ func (s *ExternalService) Delete(ctx context.Context, actor *middlewares.ActorCo
 		}
 	}
 
-	if err := s.externalRepo.SoftDelete(ctx, s.pool, id); err != nil {
-		return utils.Internal("Error al desactivar externo.", err)
-	}
+	return db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		if err := s.externalRepo.SoftDelete(ctx, tx, id); err != nil {
+			return utils.Internal("Error al desactivar externo.", err)
+		}
 
-	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
-		CompanyID: &current.CompanyID,
-		ActorType: actor.ActorType,
-		ActorID:   actor.ActorID,
-		Entity:    "externals",
-		EntityID:  &current.ID,
-		Action:    "EXTERNAL_DEACTIVATED",
-		Reason:    reason,
-		IPAddress: ip,
-		UserAgent: ua,
+		_ = s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
+			CompanyID: &current.CompanyID,
+			ActorType: actor.ActorType,
+			ActorID:   actor.ActorID,
+			Entity:    "externals",
+			EntityID:  &current.ID,
+			Action:    "EXTERNAL_DEACTIVATED",
+			Reason:    reason,
+			IPAddress: ip,
+			UserAgent: ua,
+		})
+
+		if s.events != nil && current.IsActive {
+			updated, err := s.externalRepo.FindByID(ctx, tx, id)
+			if err != nil {
+				return utils.Internal("Error al recargar externo desactivado.", err)
+			}
+			if updated != nil {
+				ref := events.EntityRef{
+					Kind:    externalEventKind(updated.Kind),
+					ID:      updated.ID,
+					Version: updated.UpdatedAt,
+				}
+				s.events.Record(ctx, events.NewEntityStatus(updated.CompanyID, nil, ref, "active", "inactive", &reason, s.mapExternalToDTO(updated)))
+			}
+		}
+		return nil
 	})
+}
 
-	return nil
+func externalEventKind(k types.ExternalKind) events.Kind {
+	if k == types.ExternalCarrier {
+		return events.KindCarrier
+	}
+	return events.KindSupplier
+}
+
+func externalActiveLabel(active bool) string {
+	if active {
+		return "active"
+	}
+	return "inactive"
 }
 
 // mapExternalToDTO convierte el tercero de la base en la respuesta que sale por la API.
@@ -370,4 +451,3 @@ func (s *ExternalService) mapExternalToDTO(e *repositories.ExternalEntity) *dtos
 		UpdatedAt:    e.UpdatedAt,
 	}
 }
-

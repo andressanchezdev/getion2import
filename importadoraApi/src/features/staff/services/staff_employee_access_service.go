@@ -5,7 +5,6 @@ package services
 
 import (
 	"context"
-	"time"
 
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
@@ -131,50 +130,6 @@ func (s *StaffService) AssignEmployeePermissions(ctx context.Context, actor *mid
 	})
 
 	return s.permissionRepo.ListByEmployeeID(ctx, s.pool, id)
-}
-
-// UnlockEmployee desbloquea a un empleado que superó los intentos fallidos de ingreso.
-func (s *StaffService) UnlockEmployee(ctx context.Context, actor *middlewares.ActorContext, id int64, ip, ua string) (*dtos.UnlockEmployeeResponse, error) {
-	if actor == nil {
-		return nil, utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
-	}
-
-	current, err := s.employeeRepo.FindByID(ctx, s.pool, id)
-	if err != nil {
-		return nil, utils.Internal("Error al consultar empleado.", err)
-	}
-	if current == nil {
-		return nil, utils.NotFound("EMPLOYEE_NOT_FOUND", "El empleado solicitado no existe.")
-	}
-
-	if actor.ActorType != types.ActorSuperadmin {
-		if actor.CompanyID == nil || *actor.CompanyID != current.CompanyID {
-			return nil, utils.Forbidden("FORBIDDEN_COMPANY_ACCESS", "No tienes permiso para desbloquear este empleado.")
-		}
-	}
-
-	if err := s.employeeRepo.UnlockEmployee(ctx, s.pool, id); err != nil {
-		return nil, utils.Internal("Error al desbloquear empleado.", err)
-	}
-
-	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
-		CompanyID: &current.CompanyID,
-		ActorType: actor.ActorType,
-		ActorID:   actor.ActorID,
-		Entity:    "employee_login_attempts",
-		EntityID:  &current.ID,
-		Action:    "EMPLOYEE_UNLOCKED",
-		Reason:    "Reactivación y reseteo de intentos fallidos",
-		IPAddress: ip,
-		UserAgent: ua,
-	})
-
-	return &dtos.UnlockEmployeeResponse{
-		EmployeeID: current.ID,
-		Email:      current.Email,
-		Message:    "Empleado desbloqueado exitosamente.",
-		UnlockedAt: time.Now().UTC(),
-	}, nil
 }
 
 // mapEmployeeToDTO convierte el miembro del personal de la base en la respuesta que sale por la API.

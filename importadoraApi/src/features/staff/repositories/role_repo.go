@@ -21,6 +21,7 @@ type RoleEntity struct {
 	Description *string
 	IsActive    bool
 	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 type RoleRepository struct{}
@@ -33,13 +34,13 @@ func NewRoleRepository() *RoleRepository {
 // FindByID busca el rol por su id (nil si no existe).
 func (r *RoleRepository) FindByID(ctx context.Context, q db.DBExecutor, id int64) (*RoleEntity, error) {
 	const sql = `
-		SELECT id, company_id, code, name, description, is_active, created_at
+		SELECT id, company_id, code, name, description, is_active, created_at, updated_at
 		FROM roles
 		WHERE id = $1
 	`
 	var role RoleEntity
 	err := q.QueryRow(ctx, sql, id).Scan(
-		&role.ID, &role.CompanyID, &role.Code, &role.Name, &role.Description, &role.IsActive, &role.CreatedAt,
+		&role.ID, &role.CompanyID, &role.Code, &role.Name, &role.Description, &role.IsActive, &role.CreatedAt, &role.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -53,13 +54,13 @@ func (r *RoleRepository) FindByID(ctx context.Context, q db.DBExecutor, id int64
 // FindByCompanyAndCode busca el rol por compañía y código (nil si no existe).
 func (r *RoleRepository) FindByCompanyAndCode(ctx context.Context, q db.DBExecutor, companyID int64, code string) (*RoleEntity, error) {
 	const sql = `
-		SELECT id, company_id, code, name, description, is_active, created_at
+		SELECT id, company_id, code, name, description, is_active, created_at, updated_at
 		FROM roles
 		WHERE company_id = $1 AND LOWER(code) = LOWER($2)
 	`
 	var role RoleEntity
 	err := q.QueryRow(ctx, sql, companyID, code).Scan(
-		&role.ID, &role.CompanyID, &role.Code, &role.Name, &role.Description, &role.IsActive, &role.CreatedAt,
+		&role.ID, &role.CompanyID, &role.Code, &role.Name, &role.Description, &role.IsActive, &role.CreatedAt, &role.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -73,7 +74,7 @@ func (r *RoleRepository) FindByCompanyAndCode(ctx context.Context, q db.DBExecut
 // ListByCompany lista los roles de una compañía.
 func (r *RoleRepository) ListByCompany(ctx context.Context, q db.DBExecutor, companyID int64, activeOnly bool) ([]RoleEntity, error) {
 	sql := `
-		SELECT id, company_id, code, name, description, is_active, created_at
+		SELECT id, company_id, code, name, description, is_active, created_at, updated_at
 		FROM roles
 		WHERE company_id = $1
 	`
@@ -92,7 +93,7 @@ func (r *RoleRepository) ListByCompany(ctx context.Context, q db.DBExecutor, com
 	for rows.Next() {
 		var role RoleEntity
 		if err := rows.Scan(
-			&role.ID, &role.CompanyID, &role.Code, &role.Name, &role.Description, &role.IsActive, &role.CreatedAt,
+			&role.ID, &role.CompanyID, &role.Code, &role.Name, &role.Description, &role.IsActive, &role.CreatedAt, &role.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -107,11 +108,11 @@ func (r *RoleRepository) Create(ctx context.Context, q db.DBExecutor, role *Role
 	const sql = `
 		INSERT INTO roles (company_id, code, name, description, is_active)
 		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id, created_at
+		RETURNING id, created_at, updated_at
 	`
 	err := q.QueryRow(ctx, sql,
 		role.CompanyID, role.Code, role.Name, role.Description, role.IsActive,
-	).Scan(&role.ID, &role.CreatedAt)
+	).Scan(&role.ID, &role.CreatedAt, &role.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -124,22 +125,24 @@ func (r *RoleRepository) Update(ctx context.Context, q db.DBExecutor, role *Role
 		UPDATE roles SET
 			name = $1,
 			description = $2,
-			is_active = $3
+			is_active = $3,
+			updated_at = CURRENT_TIMESTAMP
 		WHERE id = $4
+		RETURNING updated_at
 	`
-	cmdTag, err := q.Exec(ctx, sql, role.Name, role.Description, role.IsActive, role.ID)
+	err := q.QueryRow(ctx, sql, role.Name, role.Description, role.IsActive, role.ID).Scan(&role.UpdatedAt)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, errors.New("rol no encontrado")
+		}
 		return nil, err
-	}
-	if cmdTag.RowsAffected() == 0 {
-		return nil, errors.New("rol no encontrado")
 	}
 	return role, nil
 }
 
 // SoftDelete marca el rol como eliminado (borrado lógico: no se pierde el registro).
 func (r *RoleRepository) SoftDelete(ctx context.Context, q db.DBExecutor, id int64) error {
-	const sql = `UPDATE roles SET is_active = FALSE WHERE id = $1`
+	const sql = `UPDATE roles SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP WHERE id = $1`
 	cmdTag, err := q.Exec(ctx, sql, id)
 	if err != nil {
 		return err

@@ -9,6 +9,7 @@ import './WarehouseProductsTable.css'
 import { usePagedList } from '@/global/hooks/data/usePagedList'
 import { Pagination } from '@/global/components/UI/molecules/table/Pagination'
 import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
+import { ActionsHeader } from '@/global/components/UI/molecules/table/ActionsHeader'
 
 interface WarehouseProductsTableProps {
   warehouseId: number
@@ -56,7 +57,7 @@ export const WarehouseProductsTable: React.FC<WarehouseProductsTableProps> = ({
               <th className="inv-num">Físico</th>
               <th className="inv-num">Reservado</th>
               <th className="inv-num">Vendible</th>
-              <th className="inv-actions-header">Acciones</th>
+              <ActionsHeader className="inv-actions-header" />
             </tr>
           </thead>
           <tbody>

@@ -1,13 +1,22 @@
 // catalogs.slice · estado de los catálogos (marcas, categorías y modelos): lista, estado de carga y último error de cada uno
 // conecta con: catalogs.thunks (los llenan), catalogs.selectors (las lecturas) y rootReducer (clave 'catalogs'; no se persiste: se pide una vez por sesión)
-import { createSlice } from '@reduxjs/toolkit'
+import { applyVersionedStatus } from '@/global/helpers/realtime/applyVersioned'
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import { INITIAL_CATALOGS_STATE } from '../constants/catalogs.constants'
 import { fetchBrandsThunk, fetchCategoriesThunk, fetchMotoModelsThunk } from '../thunks/catalogs.thunks'
 
 export const catalogsSlice = createSlice({
   name: 'catalogs',
   initialState: INITIAL_CATALOGS_STATE,
-  reducers: {},
+  reducers: {
+    // tiempo real (entity.status_changed de marca, categoría o modelo): cambia el estado de la fila si ya está cargada
+    catalogStatusFromEvent: (state, action: PayloadAction<{ kind: 'brand' | 'category' | 'model'; id: number; isActive: boolean; version?: string }>) => {
+      const { kind, id, isActive, version } = action.payload
+      const list = kind === 'brand' ? state.brands.items : kind === 'category' ? state.categories.items : state.models.items
+      const row = list.find((item) => item.id === id)
+      if (row) applyVersionedStatus(row, isActive, version)
+    },
+  },
   extraReducers: (builder) => {
     builder
       // marcas
@@ -49,5 +58,6 @@ export const catalogsSlice = createSlice({
   },
 })
 
+export const { catalogStatusFromEvent } = catalogsSlice.actions
 export const catalogsReducer = catalogsSlice.reducer
 export default catalogsSlice.reducer

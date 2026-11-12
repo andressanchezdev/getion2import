@@ -168,4 +168,3 @@ func (ctrl *PaymentController) Void(c echo.Context) error {
 
 	return utils.RespondOK[any](c, "Pago anulado correctamente", nil)
 }
-

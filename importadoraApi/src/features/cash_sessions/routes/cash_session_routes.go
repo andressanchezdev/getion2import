@@ -14,8 +14,8 @@ func RegisterRoutes(e *echo.Echo, authMiddleware *middlewares.AuthMiddleware, ct
 	g := e.Group("/cash/sessions", authMiddleware.Authenticate())
 	{
 		g.GET("/active", ctrl.GetActive, authMiddleware.RequirePermission("cash", "view"))
-		g.POST("/open", ctrl.Open, authMiddleware.RequirePermission("cash", "create"))
-		g.POST("/close", ctrl.Close, authMiddleware.RequirePermission("cash", "edit"))
+		g.POST("/open", ctrl.Open, authMiddleware.RequirePermission("cash", "open_close"))
+		g.POST("/close", ctrl.Close, authMiddleware.RequirePermission("cash", "open_close"))
 	}
 
 	// los gastos de todas las cajas cerradas (Facturas): solo quien tiene el permiso de Facturas

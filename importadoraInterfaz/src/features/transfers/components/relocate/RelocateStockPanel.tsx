@@ -1,6 +1,7 @@
 // RelocateStockPanel · panel lateral para reubicar un producto dentro de su bodega
 // conecta con: inventory (relocateStockThunk), formRegistry, WarehouseProductsTable y ProductsTable
 import React, { useState } from 'react'
+import '@/global/components/UI/molecules/form/DrawerFormShell.css'
 import './RelocateStockPanel.css'
 import { closeDrawerForm } from '@/features/navigation'
 import { useAppDispatch } from '@/global/hooks/store/useRedux'
@@ -71,8 +72,8 @@ export const RelocateStockPanel: React.FC<RelocateStockPanelProps> = ({ payload 
   }
 
   return (
-    <form className="relocate-panel" onSubmit={handleSubmit}>
-      <div className="relocate-body">
+    <form className="drawer-form relocate-panel" onSubmit={handleSubmit}>
+      <div className="drawer-form-body relocate-body">
         {errorMsg && <div className="form-field-error-msg">{errorMsg}</div>}
 
         <div className="relocate-product-summary">
@@ -90,10 +91,10 @@ export const RelocateStockPanel: React.FC<RelocateStockPanelProps> = ({ payload 
           </div>
         </div>
 
-        <div className="relocate-field">
-          <label htmlFor="relocate-dest">Nueva ubicación (Estantería / Pasillo)</label>
+        <div className="drawer-form-field relocate-field">
+          <label htmlFor="relocate-dest" className="drawer-form-label">Nueva ubicación (Estantería / Pasillo)</label>
           {payload.warehouseId ? (
-            <select id="relocate-dest" className="relocate-input" value={destinationLocation} onChange={(e) => setDestinationLocation(e.target.value)} disabled={saving} required autoFocus>
+            <select id="relocate-dest" className="drawer-form-control relocate-input" value={destinationLocation} onChange={(e) => setDestinationLocation(e.target.value)} disabled={saving} required autoFocus>
               <option value="">Elige la ubicación…</option>
               {options.map((item) => (
                 <option key={item.id} value={item.code}>
@@ -103,17 +104,17 @@ export const RelocateStockPanel: React.FC<RelocateStockPanelProps> = ({ payload 
               ))}
             </select>
           ) : (
-            <input id="relocate-dest" type="text" className="relocate-input" placeholder="Ej: ESTANTE-A-02" value={destinationLocation} onChange={(e) => setDestinationLocation(e.target.value)} disabled={saving} required autoFocus />
+            <input id="relocate-dest" type="text" className="drawer-form-control relocate-input" placeholder="Ej: ESTANTE-A-02" value={destinationLocation} onChange={(e) => setDestinationLocation(e.target.value)} disabled={saving} required autoFocus />
           )}
-          <span className="relocate-hint">Debe ser una ubicación que exista en esta misma bodega (se crean en Inventario → Ubicaciones).</span>
+          <span className="drawer-form-hint relocate-hint">Debe ser una ubicación que exista en esta misma bodega (se crean en Inventario → Ubicaciones).</span>
         </div>
 
-        <div className="relocate-field">
-          <label htmlFor="relocate-qty">Cantidad a reubicar</label>
+        <div className="drawer-form-field relocate-field">
+          <label htmlFor="relocate-qty" className="drawer-form-label">Cantidad a reubicar</label>
           <input
             id="relocate-qty"
             type="number"
-            className="relocate-input"
+            className="drawer-form-control relocate-input"
             min={1}
             max={payload.availableQuantity}
             value={quantity}
@@ -123,11 +124,11 @@ export const RelocateStockPanel: React.FC<RelocateStockPanelProps> = ({ payload 
           />
         </div>
 
-        <div className="relocate-field">
-          <label htmlFor="relocate-reason">Motivo u observación (opcional)</label>
+        <div className="drawer-form-field relocate-field">
+          <label htmlFor="relocate-reason" className="drawer-form-label">Motivo u observación (opcional)</label>
           <textarea
             id="relocate-reason"
-            className="relocate-textarea"
+            className="drawer-form-control relocate-textarea"
             rows={3}
             placeholder="Ej: Optimización de espacio, reordenamiento..."
             value={reason}
@@ -137,7 +138,7 @@ export const RelocateStockPanel: React.FC<RelocateStockPanelProps> = ({ payload 
         </div>
       </div>
 
-      <div className="relocate-footer">
+      <div className="drawer-form-footer relocate-footer">
         <button
           type="button"
           className="btn-secondary"

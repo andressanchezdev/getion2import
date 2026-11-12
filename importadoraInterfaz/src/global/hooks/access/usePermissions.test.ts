@@ -102,4 +102,36 @@ describe('usePermissions', () => {
     const walletModule = result.current.find((m) => m.id === 'wallet')
     expect(walletModule).toBeUndefined()
   })
+  it('falla cerrada: un empleado sin matriz cargada no ve nada', () => {
+    mockAuthState = {
+      user: { userId: 3, companyId: 1, name: 'Sin', lastName: 'Permisos', email: 'x@test.com', identification: '789', photo: '', userType: 'employee' },
+      status: 'authenticated',
+      error: null,
+      permissions: null,
+    }
+    const { result } = renderHook(() => usePermissions())
+    expect(result.current.hasModuleAccess('shop')).toBe(false)
+    expect(result.current.hasScreenAccess('shop', 'catalog')).toBe(false)
+    expect(result.current.canPerformAction('shop', 'catalog', 'create')).toBe(false)
+    expect(result.current.can('orders:view')).toBe(false)
+  })
+
+  it('can() revisa las acciones especiales con las mismas reglas de la API', () => {
+    mockAuthState = {
+      user: { userId: 4, companyId: 1, name: 'Bodega', lastName: 'Uno', email: 'b@test.com', identification: '1', photo: '', userType: 'employee', permissions: ['orders:view', 'orders:advance_stage'] },
+      status: 'authenticated',
+      error: null,
+      permissions: { modules: [{ moduleKey: 'shop', canRead: true, canCreate: false, canUpdate: false, canDelete: false, screens: [] }] },
+    }
+    const employee = renderHook(() => usePermissions()).result.current
+    expect(employee.can('orders:advance_stage')).toBe(true)
+    expect(employee.can('orders:invoice')).toBe(false)
+    expect(employee.can('orders:invoice', 'orders:advance_stage')).toBe(true)
+
+    mockAuthState = { ...mockAuthState, user: { ...mockAuthState.user!, userType: 'superadmin', permissions: undefined }, permissions: null }
+    const superadmin = renderHook(() => usePermissions()).result.current
+    expect(superadmin.can('orders:view')).toBe(true)
+    expect(superadmin.can('orders:advance_stage')).toBe(false)
+    expect(superadmin.can('screensaver:edit')).toBe(true)
+  })
 })

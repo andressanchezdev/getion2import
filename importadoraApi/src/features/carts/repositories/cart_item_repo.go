@@ -20,7 +20,8 @@ func (r *CartRepository) ListItems(ctx context.Context, q db.DBExecutor, cartID 
 			ci.id, ci.cart_id, ci.product_id, COALESCE(p.code, ''), COALESCE(p.name, ''),
 			ci.stock_id, COALESCE(s.location, ''),
 			ci.quantity, ci.unit_price, ci.discount,
-			(ci.quantity * ci.unit_price - ci.discount) AS line_total
+			(ci.quantity * ci.unit_price - ci.discount) AS line_total,
+			COALESCE(ci.price_tier, 'p1')
 		FROM cart_items ci
 		JOIN products p ON p.id = ci.product_id
 		JOIN stock s ON s.id = ci.stock_id
@@ -40,6 +41,7 @@ func (r *CartRepository) ListItems(ctx context.Context, q db.DBExecutor, cartID 
 			&item.ID, &item.CartID, &item.ProductID, &item.ProductCode, &item.ProductName,
 			&item.StockID, &item.Location,
 			&item.Quantity, &item.UnitPrice, &item.Discount, &item.LineTotal,
+			&item.PriceTier,
 		); err != nil {
 			return nil, err
 		}
@@ -53,7 +55,8 @@ func (r *CartRepository) FindItemByID(ctx context.Context, q db.DBExecutor, item
 	const sql = `
 		SELECT
 			ci.id, ci.cart_id, ci.product_id, p.code, p.name,
-			ci.stock_id, s.location, ci.quantity, ci.unit_price, ci.discount
+			ci.stock_id, s.location, ci.quantity, ci.unit_price, ci.discount,
+			COALESCE(ci.price_tier, 'p1')
 		FROM cart_items ci
 		JOIN products p ON p.id = ci.product_id
 		JOIN stock s ON s.id = ci.stock_id
@@ -63,6 +66,7 @@ func (r *CartRepository) FindItemByID(ctx context.Context, q db.DBExecutor, item
 	err := q.QueryRow(ctx, sql, itemID).Scan(
 		&item.ID, &item.CartID, &item.ProductID, &item.ProductCode, &item.ProductName,
 		&item.StockID, &item.Location, &item.Quantity, &item.UnitPrice, &item.Discount,
+		&item.PriceTier,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -74,30 +78,32 @@ func (r *CartRepository) FindItemByID(ctx context.Context, q db.DBExecutor, item
 }
 
 // UpsertItem agrega un producto al carrito o actualiza su renglón si ya estaba.
-func (r *CartRepository) UpsertItem(ctx context.Context, q db.DBExecutor, cartID, productID, stockID int64, quantity int, unitPrice, discount float64) error {
+func (r *CartRepository) UpsertItem(ctx context.Context, q db.DBExecutor, cartID, productID, stockID int64, quantity int, unitPrice, discount float64, priceTier string) error {
 	const sql = `
-		INSERT INTO cart_items (cart_id, product_id, stock_id, quantity, unit_price, discount)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO cart_items (cart_id, product_id, stock_id, quantity, unit_price, discount, price_tier)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		ON CONFLICT (cart_id, stock_id)
 		DO UPDATE SET
 			quantity = cart_items.quantity + EXCLUDED.quantity,
 			unit_price = EXCLUDED.unit_price,
-			discount = EXCLUDED.discount
+			discount = EXCLUDED.discount,
+			price_tier = EXCLUDED.price_tier
 	`
-	_, err := q.Exec(ctx, sql, cartID, productID, stockID, quantity, unitPrice, discount)
+	_, err := q.Exec(ctx, sql, cartID, productID, stockID, quantity, unitPrice, discount, priceTier)
 	return err
 }
 
 // UpdateItem cambia los datos de un renglón del carrito (cantidad o precio).
-func (r *CartRepository) UpdateItem(ctx context.Context, q db.DBExecutor, itemID int64, quantity int, unitPrice, discount float64) error {
+func (r *CartRepository) UpdateItem(ctx context.Context, q db.DBExecutor, itemID int64, quantity int, unitPrice, discount float64, priceTier string) error {
 	const sql = `
 		UPDATE cart_items SET
 			quantity = $1,
 			unit_price = $2,
-			discount = $3
-		WHERE id = $4
+			discount = $3,
+			price_tier = $4
+		WHERE id = $5
 	`
-	cmdTag, err := q.Exec(ctx, sql, quantity, unitPrice, discount, itemID)
+	cmdTag, err := q.Exec(ctx, sql, quantity, unitPrice, discount, priceTier, itemID)
 	if err != nil {
 		return err
 	}

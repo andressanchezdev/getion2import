@@ -1,11 +1,12 @@
 // employees.thunks · carga la lista de empleados y de roles, registra un empleado, cambia su estado, guarda un rol, y carga y guarda los permisos de un empleado
 // conecta con: employees.service (llamadas) y auth (selectRequestContext); las despachan useEmployeesDirectory, useRoles, useEmployeePermissions, useCreateEmployeeForm, EmployeesTable y RoleForm
 // ojo: la lista de empleados lleva su requestId y el slice descarta las respuestas de cargas anteriores; los permisos de un empleado no van al slice (son el borrador del panel)
+import { isRealtimeLive } from '@/features/realtime/helpers/realtime.guards'
 import { createAsyncThunk } from '@reduxjs/toolkit'
 import { getErrorMessage } from '@/api'
 import { selectRequestContext, type AuthState } from '@/features/auth'
 import { toast } from '@/global/helpers/feedback/toast'
-import { createEmployee, createRole, fetchEmployeePermissions, fetchEmployeesList, fetchRolesList, saveEmployeePermissions, setEmployeeStatus, unlockEmployee, updateRole } from '../services/employees.service'
+import { createEmployee, createRole, fetchEmployeePermissions, fetchEmployeesList, fetchRolesList, saveEmployeePermissions, setEmployeeStatus, updateRole } from '../services/employees.service'
 import type { EmployeePermissionsResponse, EmployeeRole, ModulePermission, EmployeesState, NewEmployeeInput, RoleInput, SimpleEmployee } from '../types/employees.types'
 
 type ThunkState = { auth: AuthState; ui?: { activeCompanyId?: number } }
@@ -36,11 +37,11 @@ export const loadRolesThunk = createAsyncThunk<EmployeeRole[], void, { rejectVal
 // crea (sin roleId) o edita un rol y vuelve a pedir la lista
 export const saveRoleThunk = createAsyncThunk<void, { roleId?: number; input: RoleInput }, { rejectValue: string }>(
   'employees/saveRole',
-  async ({ roleId, input }, { dispatch, rejectWithValue }) => {
+  async ({ roleId, input }, { dispatch, getState, rejectWithValue }) => {
     try {
       if (roleId) await updateRole(roleId, input)
       else await createRole(input)
-      await dispatch(loadRolesThunk())
+      if (!isRealtimeLive(getState())) await dispatch(loadRolesThunk())
     } catch (error) {
       return rejectWithValue(getErrorMessage(error, 'No se pudo guardar el rol.'))
     }
@@ -58,11 +59,11 @@ export const loadEmployeePermissionsThunk = createAsyncThunk<EmployeePermissions
   }
 )
 
-export const saveEmployeePermissionsThunk = createAsyncThunk<void, { employeeId: number; modules: ModulePermission[] }, { rejectValue: string }>(
+export const saveEmployeePermissionsThunk = createAsyncThunk<void, { employeeId: number; modules: ModulePermission[]; specials?: string[] }, { rejectValue: string }>(
   'employees/savePermissions',
-  async ({ employeeId, modules }, { rejectWithValue }) => {
+  async ({ employeeId, modules, specials }, { rejectWithValue }) => {
     try {
-      await saveEmployeePermissions(employeeId, modules)
+      await saveEmployeePermissions(employeeId, modules, specials)
     } catch (error) {
       return rejectWithValue(getErrorMessage(error, 'Error al guardar permisos'))
     }
@@ -76,7 +77,7 @@ export const createEmployeeThunk = createAsyncThunk<void, NewEmployeeInput, { st
     try {
       await createEmployee(input)
       toast.success('Empleado registrado exitosamente.')
-      await dispatch(loadEmployeesThunk(getState().employees.directory.warehouseId))
+      if (!isRealtimeLive(getState())) await dispatch(loadEmployeesThunk(getState().employees.directory.warehouseId))
     } catch (error) {
       const message = getErrorMessage(error, 'Error al registrar el empleado.')
       toast.error(message)
@@ -96,22 +97,6 @@ export const setEmployeeStatusThunk = createAsyncThunk<{ employeeId: number; isA
     } catch (error) {
       toast.error(getErrorMessage(error, 'No se pudo actualizar el estado del empleado'))
       return rejectWithValue('No se pudo actualizar el estado del empleado')
-    }
-  }
-)
-
-// desbloquea la cuenta del empleado
-export const unlockEmployeeThunk = createAsyncThunk<number, number, { rejectValue: string }>(
-  'employees/unlock',
-  async (employeeId, { rejectWithValue }) => {
-    try {
-      await unlockEmployee(employeeId)
-      toast.success('Cuenta del empleado desbloqueada exitosamente')
-      return employeeId
-    } catch (error) {
-      const msg = getErrorMessage(error, 'No se pudo desbloquear la cuenta del empleado.')
-      toast.error(msg)
-      return rejectWithValue(msg)
     }
   }
 )

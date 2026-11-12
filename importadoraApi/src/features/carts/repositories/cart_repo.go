@@ -41,6 +41,7 @@ type CartItemEntity struct {
 	Quantity    int
 	UnitPrice   float64
 	Discount    float64
+	PriceTier   string
 }
 
 type CartRepository struct{}

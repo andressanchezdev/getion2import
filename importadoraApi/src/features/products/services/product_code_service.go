@@ -6,13 +6,18 @@ package services
 import (
 	"context"
 	"fmt"
+	"github.com/jackc/pgx/v5"
+	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/events"
 	"strings"
+	"time"
 
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
 	authRepos "importadoraApi/src/features/auth/repositories"
 	"importadoraApi/src/features/products/dtos"
+	"importadoraApi/src/features/products/repositories"
 )
 
 // ListCodes lista los códigos de un producto, validando que sea de la compañía del usuario.
@@ -77,7 +82,15 @@ func (s *ProductService) CreateCode(ctx context.Context, actor *middlewares.Acto
 		return nil, utils.BadRequest("INVALID_CODE", "El código es requerido.")
 	}
 
-	created, err := s.productRepo.CreateCode(ctx, s.pool, product.CompanyID, productID, req.CodeType, cleanCode)
+	created, err := db.WithTxValue(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) (*repositories.ProductCodeEntity, error) {
+		row, err := s.productRepo.CreateCode(ctx, tx, product.CompanyID, productID, req.CodeType, cleanCode)
+		if err != nil {
+			return nil, err
+		}
+		s.events.Record(ctx, events.NewEntityCreated(product.CompanyID, nil, events.EntityRef{Kind: events.KindProductCode, ID: row.ID, Version: time.Now().UTC()},
+			dtos.ProductCodeResponse{ID: row.ID, ProductID: row.ProductID, CodeType: row.CodeType, Code: row.Code}))
+		return row, nil
+	})
 	if err != nil {
 		return nil, utils.Internal("Error al registrar código alterno.", err)
 	}
@@ -122,7 +135,14 @@ func (s *ProductService) DeleteCode(ctx context.Context, actor *middlewares.Acto
 		}
 	}
 
-	if err := s.productRepo.DeleteCode(ctx, s.pool, codeID); err != nil {
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		if err := s.productRepo.DeleteCode(ctx, tx, codeID); err != nil {
+			return err
+		}
+		s.events.Record(ctx, events.NewEntityDeleted(product.CompanyID, nil, events.EntityRef{Kind: events.KindProductCode, ID: codeID, Version: time.Now().UTC()}, &events.EntityParent{Kind: events.KindProduct, ID: productID}))
+		return nil
+	})
+	if err != nil {
 		return utils.Internal("Error al eliminar código.", err)
 	}
 

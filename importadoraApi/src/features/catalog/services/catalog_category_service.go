@@ -7,12 +7,16 @@ import (
 	"context"
 	"strings"
 
+	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/events"
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
 	authRepos "importadoraApi/src/features/auth/repositories"
 	"importadoraApi/src/features/catalog/dtos"
 	"importadoraApi/src/features/catalog/repositories"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // ListCategories lista las categorías según los filtros y lo que el usuario puede ver.
@@ -45,6 +49,7 @@ func (s *CatalogService) ListCategories(ctx context.Context, actor *middlewares.
 			Description: entities[i].Description,
 			IsActive:    entities[i].IsActive,
 			CreatedAt:   entities[i].CreatedAt,
+			UpdatedAt:   entities[i].UpdatedAt,
 		})
 	}
 	return result, nil
@@ -79,6 +84,7 @@ func (s *CatalogService) GetCategoryByID(ctx context.Context, actor *middlewares
 		Description: entity.Description,
 		IsActive:    entity.IsActive,
 		CreatedAt:   entity.CreatedAt,
+		UpdatedAt:   entity.UpdatedAt,
 	}, nil
 }
 
@@ -135,7 +141,25 @@ func (s *CatalogService) CreateCategory(ctx context.Context, actor *middlewares.
 		IsActive:    isActive,
 	}
 
-	created, err := s.categoryRepo.Create(ctx, s.pool, entity)
+	// la creación y su evento van en la misma transacción: nadie recibe el aviso de un registro que no se guardó
+	created, err := db.WithTxValue(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) (*repositories.CategoryEntity, error) {
+		row, err := s.categoryRepo.Create(ctx, tx, entity)
+		if err != nil {
+			return nil, err
+		}
+		s.events.Record(ctx, events.NewEntityCreated(row.CompanyID, nil, events.EntityRef{Kind: events.KindCategory, ID: row.ID, Version: row.UpdatedAt}, &dtos.CategoryResponse{
+			ID:          row.ID,
+			CompanyID:   row.CompanyID,
+			ParentID:    row.ParentID,
+			ParentName:  parentName,
+			Name:        row.Name,
+			Description: row.Description,
+			IsActive:    row.IsActive,
+			CreatedAt:   row.CreatedAt,
+			UpdatedAt:   row.UpdatedAt,
+		}))
+		return row, nil
+	})
 	if err != nil {
 		return nil, utils.Internal("Error al registrar categoría.", err)
 	}
@@ -161,6 +185,7 @@ func (s *CatalogService) CreateCategory(ctx context.Context, actor *middlewares.
 		Description: created.Description,
 		IsActive:    created.IsActive,
 		CreatedAt:   created.CreatedAt,
+		UpdatedAt:   created.UpdatedAt,
 	}, nil
 }
 
@@ -171,6 +196,8 @@ func (s *CatalogService) UpdateCategory(ctx context.Context, actor *middlewares.
 	}
 
 	current, err := s.categoryRepo.FindByID(ctx, s.pool, id)
+	// foto del registro antes de editarlo: de aquí sale changedFields
+	beforeSnap := events.Snapshot(current)
 	if err != nil {
 		return nil, utils.Internal("Error al consultar categoría.", err)
 	}
@@ -185,18 +212,30 @@ func (s *CatalogService) UpdateCategory(ctx context.Context, actor *middlewares.
 	}
 
 	if req.ParentID != nil {
-		if *req.ParentID == id {
-			return nil, utils.BadRequest("INVALID_PARENT", "Una categoría no puede ser su propio padre.")
+		if *req.ParentID == 0 {
+			current.ParentID = nil
+			current.ParentName = nil
+		} else {
+			if *req.ParentID == id {
+				return nil, utils.BadRequest("INVALID_PARENT", "Una categoría no puede ser su propio padre.")
+			}
+			isDesc, err := s.isCategoryDescendant(ctx, id, *req.ParentID)
+			if err != nil {
+				return nil, utils.Internal("Error al validar jerarquía de categorías.", err)
+			}
+			if isDesc {
+				return nil, utils.BadRequest("CYCLE_DETECTED", "No se puede asignar como padre a una categoría que es su propia descendiente.")
+			}
+			parent, err := s.categoryRepo.FindByID(ctx, s.pool, *req.ParentID)
+			if err != nil {
+				return nil, utils.Internal("Error al validar categoría padre.", err)
+			}
+			if parent == nil || parent.CompanyID != current.CompanyID {
+				return nil, utils.BadRequest("INVALID_PARENT", "La categoría padre no existe en esta empresa.")
+			}
+			current.ParentID = req.ParentID
+			current.ParentName = &parent.Name
 		}
-		parent, err := s.categoryRepo.FindByID(ctx, s.pool, *req.ParentID)
-		if err != nil {
-			return nil, utils.Internal("Error al validar categoría padre.", err)
-		}
-		if parent == nil || parent.CompanyID != current.CompanyID {
-			return nil, utils.BadRequest("INVALID_PARENT", "La categoría padre no existe en esta empresa.")
-		}
-		current.ParentID = req.ParentID
-		current.ParentName = &parent.Name
 	}
 
 	if req.Name != nil && strings.TrimSpace(*req.Name) != "" {
@@ -214,42 +253,79 @@ func (s *CatalogService) UpdateCategory(ctx context.Context, actor *middlewares.
 	}
 
 	if req.Description != nil {
-		current.Description = req.Description
+		if strings.TrimSpace(*req.Description) == "" {
+			current.Description = nil
+		} else {
+			trimmed := strings.TrimSpace(*req.Description)
+			current.Description = &trimmed
+		}
 	}
-	if _, rerr := utils.ReasonOnDeactivation(current.IsActive, req.IsActive, req.Reason); rerr != nil {
+	oldActive := current.IsActive
+	reason, rerr := utils.ReasonOnDeactivation(current.IsActive, req.IsActive, req.Reason)
+	if rerr != nil {
 		return nil, rerr
 	}
 	if req.IsActive != nil {
 		current.IsActive = *req.IsActive
 	}
 
-	updated, err := s.categoryRepo.Update(ctx, s.pool, current)
+	var resp *dtos.CategoryResponse
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		updated, err := s.categoryRepo.Update(ctx, tx, current)
+		if err != nil {
+			return utils.Internal("Error al actualizar categoría.", err)
+		}
+
+		_ = s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
+			CompanyID: &current.CompanyID,
+			ActorType: actor.ActorType,
+			ActorID:   actor.ActorID,
+			Entity:    "categories",
+			EntityID:  &current.ID,
+			Action:    "CATEGORY_UPDATED",
+			Reason:    utils.ReasonOrDefault(reason, "Actualización de categoría"),
+			IPAddress: ip,
+			UserAgent: ua,
+		})
+
+		resp = &dtos.CategoryResponse{
+			ID:          updated.ID,
+			CompanyID:   updated.CompanyID,
+			ParentID:    updated.ParentID,
+			ParentName:  current.ParentName,
+			Name:        updated.Name,
+			Description: updated.Description,
+			IsActive:    updated.IsActive,
+			CreatedAt:   updated.CreatedAt,
+			UpdatedAt:   updated.UpdatedAt,
+		}
+		if s.events != nil && oldActive != updated.IsActive {
+			var reasonPtr *string
+			if reason != "" {
+				reasonPtr = &reason
+			}
+			ref := events.EntityRef{
+				Kind:    events.KindCategory,
+				ID:      updated.ID,
+				Version: updated.UpdatedAt,
+			}
+			s.events.Record(ctx, events.NewEntityStatus(updated.CompanyID, nil, ref, catalogActiveLabel(oldActive), catalogActiveLabel(updated.IsActive), reasonPtr, resp))
+		} else {
+			// edición sin cambio de estado: viaja la fila ya guardada para que las tablas abiertas se actualicen sin pedirla
+			ref := events.EntityRef{
+				Kind:    events.KindCategory,
+				ID:      updated.ID,
+				Version: updated.UpdatedAt,
+			}
+			s.events.Record(ctx, events.NewEntityUpdated(updated.CompanyID, nil, ref, resp, events.ChangedFields(beforeSnap, updated)))
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, utils.Internal("Error al actualizar categoría.", err)
+		return nil, err
 	}
 
-	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
-		CompanyID: &current.CompanyID,
-		ActorType: actor.ActorType,
-		ActorID:   actor.ActorID,
-		Entity:    "categories",
-		EntityID:  &current.ID,
-		Action:    "CATEGORY_UPDATED",
-		Reason:    "Actualización de categoría",
-		IPAddress: ip,
-		UserAgent: ua,
-	})
-
-	return &dtos.CategoryResponse{
-		ID:          updated.ID,
-		CompanyID:   updated.CompanyID,
-		ParentID:    updated.ParentID,
-		ParentName:  current.ParentName,
-		Name:        updated.Name,
-		Description: updated.Description,
-		IsActive:    updated.IsActive,
-		CreatedAt:   updated.CreatedAt,
-	}, nil
+	return resp, nil
 }
 
 // DeleteCategory elimina la categoría validando que sea de la compañía del usuario.
@@ -276,21 +352,68 @@ func (s *CatalogService) DeleteCategory(ctx context.Context, actor *middlewares.
 		}
 	}
 
-	if err := s.categoryRepo.SoftDelete(ctx, s.pool, id); err != nil {
-		return utils.Internal("Error al desactivar categoría.", err)
-	}
+	return db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		if err := s.categoryRepo.SoftDelete(ctx, tx, id); err != nil {
+			return utils.Internal("Error al desactivar categoría.", err)
+		}
 
-	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
-		CompanyID: &current.CompanyID,
-		ActorType: actor.ActorType,
-		ActorID:   actor.ActorID,
-		Entity:    "categories",
-		EntityID:  &current.ID,
-		Action:    "CATEGORY_DEACTIVATED",
-		Reason:    reason,
-		IPAddress: ip,
-		UserAgent: ua,
+		_ = s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
+			CompanyID: &current.CompanyID,
+			ActorType: actor.ActorType,
+			ActorID:   actor.ActorID,
+			Entity:    "categories",
+			EntityID:  &current.ID,
+			Action:    "CATEGORY_DEACTIVATED",
+			Reason:    reason,
+			IPAddress: ip,
+			UserAgent: ua,
+		})
+
+		if s.events != nil && current.IsActive {
+			updated, err := s.categoryRepo.FindByID(ctx, tx, id)
+			if err != nil {
+				return utils.Internal("Error al recargar categoría desactivada.", err)
+			}
+			if updated != nil {
+				resp := &dtos.CategoryResponse{
+					ID:          updated.ID,
+					CompanyID:   updated.CompanyID,
+					ParentID:    updated.ParentID,
+					ParentName:  updated.ParentName,
+					Name:        updated.Name,
+					Description: updated.Description,
+					IsActive:    updated.IsActive,
+					CreatedAt:   updated.CreatedAt,
+					UpdatedAt:   updated.UpdatedAt,
+				}
+				ref := events.EntityRef{
+					Kind:    events.KindCategory,
+					ID:      updated.ID,
+					Version: updated.UpdatedAt,
+				}
+				s.events.Record(ctx, events.NewEntityStatus(updated.CompanyID, nil, ref, "active", "inactive", &reason, resp))
+			}
+		}
+		return nil
 	})
+}
 
-	return nil
+func (s *CatalogService) isCategoryDescendant(ctx context.Context, ancestorID, candidateDescendantID int64) (bool, error) {
+	currentID := candidateDescendantID
+	visited := make(map[int64]bool)
+	for currentID > 0 {
+		if currentID == ancestorID {
+			return true, nil
+		}
+		if visited[currentID] {
+			break
+		}
+		visited[currentID] = true
+		curr, err := s.categoryRepo.FindByID(ctx, s.pool, currentID)
+		if err != nil || curr == nil || curr.ParentID == nil {
+			break
+		}
+		currentID = *curr.ParentID
+	}
+	return false, nil
 }

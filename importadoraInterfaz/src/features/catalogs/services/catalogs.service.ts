@@ -38,12 +38,12 @@ export const fetchCategories = async (ctx: RequestContext): Promise<Category[]> 
 }
 
 // crea una categoría con su nombre y descripción
-export const createCategory = async (ctx: RequestContext, payload: { name: string; description?: string }): Promise<void> => {
+export const createCategory = async (ctx: RequestContext, payload: { name: string; description?: string; parentId?: number | null }): Promise<void> => {
   await apiClient.post('/categories', withCompany(ctx.companyId, payload))
 }
 
 // cambia el nombre o la descripción de una categoría
-export const updateCategory = async (categoryId: number, payload: { name: string; description?: string }): Promise<void> => {
+export const updateCategory = async (categoryId: number, payload: { name: string; description?: string; parentId?: number | null }): Promise<void> => {
   await apiClient.put(`/categories/${categoryId}`, payload)
 }
 

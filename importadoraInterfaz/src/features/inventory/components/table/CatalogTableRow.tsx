@@ -2,6 +2,8 @@
 // conecta con: CatalogTable (la pinta), RowActions (acciones en fila) y los iconos de acciones de assets
 import React from 'react'
 import { RowActions } from '@/global/components/UI/molecules/table/RowActions'
+import { CopyableCell } from '@/global/components/UI/molecules/table/CopyableCell'
+import { StatusSelect } from '@/global/components/UI/molecules/table/StatusSelect'
 import eyeIcon from '@/assets/icons/eye.svg?raw'
 import editIcon from '@/assets/icons/edit.svg?raw'
 import copyIcon from '@/assets/icons/copy.svg?raw'
@@ -43,26 +45,21 @@ export const CatalogTableRow: React.FC<CatalogTableRowProps> = ({
       </td>
     )}
     <td>
-      <span className="inv-code">{row.id}</span>
+      <CopyableCell text={row.id} />
     </td>
     <td className="inv-name">{row.name}</td>
     <td>
-      <select
-        className={`inv-status-select ${row.isActive !== false ? 'is-active' : 'is-inactive'}`}
+      <StatusSelect
         value={row.isActive !== false ? 'active' : 'inactive'}
         disabled={toggling}
-        onChange={(e) => {
-          const nextActive = e.target.value === 'active'
+        ariaLabel={`Cambiar estado de ${row.name}`}
+        onChange={(val) => {
+          const nextActive = val === 'active'
           if (nextActive !== (row.isActive !== false)) {
             onToggleStatus?.(row)
           }
         }}
-        title="Cambiar estado"
-        aria-label={`Cambiar estado de ${row.name}`}
-      >
-        <option value="active">Activo</option>
-        <option value="inactive">Inactivo</option>
-      </select>
+      />
     </td>
     <td>
       <RowActions

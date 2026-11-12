@@ -6,13 +6,15 @@ import { searchCatalogThunk } from '@/features/inventory'
 import type { Product } from '@/features/shop'
 import { toast } from '@/global/helpers/feedback/toast'
 import { useDebouncedValue } from '@/global/hooks/data/useDebouncedValue'
-import { useAppDispatch } from '@/global/hooks/store/useRedux'
+import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { deleteSupplierProductThunk, loadSupplierProductsThunk, saveSupplierProductThunk } from '../thunks/purchases.thunks'
 import type { SupplierProduct } from '../types/purchases.types'
 
 export const useSupplierCatalog = (supplierId: number) => {
   const dispatch = useAppDispatch()
   const [items, setItems] = useState<SupplierProduct[] | null>(null)
+  // tiempo real: si otro usuario importa el catálogo de este proveedor, se vuelve a pedir la lista
+  const importTick = useAppSelector((state) => (state as { purchases?: { catalogTicks?: Record<number, number> } }).purchases?.catalogTicks?.[supplierId] ?? 0)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [text, setText] = useState('')
   const [found, setFound] = useState<{ query: string; items: Product[] }>({ query: '', items: [] })
@@ -33,7 +35,7 @@ export const useSupplierCatalog = (supplierId: number) => {
     return () => {
       current = false
     }
-  }, [dispatch, supplierId])
+  }, [dispatch, supplierId, importTick])
 
   useEffect(() => {
     if (!canSearch) return

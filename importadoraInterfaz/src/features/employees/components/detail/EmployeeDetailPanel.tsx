@@ -2,6 +2,7 @@
 // conecta con: formRegistry (lo muestra), useEmployeePermissions (permisos cargados), permissions.selection (resumen en lista), usePermissions (puede editar) y navigation (abrir la edición o cerrar)
 // ojo: aquí los permisos son solo una lista (no la matriz de casillas); la matriz para elegir permisos solo aparece al presionar «Editar permisos», ya con este mismo empleado
 import React from 'react'
+import '@/global/components/UI/molecules/form/DrawerFormShell.css'
 import './EmployeeDetailPanel.css'
 import { closeDrawerForm, openDrawerForm } from '@/features/navigation'
 import { formatDateTime } from '@/global/helpers/formatting/format'
@@ -16,7 +17,7 @@ export const EmployeeDetailPanel: React.FC<{ employee: SimpleEmployee; onClose?:
   const dispatch = useAppDispatch()
   const close = () => (onClose ? onClose() : dispatch(closeDrawerForm()))
   const { map, loading, feedback } = useEmployeePermissions(employee.employeeId)
-  const canEdit = usePermissions().canPerformAction('settings', 'rolesPermissions', 'update')
+  const canEdit = usePermissions().can('roles:edit')
   const summary = summarizePermissions(map, ASSIGNABLE_MENU_ITEMS)
 
   const facts: Array<[string, string]> = [
@@ -32,8 +33,8 @@ export const EmployeeDetailPanel: React.FC<{ employee: SimpleEmployee; onClose?:
   ]
 
   return (
-    <div className="employee-detail">
-      <div className="employee-detail-body">
+    <div className="drawer-form employee-detail">
+      <div className="drawer-form-body employee-detail-body">
         <dl className="employee-detail-facts">
           {facts.map(([label, value]) => (
             <div key={label} className="employee-detail-fact">
@@ -68,7 +69,7 @@ export const EmployeeDetailPanel: React.FC<{ employee: SimpleEmployee; onClose?:
         )}
       </div>
 
-      <div className="employee-detail-footer">
+      <div className="drawer-form-footer employee-detail-footer">
         <button type="button" className="btn-secondary" onClick={close}>Cerrar</button>
         {canEdit && (
           <button type="button" className="btn-primary" onClick={() => dispatch(openDrawerForm({ kind: 'employeePermissions', payload: { employee, mode: 'edit' } }))}>

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/events"
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
@@ -61,6 +62,7 @@ func (s *ProductService) assignInitialStock(ctx context.Context, tx db.DBExecuto
 		if err != nil {
 			return err
 		}
+		s.events.Stock(ctx, stock.ID, events.CauseAdjustment())
 		if item.Quantity == 0 {
 			continue
 		}

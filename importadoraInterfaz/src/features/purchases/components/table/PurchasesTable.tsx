@@ -5,6 +5,7 @@ import './PurchasesTable.css'
 import { Pill } from '@/global/components/UI/atoms/Pill'
 import { ReasonPrompt } from '@/features/reasonPrompt'
 import { SearchBar } from '@/global/components/UI/molecules/filters/SearchBar'
+import { FilterSelect } from '@/global/components/UI/molecules/filters/FilterSelect'
 import { Pagination } from '@/global/components/UI/molecules/table/Pagination'
 import { RowActions } from '@/global/components/UI/molecules/table/RowActions'
 import { formatCOP } from '@/global/helpers/formatting/format'
@@ -23,6 +24,8 @@ import { usePurchaseActions } from '../../hooks/usePurchaseActions'
 import { usePurchases, type PurchasesMode } from '../../hooks/usePurchases'
 import type { Purchase, PurchaseStatus } from '../../types/purchases.types'
 import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
+import { ActionsHeader } from '@/global/components/UI/molecules/table/ActionsHeader'
+import { CopyableCell } from '@/global/components/UI/molecules/table/CopyableCell'
 import { Icon } from '@/global/components/UI/atoms/Icon'
 import plusIcon from '@/assets/icons/plus.svg?raw'
 
@@ -34,7 +37,8 @@ export const PurchasesTable: React.FC<{ mode: PurchasesMode }> = ({ mode }) => {
   const { pageItems, meta, setPage } = usePagedList(list.items, `${list.search}|${list.status}|${list.selectedWarehouseId}|${mode}`)
   const receiving = mode === 'receiving'
   // pagar la recepción es de la caja: lo hace quien puede editar en Caja
-  const canPayFromCash = usePermissions().canPerformAction('shop', 'cashRegister', 'update')
+  const { can } = usePermissions()
+  const canPayFromCash = can('cash:edit')
 
   const warehouseOptions = [
     { value: 'all', label: 'Todas las bodegas' },
@@ -44,14 +48,14 @@ export const PurchasesTable: React.FC<{ mode: PurchasesMode }> = ({ mode }) => {
   const message = list.failed
     ? list.error
     : list.loading
-    ? 'Cargando compras…'
-    : list.items.length === 0
-    ? list.hasFilters
-      ? 'No hay órdenes que coincidan con la búsqueda.'
-      : receiving
-      ? 'No hay órdenes esperando mercancía.'
-      : 'Todavía no hay órdenes de compra registradas.'
-    : null
+      ? 'Cargando compras…'
+      : list.items.length === 0
+        ? list.hasFilters
+          ? 'No hay órdenes que coincidan con la búsqueda.'
+          : receiving
+            ? 'No hay órdenes esperando mercancía.'
+            : 'Todavía no hay órdenes de compra registradas.'
+        : null
 
   const confirmVoid = async (reason: string) => {
     const target = toVoid
@@ -71,36 +75,28 @@ export const PurchasesTable: React.FC<{ mode: PurchasesMode }> = ({ mode }) => {
           className="purchases-search"
         />
         <div className="purchases-toolbar-middle">
-          <label className="purchases-toolbar-filter">
-            <span>Bodega:</span>
-            <select
-              className="purchases-toolbar-select"
-              value={list.selectedWarehouseId ? String(list.selectedWarehouseId) : 'all'}
-              onChange={(e) => list.setSelectedWarehouseId(!e.target.value || e.target.value === 'all' ? null : Number(e.target.value))}
-            >
-              {warehouseOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-          </label>
-          <label className="purchases-toolbar-filter">
-            <span>Estado:</span>
-            <select
-              className="purchases-toolbar-select"
-              value={list.status}
-              onChange={(e) => list.setStatus((e.target.value || 'all') as PurchaseStatus | 'all')}
-            >
-              {PURCHASE_STATUS_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-          </label>
+          <FilterSelect
+            label="Bodega"
+            allLabel="Todas las bodegas"
+            emptyValue="all"
+            value={list.selectedWarehouseId ? String(list.selectedWarehouseId) : 'all'}
+            options={warehouseOptions}
+            onChange={(val) => list.setSelectedWarehouseId(!val || val === 'all' ? null : Number(val))}
+          />
+          <FilterSelect
+            label="Estado"
+            allLabel="Todos los estados"
+            emptyValue="all"
+            value={list.status}
+            options={PURCHASE_STATUS_OPTIONS}
+            onChange={(val) => list.setStatus((val || 'all') as PurchaseStatus | 'all')}
+          />
         </div>
         <div className="purchases-toolbar-actions">
           <span className="purchases-count" aria-live="polite">
             {list.items.length} de {list.total} órdenes
           </span>
-          {!receiving && (
+          {!receiving && can('purchases:create') && (
             <button
               type="button"
               className="btn-primary purchases-create"
@@ -113,61 +109,65 @@ export const PurchasesTable: React.FC<{ mode: PurchasesMode }> = ({ mode }) => {
       </div>
 
       <DataTable tableId="purchases-purchases">
-          <thead>
+        <thead>
+          <tr>
+            <th>Orden</th>
+            <th>Proveedor</th>
+            <th>Bodega Destino</th>
+            <th>Creada</th>
+            <th>Esperada</th>
+            <th>Referencia</th>
+            <th className="purchases-num">Total</th>
+            <th>Estado</th>
+            {receiving && <th>Pago</th>}
+            <ActionsHeader />
+          </tr>
+        </thead>
+        <tbody>
+          {message ? (
             <tr>
-              <th>Orden</th>
-              <th>Proveedor</th>
-              <th>Bodega Destino</th>
-              <th>Creada</th>
-              <th>Esperada</th>
-              <th>Referencia</th>
-              <th className="purchases-num">Total</th>
-              <th>Estado</th>
-              {receiving && <th>Pago</th>}
-              <th>Acciones</th>
+              <td colSpan={receiving ? 10 : 9} className="purchases-empty">{message}</td>
             </tr>
-          </thead>
-          <tbody>
-            {message ? (
-              <tr>
-                <td colSpan={receiving ? 10 : 9} className="purchases-empty">{message}</td>
+          ) : (
+            pageItems.map((purchase) => (
+              <tr key={purchase.id}>
+                <td>
+                  <strong>
+                    <CopyableCell text={purchase.serial} label="Orden de compra" />
+                  </strong>
+                </td>
+                <td>{purchase.supplierName}</td>
+                <td>
+                  <strong className="purchases-table-wh">{purchase.warehouseName || 'Bodega Principal'}</strong>
+                </td>
+                <td>{purchase.createdAt || '—'}</td>
+                <td>{purchase.expectedDate || '—'}</td>
+                <td>{purchase.supplierRef || '—'}</td>
+                <td className="purchases-num table-amount">{formatCOP(purchase.total)}</td>
+                <td><Pill tone={PURCHASE_STATUS[purchase.status].tone}>{PURCHASE_STATUS[purchase.status].label}</Pill></td>
+                {receiving && (
+                  <td>
+                    <Pill tone={purchase.paidTotal <= 0 ? 'gray' : pendingToPay(purchase) > 0 ? 'amber' : 'green'}>
+                      {purchase.paidTotal <= 0 ? 'Sin pagar' : pendingToPay(purchase) > 0 ? `Pagado ${formatCOP(purchase.paidTotal)}` : 'Pagada'}
+                    </Pill>
+                  </td>
+                )}
+                <td>
+                  <RowActions
+                    actions={[
+                      { key: 'detail', label: `Ver la orden ${purchase.serial}`, icon: eyeIcon, onClick: () => dispatch(openDrawerForm({ kind: 'purchaseDetail', payload: { id: purchase.id } })) },
+                      { key: 'receive', label: `Recibir mercancía de ${purchase.serial}`, icon: receiveIcon, tone: 'success', visible: canReceive(purchase) && can('purchases:receive'), onClick: () => dispatch(openDrawerForm({ kind: 'purchaseReceive', payload: { id: purchase.id } })) },
+                      { key: 'pay', label: `Pagar la recepción de ${purchase.serial} desde la caja`, icon: walletIcon, tone: 'success', visible: receiving && canPayFromCash && canPay(purchase), onClick: () => dispatch(openDrawerForm({ kind: 'purchasePay', payload: { id: purchase.id } })) },
+                      { key: 'excel', label: `Bajar el Excel de ${purchase.serial}`, icon: fileIcon, onClick: () => actions.exportExcel(purchase) },
+                      { key: 'void', label: `Anular la orden ${purchase.serial}`, icon: banIcon, tone: 'danger', visible: purchase.status === 'ordered' && can('purchases:edit'), onClick: () => setToVoid(purchase) },
+                    ]}
+                  />
+                </td>
               </tr>
-            ) : (
-              pageItems.map((purchase) => (
-                <tr key={purchase.id}>
-                  <td><strong>{purchase.serial}</strong></td>
-                  <td>{purchase.supplierName}</td>
-                  <td>
-                    <strong className="purchases-table-wh">{purchase.warehouseName || 'Bodega Principal'}</strong>
-                  </td>
-                  <td>{purchase.createdAt || '—'}</td>
-                  <td>{purchase.expectedDate || '—'}</td>
-                  <td>{purchase.supplierRef || '—'}</td>
-                  <td className="purchases-num table-amount">{formatCOP(purchase.total)}</td>
-                  <td><Pill tone={PURCHASE_STATUS[purchase.status].tone}>{PURCHASE_STATUS[purchase.status].label}</Pill></td>
-                  {receiving && (
-                    <td>
-                      <Pill tone={purchase.paidTotal <= 0 ? 'gray' : pendingToPay(purchase) > 0 ? 'amber' : 'green'}>
-                        {purchase.paidTotal <= 0 ? 'Sin pagar' : pendingToPay(purchase) > 0 ? `Pagado ${formatCOP(purchase.paidTotal)}` : 'Pagada'}
-                      </Pill>
-                    </td>
-                  )}
-                  <td>
-                    <RowActions
-                      actions={[
-                        { key: 'detail', label: `Ver la orden ${purchase.serial}`, icon: eyeIcon, onClick: () => dispatch(openDrawerForm({ kind: 'purchaseDetail', payload: { id: purchase.id } })) },
-                        { key: 'receive', label: `Recibir mercancía de ${purchase.serial}`, icon: receiveIcon, tone: 'success', visible: canReceive(purchase), onClick: () => dispatch(openDrawerForm({ kind: 'purchaseReceive', payload: { id: purchase.id } })) },
-                        { key: 'pay', label: `Pagar la recepción de ${purchase.serial} desde la caja`, icon: walletIcon, tone: 'success', visible: receiving && canPayFromCash && canPay(purchase), onClick: () => dispatch(openDrawerForm({ kind: 'purchasePay', payload: { id: purchase.id } })) },
-                        { key: 'excel', label: `Bajar el Excel de ${purchase.serial}`, icon: fileIcon, onClick: () => actions.exportExcel(purchase) },
-                        { key: 'void', label: `Anular la orden ${purchase.serial}`, icon: banIcon, tone: 'danger', visible: purchase.status === 'ordered', onClick: () => setToVoid(purchase) },
-                      ]}
-                    />
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </DataTable>
+            ))
+          )}
+        </tbody>
+      </DataTable>
       <Pagination meta={meta} label="Paginación de compras" onPageChange={setPage} />
 
       <ReasonPrompt

@@ -6,6 +6,7 @@ package repositories
 import (
 	"context"
 	"errors"
+	"time"
 
 	"importadoraApi/src/core/db"
 
@@ -75,7 +76,7 @@ func (r *SaleRepository) MarkQuotationConverted(ctx context.Context, q db.DBExec
 }
 
 // InsertTransferPayment crea el pago por transferencia de un pedido, en revisión, con su comprobante y referencia
-func (r *SaleRepository) InsertTransferPayment(ctx context.Context, q db.DBExecutor, companyID int64, serialCode string, saleID, customerID, employeeID int64, amount float64, proofURL, reference, notes *string) error {
+func (r *SaleRepository) InsertTransferPayment(ctx context.Context, q db.DBExecutor, companyID int64, serialCode string, saleID, customerID, employeeID int64, amount float64, proofURL, reference, notes *string) (int64, time.Time, error) {
 	const sql = `
 		INSERT INTO payments (
 			company_id, serial_code, sale_id, customer_id, employee_id,
@@ -83,9 +84,12 @@ func (r *SaleRepository) InsertTransferPayment(ctx context.Context, q db.DBExecu
 		) VALUES (
 			$1, $2, $3, $4, $5, 'transfer', $6, 'review', $7, $8, $9
 		)
+		RETURNING id, created_at
 	`
-	_, err := q.Exec(ctx, sql, companyID, serialCode, saleID, customerID, employeeID, amount, proofURL, reference, notes)
-	return err
+	var id int64
+	var createdAt time.Time
+	err := q.QueryRow(ctx, sql, companyID, serialCode, saleID, customerID, employeeID, amount, proofURL, reference, notes).Scan(&id, &createdAt)
+	return id, createdAt, err
 }
 
 // UpdateCarrier guarda la transportadora y la guía de la venta; lo que no se envía se conserva

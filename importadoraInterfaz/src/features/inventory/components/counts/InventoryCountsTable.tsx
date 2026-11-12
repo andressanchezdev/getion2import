@@ -7,6 +7,8 @@ import eyeIcon from '@/assets/icons/eye.svg?raw'
 import { RowActions, type RowAction } from '@/global/components/UI/molecules/table/RowActions'
 import type { InventoryCount } from '../../types/inventory.counts.types'
 import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
+import { ActionsHeader } from '@/global/components/UI/molecules/table/ActionsHeader'
+import { CopyableCell } from '@/global/components/UI/molecules/table/CopyableCell'
 
 interface Props {
   items: InventoryCount[]
@@ -73,7 +75,7 @@ export const InventoryCountsTable: React.FC<Props> = ({
             <th className="col-priority-high">Estado</th>
             <th className="col-priority-medium">Fecha Inicio</th>
             <th className="col-priority-low">Fecha Cierre</th>
-            <th className="col-actions" style={{ textAlign: 'center' }}>Acciones</th>
+            <ActionsHeader className="col-actions" />
           </tr>
         </thead>
         <tbody>
@@ -91,7 +93,7 @@ export const InventoryCountsTable: React.FC<Props> = ({
                 onClick={() => onOpenDetail(count.id)}
               >
                 <td className="col-priority-high">
-                  <strong>#{count.id}</strong>
+                  <CopyableCell text={count.id} prefix="#" />
                 </td>
                 <td className="col-priority-high">{count.warehouseName}</td>
                 <td className="col-priority-medium">{count.employeeName || '—'}</td>

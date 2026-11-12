@@ -11,7 +11,6 @@ export const OrderPeopleSection: React.FC<{ order: OrderDetail }> = ({ order }) 
       <Row label="Nombre">{order.customer.name}</Row>
       {order.customer.document && <Row label="Documento">{order.customer.document}</Row>}
       {order.customer.email && <Row label="Correo">{order.customer.email}</Row>}
-      {order.customer.priceType && <Row label="Nivel de precio">{order.customer.priceType}</Row>}
     </Box>
     <Box title="Vendedor">
       <Row label="Nombre">{order.seller.name}</Row>

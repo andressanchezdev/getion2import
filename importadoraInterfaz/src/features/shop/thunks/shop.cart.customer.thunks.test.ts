@@ -64,7 +64,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(fetchActiveCart).mockResolvedValue({ cartId: 9, uuid: 'u-9', items: [line] })
   vi.mocked(findStockId).mockResolvedValue(21)
-  vi.mocked(addCartItem).mockResolvedValue(undefined)
+  vi.mocked(addCartItem).mockResolvedValue(null)
   vi.mocked(fetchProductsPage).mockResolvedValue({
     items: [],
     meta: { currentPage: 1, pageSize: 30, totalRecords: 0, totalPages: 0, hasNextPage: false, hasPrevPage: false },

@@ -2,6 +2,7 @@
 // conecta con: formRegistry (reasonForm), reasonRequests (entrega la respuesta) y navigation (closeDrawerForm); sigue el mismo diseño de los demás formularios laterales
 // ojo: si el panel se cierra sin confirmar (Cancelar, la ✕ o abrir otro) la petición se resuelve con null
 import React, { useEffect, useRef, useState } from 'react'
+import '@/global/components/UI/molecules/form/DrawerFormShell.css'
 import './ReasonFormPanel.css'
 import { useAppDispatch } from '@/global/hooks/store/useRedux'
 import { closeDrawerForm } from '@/features/navigation'
@@ -41,28 +42,28 @@ export const ReasonFormPanel: React.FC<ReasonFormPanelProps> = ({ payload }) => 
   }
 
   return (
-    <form className="reason-form-panel" onSubmit={submit}>
-      <div className="reason-form-body">
+    <form className="drawer-form reason-form-panel" onSubmit={submit}>
+      <div className="drawer-form-body reason-form-body">
         <p className="reason-form-message">{message}</p>
         {field && (
-        <div className="reason-form-field">
-          <label htmlFor="reason-form-input">{fieldLabel}{required ? ' *' : ''}</label>
-          <textarea
-            id="reason-form-input"
-            className="reason-form-textarea"
-            rows={4}
-            value={text}
-            maxLength={maxLength}
-            placeholder={placeholder ?? (required ? `Indica el motivo (${minLength} a ${maxLength} caracteres)…` : 'Opcional')}
-            onChange={(event) => setText(event.target.value)}
-            autoFocus
-          />
-          <span className="reason-form-hint">{length}/{maxLength}{required ? ` (mínimo ${minLength})` : ''}</span>
-        </div>
+          <div className="drawer-form-field reason-form-field">
+            <label htmlFor="reason-form-input" className="drawer-form-label">{fieldLabel}{required ? ' *' : ''}</label>
+            <textarea
+              id="reason-form-input"
+              className="drawer-form-control reason-form-textarea"
+              rows={4}
+              value={text}
+              maxLength={maxLength}
+              placeholder={placeholder ?? (required ? `Indica el motivo (${minLength} a ${maxLength} caracteres)…` : 'Opcional')}
+              onChange={(event) => setText(event.target.value)}
+              autoFocus
+            />
+            <span className="drawer-form-hint reason-form-hint">{length}/{maxLength}{required ? ` (mínimo ${minLength})` : ''}</span>
+          </div>
         )}
       </div>
 
-      <div className="reason-form-footer">
+      <div className="drawer-form-footer reason-form-footer">
         <button type="button" className="btn-secondary" onClick={() => dispatch(closeDrawerForm())}>
           Cancelar
         </button>

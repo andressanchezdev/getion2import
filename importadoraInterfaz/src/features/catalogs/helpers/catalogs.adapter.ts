@@ -24,6 +24,7 @@ export const toCategories = (rows: CategoryDto[]): Category[] =>
     id: row.id,
     name: cleanName(row.name),
     description: cleanName(row.description) || undefined,
+    parentId: row.parentId ?? null,
     isActive: row.isActive ?? true,
   }))
 

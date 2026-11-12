@@ -119,4 +119,5 @@ export interface OrdersState {
   list: OrdersListState
   openId: number | null
   detail: OrderDetailState
+  processingIds?: number[]
 }

@@ -16,7 +16,7 @@ func RegisterRoutes(e *echo.Echo, authMiddleware *middlewares.AuthMiddleware, ct
 	{
 		b.POST("/upload-pdf", ctrl.UploadPDF, authMiddleware.RequirePermission("payments", "create"))
 		b.GET("/records", ctrl.ListRecords, authMiddleware.RequirePermission("payments", "view"))
-		b.PATCH("/records/:id/confirm", ctrl.ConfirmRecord, authMiddleware.RequirePermission("payments", "edit"))
-		b.PATCH("/records/:id/ignore", ctrl.IgnoreRecord, authMiddleware.RequirePermission("payments", "edit"))
+		b.PATCH("/records/:id/confirm", ctrl.ConfirmRecord, authMiddleware.RequirePermission("payments", "reconcile"))
+		b.PATCH("/records/:id/ignore", ctrl.IgnoreRecord, authMiddleware.RequirePermission("payments", "reconcile"))
 	}
 }

@@ -35,6 +35,7 @@ export interface TransferDto {
   dispatchedAt?: string
   receivedAt?: string
   createdAt?: string
+  updatedAt?: string
   items?: TransferItemDto[] | null
 }
 

@@ -44,6 +44,12 @@ export const navigationSlice = createSlice({
       state.activeWarehouseId = action.payload.id
       state.activeWarehouseName = action.payload.name
     },
+    // tiempo real: si la bodega activa se desactiva se vacía, para que WarehouseSelector elija otra de las activas
+    activeWarehouseDeactivated: (state, action: PayloadAction<string>) => {
+      if (state.activeWarehouseId !== action.payload) return
+      state.activeWarehouseId = INITIAL_NAVIGATION_STATE.activeWarehouseId
+      state.activeWarehouseName = INITIAL_NAVIGATION_STATE.activeWarehouseName
+    },
     // el superadmin salta de compañía: la bodega activa era de la anterior, se vacía para que WarehouseSelector elija una de la nueva
     // ojo: rootReducer borra además los datos de las demás features (productos, carrito, clientes...) al ver esta acción
     setActiveCompany: (state, action: PayloadAction<{ id: number; name: string }>) => {
@@ -77,6 +83,7 @@ export const {
   closeDrawerForm,
   setRightDrawerOpen,
   setActiveWarehouse,
+  activeWarehouseDeactivated,
   setActiveCompany,
   openHistory,
   clearHistoryTarget,

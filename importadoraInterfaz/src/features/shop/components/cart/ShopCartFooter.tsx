@@ -6,7 +6,7 @@ import { formatPesos } from '@/global/helpers/formatting/format'
 import { usePermissions } from '@/global/hooks/access/usePermissions'
 import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { openDrawerForm } from '@/features/navigation'
-import { selectCartMutating, selectCartTotals } from '../../selectors/shop.selectors'
+import { selectCartCustomer, selectCartItems, selectCartMutating, selectCartTotals } from '../../selectors/shop.selectors'
 import { IVA_RATE } from '../../constants/shop.constants'
 import { splitIncludedTax } from '../../helpers/shop.helpers'
 import './ShopCartFooter.css'
@@ -14,11 +14,17 @@ import './ShopCartFooter.css'
 export const ShopCartFooter: React.FC = () => {
   const dispatch = useAppDispatch()
   const { totalAmount, totalItemsCount } = useAppSelector(selectCartTotals)
+  const items = useAppSelector(selectCartItems)
+  const customer = useAppSelector(selectCartCustomer)
   const isBusy = useAppSelector(selectCartMutating)
   const { subtotal, tax } = splitIncludedTax(totalAmount)
   const isEmpty = totalItemsCount === 0
+  const hasBlockedItems = items.some(
+    (item) => item.unavailable || item.product.status === 'inactive' || (item.maxAvailable !== undefined && item.quantity > item.maxAvailable)
+  )
+  const hasBlockedCustomer = Boolean(customer?.unavailable)
   // vender o cotizar es de quien tiene permiso de ventas (el administrador también, pero asigna la venta a un empleado)
-  const canSell = usePermissions().canPerformAction('shop', 'orders', 'create')
+  const canSell = usePermissions().can('orders:create')
 
   // finalizar compra abre el panel: cliente y entrega, y después el pago
   const openCheckout = () => dispatch(openDrawerForm({ kind: 'checkout', payload: { mode: 'sale' } }))
@@ -41,8 +47,16 @@ export const ShopCartFooter: React.FC = () => {
       <button
         type="button"
         className="shop-cart-btn-checkout"
-        disabled={isEmpty || isBusy || !canSell}
-        title={canSell ? undefined : 'No tienes permiso de ventas'}
+        disabled={isEmpty || isBusy || !canSell || hasBlockedItems || hasBlockedCustomer}
+        title={
+          !canSell
+            ? 'No tienes permiso de ventas'
+            : hasBlockedItems
+              ? 'Revisa los productos sin disponibilidad antes de finalizar'
+              : hasBlockedCustomer
+                ? 'El cliente elegido está inactivo'
+                : undefined
+        }
         onClick={openCheckout}
       >
         Finalizar compra

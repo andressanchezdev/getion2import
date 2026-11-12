@@ -8,7 +8,10 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
+	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/events"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
 	inventoryrepos "importadoraApi/src/features/inventory/repositories"
@@ -16,6 +19,7 @@ import (
 	"importadoraApi/src/features/returns/repositories"
 	salerepos "importadoraApi/src/features/sales/repositories"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -24,6 +28,7 @@ type ReturnService struct {
 	returnRepo    *repositories.ReturnRepository
 	saleRepo      *salerepos.SaleRepository
 	inventoryRepo *inventoryrepos.InventoryRepository
+	events        *events.Recorder
 }
 
 // NewReturnService crea el servicio con las piezas que necesita para funcionar.
@@ -32,12 +37,14 @@ func NewReturnService(
 	returnRepo *repositories.ReturnRepository,
 	saleRepo *salerepos.SaleRepository,
 	inventoryRepo *inventoryrepos.InventoryRepository,
+	events *events.Recorder,
 ) *ReturnService {
 	return &ReturnService{
 		pool:          pool,
 		returnRepo:    returnRepo,
 		saleRepo:      saleRepo,
 		inventoryRepo: inventoryRepo,
+		events:        events,
 	}
 }
 
@@ -69,146 +76,156 @@ func (s *ReturnService) Create(ctx context.Context, actorCompanyID *int64, actor
 		}
 	}
 
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback(ctx)
-
-	sale, err := s.saleRepo.FindByID(ctx, tx, req.SaleID)
-	if err != nil {
-		return nil, err
-	}
-	if sale == nil {
-		return nil, errors.New("la venta especificada no existe")
-	}
-	if actorCompanyID != nil && *actorCompanyID > 0 && sale.CompanyID != *actorCompanyID {
-		return nil, errors.New("no tiene permisos sobre la venta especificada")
-	}
-	if sale.Status == types.SaleCancelled {
-		return nil, errors.New("no se puede crear una devolución sobre una venta cancelada")
-	}
-	if sale.CustomerID == nil {
-		return nil, errors.New("la venta no tiene cliente asociado para procesar la devolución")
-	}
-
-	saleItems, err := s.saleRepo.ListItems(ctx, tx, req.SaleID)
-	if err != nil {
-		return nil, err
-	}
-	saleItemsMap := make(map[int64]salerepos.SaleItemEntity)
-	for _, si := range saleItems {
-		saleItemsMap[si.ID] = salerepos.SaleItemEntity{
-			ID:          si.ID,
-			SaleID:      si.SaleID,
-			ProductID:   si.ProductID,
-			StockID:     si.StockID,
-			ProductCode: si.ProductCode,
-			ProductName: si.ProductName,
-			Quantity:    si.Quantity,
-			UnitPrice:   si.UnitPrice,
-			UnitCost:    si.UnitCost,
+	var createdID int64
+	err := db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		sale, err := s.saleRepo.FindByID(ctx, tx, req.SaleID)
+		if err != nil {
+			return err
 		}
-	}
-
-	var grandTotal float64
-	type itemToCreate struct {
-		saleItemID int64
-		quantity   int
-		restock    bool
-	}
-	itemsToCreate := make([]itemToCreate, 0, len(req.Items))
-
-	for _, itReq := range req.Items {
-		si, exists := saleItemsMap[itReq.SaleItemID]
-		if !exists {
-			return nil, fmt.Errorf("el ítem %d no pertenece a la venta %s", itReq.SaleItemID, sale.SerialCode)
+		if sale == nil {
+			return errors.New("la venta especificada no existe")
 		}
-		if itReq.Quantity <= 0 {
-			return nil, errors.New("la cantidad devuelta debe ser mayor a 0")
+		if actorCompanyID != nil && *actorCompanyID > 0 && sale.CompanyID != *actorCompanyID {
+			return errors.New("no tiene permisos sobre la venta especificada")
 		}
-		if itReq.Quantity > si.Quantity {
-			return nil, fmt.Errorf("la cantidad devuelta (%d) no puede superar la cantidad vendida (%d) para '%s'", itReq.Quantity, si.Quantity, si.ProductName)
+		if sale.Status == types.SaleCancelled {
+			return errors.New("no se puede crear una devolución sobre una venta cancelada")
+		}
+		if sale.CustomerID == nil {
+			return errors.New("la venta no tiene cliente asociado para procesar la devolución")
 		}
 
-		// Regla de blindaje: Si es garantía por defecto, NUNCA vuelve a stock físico vendible.
-		// Si es error de despacho (wrong_item), sí reingresa a la ubicación de origen.
-		restock := false
-		if req.ReasonType == types.ReturnReasonWrongItem {
-			restock = true
-			if itReq.Restock != nil {
-				restock = *itReq.Restock
+		saleItems, err := s.saleRepo.ListItems(ctx, tx, req.SaleID)
+		if err != nil {
+			return err
+		}
+		saleItemsMap := make(map[int64]salerepos.SaleItemEntity)
+		for _, si := range saleItems {
+			saleItemsMap[si.ID] = salerepos.SaleItemEntity{
+				ID:          si.ID,
+				SaleID:      si.SaleID,
+				ProductID:   si.ProductID,
+				StockID:     si.StockID,
+				ProductCode: si.ProductCode,
+				ProductName: si.ProductName,
+				Quantity:    si.Quantity,
+				UnitPrice:   si.UnitPrice,
+				UnitCost:    si.UnitCost,
 			}
 		}
 
-		grandTotal += float64(itReq.Quantity) * si.UnitPrice
-		itemsToCreate = append(itemsToCreate, itemToCreate{
-			saleItemID: itReq.SaleItemID,
-			quantity:   itReq.Quantity,
-			restock:    restock,
-		})
-	}
-
-	var replacementProductID *int64
-	var replacementStockID *int64
-	if req.ResolutionType == types.ReturnResolutionExchange {
-		if req.ReplacementStockID == nil || *req.ReplacementStockID <= 0 {
-			return nil, errors.New("para resolución 'exchange' (cambio de repuesto) debe especificar replacementStockId")
+		var grandTotal float64
+		type itemToCreate struct {
+			saleItemID int64
+			quantity   int
+			restock    bool
 		}
-		replacement, err := s.returnRepo.FindReplacementStock(ctx, tx, *req.ReplacementStockID, sale.CompanyID)
+		itemsToCreate := make([]itemToCreate, 0, len(req.Items))
+
+		for _, itReq := range req.Items {
+			si, exists := saleItemsMap[itReq.SaleItemID]
+			if !exists {
+				return fmt.Errorf("el ítem %d no pertenece a la venta %s", itReq.SaleItemID, sale.SerialCode)
+			}
+			if itReq.Quantity <= 0 {
+				return errors.New("la cantidad devuelta debe ser mayor a 0")
+			}
+			if itReq.Quantity > si.Quantity {
+				return fmt.Errorf("la cantidad devuelta (%d) no puede superar la cantidad vendida (%d) para '%s'", itReq.Quantity, si.Quantity, si.ProductName)
+			}
+
+			// Regla de blindaje: Si es garantía por defecto, NUNCA vuelve a stock físico vendible.
+			// Si es error de despacho (wrong_item), sí reingresa a la ubicación de origen.
+			restock := false
+			if req.ReasonType == types.ReturnReasonWrongItem {
+				restock = true
+				if itReq.Restock != nil {
+					restock = *itReq.Restock
+				}
+			}
+
+			grandTotal += float64(itReq.Quantity) * si.UnitPrice
+			itemsToCreate = append(itemsToCreate, itemToCreate{
+				saleItemID: itReq.SaleItemID,
+				quantity:   itReq.Quantity,
+				restock:    restock,
+			})
+		}
+
+		var replacementProductID *int64
+		var replacementStockID *int64
+		if req.ResolutionType == types.ReturnResolutionExchange {
+			if req.ReplacementStockID == nil || *req.ReplacementStockID <= 0 {
+				return errors.New("para resolución 'exchange' (cambio de repuesto) debe especificar replacementStockId")
+			}
+			replacement, err := s.returnRepo.FindReplacementStock(ctx, tx, *req.ReplacementStockID, sale.CompanyID)
+			if err != nil {
+				return fmt.Errorf("el stock de reemplazo ID %d no existe en la compañía: %w", *req.ReplacementStockID, err)
+			}
+			if (replacement.Available - replacement.Reserved) < 1 {
+				return fmt.Errorf("el repuesto de reemplazo %s no cuenta con stock disponible suficiente", replacement.ProductCode)
+			}
+			replacementProductID = &replacement.ProductID
+			replacementStockID = req.ReplacementStockID
+		}
+
+		retEntity := &repositories.ReturnEntity{
+			CompanyID:            sale.CompanyID,
+			SaleID:               sale.ID,
+			CustomerID:           *sale.CustomerID,
+			EmployeeID:           actorEmployeeID,
+			Reason:               req.Reason,
+			ReasonType:           req.ReasonType,
+			ResolutionType:       req.ResolutionType,
+			ReplacementProductID: replacementProductID,
+			ReplacementStockID:   replacementStockID,
+			EvidenceURL:          req.EvidenceURL,
+			ReceiptURL:           req.ReceiptURL,
+			Status:               types.ReturnPending,
+			Total:                grandTotal,
+		}
+
+		createdRet, err := s.returnRepo.Create(ctx, tx, retEntity)
 		if err != nil {
-			return nil, fmt.Errorf("el stock de reemplazo ID %d no existe en la compañía: %w", *req.ReplacementStockID, err)
+			return fmt.Errorf("error al registrar encabezado de devolución: %w", err)
 		}
-		if (replacement.Available - replacement.Reserved) < 1 {
-			return nil, fmt.Errorf("el repuesto de reemplazo %s no cuenta con stock disponible suficiente", replacement.ProductCode)
+		createdID = createdRet.ID
+
+		for _, it := range itemsToCreate {
+			itemEntity := &repositories.ReturnItemEntity{
+				ReturnID:   createdRet.ID,
+				SaleItemID: it.saleItemID,
+				Quantity:   it.quantity,
+				Restock:    it.restock,
+			}
+			if err := s.returnRepo.CreateItem(ctx, tx, itemEntity); err != nil {
+				return fmt.Errorf("error al registrar ítem de devolución: %w", err)
+			}
 		}
-		replacementProductID = &replacement.ProductID
-		replacementStockID = req.ReplacementStockID
-	}
 
-	retEntity := &repositories.ReturnEntity{
-		CompanyID:            sale.CompanyID,
-		SaleID:               sale.ID,
-		CustomerID:           *sale.CustomerID,
-		EmployeeID:           actorEmployeeID,
-		Reason:               req.Reason,
-		ReasonType:           req.ReasonType,
-		ResolutionType:       req.ResolutionType,
-		ReplacementProductID: replacementProductID,
-		ReplacementStockID:   replacementStockID,
-		EvidenceURL:          req.EvidenceURL,
-		ReceiptURL:           req.ReceiptURL,
-		Status:               types.ReturnPending,
-		Total:                grandTotal,
-	}
-
-	createdRet, err := s.returnRepo.Create(ctx, tx, retEntity)
+		// el evento lleva la misma forma que la fila del listado de devoluciones
+		row, err := s.findResponse(ctx, tx, createdRet.ID)
+		if err != nil {
+			return err
+		}
+		s.events.Record(ctx, events.NewReturnCreated(row.CompanyID, row.WarehouseID, row))
+		return nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("error al registrar encabezado de devolución: %w", err)
-	}
-
-	for _, it := range itemsToCreate {
-		itemEntity := &repositories.ReturnItemEntity{
-			ReturnID:   createdRet.ID,
-			SaleItemID: it.saleItemID,
-			Quantity:   it.quantity,
-			Restock:    it.restock,
-		}
-		if err := s.returnRepo.CreateItem(ctx, tx, itemEntity); err != nil {
-			return nil, fmt.Errorf("error al registrar ítem de devolución: %w", err)
-		}
-	}
-
-	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
 
-	return s.FindByID(ctx, createdRet.ID)
+	return s.FindByID(ctx, createdID)
 }
 
 // FindByID devuelve la devolución por su id, validando que sea de la compañía del usuario.
 func (s *ReturnService) FindByID(ctx context.Context, id int64) (*dtos.ReturnResponse, error) {
-	ret, err := s.returnRepo.FindByID(ctx, s.pool, id)
+	return s.findResponse(ctx, s.pool, id)
+}
+
+// findResponse arma la respuesta de una devolución leyendo con la conexión o la transacción que reciba.
+func (s *ReturnService) findResponse(ctx context.Context, q db.DBExecutor, id int64) (*dtos.ReturnResponse, error) {
+	ret, err := s.returnRepo.FindByID(ctx, q, id)
 	if err != nil {
 		return nil, err
 	}
@@ -216,7 +233,7 @@ func (s *ReturnService) FindByID(ctx context.Context, id int64) (*dtos.ReturnRes
 		return nil, errors.New("devolución no encontrada")
 	}
 
-	rawItems, err := s.returnRepo.ListItems(ctx, s.pool, id)
+	rawItems, err := s.returnRepo.ListItems(ctx, q, id)
 	if err != nil {
 		return nil, err
 	}
@@ -241,8 +258,8 @@ func (s *ReturnService) FindByID(ctx context.Context, id int64) (*dtos.ReturnRes
 		CompanyID:              ret.CompanyID,
 		SaleID:                 ret.SaleID,
 		SaleSerial:             ret.SaleSerial,
-		WarehouseID:             ret.WarehouseID,
-		WarehouseName:           ret.WarehouseName,
+		WarehouseID:            ret.WarehouseID,
+		WarehouseName:          ret.WarehouseName,
 		CustomerID:             ret.CustomerID,
 		CustomerName:           ret.CustomerName,
 		EmployeeID:             ret.EmployeeID,
@@ -280,8 +297,8 @@ func (s *ReturnService) List(ctx context.Context, f dtos.ReturnFilterQuery) ([]d
 			CompanyID:              ret.CompanyID,
 			SaleID:                 ret.SaleID,
 			SaleSerial:             ret.SaleSerial,
-			WarehouseID:             ret.WarehouseID,
-			WarehouseName:           ret.WarehouseName,
+			WarehouseID:            ret.WarehouseID,
+			WarehouseName:          ret.WarehouseName,
 			CustomerID:             ret.CustomerID,
 			CustomerName:           ret.CustomerName,
 			EmployeeID:             ret.EmployeeID,
@@ -309,97 +326,102 @@ func (s *ReturnService) List(ctx context.Context, f dtos.ReturnFilterQuery) ([]d
 
 // Approve aprueba la devolución y, si corresponde, reingresa los ítems al inventario con movimiento Kardex
 func (s *ReturnService) Approve(ctx context.Context, returnID, approverEmployeeID int64) error {
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback(ctx)
+	return db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		ret, err := s.returnRepo.FindByID(ctx, tx, returnID)
+		if err != nil {
+			return err
+		}
+		if ret == nil {
+			return errors.New("devolución no encontrada")
+		}
+		if ret.Status != types.ReturnPending {
+			return fmt.Errorf("la devolución ya se encuentra en estado '%s'", ret.Status)
+		}
 
-	ret, err := s.returnRepo.FindByID(ctx, tx, returnID)
-	if err != nil {
-		return err
-	}
-	if ret == nil {
-		return errors.New("devolución no encontrada")
-	}
-	if ret.Status != types.ReturnPending {
-		return fmt.Errorf("la devolución ya se encuentra en estado '%s'", ret.Status)
-	}
+		items, err := s.returnRepo.ListItems(ctx, tx, returnID)
+		if err != nil {
+			return err
+		}
 
-	items, err := s.returnRepo.ListItems(ctx, tx, returnID)
-	if err != nil {
-		return err
-	}
+		reason := fmt.Sprintf("Reingreso por devolución #%d sobre pedido %s", ret.ID, ret.SaleSerial)
+		refType := "return"
+		for _, it := range items {
+			if it.Restock {
+				// Reintegrar stock disponible
+				stockEntity, err := s.inventoryRepo.UpsertStockDelta(ctx, tx, ret.CompanyID, it.ProductID, it.WarehouseID, "", it.Quantity, 0)
+				if err != nil {
+					return fmt.Errorf("error al reintegrar stock del ítem %s: %w", it.ProductCode, err)
+				}
+				s.events.Stock(ctx, stockEntity.ID, events.CauseReturnIn(ret.ID))
 
-	reason := fmt.Sprintf("Reingreso por devolución #%d sobre pedido %s", ret.ID, ret.SaleSerial)
-	refType := "return"
-	for _, it := range items {
-		if it.Restock {
-			// Reintegrar stock disponible
-			_, err := s.inventoryRepo.UpsertStockDelta(ctx, tx, ret.CompanyID, it.ProductID, it.WarehouseID, "", it.Quantity, 0)
-			if err != nil {
-				return fmt.Errorf("error al reintegrar stock del ítem %s: %w", it.ProductCode, err)
+				movement := &inventoryrepos.AuditMovementEntity{
+					CompanyID:     ret.CompanyID,
+					StockID:       it.StockID,
+					WarehouseID:   it.WarehouseID,
+					ProductID:     it.ProductID,
+					EmployeeID:    &approverEmployeeID,
+					MovementType:  types.MovementReturnIn,
+					Quantity:      it.Quantity,
+					ReferenceType: &refType,
+					ReferenceID:   &ret.ID,
+					Reason:        &reason,
+				}
+				if _, err := s.inventoryRepo.RecordMovement(ctx, tx, movement); err != nil {
+					return fmt.Errorf("error al asentar kardex de devolución para producto %s: %w", it.ProductCode, err)
+				}
 			}
+		}
 
+		// Aplicar la resolución acordada para la devolución
+		if ret.ResolutionType == types.ReturnResolutionCredit {
+			creditReason := fmt.Sprintf("Saldo a favor por devolución #%d sobre pedido %s (Causal: %s)", ret.ID, ret.SaleSerial, ret.ReasonType)
+			if err := s.returnRepo.InsertReturnCreditEntry(ctx, tx, ret.CompanyID, ret.CustomerID, approverEmployeeID, ret.Total, ret.ID, creditReason); err != nil {
+				return fmt.Errorf("error al asentar saldo a favor en el crédito del cliente: %w", err)
+			}
+			creditRef := "return"
+			s.events.CreditBalance(ctx, tx, ret.CompanyID, ret.CustomerID, &events.CreditEntryRef{Type: "return", Amount: ret.Total, ReferenceType: &creditRef, ReferenceID: &ret.ID})
+		} else if ret.ResolutionType == types.ReturnResolutionExchange && ret.ReplacementStockID != nil {
+			lock, err := s.returnRepo.LockReplacementStock(ctx, tx, *ret.ReplacementStockID)
+			if err != nil {
+				return fmt.Errorf("error al consultar stock de reemplazo: %w", err)
+			}
+			whID, pID, pCode := lock.WarehouseID, lock.ProductID, lock.ProductCode
+
+			rows, err := s.returnRepo.DecrementStock(ctx, tx, *ret.ReplacementStockID)
+			if err != nil || rows == 0 {
+				return fmt.Errorf("no hay stock disponible suficiente para despachar la pieza de reemplazo %s", pCode)
+			}
+			s.events.Stock(ctx, *ret.ReplacementStockID, events.CauseReturnIn(ret.ID))
+
+			exchangeReason := fmt.Sprintf("Entrega de repuesto de reemplazo por devolución #%d", ret.ID)
 			movement := &inventoryrepos.AuditMovementEntity{
 				CompanyID:     ret.CompanyID,
-				StockID:       it.StockID,
-				WarehouseID:   it.WarehouseID,
-				ProductID:     it.ProductID,
+				StockID:       *ret.ReplacementStockID,
+				WarehouseID:   whID,
+				ProductID:     pID,
 				EmployeeID:    &approverEmployeeID,
-				MovementType:  types.MovementReturnIn,
-				Quantity:      it.Quantity,
+				MovementType:  types.MovementAdjustment,
+				Quantity:      -1,
 				ReferenceType: &refType,
 				ReferenceID:   &ret.ID,
-				Reason:        &reason,
+				Reason:        &exchangeReason,
 			}
 			if _, err := s.inventoryRepo.RecordMovement(ctx, tx, movement); err != nil {
-				return fmt.Errorf("error al asentar kardex de devolución para producto %s: %w", it.ProductCode, err)
+				return fmt.Errorf("error al asentar kardex de repuesto entregado por reemplazo: %w", err)
 			}
 		}
-	}
 
-	// Aplicar la resolución acordada para la devolución
-	if ret.ResolutionType == types.ReturnResolutionCredit {
-		creditReason := fmt.Sprintf("Saldo a favor por devolución #%d sobre pedido %s (Causal: %s)", ret.ID, ret.SaleSerial, ret.ReasonType)
-		if err := s.returnRepo.InsertReturnCreditEntry(ctx, tx, ret.CompanyID, ret.CustomerID, approverEmployeeID, ret.Total, ret.ID, creditReason); err != nil {
-			return fmt.Errorf("error al asentar saldo a favor en el crédito del cliente: %w", err)
+		if err := s.returnRepo.Approve(ctx, tx, returnID, approverEmployeeID); err != nil {
+			return err
 		}
-	} else if ret.ResolutionType == types.ReturnResolutionExchange && ret.ReplacementStockID != nil {
-		lock, err := s.returnRepo.LockReplacementStock(ctx, tx, *ret.ReplacementStockID)
-		if err != nil {
-			return fmt.Errorf("error al consultar stock de reemplazo: %w", err)
-		}
-		whID, pID, pCode := lock.WarehouseID, lock.ProductID, lock.ProductCode
-
-		rows, err := s.returnRepo.DecrementStock(ctx, tx, *ret.ReplacementStockID)
-		if err != nil || rows == 0 {
-			return fmt.Errorf("no hay stock disponible suficiente para despachar la pieza de reemplazo %s", pCode)
-		}
-
-		exchangeReason := fmt.Sprintf("Entrega de repuesto de reemplazo por devolución #%d", ret.ID)
-		movement := &inventoryrepos.AuditMovementEntity{
-			CompanyID:     ret.CompanyID,
-			StockID:       *ret.ReplacementStockID,
-			WarehouseID:   whID,
-			ProductID:     pID,
-			EmployeeID:    &approverEmployeeID,
-			MovementType:  types.MovementAdjustment,
-			Quantity:      -1,
-			ReferenceType: &refType,
-			ReferenceID:   &ret.ID,
-			Reason:        &exchangeReason,
-		}
-		if _, err := s.inventoryRepo.RecordMovement(ctx, tx, movement); err != nil {
-			return fmt.Errorf("error al asentar kardex de repuesto entregado por reemplazo: %w", err)
-		}
-	}
-
-	if err := s.returnRepo.Approve(ctx, tx, returnID, approverEmployeeID); err != nil {
-		return err
-	}
-
-	return tx.Commit(ctx)
+		s.events.Record(ctx, events.NewReturnStatusChanged(ret.CompanyID, ret.WarehouseID, events.ReturnStatusChangedData{
+			Entity:     events.EntityRef{Kind: "return", ID: ret.ID, Version: time.Now().UTC()},
+			From:       string(ret.Status),
+			To:         string(types.ReturnApproved),
+			Resolution: string(ret.ResolutionType),
+		}))
+		return nil
+	})
 }
 
 // Reject rechaza la devolución sin modificar el stock
@@ -408,5 +430,25 @@ func (s *ReturnService) Reject(ctx context.Context, returnID, approverEmployeeID
 	if verr != nil {
 		return verr
 	}
-	return s.returnRepo.Reject(ctx, s.pool, returnID, approverEmployeeID, reason)
+	// el rechazo y su evento van en la misma transacción
+	return db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		ret, err := s.returnRepo.FindByID(ctx, tx, returnID)
+		if err != nil {
+			return err
+		}
+		if ret == nil {
+			return errors.New("devolución no encontrada")
+		}
+		if err := s.returnRepo.Reject(ctx, tx, returnID, approverEmployeeID, reason); err != nil {
+			return err
+		}
+		s.events.Record(ctx, events.NewReturnStatusChanged(ret.CompanyID, ret.WarehouseID, events.ReturnStatusChangedData{
+			Entity:       events.EntityRef{Kind: "return", ID: ret.ID, Version: time.Now().UTC()},
+			From:         string(ret.Status),
+			To:           string(types.ReturnRejected),
+			Resolution:   string(ret.ResolutionType),
+			RejectReason: &reason,
+		}))
+		return nil
+	})
 }

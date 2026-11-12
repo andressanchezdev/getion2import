@@ -25,7 +25,7 @@ export const TransfersScreen: React.FC = () => {
   const dispatch = useAppDispatch()
   const activeWarehouseId = useAppSelector((state) => state.ui.activeWarehouseId)
   const activeWarehouseName = useAppSelector((state) => state.ui.activeWarehouseName)
-  const canCreate = usePermissions().canPerformAction('shop', 'transfers', 'create')
+  const canCreate = usePermissions().can('transfers:create')
   const [activeTab, setActiveTab] = useState<TransfersTab>('products')
   const [filters, setFilters] = useState<TransferFilters>(INITIAL_TRANSFER_FILTERS)
   const [productQuery, setProductQuery] = useState('')

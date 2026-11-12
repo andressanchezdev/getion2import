@@ -48,10 +48,10 @@ export const searchTransferProductsThunk = createAsyncThunk<ProductStockMatrix[]
 })
 
 // envía el pedido de traslado: crea un traslado por cada bodega de origen (todos hacia la misma bodega destino) y avisa qué pasó con cada una
-// ojo: si una bodega falla las demás se crean igual; el resultado dice cuáles salieron y cuáles no
+// ojo: si una bodega falla las demás se crean igual; el resultado dice cuáles salieron y cuáles no (sin recargar la lista: se aplica la respuesta directa)
 export const createTransferRequestThunk = createAsyncThunk<TransferRequestResult[], { destWarehouseId: number; lines: TransferRequestLine[]; notes?: string; isPriority?: boolean }, ThunkConfig>(
   'transfers/createRequest',
-  async ({ destWarehouseId, lines, notes, isPriority }, { getState, dispatch, rejectWithValue }) => {
+  async ({ destWarehouseId, lines, notes, isPriority }, { getState, rejectWithValue }) => {
     const ctx = selectRequestContext(getState())
     if (!ctx) return rejectWithValue(NO_SESSION)
     const problem = validateRequest(lines, destWarehouseId)
@@ -73,28 +73,31 @@ export const createTransferRequestThunk = createAsyncThunk<TransferRequestResult
         results.push({ ...base, error: getErrorMessage(error, 'No se pudo registrar el traslado.') })
       }
     }
-    if (results.some((result) => result.transfer)) dispatch(loadTransfersThunk(destWarehouseId))
     return results
   }
 )
 
-// despacha el traslado (pasa a «en tránsito»); devuelve el id para que el slice actualice la fila
-export const dispatchTransferThunk = createAsyncThunk<number, number, { rejectValue: string }>('transfers/dispatch', async (id, { rejectWithValue }) => {
+// despacha el traslado (pasa a «en tránsito»); devuelve la entidad actualizada de la API (o el id como respaldo)
+export const dispatchTransferThunk = createAsyncThunk<number | TrasladeItem, number, { rejectValue: string }>('transfers/dispatch', async (id, { rejectWithValue }) => {
   try {
-    await dispatchTransfer(id)
-    return id
+    const updated = await dispatchTransfer(id)
+    return updated ?? id
   } catch (error) {
     return rejectWithValue(getErrorMessage(error, 'No se pudo despachar el traslado.'))
   }
 })
 
-// recibe el traslado: OK completo, o con novedad si lleva texto
-export const acceptTransferThunk = createAsyncThunk<{ id: number; noveltyNotes?: string }, { transfer: TrasladeItem; noveltyNotes?: string }, { rejectValue: string }>(
+// recibe el traslado: OK completo, o con novedad si lleva texto; devuelve la entidad actualizada de la API
+export const acceptTransferThunk = createAsyncThunk<
+  { id: number; noveltyNotes?: string; transfer?: TrasladeItem },
+  { transfer: TrasladeItem; noveltyNotes?: string },
+  { rejectValue: string }
+>(
   'transfers/accept',
   async ({ transfer, noveltyNotes }, { rejectWithValue }) => {
     try {
-      await acceptTransfer(transfer, noveltyNotes)
-      return { id: transfer.id, noveltyNotes: noveltyNotes?.trim() || undefined }
+      const updated = await acceptTransfer(transfer, noveltyNotes)
+      return { id: transfer.id, noveltyNotes: noveltyNotes?.trim() || undefined, transfer: updated ?? undefined }
     } catch (error) {
       return rejectWithValue(getErrorMessage(error, 'Error al procesar la aceptación del traslado.'))
     }

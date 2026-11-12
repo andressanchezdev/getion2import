@@ -12,6 +12,7 @@ export const INITIAL_INVENTORY_STATE: InventoryState = {
   products: EMPTY_TABLE,
   stock: EMPTY_TABLE,
   productStock: { productId: null, items: [], status: 'idle', error: null, requestId: null },
+  countEvent: null,
 }
 
 export const STOCK_LEVEL_LABEL: Record<StockLevel, string> = { out: 'Agotado', low: 'Bajo', ok: 'Disponible' }

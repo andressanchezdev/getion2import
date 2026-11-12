@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/events"
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
@@ -26,13 +27,15 @@ type CashSessionService struct {
 	pool     *pgxpool.Pool
 	repo     *repositories.CashSessionRepository
 	authRepo *authRepos.AuthRepository
+	events   *events.Recorder
 }
 
-func NewCashSessionService(pool *pgxpool.Pool, repo *repositories.CashSessionRepository, authRepo *authRepos.AuthRepository) *CashSessionService {
+func NewCashSessionService(pool *pgxpool.Pool, repo *repositories.CashSessionRepository, authRepo *authRepos.AuthRepository, recorder *events.Recorder) *CashSessionService {
 	return &CashSessionService{
 		pool:     pool,
 		repo:     repo,
 		authRepo: authRepo,
+		events:   recorder,
 	}
 }
 
@@ -111,7 +114,22 @@ func (s *CashSessionService) Open(ctx context.Context, actor *middlewares.ActorC
 		OpeningAmount:     req.OpeningAmount,
 	}
 
-	created, err := s.repo.OpenSession(ctx, s.pool, entity)
+	// abrir el turno y avisarlo van en la misma transacción
+	var created *repositories.CashSessionEntity
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		row, err := s.repo.OpenSession(ctx, tx, entity)
+		if err != nil {
+			return err
+		}
+		created = row
+		s.events.Record(ctx, events.NewCashSessionStatusChanged(row.CompanyID, row.WarehouseID, events.CashSessionStatusChangedData{
+			Entity:   events.EntityRef{Kind: "cash_session", ID: row.ID, Version: row.OpenedAt.UTC()},
+			To:       "open",
+			OpenedBy: &events.Actor{Type: actorType, ID: &actorID, Name: actorName},
+			Totals:   events.CashTotals{ExpectedCash: row.OpeningAmount},
+		}))
+		return nil
+	})
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
@@ -195,13 +213,30 @@ func (s *CashSessionService) Close(ctx context.Context, actor *middlewares.Actor
 	existing.Difference = &diff
 	existing.Notes = req.Notes
 
-	err = db.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
 		for _, expense := range expenses {
-			if err := s.repo.InsertExpense(ctx, tx, existing.ID, expense); err != nil {
+			expenseID, err := s.repo.InsertExpense(ctx, tx, existing.ID, expense)
+			if err != nil {
 				return err
 			}
+			s.events.Record(ctx, events.NewCashExpenseRecorded(existing.CompanyID, existing.WarehouseID, events.CashExpense{
+				ID: expenseID, SessionID: existing.ID, ExpenseType: "other",
+				CashAmount: expense.CashAmount, TransferAmount: expense.TransferAmount, Concept: expense.Concept,
+			}))
 		}
-		return s.repo.CloseSession(ctx, tx, existing)
+		if err := s.repo.CloseSession(ctx, tx, existing); err != nil {
+			return err
+		}
+		from := "open"
+		s.events.Record(ctx, events.NewCashSessionStatusChanged(existing.CompanyID, existing.WarehouseID, events.CashSessionStatusChangedData{
+			Entity:   events.EntityRef{Kind: "cash_session", ID: existing.ID, Version: existing.ClosedAt.UTC()},
+			From:     &from,
+			To:       "closed",
+			OpenedBy: &events.Actor{Type: existing.OpenedByActorType, ID: &existing.OpenedByActorID, Name: existing.OpenedByName},
+			ClosedBy: &events.Actor{Type: actorType, ID: &actorID, Name: actorName},
+			Totals:   events.CashTotals{CashIn: sums.Cash, TransferIn: sums.Transfer, Expenses: expensesCash, ExpectedCash: expectedCash},
+		}))
+		return nil
 	})
 	if err != nil {
 		return nil, utils.Internal("Error al cerrar el turno de caja.", err)

@@ -6,9 +6,12 @@ package bootstrap
 import (
 	"github.com/labstack/echo/v4"
 
-	authRoutes "importadoraApi/src/features/auth/routes"
 	auditRoutes "importadoraApi/src/features/audit/routes"
+	authRoutes "importadoraApi/src/features/auth/routes"
+	backupRoutes "importadoraApi/src/features/backups/routes"
+	bankStatementRoutes "importadoraApi/src/features/bank_statements/routes"
 	cartRoutes "importadoraApi/src/features/carts/routes"
+	cashSessionRoutes "importadoraApi/src/features/cash_sessions/routes"
 	catalogRoutes "importadoraApi/src/features/catalog/routes"
 	companyRoutes "importadoraApi/src/features/companies/routes"
 	customerRoutes "importadoraApi/src/features/customers/routes"
@@ -20,24 +23,23 @@ import (
 	productRoutes "importadoraApi/src/features/products/routes"
 	purchaseRoutes "importadoraApi/src/features/purchases/routes"
 	quotationRoutes "importadoraApi/src/features/quotations/routes"
-	backupRoutes "importadoraApi/src/features/backups/routes"
+	realtimeRoutes "importadoraApi/src/features/realtime/routes"
 	recycleBinRoutes "importadoraApi/src/features/recyclebin/routes"
 	reportRoutes "importadoraApi/src/features/reports/routes"
 	returnRoutes "importadoraApi/src/features/returns/routes"
 	saleRoutes "importadoraApi/src/features/sales/routes"
+	screensaverRoutes "importadoraApi/src/features/screensaver/routes"
 	staffRoutes "importadoraApi/src/features/staff/routes"
+	swaggerRoutes "importadoraApi/src/features/swagger/routes"
 	walletRoutes "importadoraApi/src/features/wallet/routes"
 	warehouseRoutes "importadoraApi/src/features/warehouses/routes"
-	bankStatementRoutes "importadoraApi/src/features/bank_statements/routes"
-	cashSessionRoutes "importadoraApi/src/features/cash_sessions/routes"
-	screensaverRoutes "importadoraApi/src/features/screensaver/routes"
-	swaggerRoutes "importadoraApi/src/features/swagger/routes"
 )
 
 // RegisterAllRoutes conecta los controladores de cada módulo con Echo
 func RegisterAllRoutes(e *echo.Echo, c *AppContainer) {
 	healthRoutes.RegisterRoutes(e, c.HealthCtrl)
 	swaggerRoutes.RegisterRoutes(e, c.SwaggerCtrl)
+	realtimeRoutes.RegisterRoutes(e, c.AuthMiddleware, c.RealtimeCtrl)
 	authRoutes.RegisterRoutes(e, c.AuthMiddleware, c.AuthCtrl)
 	companyRoutes.RegisterRoutes(e, c.AuthMiddleware, c.CompanyCtrl)
 	warehouseRoutes.RegisterRoutes(e, c.AuthMiddleware, c.WarehouseCtrl)
@@ -63,4 +65,3 @@ func RegisterAllRoutes(e *echo.Echo, c *AppContainer) {
 	cashSessionRoutes.RegisterRoutes(e, c.AuthMiddleware, c.CashSessionCtrl)
 	screensaverRoutes.RegisterRoutes(e, c.AuthMiddleware, c.ScreensaverCtrl)
 }
-

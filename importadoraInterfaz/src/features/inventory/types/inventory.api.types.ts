@@ -14,4 +14,5 @@ export interface StockFullDto {
   reserved: number
   sellable: number
   minStock?: number
+  version?: string
 }

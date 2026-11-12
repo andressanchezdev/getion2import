@@ -7,6 +7,8 @@ import type { CustomerDocument } from '../../types/customers.types'
 
 const state = vi.hoisted(() => ({ items: [] as CustomerDocument[], status: 'succeeded', error: null as string | null, saving: false, renew: vi.fn() }))
 vi.mock('../../hooks/useCustomerDocuments', () => ({ useCustomerDocuments: () => state }))
+// el usuario de la prueba puede renovar (customers:edit)
+vi.mock('@/global/hooks/access/usePermissions', () => ({ usePermissions: () => ({ can: () => true }) }))
 
 const doc = (over: Partial<CustomerDocument>): CustomerDocument => ({
   id: 1,

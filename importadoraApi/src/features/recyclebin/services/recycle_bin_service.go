@@ -8,7 +8,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
+	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/events"
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
@@ -21,11 +24,15 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// restoredKinds dice a qué dato maestro corresponde cada tabla que hoy pasa por la papelera
+var restoredKinds = map[string]events.Kind{"customers": events.KindCustomer, "products": events.KindProduct}
+
 type RecycleBinService struct {
 	pool             *pgxpool.Pool
 	recycleBinRepo   *repositories.RecycleBinRepository
 	auditRepo        *authRepos.AuditRepository
 	notificationRepo *notificationRepos.NotificationRepository
+	events           *events.Recorder
 }
 
 // NewRecycleBinService crea el servicio con las piezas que necesita para funcionar.
@@ -34,12 +41,14 @@ func NewRecycleBinService(
 	recycleBinRepo *repositories.RecycleBinRepository,
 	auditRepo *authRepos.AuditRepository,
 	notificationRepo *notificationRepos.NotificationRepository,
+	recorder *events.Recorder,
 ) *RecycleBinService {
 	return &RecycleBinService{
 		pool:             pool,
 		recycleBinRepo:   recycleBinRepo,
 		auditRepo:        auditRepo,
 		notificationRepo: notificationRepo,
+		events:           recorder,
 	}
 }
 
@@ -99,57 +108,57 @@ func (s *RecycleBinService) Restore(ctx context.Context, actor *middlewares.Acto
 		return verr
 	}
 
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		return utils.Internal("Error al iniciar transacción de restauración.", err)
-	}
-	defer tx.Rollback(ctx)
-
-	if err := s.recycleBinRepo.LockByID(ctx, tx, id); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+	return db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		if err := s.recycleBinRepo.LockByID(ctx, tx, id); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return utils.NotFound("NOT_FOUND", "El elemento no se encuentra en la papelera de reciclaje.")
+			}
+			return utils.Internal("Error al bloquear el elemento en papelera.", err)
+		}
+		item, err := s.recycleBinRepo.FindByID(ctx, tx, id)
+		if err != nil {
+			return utils.Internal("Error al consultar elemento en papelera.", err)
+		}
+		if item == nil {
 			return utils.NotFound("NOT_FOUND", "El elemento no se encuentra en la papelera de reciclaje.")
 		}
-		return utils.Internal("Error al bloquear el elemento en papelera.", err)
-	}
-	item, err := s.recycleBinRepo.FindByID(ctx, tx, id)
-	if err != nil {
-		return utils.Internal("Error al consultar elemento en papelera.", err)
-	}
-	if item == nil {
-		return utils.NotFound("NOT_FOUND", "El elemento no se encuentra en la papelera de reciclaje.")
-	}
-	if actor.ActorType != types.ActorSuperadmin {
-		if actor.CompanyID == nil || item.CompanyID == nil || *actor.CompanyID != *item.CompanyID {
-			return utils.Forbidden("FORBIDDEN_COMPANY_ACCESS", "No tienes permiso para restaurar elementos de esta compañía.")
+		if actor.ActorType != types.ActorSuperadmin {
+			if actor.CompanyID == nil || item.CompanyID == nil || *actor.CompanyID != *item.CompanyID {
+				return utils.Forbidden("FORBIDDEN_COMPANY_ACCESS", "No tienes permiso para restaurar elementos de esta compañía.")
+			}
 		}
-	}
-	if item.IsRestored {
-		return utils.BadRequest("ALREADY_RESTORED", "Este elemento ya fue restaurado previamente.")
-	}
-
-	if err := s.recycleBinRepo.Restore(ctx, tx, item, actor.ActorID); err != nil {
-		return utils.Internal("Error al restaurar elemento.", err)
-	}
-
-	if err := s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
-		CompanyID: item.CompanyID,
-		ActorType: actor.ActorType,
-		ActorID:   actor.ActorID,
-		Entity:    item.EntityTable,
-		EntityID:  &item.EntityID,
-		Action:    "RECORD_RESTORED_FROM_TRASH",
-		Reason:    fmt.Sprintf("Restauración de '%s' (ID %d) desde papelera de reciclaje: %s", item.EntityLabel, item.EntityID, reason),
-		IPAddress: ip,
-		UserAgent: ua,
-	}); err != nil {
-		return utils.Internal("Error al registrar la restauración en auditoría.", err)
-	}
-	if item.CompanyID != nil {
-		body := fmt.Sprintf("El SUPERADMIN restauró el registro '%s'.", item.EntityLabel)
-		if err := s.notificationRepo.CreateCompanyAdminNotification(ctx, tx, *item.CompanyID, "Registro restaurado", body, item.EntityTable, item.EntityID); err != nil {
-			return utils.Internal("No se pudo completar la restauración ni notificar al administrador.", err)
+		if item.IsRestored {
+			return utils.BadRequest("ALREADY_RESTORED", "Este elemento ya fue restaurado previamente.")
 		}
-	}
 
-	return tx.Commit(ctx)
+		if err := s.recycleBinRepo.Restore(ctx, tx, item, actor.ActorID); err != nil {
+			return utils.Internal("Error al restaurar elemento.", err)
+		}
+
+		if err := s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
+			CompanyID: item.CompanyID,
+			ActorType: actor.ActorType,
+			ActorID:   actor.ActorID,
+			Entity:    item.EntityTable,
+			EntityID:  &item.EntityID,
+			Action:    "RECORD_RESTORED_FROM_TRASH",
+			Reason:    fmt.Sprintf("Restauración de '%s' (ID %d) desde papelera de reciclaje: %s", item.EntityLabel, item.EntityID, reason),
+			IPAddress: ip,
+			UserAgent: ua,
+		}); err != nil {
+			return utils.Internal("Error al registrar la restauración en auditoría.", err)
+		}
+		if item.CompanyID != nil {
+			body := fmt.Sprintf("El SUPERADMIN restauró el registro '%s'.", item.EntityLabel)
+			if err := s.notificationRepo.CreateCompanyAdminNotification(ctx, tx, *item.CompanyID, "Registro restaurado", body, item.EntityTable, item.EntityID); err != nil {
+				return utils.Internal("No se pudo completar la restauración ni notificar al administrador.", err)
+			}
+			// el registro vuelve a existir: se avisa para que las tablas de esa entidad y la papelera se actualicen
+			if kind, ok := restoredKinds[item.EntityTable]; ok {
+				row := map[string]any{"id": item.EntityID, "label": item.EntityLabel}
+				s.events.Record(ctx, events.NewEntityRestored(*item.CompanyID, nil, events.EntityRef{Kind: kind, ID: item.EntityID, Version: time.Now().UTC()}, row, item.ID, s.events.Actor(ctx, tx)))
+			}
+		}
+		return nil
+	})
 }

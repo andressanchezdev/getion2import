@@ -16,6 +16,8 @@ import type { TrasladeItem } from '../../types/transfers.types'
 import { usePagedList } from '@/global/hooks/data/usePagedList'
 import { Pagination } from '@/global/components/UI/molecules/table/Pagination'
 import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
+import { ActionsHeader } from '@/global/components/UI/molecules/table/ActionsHeader'
+import { CopyableCell } from '@/global/components/UI/molecules/table/CopyableCell'
 
 interface TransferItemsTableProps {
   items: TrasladeItem[]
@@ -43,8 +45,9 @@ export const TransferItemsTable: React.FC<TransferItemsTableProps> = ({
   onViewDetail,
 }) => {
   const openHistory = useOpenHistory()
-  const { hasScreenAccess, canPerformAction } = usePermissions()
-  const canMove = canPerformAction('shop', 'transfers', 'update')
+  const { hasScreenAccess, can } = usePermissions()
+  const canMove = can('transfers:edit') // despachar (POST /transfers/:id/dispatch)
+  const canReceive = can('transfers:receive') // recibir (POST /transfers/:id/receive)
   const { pageItems, meta, setPage } = usePagedList(items, items)
 
   const rowActions = (item: TrasladeItem): RowAction[] => {
@@ -71,7 +74,7 @@ export const TransferItemsTable: React.FC<TransferItemsTableProps> = ({
         key: 'receive',
         label: 'Aceptar / Gestionar novedad',
         icon: receiveIcon,
-        visible: item.status === 'in_transit' && isDest && canMove,
+        visible: item.status === 'in_transit' && isDest && canReceive,
         onClick: () => onReceive(item),
       },
     ]
@@ -90,7 +93,7 @@ export const TransferItemsTable: React.FC<TransferItemsTableProps> = ({
             <th>Recibido por</th>
             <th>Repuestos</th>
             <th>Estado</th>
-            <th>Acciones</th>
+            <ActionsHeader />
           </tr>
         </thead>
         <tbody>
@@ -109,7 +112,9 @@ export const TransferItemsTable: React.FC<TransferItemsTableProps> = ({
               return (
                 <tr key={item.id} className="transfers-table-row">
                   <td data-label="Serial">
-                    <span className="transfers-table-code">{item.serialCode}</span>
+                    <span className="transfers-table-code">
+                      <CopyableCell text={item.serialCode} label="Serial de traslado" />
+                    </span>
                     <small className="transfers-table-sub">{item.createdAt ? formatDateTime(item.createdAt) : '—'}</small>
                   </td>
                   <td data-label="Tipo">{item.typeLabel || 'Solicitud'}</td>

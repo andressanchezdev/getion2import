@@ -116,6 +116,7 @@ type TransferResponse struct {
 	Status                   types.TransferStatus   `json:"status"`
 	IsPriority               bool                   `json:"isPriority"`
 	Notes                    *string                `json:"notes,omitempty"`
+	NoveltyNotes             *string                `json:"noveltyNotes,omitempty"`
 	CancelReason             *string                `json:"cancelReason,omitempty"`
 	DispatchedAt             *time.Time             `json:"dispatchedAt,omitempty"`
 	ReceivedAt               *time.Time             `json:"receivedAt,omitempty"`
@@ -147,7 +148,8 @@ type ReceiveTransferItemRequest struct {
 }
 
 type ReceiveTransferRequest struct {
-	Items []ReceiveTransferItemRequest `json:"items"`
+	Items        []ReceiveTransferItemRequest `json:"items"`
+	NoveltyNotes *string                      `json:"noveltyNotes"`
 }
 
 type CancelTransferRequest struct {

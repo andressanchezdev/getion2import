@@ -14,9 +14,9 @@ import (
 func RegisterRoutes(e *echo.Echo, authMiddleware *middlewares.AuthMiddleware, ctrl *controllers.ExternalController) {
 	ext := e.Group("/externals", authMiddleware.Authenticate())
 	{
-		ext.GET("", ctrl.Get)
-		ext.GET("/search", ctrl.Search)
-		ext.GET("/:id", ctrl.GetByID)
+		ext.GET("", ctrl.Get, authMiddleware.RequireAnyPermission("suppliers:view", "purchases:view", "purchases:create", "orders:advance_stage", "transfers:create", "transfers:edit"))
+		ext.GET("/search", ctrl.Search, authMiddleware.RequireAnyPermission("suppliers:view", "purchases:view", "purchases:create", "orders:advance_stage", "transfers:create", "transfers:edit"))
+		ext.GET("/:id", ctrl.GetByID, authMiddleware.RequireAnyPermission("suppliers:view_detail", "purchases:view"))
 		ext.POST("", ctrl.Create, authMiddleware.RequirePermission("suppliers", "create"))
 		ext.PUT("/:id", ctrl.Update, authMiddleware.RequirePermission("suppliers", "edit"))
 		ext.DELETE("/:id", ctrl.Delete, authMiddleware.RequirePermission("suppliers", "delete"))

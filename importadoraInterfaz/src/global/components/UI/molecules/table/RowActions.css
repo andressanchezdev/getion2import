@@ -24,9 +24,14 @@
   transition: background-color var(--motion-fast), color var(--motion-fast);
 }
 
-.row-actions-btn:hover,
-.row-actions-btn:focus-visible {
+.row-actions-btn:hover:not(:disabled),
+.row-actions-btn:focus-visible:not(:disabled) {
   background-color: var(--bg-hover);
+}
+
+.row-actions-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .row-actions-btn-danger {

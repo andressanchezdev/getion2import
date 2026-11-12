@@ -6,7 +6,12 @@ package bootstrap
 import (
 	"importadoraApi/src/core/config"
 	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/events"
 	"importadoraApi/src/core/middlewares"
+
+	realtimeControllers "importadoraApi/src/features/realtime/controllers"
+	realtimeRepos "importadoraApi/src/features/realtime/repositories"
+	realtimeServices "importadoraApi/src/features/realtime/services"
 
 	authControllers "importadoraApi/src/features/auth/controllers"
 	authRepos "importadoraApi/src/features/auth/repositories"
@@ -139,7 +144,10 @@ type AppContainer struct {
 	BankStatementCtrl *bankStatementControllers.BankStatementController
 	CashSessionCtrl   *cashSessionControllers.CashSessionController
 	ScreensaverCtrl   *screensaverControllers.ScreensaverController
-	SwaggerCtrl       *swaggerControllers.SwaggerController
+	RealtimeCtrl      *realtimeControllers.RealtimeController
+	// Events guarda los eventos del websocket; los servicios lo reciben a medida que empiezan a emitir (E8–E9 del plan)
+	Events      *events.Recorder
+	SwaggerCtrl *swaggerControllers.SwaggerController
 }
 
 // NewContainer arma todas las dependencias de la API (repositorios, servicios y controladores) ya conectadas entre sí.
@@ -156,13 +164,16 @@ func NewContainer(cfg *config.Config, database *db.Database) *AppContainer {
 	authService := authServices.NewAuthService(cfg, database.Pool, authRepo, auditRepo)
 	authCtrl := authControllers.NewAuthController(authService)
 
+	// Tiempo real: eventos del websocket (outbox)
+	eventsRecorder := events.NewRecorder(cfg.RealtimeEventsEnabled, cfg.AppEnv == "development")
+
 	// Companies & Warehouses
 	companyRepo := companyRepos.NewCompanyRepository()
-	companyService := companyServices.NewCompanyService(cfg, database.Pool, companyRepo, auditRepo, authRepo)
+	companyService := companyServices.NewCompanyService(cfg, database.Pool, companyRepo, auditRepo, authRepo, eventsRecorder)
 	companyCtrl := companyControllers.NewCompanyController(companyService)
 
 	warehouseRepo := warehouseRepos.NewWarehouseRepository()
-	warehouseService := warehouseServices.NewWarehouseService(cfg, database.Pool, warehouseRepo, auditRepo, authRepo)
+	warehouseService := warehouseServices.NewWarehouseService(cfg, database.Pool, warehouseRepo, auditRepo, authRepo, eventsRecorder)
 	warehouseCtrl := warehouseControllers.NewWarehouseController(warehouseService)
 
 	// Staff
@@ -170,64 +181,64 @@ func NewContainer(cfg *config.Config, database *db.Database) *AppContainer {
 	roleRepo := staffRepos.NewRoleRepository()
 	permissionRepo := staffRepos.NewPermissionRepository()
 	employeeRepo := staffRepos.NewEmployeeRepository()
-	staffService := staffServices.NewStaffService(cfg, database.Pool, adminRepo, roleRepo, permissionRepo, employeeRepo, auditRepo, authRepo)
+	staffService := staffServices.NewStaffService(cfg, database.Pool, adminRepo, roleRepo, permissionRepo, employeeRepo, auditRepo, authRepo, eventsRecorder)
 	staffCtrl := staffControllers.NewStaffController(staffService)
 
 	// Customers & Externals
 	customerRepo := customerRepos.NewCustomerRepository()
 	recycleBinRepo := recycleBinRepos.NewRecycleBinRepository()
-	customerService := customerServices.NewCustomerService(cfg, database.Pool, customerRepo, recycleBinRepo, auditRepo)
+	customerService := customerServices.NewCustomerService(cfg, database.Pool, customerRepo, recycleBinRepo, auditRepo, eventsRecorder)
 	customerCtrl := customerControllers.NewCustomerController(customerService)
 
 	externalRepo := externalRepos.NewExternalRepository()
-	externalService := externalServices.NewExternalService(cfg, database.Pool, externalRepo, auditRepo)
+	externalService := externalServices.NewExternalService(cfg, database.Pool, externalRepo, auditRepo, eventsRecorder)
 	externalCtrl := externalControllers.NewExternalController(externalService)
 
 	// Catalog & Products
 	brandRepo := catalogRepos.NewBrandRepository()
 	modelRepo := catalogRepos.NewModelRepository()
 	categoryRepo := catalogRepos.NewCategoryRepository()
-	catalogService := catalogServices.NewCatalogService(cfg, database.Pool, brandRepo, modelRepo, categoryRepo, auditRepo)
+	catalogService := catalogServices.NewCatalogService(cfg, database.Pool, brandRepo, modelRepo, categoryRepo, auditRepo, eventsRecorder)
 	catalogCtrl := catalogControllers.NewCatalogController(catalogService)
 
 	productRepo := productRepos.NewProductRepository()
 	inventoryRepo := inventoryRepos.NewInventoryRepository()
-	productService := productServices.NewProductService(cfg, database.Pool, productRepo, recycleBinRepo, categoryRepo, brandRepo, modelRepo, auditRepo, warehouseRepo, inventoryRepo)
+	productService := productServices.NewProductService(cfg, database.Pool, productRepo, recycleBinRepo, categoryRepo, brandRepo, modelRepo, auditRepo, warehouseRepo, inventoryRepo, eventsRecorder)
 	productCtrl := productControllers.NewProductController(productService)
 
 	// Inventory
-	inventoryService := inventoryServices.NewInventoryService(cfg, database.Pool, inventoryRepo, productRepo, warehouseRepo, auditRepo)
+	inventoryService := inventoryServices.NewInventoryService(cfg, database.Pool, inventoryRepo, productRepo, warehouseRepo, auditRepo, eventsRecorder)
 	inventoryCtrl := inventoryControllers.NewInventoryController(inventoryService)
 
 	// Carts & Quotations
 	cartRepo := cartRepos.NewCartRepository()
-	cartService := cartServices.NewCartService(cfg, database.Pool, cartRepo, productRepo, inventoryRepo, customerRepo, auditRepo)
+	cartService := cartServices.NewCartService(cfg, database.Pool, cartRepo, productRepo, inventoryRepo, customerRepo, auditRepo, eventsRecorder)
 	cartCtrl := cartControllers.NewCartController(cartService)
 
 	quotationRepo := quotationRepos.NewQuotationRepository()
-	quotationService := quotationServices.NewQuotationService(cfg, database.Pool, quotationRepo, cartRepo, customerRepo, productRepo, auditRepo)
+	quotationService := quotationServices.NewQuotationService(cfg, database.Pool, quotationRepo, cartRepo, customerRepo, productRepo, auditRepo, eventsRecorder)
 	quotationCtrl := quotationControllers.NewQuotationController(quotationService)
 
 	// Sales & Returns
 	saleRepo := saleRepos.NewSaleRepository()
-	saleService := saleServices.NewSaleService(database.Pool, saleRepo, inventoryRepo, auditRepo)
+	saleService := saleServices.NewSaleService(database.Pool, saleRepo, inventoryRepo, auditRepo, eventsRecorder)
 	saleCtrl := saleControllers.NewSaleController(saleService)
 
 	returnRepo := returnRepos.NewReturnRepository()
-	returnService := returnServices.NewReturnService(database.Pool, returnRepo, saleRepo, inventoryRepo)
+	returnService := returnServices.NewReturnService(database.Pool, returnRepo, saleRepo, inventoryRepo, eventsRecorder)
 	returnCtrl := returnControllers.NewReturnController(returnService)
 
 	// Payments, Wallet & Purchases
 	paymentRepo := paymentRepos.NewPaymentRepository()
-	paymentService := paymentServices.NewPaymentService(database.Pool, paymentRepo, saleRepo, auditRepo)
+	paymentService := paymentServices.NewPaymentService(database.Pool, paymentRepo, saleRepo, auditRepo, eventsRecorder)
 	paymentCtrl := paymentControllers.NewPaymentController(paymentService)
 
 	walletRepo := walletRepos.NewWalletRepository()
-	walletService := walletServices.NewWalletService(database.Pool, walletRepo, customerRepo, auditRepo)
+	walletService := walletServices.NewWalletService(database.Pool, walletRepo, customerRepo, auditRepo, eventsRecorder)
 	walletCtrl := walletControllers.NewWalletController(walletService)
 
 	purchaseRepo := purchaseRepos.NewPurchaseRepository()
-	purchaseService := purchaseServices.NewPurchaseService(database.Pool, purchaseRepo, externalRepo, warehouseRepo, inventoryRepo, auditRepo)
+	purchaseService := purchaseServices.NewPurchaseService(database.Pool, purchaseRepo, externalRepo, warehouseRepo, inventoryRepo, auditRepo, eventsRecorder)
 	purchaseCtrl := purchaseControllers.NewPurchaseController(purchaseService)
 
 	notificationRepo := notificationRepos.NewNotificationRepository()
@@ -243,7 +254,7 @@ func NewContainer(cfg *config.Config, database *db.Database) *AppContainer {
 	reportService := reportServices.NewReportService(database.Pool, reportRepo)
 	reportCtrl := reportControllers.NewReportController(reportService)
 
-	recycleBinService := recycleBinServices.NewRecycleBinService(database.Pool, recycleBinRepo, auditRepo, notificationRepo)
+	recycleBinService := recycleBinServices.NewRecycleBinService(database.Pool, recycleBinRepo, auditRepo, notificationRepo, eventsRecorder)
 	recycleBinCtrl := recycleBinControllers.NewRecycleBinController(recycleBinService)
 
 	backupStore := backupRepos.NewBackupStore(cfg.BackupsDir)
@@ -252,16 +263,20 @@ func NewContainer(cfg *config.Config, database *db.Database) *AppContainer {
 	backupCtrl := backupControllers.NewBackupController(backupService)
 
 	bankStatementRepo := bankStatementRepos.NewBankStatementRepository()
-	bankStatementService := bankStatementServices.NewBankStatementService(database.Pool, bankStatementRepo, paymentRepo, paymentService)
+	bankStatementService := bankStatementServices.NewBankStatementService(database.Pool, bankStatementRepo, paymentRepo, paymentService, eventsRecorder)
 	bankStatementCtrl := bankStatementControllers.NewBankStatementController(bankStatementService)
 
 	cashSessionRepo := cashSessionRepos.NewCashSessionRepository()
-	cashSessionService := cashSessionServices.NewCashSessionService(database.Pool, cashSessionRepo, authRepo)
+	cashSessionService := cashSessionServices.NewCashSessionService(database.Pool, cashSessionRepo, authRepo, eventsRecorder)
 	cashSessionCtrl := cashSessionControllers.NewCashSessionController(cashSessionService)
 
 	screensaverRepo := screensaverRepos.NewScreensaverRepository(database.Pool)
-	screensaverService := screensaverServices.NewScreensaverService(screensaverRepo)
+	screensaverService := screensaverServices.NewScreensaverService(screensaverRepo, eventsRecorder)
 	screensaverCtrl := screensaverControllers.NewScreensaverController(screensaverService)
+
+	// Tiempo real: tickets para conectarse a importadoraRealtime
+	ticketService := realtimeServices.NewTicketService(database.Pool, realtimeRepos.NewTicketRepository(), cfg.RealtimeTicketTTL, cfg.RealtimeWSURL)
+	realtimeCtrl := realtimeControllers.NewRealtimeController(ticketService)
 
 	swaggerCtrl := swaggerControllers.NewSwaggerController()
 
@@ -293,6 +308,8 @@ func NewContainer(cfg *config.Config, database *db.Database) *AppContainer {
 		BankStatementCtrl: bankStatementCtrl,
 		CashSessionCtrl:   cashSessionCtrl,
 		ScreensaverCtrl:   screensaverCtrl,
+		RealtimeCtrl:      realtimeCtrl,
+		Events:            eventsRecorder,
 		SwaggerCtrl:       swaggerCtrl,
 	}
 }

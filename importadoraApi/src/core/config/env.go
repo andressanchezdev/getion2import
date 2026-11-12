@@ -32,6 +32,20 @@ func envInt(key string, fallback int) (int, error) {
 	return res, nil
 }
 
+// envBool obtiene una variable de entorno booleana (true/false, 1/0, yes/no) con fallback seguro.
+func envBool(key string, fallback bool) (bool, error) {
+	val := strings.ToLower(strings.TrimSpace(os.Getenv(key)))
+	switch val {
+	case "":
+		return fallback, nil
+	case "true", "1", "yes", "si", "sí":
+		return true, nil
+	case "false", "0", "no":
+		return false, nil
+	}
+	return false, fmt.Errorf("valor de entorno %s no es un booleano válido: %q", key, val)
+}
+
 // parseCSV divide una cadena delimitada por comas en un slice de cadenas limpias.
 func parseCSV(raw string) []string {
 	parts := strings.Split(raw, ",")

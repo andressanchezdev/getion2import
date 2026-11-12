@@ -21,6 +21,7 @@ type CartItemResponse struct {
 	UnitPrice   float64 `json:"unitPrice"`
 	Discount    float64 `json:"discount"`
 	LineTotal   float64 `json:"lineTotal"`
+	PriceTier   string  `json:"priceTier"`
 }
 
 type CartResponse struct {
@@ -51,15 +52,19 @@ type CreateCartRequest struct {
 }
 
 type AddCartItemRequest struct {
-	StockID   int64    `json:"stockId" validate:"required"`
-	Quantity  int      `json:"quantity" validate:"required,min=1"`
-	UnitPrice *float64 `json:"unitPrice"`
-	Discount  *float64 `json:"discount"`
+	StockID     int64            `json:"stockId"`
+	ProductID   int64            `json:"productId"`
+	WarehouseID int64            `json:"warehouseId"`
+	Quantity    int              `json:"quantity" validate:"required,min=1"`
+	UnitPrice   *float64         `json:"unitPrice"`
+	Discount    *float64         `json:"discount"`
+	PriceTier   *types.PriceTier `json:"priceTier"`
 }
 
 type UpdateCartItemRequest struct {
-	Quantity  int      `json:"quantity" validate:"required,min=1"`
-	UnitPrice *float64 `json:"unitPrice"`
-	Discount  *float64 `json:"discount"`
+	Quantity  int              `json:"quantity" validate:"required,min=1"`
+	UnitPrice *float64         `json:"unitPrice"`
+	Discount  *float64         `json:"discount"`
+	PriceTier *types.PriceTier `json:"priceTier"`
 }
 

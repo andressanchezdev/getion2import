@@ -139,8 +139,8 @@ describe('getOrderActions', () => {
   const row = toOrderRow({ id: 1, serialCode: 'PD-1' }, 'picking')
 
   it('ofrece anular solo con permiso', () => {
-    expect(getOrderActions(row, false).map((a) => a.key)).toEqual(['detail', 'copy'])
-    expect(getOrderActions(row, true).map((a) => a.key)).toEqual(['detail', 'copy', 'cancel'])
+    expect(getOrderActions(row, false).map((a) => a.key)).toEqual(['detail'])
+    expect(getOrderActions(row, true).map((a) => a.key)).toEqual(['detail', 'cancel'])
   })
 })
 

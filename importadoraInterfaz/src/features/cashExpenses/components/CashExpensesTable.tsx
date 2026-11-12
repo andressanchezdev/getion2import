@@ -8,6 +8,7 @@ import { FilterSelect } from '@/global/components/UI/molecules/filters/FilterSel
 import { SearchBar } from '@/global/components/UI/molecules/filters/SearchBar'
 import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
 import { Pagination } from '@/global/components/UI/molecules/table/Pagination'
+import { CopyableCell } from '@/global/components/UI/molecules/table/CopyableCell'
 import { formatCOP, formatDateTime } from '@/global/helpers/formatting/format'
 import { useAppSelector } from '@/global/hooks/store/useRedux'
 import { hasCashExpenseFilters } from '../helpers/cashExpenses.adapter'
@@ -71,8 +72,8 @@ export const CashExpensesTable: React.FC = () => {
                 <td>{item.warehouseName}</td>
                 <td>{item.typeLabel}</td>
                 <td>{item.concept}</td>
-                <td>{item.isPurchase ? `${item.supplierName} · ${item.purchaseCode}` : '—'}</td>
-                <td>{item.receiptNumber || '—'}</td>
+                <td>{item.isPurchase ? <>{item.supplierName} · <CopyableCell text={item.purchaseCode} /></> : '—'}</td>
+                <td>{item.receiptNumber ? <CopyableCell text={item.receiptNumber} /> : '—'}</td>
                 <td>{item.paidBy}</td>
                 <td className="cash-expenses-num">{formatCOP(item.total)}</td>
               </tr>

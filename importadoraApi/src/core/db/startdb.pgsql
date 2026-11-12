@@ -291,7 +291,8 @@ CREATE TABLE roles (
     description     TEXT,
     is_active       BOOLEAN NOT NULL DEFAULT TRUE,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (company_id, code)
+    UNIQUE (company_id, code),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP   -- versión de la fila (trigger fn_set_updated_at)
 );
 
 -- 6. TABLA: permissions (Catálogo maestro de permisos habilitables)
@@ -368,7 +369,8 @@ CREATE TABLE employee_permissions (
     granted_by_admin_id     BIGINT REFERENCES admins(id) ON DELETE SET NULL,
     granted_by_employee_id  BIGINT REFERENCES employees(id) ON DELETE SET NULL,
     granted_at              TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (employee_id, permission_id)
+    PRIMARY KEY (employee_id, permission_id),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP   -- versión de la fila (trigger fn_set_updated_at)
 );
 
 CREATE INDEX idx_employee_permissions_perm ON employee_permissions (permission_id);
@@ -462,7 +464,8 @@ CREATE TABLE customer_documents (
     file_url        TEXT NOT NULL,
     mime_type       VARCHAR(100),
     notes           TEXT,
-    uploaded_at     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    uploaded_at     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP   -- versión de la fila (trigger fn_set_updated_at)
 );
 
 CREATE INDEX idx_customer_documents_customer ON customer_documents (customer_id);
@@ -512,7 +515,8 @@ CREATE TABLE brands (
     image_url       TEXT,
     is_active       BOOLEAN NOT NULL DEFAULT TRUE,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (company_id, name)
+    UNIQUE (company_id, name),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP   -- versión de la fila (trigger fn_set_updated_at)
 );
 
 -- 16. TABLA: models (Con campo description opcional)
@@ -523,7 +527,8 @@ CREATE TABLE models (
     description     TEXT,
     is_active       BOOLEAN NOT NULL DEFAULT TRUE,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (company_id, name)
+    UNIQUE (company_id, name),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP   -- versión de la fila (trigger fn_set_updated_at)
 );
 
 -- 17. TABLA: categories (Con parent_id para jerarquía padre -> subcategoría)
@@ -535,7 +540,8 @@ CREATE TABLE categories (
     description     TEXT,
     is_active       BOOLEAN NOT NULL DEFAULT TRUE,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CHECK (parent_id IS NULL OR parent_id <> id)
+    CHECK (parent_id IS NULL OR parent_id <> id),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP   -- versión de la fila (trigger fn_set_updated_at)
 );
 
 CREATE UNIQUE INDEX idx_uq_categories_company_parent_name
@@ -595,7 +601,8 @@ CREATE TABLE product_codes (
     code_type       VARCHAR(20) NOT NULL
         CHECK (code_type IN ('sku', 'reference', 'barcode', 'supplier', 'oem')),
     code            VARCHAR(80) NOT NULL,
-    UNIQUE (company_id, code_type, code)
+    UNIQUE (company_id, code_type, code),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP   -- versión de la fila (trigger fn_set_updated_at)
 );
 
 CREATE INDEX idx_product_codes_product ON product_codes (product_id);
@@ -606,7 +613,8 @@ CREATE TABLE product_suppliers (
     supplier_id     BIGINT NOT NULL REFERENCES externals(id) ON DELETE CASCADE,
     cost            NUMERIC(14,2) NOT NULL CHECK (cost >= 0),
     supplier_code   VARCHAR(80),
-    PRIMARY KEY (product_id, supplier_id)
+    PRIMARY KEY (product_id, supplier_id),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP   -- versión de la fila (trigger fn_set_updated_at)
 );
 
 
@@ -710,7 +718,8 @@ CREATE TABLE counts (
         CHECK (status IN ('pending', 'verified', 'corroborated')),
     notes           TEXT,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    closed_at       TIMESTAMPTZ
+    closed_at       TIMESTAMPTZ,
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP   -- versión de la fila (trigger fn_set_updated_at)
 );
 
 CREATE INDEX idx_counts_company_warehouse ON counts (company_id, warehouse_id, status);
@@ -739,7 +748,8 @@ CREATE TABLE doc_series (
     doc_type        VARCHAR(20) NOT NULL
         CHECK (doc_type IN ('sale', 'transfer', 'quotation', 'purchase', 'payment', 'invoice')),
     prefix          VARCHAR(20) NOT NULL,
-    next_number     BIGINT NOT NULL DEFAULT 1 CHECK (next_number >= 1)
+    next_number     BIGINT NOT NULL DEFAULT 1 CHECK (next_number >= 1),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP   -- versión de la fila (trigger fn_set_updated_at)
 );
 
 CREATE UNIQUE INDEX idx_uq_doc_series_scope
@@ -773,6 +783,8 @@ CREATE TABLE cart_items (
     quantity        INTEGER NOT NULL CHECK (quantity > 0),
     unit_price      NUMERIC(14,2) NOT NULL CHECK (unit_price >= 0),
     discount        NUMERIC(14,2) NOT NULL DEFAULT 0 CHECK (discount >= 0),
+    price_tier      VARCHAR(10) NOT NULL DEFAULT 'p1'
+        CHECK (price_tier IN ('p1', 'p2', 'p3', 'p4')),
     UNIQUE (cart_id, stock_id)
 );
 
@@ -954,7 +966,8 @@ CREATE TABLE returns (
     evidence_url                TEXT,
     receipt_url                 TEXT,
     approved_at                 TIMESTAMPTZ,
-    created_at                  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at                  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP   -- versión de la fila (trigger fn_set_updated_at)
 );
 
 CREATE INDEX idx_returns_company_sale ON returns (company_id, sale_id);
@@ -1002,7 +1015,8 @@ CREATE TABLE cash_sessions (
     abonos_total            NUMERIC(14,2),
     counted_transfer        NUMERIC(14,2) CHECK (counted_transfer IS NULL OR counted_transfer >= 0),
     counted_abonos          NUMERIC(14,2) CHECK (counted_abonos IS NULL OR counted_abonos >= 0),
-    CHECK (status = 'open' OR closed_at IS NOT NULL)
+    CHECK (status = 'open' OR closed_at IS NOT NULL),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP   -- versión de la fila (trigger fn_set_updated_at)
 );
 
 CREATE UNIQUE INDEX idx_cash_sessions_one_open_per_actor 
@@ -1047,7 +1061,8 @@ CREATE TABLE payments (
     verified_at                 TIMESTAMPTZ,
     cash_session_id             BIGINT REFERENCES cash_sessions(id) ON DELETE SET NULL,
     created_at                  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (company_id, serial_code)
+    UNIQUE (company_id, serial_code),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP   -- versión de la fila (trigger fn_set_updated_at)
 );
 
 CREATE INDEX idx_payments_cash_session ON payments (cash_session_id);
@@ -1107,7 +1122,8 @@ CREATE TABLE bank_statement_records (
     confirmed_by_id     BIGINT REFERENCES employees(id) ON DELETE SET NULL,
     confirmed_at        TIMESTAMPTZ,
     notes               TEXT,
-    created_at          TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP   -- versión de la fila (trigger fn_set_updated_at)
 );
 
 CREATE INDEX idx_bank_stmt_filter ON bank_statement_records (company_id, movement_date, status);
@@ -1175,7 +1191,8 @@ CREATE TABLE invoices (
     pdf_url                     TEXT,
     issued_at                   TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_at                  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (warehouse_id, number)
+    UNIQUE (warehouse_id, number),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP   -- versión de la fila (trigger fn_set_updated_at)
 );
 
 CREATE INDEX idx_invoices_sale ON invoices (sale_id);
@@ -1274,19 +1291,71 @@ CREATE TABLE schema_migrations (
 );
 
 INSERT INTO schema_migrations (version, name, filename, checksum, execution_time_ms)
-VALUES ('20261126', 'close-plan-gaps', '20261126_close-plan-gaps.sql', 'bundled-in-startdb', 0)
+VALUES
+    ('20261126', 'close-plan-gaps', '20261126_close-plan-gaps.sql', 'bundled-in-startdb', 0),
+    ('20261127', 'cart-item-price-tier', '20261127_cart-item-price-tier.sql', 'bundled-in-startdb', 0),
+    ('20261128', 'permission-catalog', '20261128_permission-catalog.sql', 'bundled-in-startdb', 0),
+    ('20261129', 'realtime', '20261129_realtime.sql', 'bundled-in-startdb', 0),
+    ('20261130', 'doc-series-prefix-per-warehouse', '20261130_doc-series-prefix-per-warehouse.sql', 'bundled-in-startdb', 0)
 ON CONFLICT (version) DO NOTHING;
+
+-- 45. TABLA: realtime_events (outbox del websocket: eventos confirmados que reparte importadoraRealtime; se purgan a las 48 h)
+CREATE TABLE IF NOT EXISTS realtime_events (
+    seq             BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    id              UUID NOT NULL DEFAULT gen_random_uuid() UNIQUE,
+    tx_id           xid8 NOT NULL DEFAULT pg_current_xact_id(),          -- transacción que lo creó: el listener solo lee lo ya visible para todos (14.7)
+    company_id      BIGINT REFERENCES companies(id) ON DELETE CASCADE,   -- NULL: evento de plataforma (superadmin)
+    warehouse_ids   BIGINT[] NOT NULL DEFAULT '{}',                      -- bodegas afectadas (canal warehouse:{id})
+    actor_channel   VARCHAR(60),                                         -- 'employee:12' para eventos personales
+    type            VARCHAR(60) NOT NULL,
+    permissions     TEXT[] NOT NULL DEFAULT '{}',                        -- basta con uno: {'catalog:view','stock:view'} (filtro del hub)
+    actor_type      VARCHAR(20) NOT NULL CHECK (actor_type IN ('employee', 'admin', 'superadmin', 'system')),
+    actor_id        BIGINT,
+    actor_name      VARCHAR(150) NOT NULL DEFAULT '',                    -- «Ana Pérez», para mostrar quién hizo el cambio
+    platform        BOOLEAN NOT NULL DEFAULT FALSE,                      -- también al canal platform (superadmins)
+    correlation_id  VARCHAR(64),
+    payload         JSONB NOT NULL,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_realtime_events_company_seq ON realtime_events (company_id, seq);
+CREATE INDEX IF NOT EXISTS idx_realtime_events_created ON realtime_events (created_at);
+
+-- 46. TABLA: realtime_tickets (tickets de un solo uso para abrir el websocket: la API los emite, importadoraRealtime los consume)
+CREATE TABLE IF NOT EXISTS realtime_tickets (
+    ticket_hash     CHAR(64) PRIMARY KEY,                                -- sha256 del ticket; el ticket en claro nunca se guarda
+    actor_type      VARCHAR(20) NOT NULL CHECK (actor_type IN ('employee', 'admin', 'superadmin')),
+    actor_id        BIGINT NOT NULL,
+    company_id      BIGINT REFERENCES companies(id) ON DELETE CASCADE,
+    warehouse_id    BIGINT REFERENCES warehouses(id) ON DELETE CASCADE,
+    session_id      BIGINT NOT NULL REFERENCES refresh_tokens(id) ON DELETE CASCADE,
+    expires_at      TIMESTAMPTZ NOT NULL,
+    used_at         TIMESTAMPTZ,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_realtime_tickets_expires ON realtime_tickets (expires_at);
+
+-- usuario del servicio importadoraRealtime con mínimo privilegio; la contraseña se define al desplegar (ALTER ROLE … PASSWORD), nunca aquí
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'importadora_realtime') THEN
+        CREATE ROLE importadora_realtime LOGIN;
+    END IF;
+END $$;
+GRANT SELECT, DELETE ON realtime_events TO importadora_realtime;
+GRANT SELECT, DELETE ON realtime_tickets TO importadora_realtime;
+GRANT UPDATE (used_at) ON realtime_tickets TO importadora_realtime;
+GRANT SELECT ON refresh_tokens, employees, admins, superadmins, employee_permissions, permissions, companies, warehouses TO importadora_realtime;
 
 
 -- ============================================================
 -- PARTE 3: FUNCIONES LIGERAS, TRIGGERS Y VISTAS OPERATIVAS
 -- ============================================================
 
--- Función automática para mantener updated_at al día
+-- Función automática para mantener updated_at al día: es la versión de la fila que usan los eventos del websocket y la concurrencia optimista
+-- ojo: clock_timestamp() (reloj real) y no CURRENT_TIMESTAMP: dos cambios en la misma transacción tienen versiones distintas
 CREATE OR REPLACE FUNCTION fn_set_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.updated_at := CURRENT_TIMESTAMP;
+    NEW.updated_at := clock_timestamp();
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -1356,6 +1425,57 @@ CREATE TRIGGER trg_purchases_updated_at
     FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
 CREATE TRIGGER trg_warehouse_locations_updated_at
     BEFORE UPDATE ON warehouse_locations
+    FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
+
+-- versión por fila en las tablas que no la tenían (migración 20261129_realtime)
+CREATE TRIGGER trg_brands_updated_at
+    BEFORE UPDATE ON brands
+    FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
+CREATE TRIGGER trg_models_updated_at
+    BEFORE UPDATE ON models
+    FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
+CREATE TRIGGER trg_categories_updated_at
+    BEFORE UPDATE ON categories
+    FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
+CREATE TRIGGER trg_roles_updated_at
+    BEFORE UPDATE ON roles
+    FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
+CREATE TRIGGER trg_product_suppliers_updated_at
+    BEFORE UPDATE ON product_suppliers
+    FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
+CREATE TRIGGER trg_product_codes_updated_at
+    BEFORE UPDATE ON product_codes
+    FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
+CREATE TRIGGER trg_counts_updated_at
+    BEFORE UPDATE ON counts
+    FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
+CREATE TRIGGER trg_doc_series_updated_at
+    BEFORE UPDATE ON doc_series
+    FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
+CREATE TRIGGER trg_employee_permissions_updated_at
+    BEFORE UPDATE ON employee_permissions
+    FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
+CREATE TRIGGER trg_customer_documents_updated_at
+    BEFORE UPDATE ON customer_documents
+    FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
+CREATE TRIGGER trg_invoices_updated_at
+    BEFORE UPDATE ON invoices
+    FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
+CREATE TRIGGER trg_returns_updated_at
+    BEFORE UPDATE ON returns
+    FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
+CREATE TRIGGER trg_payments_updated_at
+    BEFORE UPDATE ON payments
+    FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
+CREATE TRIGGER trg_bank_statement_records_updated_at
+    BEFORE UPDATE ON bank_statement_records
+    FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
+CREATE TRIGGER trg_cash_sessions_updated_at
+    BEFORE UPDATE ON cash_sessions
+    FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
+-- product_prices ya tenía updated_at pero ningún trigger lo mantenía (lo usa product.prices_changed)
+CREATE TRIGGER trg_product_prices_updated_at
+    BEFORE UPDATE ON product_prices
     FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
 
 -- 43. TABLA (se crea aquí, antes de su trigger y de la semilla): screensaver_settings (Configuración de protector de pantalla por empresa)
@@ -1669,7 +1789,8 @@ VALUES
     (2, 1, 2, 1, 'admin.online@importadora.com', '$2a$10$xo3irJ9IbTG.ju8iRMb2Iu4YB6KAe.XzeBtRkEo1aWXnChX84X2ne', 'Marcela', 'Gómez Restrepo', 'CC', '1001002', '3001112236', TRUE)
 ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email;
 
--- CATÁLOGO DE PERMISOS: cada módulo con las acciones que la matriz de permisos puede encender (ver, ver detalle, crear, editar, cambiar estado, borrar y, en productos y catálogo, editar precios)
+-- CATÁLOGO DE PERMISOS: cada módulo con sus acciones base (ver, ver detalle, crear, editar, borrar) más las acciones especiales.
+-- Fuente de verdad de los nombres: src/core/types/permission_types.go (routes_guard_test revisa que este bloque los siembre). Igual a migrations/20261128_permission-catalog.sql
 -- Los roles son solo etiquetas: cualquier permiso se le puede dar a cualquier empleado. La API exige estos permisos en cada ruta que cambia datos y en las lecturas sensibles.
 INSERT INTO permissions (module, action, description)
 SELECT m.module, a.action, m.label || ' · ' || a.label
@@ -1682,14 +1803,29 @@ FROM (VALUES
     ('audit', 'Auditoría y papelera'), ('warehouses', 'Sedes y series de documentos'), ('invoices', 'Facturas de las cajas')
 ) AS m(module, label)
 CROSS JOIN (VALUES
-    ('view', 'ver'), ('view_detail', 'ver detalle'), ('create', 'crear'), ('edit', 'editar'), ('change_status', 'cambiar estado'), ('delete', 'borrar')
+    ('view', 'ver'), ('view_detail', 'ver detalle'), ('create', 'crear'), ('edit', 'editar'), ('delete', 'borrar')
 ) AS a(action, label)
 ON CONFLICT (module, action) DO NOTHING;
 
+-- acciones especiales: cada una con su casilla en el panel de permisos
 INSERT INTO permissions (module, action, description)
-SELECT m.module, a.action, m.label || ' · ' || a.label
-FROM (VALUES ('products', 'Productos'), ('catalog', 'Catálogo de la tienda')) AS m(module, label)
-CROSS JOIN (VALUES ('edit_prices', 'editar precios'), ('update_prices', 'actualizar precios')) AS a(action, label)
+VALUES
+    ('products', 'edit_prices', 'Productos · editar precios'),
+    ('catalog', 'edit_prices', 'Catálogo de la tienda · editar precios'),
+    ('orders', 'verify_payment', 'Pedidos · verificar el pago'),
+    ('orders', 'advance_stage', 'Pedidos · avanzar etapa (alistar, empacar, despachar, entregar)'),
+    ('orders', 'invoice', 'Pedidos · facturar'),
+    ('invoices', 'annul', 'Facturas · anular'),
+    ('payments', 'verify', 'Pagos · verificar, rechazar o reabrir abonos'),
+    ('payments', 'reconcile', 'Pagos · conciliar extractos bancarios'),
+    ('cash', 'open_close', 'Caja · abrir y cerrar turno'),
+    ('stock', 'relocate', 'Inventario · reubicar productos'),
+    ('stock', 'count', 'Inventario · registrar conteo físico'),
+    ('stock', 'count_verify', 'Inventario · verificar y corroborar conteos'),
+    ('purchases', 'receive', 'Compras · recibir mercancía'),
+    ('transfers', 'receive', 'Traslados · recibir'),
+    ('returns', 'approve', 'Devoluciones · aprobar o rechazar'),
+    ('reports', 'export', 'Reportes · exportar a Excel')
 ON CONFLICT (module, action) DO NOTHING;
 
 -- PERMISOS INICIALES DE LOS EMPLEADOS DE PRUEBA (solo punto de partida: se editan desde Roles y permisos; el rol es solo una etiqueta)
@@ -1720,6 +1856,32 @@ JOIN permissions p ON (
         OR (p.module = 'orders' AND p.action IN ('view', 'view_detail', 'edit'))
         OR (p.module IN ('customers', 'returns') AND p.action IN ('view', 'view_detail'))))
 )
+ON CONFLICT (employee_id, permission_id) DO NOTHING;
+
+-- acciones especiales de los empleados de prueba: las reciben quienes tienen la acción base que las abarca (misma regla que la migración 20261128)
+INSERT INTO employee_permissions (employee_id, permission_id)
+SELECT DISTINCT ep.employee_id, target.id
+FROM (VALUES
+    ('orders', 'verify_payment', 'orders', 'edit'),
+    ('orders', 'advance_stage', 'orders', 'edit'),
+    ('orders', 'invoice', 'orders', 'edit'),
+    ('invoices', 'annul', 'orders', 'delete'),
+    ('payments', 'verify', 'payments', 'edit'),
+    ('payments', 'reconcile', 'payments', 'edit'),
+    ('cash', 'open_close', 'cash', 'create'),
+    ('cash', 'open_close', 'cash', 'edit'),
+    ('stock', 'relocate', 'stock', 'edit'),
+    ('stock', 'count', 'stock', 'create'),
+    ('stock', 'count', 'stock', 'edit'),
+    ('stock', 'count_verify', 'stock', 'edit'),
+    ('purchases', 'receive', 'purchases', 'edit'),
+    ('transfers', 'receive', 'transfers', 'edit'),
+    ('returns', 'approve', 'returns', 'edit'),
+    ('reports', 'export', 'reports', 'view')
+) AS h(module, action, from_module, from_action)
+JOIN permissions source ON source.module = h.from_module AND source.action = h.from_action
+JOIN employee_permissions ep ON ep.permission_id = source.id
+JOIN permissions target ON target.module = h.module AND target.action = h.action
 ON CONFLICT (employee_id, permission_id) DO NOTHING;
 
 -- 6. TERCEROS: PROVEEDORES Y TRANSPORTADORAS REALES (externals)
@@ -1956,58 +2118,117 @@ VALUES (1, 1, 'open', 'employee', 1, 'Andrés Felipe Ramos', 150000.00)
 ON CONFLICT DO NOTHING;
 
 
+-- IVA POR PRODUCTO: la mayoría al 19 %, algunos al 5 % y otros exentos (0 %), para probar los tres casos al vender
+-- ojo: va antes de las ventas para que cada renglón tome el IVA de su producto, igual que la API (sale_service)
+-- ojo: las tarifas son valores netos; el IVA se suma aparte al vender
+UPDATE products SET iva = 0 WHERE iva = 19 AND id % 10 = 0;
+UPDATE products SET iva = 5 WHERE iva = 19 AND id % 10 = 5;
+
+-- producto sin precio en la lista: queda en borrador hasta que lo tarifen (activo sin tarifas no se puede vender)
+UPDATE products SET status = 'draft' WHERE company_id = 1 AND code = 'JL231045-1';
+DELETE FROM product_prices pp USING products p WHERE pp.product_id = p.id AND p.code = 'JL231045-1' AND pp.price <= 0;
+
 -- SEED DE VENTAS, PEDIDOS Y OPERACIONES (CAJA, DESPACHOS, CARTERA Y GARANTÍAS)
+-- pedidos de mostrador de Paseo Bolívar en cuatro momentos del flujo; productos, tarifa p1 e IVA reales del catálogo
+-- ojo: los ids 1 a 4 son fijos porque los usan los pagos, la devolución, la factura y la auditoría de esta semilla
 INSERT INTO sales (
     id, company_id, serial_code, customer_id, employee_id, warehouse_id,
     price_tier, payment_method, payment_condition, immediate_picking,
-    status, current_stage, subtotal, discount_total, iva_total, total, paid_total,
-    notes, payment_reference
+    status, current_stage, notes, payment_reference, created_at
 )
 OVERRIDING SYSTEM VALUE
-VALUES 
-    (1, 1, 'PED-0001', 1, 1, 1, 'p1', 'cash', 'cash', TRUE, 'open', 'verification', 120000.00, 0, 0, 120000.00, 120000.00, 'Pedido en mostrador para entrega inmediata', 'EFEC-CAJA-01'),
-    (2, 1, 'PED-0002', 2, 1, 1, 'p1', 'transfer', 'cash', FALSE, 'open', 'picking', 250000.00, 0, 0, 250000.00, 0.00, 'Pedido con transferencia bancaria para alistamiento', 'TRANSF-77492'),
-    (3, 1, 'PED-0003', 3, 2, 1, 'p1', 'credit', 'credit', FALSE, 'open', 'invoicing', 450000.00, 0, 0, 450000.00, 100000.00, 'Venta a crédito aprobada por cartera', NULL),
-    (4, 1, 'PED-0004', 1, 1, 1, 'p1', 'cash', 'cash', FALSE, 'completed', 'sent', 85000.00, 0, 0, 85000.00, 85000.00, 'Venta anterior entregada y facturada', 'EFEC-HIST-01')
+VALUES
+    (1, 1, 'PED-0001', 1, 3, 1, 'p1', 'cash', 'cash', TRUE, 'open', 'verification', 'Pedido en mostrador para entrega inmediata', 'EFEC-CAJA-01', CURRENT_TIMESTAMP - INTERVAL '2 hours'),
+    (2, 1, 'PED-0002', 2, 3, 1, 'p1', 'transfer', 'cash', FALSE, 'open', 'picking', 'Pedido con transferencia bancaria para alistamiento', 'TRANSF-77492', CURRENT_TIMESTAMP - INTERVAL '1 day'),
+    (3, 1, 'PED-0003', 3, 3, 1, 'p1', 'credit', 'credit', FALSE, 'open', 'invoicing', 'Venta a crédito aprobada por cartera', NULL, CURRENT_TIMESTAMP - INTERVAL '3 days'),
+    (4, 1, 'PED-0004', 1, 3, 1, 'p1', 'cash', 'cash', FALSE, 'completed', 'sent', 'Venta anterior entregada y facturada', 'EFEC-HIST-01', CURRENT_TIMESTAMP - INTERVAL '10 days')
 ON CONFLICT (id) DO NOTHING;
 
--- la parte a crédito de los pedidos a crédito y la primera fila del historial de etapas de cada pedido
-UPDATE sales SET credit_amount = total - paid_total WHERE payment_method = 'credit';
-INSERT INTO sale_stage_history (sale_id, stage, entered_at)
-SELECT s.id, s.current_stage, s.created_at FROM sales s
-WHERE NOT EXISTS (SELECT 1 FROM sale_stage_history h WHERE h.sale_id = s.id);
-
+-- renglones: precio de la tarifa del pedido, costo del producto e IVA del producto (como sale_service)
 INSERT INTO sale_items (
     id, sale_id, product_id, stock_id, product_code, product_name,
     price_tier, quantity, picked_qty, packed_qty, dispatched_qty,
-    unit_price, subtotal, line_total, process_stage, stage_status
+    unit_price, unit_cost, discount, iva_percent, iva_amount, subtotal, line_total, process_stage, stage_status
 )
 OVERRIDING SYSTEM VALUE
-VALUES
-    (1, 1, 1, 1, 'CIL-P100', 'Cilindro Estándar DT125', 'p1', 1, 0, 0, 0, 120000.00, 120000.00, 120000.00, 'verification', 'pending'),
-    (2, 2, 2, 2, 'LUB-4T', 'Aceite Sintético 4T 20W50', 'p1', 5, 5, 0, 0, 50000.00, 250000.00, 250000.00, 'picking', 'in_progress'),
-    (3, 3, 3, 3, 'FRN-DISC', 'Disco Delantero NMAX', 'p1', 3, 3, 3, 0, 150000.00, 450000.00, 450000.00, 'invoicing', 'in_progress'),
-    (4, 4, 1, 1, 'CIL-P100', 'Cilindro Estándar DT125', 'p1', 1, 1, 1, 1, 85000.00, 85000.00, 85000.00, 'sent', 'completed')
+SELECT v.id, v.sale_id, p.id, st.id, p.code, p.name, 'p1', v.qty, v.picked, v.packed, v.dispatched,
+       pp.price, p.last_cost, 0, p.iva, ROUND(pp.price * v.qty * p.iva / 100, 2), pp.price * v.qty,
+       pp.price * v.qty + ROUND(pp.price * v.qty * p.iva / 100, 2), v.stage, v.stage_status
+FROM (VALUES
+    (1, 1, 'BAJAJ1.2D', 2, 0, 0, 0, 'verification', 'pending'),
+    (2, 2, 'ACEBAJAJ', 5, 5, 0, 0, 'picking', 'in_progress'),
+    (3, 3, 'BAJAJ115', 10, 10, 10, 0, 'invoicing', 'in_progress'),
+    (4, 4, 'DJ121044-1', 1, 1, 1, 1, 'sent', 'completed')
+) AS v(id, sale_id, code, qty, picked, packed, dispatched, stage, stage_status)
+JOIN products p ON p.company_id = 1 AND p.code = v.code
+JOIN stock st ON st.product_id = p.id AND st.warehouse_id = 1 AND st.location = 'ESTANTE-P1-01'
+JOIN product_prices pp ON pp.product_id = p.id AND pp.price_tier = 'p1'
 ON CONFLICT (id) DO NOTHING;
 
+-- totales desde los renglones; lo pagado (efectivo del mostrador, abono inicial del crédito) y la parte a crédito
+UPDATE sales s SET subtotal = t.subtotal, discount_total = t.discount, iva_total = t.iva, total = t.total
+FROM (SELECT sale_id, SUM(subtotal) AS subtotal, SUM(discount) AS discount, SUM(iva_amount) AS iva, SUM(line_total) AS total
+      FROM sale_items WHERE sale_id BETWEEN 1 AND 4 GROUP BY sale_id) t
+WHERE s.id = t.sale_id;
+UPDATE sales SET paid_total = CASE id WHEN 1 THEN total WHEN 3 THEN 100000.00 WHEN 4 THEN total ELSE 0 END WHERE id BETWEEN 1 AND 4;
+UPDATE sales SET credit_amount = total - paid_total WHERE id BETWEEN 1 AND 4 AND payment_method = 'credit';
+-- facturados (PED-0003 y PED-0004): fecha de venta y vencimiento del crédito, como al emitir la factura
+UPDATE sales s SET sale_at = s.created_at + INTERVAL '6 hours',
+                   due_date = CASE WHEN s.payment_method = 'credit' THEN (s.created_at + INTERVAL '6 hours')::date + c.credit_days END
+FROM customers c WHERE c.id = s.customer_id AND s.id IN (3, 4);
+
+-- historial: una fila por etapa recorrida; cada una cierra cuando entra la siguiente y la actual queda abierta
+INSERT INTO sale_stage_history (sale_id, stage, employee_id, entered_at, left_at)
+SELECT s.id, st.stage, s.employee_id,
+       s.created_at + (st.pos - 1) * INTERVAL '1 hour',
+       CASE WHEN st.stage = s.current_stage THEN NULL ELSE s.created_at + st.pos * INTERVAL '1 hour' END
+FROM sales s
+CROSS JOIN LATERAL unnest(ARRAY['verification','verification_ok','picking','picking_ok','packing','packing_ok','invoicing','invoicing_ok','dispatch','sent']) WITH ORDINALITY AS st(stage, pos)
+WHERE s.id BETWEEN 1 AND 4
+  AND st.pos <= array_position(ARRAY['verification','verification_ok','picking','picking_ok','packing','packing_ok','invoicing','invoicing_ok','dispatch','sent'], s.current_stage::text)
+  AND NOT EXISTS (SELECT 1 FROM sale_stage_history h WHERE h.sale_id = s.id);
+
+-- pagos: efectivo verificado por la cajera de la bodega (Juliana, 9), transferencia en revisión y el abono inicial del crédito
 INSERT INTO payments (
-    id, company_id, serial_code, sale_id, customer_id, employee_id,
-    method, amount, status, reference, cash_session_id
+    id, company_id, serial_code, sale_id, customer_id, employee_id, verified_by_employee_id,
+    method, amount, status, reference, verified_at, cash_session_id, created_at
 )
 OVERRIDING SYSTEM VALUE
-VALUES
-    (1, 1, 'PAG-0001', 1, 1, 1, 'cash', 120000.00, 'verified', 'EFEC-CAJA-01', 1),
-    (2, 1, 'PAG-0002', 2, 2, 1, 'transfer', 250000.00, 'review', 'TRANSF-77492', 1),
-    (3, 1, 'REC-1001', 3, 3, 1, 'cash', 100000.00, 'verified', 'ABONO-01', 1)
+SELECT v.id, 1, v.serial, s.id, s.customer_id, s.employee_id,
+       CASE WHEN v.status = 'verified' THEN 9 END, v.method, a.amount, v.status, v.reference,
+       CASE WHEN v.status = 'verified' THEN s.created_at + INTERVAL '30 minutes' END,
+       CASE WHEN v.in_open_session THEN (SELECT cs.id FROM cash_sessions cs WHERE cs.warehouse_id = 1 AND cs.status = 'open' ORDER BY cs.id LIMIT 1) END,
+       s.created_at + INTERVAL '15 minutes'
+FROM (VALUES
+    (1, 'PAG-0001', 1, 'cash', NULL::numeric, 'verified', 'EFEC-CAJA-01', TRUE),
+    (2, 'PAG-0002', 2, 'transfer', NULL::numeric, 'review', 'TRANSF-77492', FALSE),
+    (3, 'REC-1001', 3, 'cash', 100000.00, 'verified', 'ABONO-01', FALSE),
+    (4, 'PAG-0003', 4, 'cash', NULL::numeric, 'verified', 'EFEC-HIST-01', FALSE)
+) AS v(id, serial, sale_id, method, fixed_amount, status, reference, in_open_session)
+JOIN sales s ON s.id = v.sale_id
+CROSS JOIN LATERAL (SELECT COALESCE(v.fixed_amount, s.total) AS amount) a(amount)
 ON CONFLICT (id) DO NOTHING;
 
+-- cartera de PED-0003: el cargo al facturar (todo el total, como sale_invoice_service) y el abono inicial
+INSERT INTO credit_entries (company_id, customer_id, employee_id, entry_type, amount, sale_id, payment_id, reason, created_at)
+SELECT 1, s.customer_id, s.employee_id, v.entry_type, v.sign * v.amount, s.id, v.payment_id, v.reason, s.sale_at
+FROM sales s
+CROSS JOIN LATERAL (VALUES
+    ('charge', -1, s.total, NULL::bigint, 'Venta a crédito ' || s.serial_code || ' facturada'),
+    ('payment', 1, 100000.00, 3::bigint, 'Abono inicial al pedido ' || s.serial_code)
+) AS v(entry_type, sign, amount, payment_id, reason)
+WHERE s.id = 3 AND NOT EXISTS (SELECT 1 FROM credit_entries ce WHERE ce.sale_id = s.id);
+
+-- devolución en garantía de PED-0004, aprobada por el administrador (empleado 1) con saldo a favor del cliente
 INSERT INTO returns (
-    id, company_id, sale_id, customer_id, employee_id,
-    reason, reason_type, resolution_type, status, total
+    id, company_id, sale_id, customer_id, employee_id, approved_by_employee_id,
+    reason, reason_type, resolution_type, status, total, approved_at
 )
 OVERRIDING SYSTEM VALUE
-VALUES
-    (1, 1, 4, 1, 1, 'Ralladura en empaque original detectada al recibir', 'warranty', 'credit_balance', 'approved', 85000.00)
+SELECT 1, 1, s.id, s.customer_id, s.employee_id, 1, 'Ralladura en empaque original detectada al recibir', 'warranty', 'credit_balance', 'approved',
+       si.line_total, s.sale_at + INTERVAL '2 days'
+FROM sales s JOIN sale_items si ON si.sale_id = s.id
+WHERE s.id = 4
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO return_items (
@@ -2017,6 +2238,10 @@ OVERRIDING SYSTEM VALUE
 VALUES
     (1, 1, 4, 1, TRUE)
 ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO credit_entries (company_id, customer_id, employee_id, entry_type, amount, return_id, reason, created_at)
+SELECT r.company_id, r.customer_id, r.approved_by_employee_id, 'return', r.total, r.id, 'Saldo a favor por la devolución aprobada de PED-0004', r.approved_at
+FROM returns r WHERE r.id = 1 AND NOT EXISTS (SELECT 1 FROM credit_entries ce WHERE ce.return_id = r.id);
 
 -- AJUSTE DE SECUENCIAS IDENTITY PARA QUE LOS PRÓXIMOS REGISTROS NO GENEREN CONFLICTO
 SELECT setval(pg_get_serial_sequence('sales', 'id'), COALESCE((SELECT MAX(id) FROM sales), 1));
@@ -2052,10 +2277,13 @@ SELECT w.company_id, w.id, 'juridica', 'NIT', '900111222-1', 'IMPORTADORA PREMIU
 FROM warehouses w
 WHERE NOT EXISTS (SELECT 1 FROM warehouse_facturation f WHERE f.warehouse_id = w.id);
 
+-- ojo: pedidos, traslados, cotizaciones, compras y pagos son únicos por COMPAÑÍA y la serie es por bodega: cada bodega lleva su prefijo
+-- (PED-01-, PED-02-…) para que dos bodegas nunca generen el mismo número. Las facturas son únicas por bodega: van con el prefijo DIAN (FE-)
+-- y su siguiente número se ajusta al final de la semilla según las facturas sembradas
 INSERT INTO doc_series (company_id, warehouse_id, doc_type, prefix, next_number)
-SELECT w.company_id, w.id, d.doc_type, d.prefix, d.next_number
+SELECT w.company_id, w.id, d.doc_type, CASE WHEN d.per_warehouse THEN d.prefix || LPAD(w.id::text, 2, '0') || '-' ELSE d.prefix END, 1
 FROM warehouses w
-CROSS JOIN (VALUES ('sale', 'PED-', 5), ('transfer', 'TR-', 3), ('quotation', 'COT-', 4), ('purchase', 'OC-', 3), ('payment', 'PAG-', 4), ('invoice', 'FE-', 2)) AS d(doc_type, prefix, next_number)
+CROSS JOIN (VALUES ('sale', 'PED-', TRUE), ('transfer', 'TR-', TRUE), ('quotation', 'COT-', TRUE), ('purchase', 'OC-', TRUE), ('payment', 'PAG-', TRUE), ('invoice', 'FE-', FALSE)) AS d(doc_type, prefix, per_warehouse)
 WHERE NOT EXISTS (SELECT 1 FROM doc_series s WHERE s.company_id = w.company_id AND COALESCE(s.warehouse_id, 0) = w.id AND s.doc_type = d.doc_type);
 
 -- 3) Cotizaciones: borrador, enviada y aceptada, con dos productos cada una
@@ -2116,16 +2344,17 @@ FROM purchases pu
 JOIN (SELECT id, ROW_NUMBER() OVER (ORDER BY id) AS n FROM products WHERE company_id = 1) p ON p.n <= 3
 WHERE pu.serial_code LIKE 'OC-SEED-%' AND NOT EXISTS (SELECT 1 FROM purchase_items i WHERE i.purchase_id = pu.id);
 
-UPDATE purchases pu SET subtotal = t.total, total = ROUND(t.total * 1.19, 2), updated_at = CURRENT_TIMESTAMP
+UPDATE purchases pu SET subtotal = t.total, iva_total = ROUND(t.total * 0.19, 2), total = t.total + ROUND(t.total * 0.19, 2), updated_at = CURRENT_TIMESTAMP
 FROM (SELECT purchase_id, SUM(subtotal) AS total FROM purchase_items GROUP BY purchase_id) t
 WHERE t.purchase_id = pu.id AND pu.serial_code LIKE 'OC-SEED-%' AND pu.total = 0;
 
--- 6) Una factura emitida del pedido ya enviado (PED-0004)
-INSERT INTO invoices (company_id, warehouse_id, warehouse_facturation_id, sale_id, employee_id, kind, number, status)
-SELECT s.company_id, s.warehouse_id, f.id, s.id, 1, 'invoice', 'FE-000001', 'issued'
-FROM sales s
+-- 6) Facturas de los pedidos de mostrador ya facturados (PED-0004 y PED-0003), numeradas en orden de facturación
+INSERT INTO invoices (company_id, warehouse_id, warehouse_facturation_id, sale_id, employee_id, kind, number, status, issued_at)
+SELECT s.company_id, s.warehouse_id, f.id, s.id, s.employee_id, 'invoice', v.number, 'issued', s.sale_at
+FROM (VALUES ('PED-0004', 'FE-000001'), ('PED-0003', 'FE-000002')) AS v(serial, number)
+JOIN sales s ON s.company_id = 1 AND s.serial_code = v.serial
 JOIN warehouse_facturation f ON f.warehouse_id = s.warehouse_id
-WHERE s.serial_code = 'PED-0004' AND NOT EXISTS (SELECT 1 FROM invoices i WHERE i.sale_id = s.id AND i.kind = 'invoice');
+WHERE NOT EXISTS (SELECT 1 FROM invoices i WHERE i.sale_id = s.id AND i.kind = 'invoice');
 
 -- 7) Notificaciones del empleado 1 (una ya leída)
 INSERT INTO notifications (employee_id, kind, title, body, entity, entity_id, read_at)
@@ -2140,9 +2369,9 @@ WHERE NOT EXISTS (SELECT 1 FROM notifications n WHERE n.employee_id = 1 AND n.ti
 -- 8) Documentos de clientes (para el control de vencimientos)
 INSERT INTO customer_documents (customer_id, doc_type, file_name, file_url, mime_type, notes)
 SELECT v.customer_id, v.doc_type, v.file_name, v.file_url, 'application/pdf', v.notes FROM (VALUES
-    (3, 'rut', 'rut-cliente-3.pdf', '/assets/demo/rut-cliente-3.pdf', 'RUT actualizado'),
-    (3, 'credit_form', 'formulario-credito-3.pdf', '/assets/demo/formulario-credito-3.pdf', 'Solicitud de crédito firmada'),
-    (4, 'chamber', 'camara-comercio-4.pdf', '/assets/demo/camara-comercio-4.pdf', 'Cámara de comercio vigente')
+    (3, 'rut', 'rut-cliente-3.pdf', '/uploads/customers/3/rut-cliente-3.pdf', 'RUT actualizado'),
+    (3, 'credit_form', 'formulario-credito-3.pdf', '/uploads/customers/3/formulario-credito-3.pdf', 'Solicitud de crédito firmada'),
+    (4, 'chamber', 'camara-comercio-4.pdf', '/uploads/customers/4/camara-comercio-4.pdf', 'Cámara de comercio vigente')
 ) AS v(customer_id, doc_type, file_name, file_url, notes)
 WHERE NOT EXISTS (SELECT 1 FROM customer_documents d WHERE d.customer_id = v.customer_id AND d.doc_type = v.doc_type);
 
@@ -2354,17 +2583,21 @@ BEGIN
     FROM s15_cases c
     JOIN customers cu ON cu.company_id = 1 AND cu.document = c.doc;
 
-    -- dos renglones por pedido; el precio sale de la tarifa p1 del producto y el descuento del cliente
+    -- dos renglones por pedido; el precio sale de la tarifa del pedido (la del cliente), el descuento del cliente y el IVA del producto, como sale_service
     INSERT INTO sale_items (sale_id, product_id, stock_id, product_code, product_name, price_tier, quantity, picked_qty, packed_qty, dispatched_qty,
-                            unit_price, discount, subtotal, line_total, process_stage, stage_status)
+                            unit_price, unit_cost, discount, iva_percent, iva_amount, subtotal, line_total, process_stage, stage_status)
     SELECT s.id, p.id, k.stock_id, p.code, p.name, s.price_tier, q.qty,
            CASE WHEN r.rank >= 4 THEN q.qty ELSE 0 END,
            CASE WHEN r.rank >= 6 THEN q.qty ELSE 0 END,
            CASE WHEN r.rank >= 10 THEN q.qty ELSE 0 END,
            pr.price,
+           p.last_cost,
            ROUND(pr.price * q.qty * cu.discount_percent / 100, 2),
+           p.iva,
+           ROUND((pr.price * q.qty - ROUND(pr.price * q.qty * cu.discount_percent / 100, 2)) * p.iva / 100, 2),
            pr.price * q.qty,
-           pr.price * q.qty - ROUND(pr.price * q.qty * cu.discount_percent / 100, 2),
+           pr.price * q.qty - ROUND(pr.price * q.qty * cu.discount_percent / 100, 2)
+               + ROUND((pr.price * q.qty - ROUND(pr.price * q.qty * cu.discount_percent / 100, 2)) * p.iva / 100, 2),
            CASE WHEN s.current_stage = 'cancelled' THEN 'verification' ELSE s.current_stage END,
            CASE WHEN s.current_stage IN ('verification', 'cancelled') THEN 'pending'
                 WHEN s.current_stage LIKE '%\_ok' OR s.current_stage = 'sent' THEN 'completed'
@@ -2375,32 +2608,33 @@ BEGIN
     CROSS JOIN LATERAL (VALUES (1, 1 + (c.n % 3)), (2, 2)) AS q(item, qty)
     JOIN s15_pick k ON k.wh = c.wh AND k.idx = ((c.n * 2 + q.item) % (SELECT MAX(total) FROM s15_pick WHERE wh = c.wh)) + 1
     JOIN products p ON p.id = k.product_id
-    CROSS JOIN LATERAL (SELECT COALESCE((SELECT pp.price FROM product_prices pp WHERE pp.product_id = p.id AND pp.price_tier = 'p1'), 30000 + (p.id % 10) * 7500)::numeric AS price) pr
+    CROSS JOIN LATERAL (SELECT COALESCE((SELECT pp.price FROM product_prices pp WHERE pp.product_id = p.id AND pp.price_tier = s.price_tier), 30000 + (p.id % 10) * 7500)::numeric AS price) pr
     CROSS JOIN LATERAL (SELECT COALESCE(array_position(ARRAY['verification','verification_ok','picking','picking_ok','packing','packing_ok','invoicing','invoicing_ok','dispatch','sent'], s.current_stage::text), 1) AS rank) r;
 
     -- totales, parte pagada y parte a crédito
     UPDATE sales s SET
         subtotal = t.subtotal,
         discount_total = t.discount,
-        total = t.subtotal - t.discount,
-        paid_total = ROUND((t.subtotal - t.discount) * c.paid_pct / 100, 2),
-        credit_amount = CASE WHEN s.payment_method = 'credit' THEN (t.subtotal - t.discount) - ROUND((t.subtotal - t.discount) * c.paid_pct / 100, 2) ELSE 0 END
+        iva_total = t.iva,
+        total = t.total,
+        paid_total = ROUND(t.total * c.paid_pct / 100, 2),
+        credit_amount = CASE WHEN s.payment_method = 'credit' THEN t.total - ROUND(t.total * c.paid_pct / 100, 2) ELSE 0 END
     FROM s15_cases c,
-         (SELECT sale_id, SUM(subtotal) AS subtotal, SUM(discount) AS discount FROM sale_items GROUP BY sale_id) t
+         (SELECT sale_id, SUM(subtotal) AS subtotal, SUM(discount) AS discount, SUM(iva_amount) AS iva, SUM(line_total) AS total FROM sale_items GROUP BY sale_id) t
     WHERE s.serial_code = c.serial AND s.company_id = 1 AND t.sale_id = s.id;
 
-    -- una fila por etapa recorrida (la actual queda abierta)
+    -- una fila por etapa recorrida: cada una cierra cuando entra la siguiente (como el avance de etapa en la API) y la actual queda abierta
     INSERT INTO sale_stage_history (sale_id, stage, employee_id, entered_at, left_at)
     SELECT s.id, st.stage, s.employee_id,
            s.created_at + (st.pos - 1) * INTERVAL '2 hours',
-           CASE WHEN st.stage = s.current_stage THEN NULL ELSE s.created_at + st.pos * INTERVAL '2 hours' - INTERVAL '5 minutes' END
+           CASE WHEN st.stage = s.current_stage THEN NULL ELSE s.created_at + st.pos * INTERVAL '2 hours' END
     FROM sales s
     JOIN s15_cases c ON c.serial = s.serial_code
     CROSS JOIN LATERAL unnest(ARRAY['verification','verification_ok','picking','picking_ok','packing','packing_ok','invoicing','invoicing_ok','dispatch','sent']) WITH ORDINALITY AS st(stage, pos)
     WHERE s.company_id = 1 AND st.pos <= COALESCE(array_position(ARRAY['verification','verification_ok','picking','picking_ok','packing','packing_ok','invoicing','invoicing_ok','dispatch','sent'], s.current_stage::text), 1);
 
     INSERT INTO sale_stage_history (sale_id, stage, employee_id, entered_at)
-    SELECT s.id, 'cancelled', s.employee_id, s.created_at + INTERVAL '3 hours'
+    SELECT s.id, 'cancelled', s.employee_id, s.created_at + INTERVAL '2 hours'  -- entra cuando se cierra la verificación
     FROM sales s WHERE s.company_id = 1 AND s.serial_code LIKE 'PED-S15-%' AND s.current_stage = 'cancelled';
 
     -- pagos: efectivo verificado en la caja de la bodega, transferencias en revisión o verificadas, el abono a crédito y el cobro anulado del pedido cancelado
@@ -2457,12 +2691,17 @@ BEGIN
         (1, 'Bancolombia', '123-456789-00', CURRENT_DATE - 2, 'CONSIGNACION SIN PEDIDO', 'SUCURSAL', 'CONS-S15-01', 175000.00, TRUE, 'pending', 'SEED15 entrada sin pedido'),
         (1, 'Bancolombia', '123-456789-00', CURRENT_DATE - 3, 'PAGO PROVEEDOR TRANSPORTES', 'PSE', 'PSE-S15-01', 420000.00, FALSE, 'ignored', 'SEED15 salida, no se concilia');
 
-    -- el stock refleja los pedidos: los abiertos reservan, los enviados descuentan
-    UPDATE stock st SET reserved = st.reserved + a.qty
-    FROM (SELECT si.stock_id, SUM(si.quantity) AS qty FROM sale_items si JOIN sales s ON s.id = si.sale_id
-          WHERE s.serial_code LIKE 'PED-S15-%' AND s.status = 'open' GROUP BY si.stock_id) a
-    WHERE st.id = a.stock_id;
+    -- facturas: todo pedido que ya pasó por facturación (invoicing en adelante) tiene la suya, numerada por bodega en orden de facturación
+    INSERT INTO invoices (company_id, warehouse_id, warehouse_facturation_id, sale_id, employee_id, kind, number, status, issued_at)
+    SELECT s.company_id, s.warehouse_id, f.id, s.id, s.employee_id, 'invoice',
+           'FE-' || LPAD((COALESCE(prev.n, 0) + ROW_NUMBER() OVER (PARTITION BY s.warehouse_id ORDER BY s.sale_at, s.id))::text, 6, '0'),
+           'issued', s.sale_at
+    FROM sales s
+    JOIN warehouse_facturation f ON f.warehouse_id = s.warehouse_id
+    LEFT JOIN (SELECT warehouse_id, COUNT(*) AS n FROM invoices GROUP BY warehouse_id) prev ON prev.warehouse_id = s.warehouse_id
+    WHERE s.company_id = 1 AND s.serial_code LIKE 'PED-S15-%' AND s.sale_at IS NOT NULL;
 
+    -- el stock refleja los pedidos enviados (descuentan); las reservas de los abiertos se recalculan al final de la semilla
     UPDATE stock st SET available = st.available - a.qty
     FROM (SELECT si.stock_id, SUM(si.quantity) AS qty FROM sale_items si JOIN sales s ON s.id = si.sale_id
           WHERE s.serial_code LIKE 'PED-S15-%' AND s.current_stage = 'sent' GROUP BY si.stock_id) a
@@ -2513,16 +2752,26 @@ INSERT INTO carts (company_id, employee_id, customer_id, warehouse_id, price_tie
 SELECT 1, 3, NULL, 1, 'p1', 'open'
 WHERE NOT EXISTS (SELECT 1 FROM carts WHERE employee_id = 3 AND warehouse_id = 1 AND status = 'open');
 
-INSERT INTO cart_items (cart_id, product_id, stock_id, quantity, unit_price)
-SELECT c.id, s.product_id, s.id, 2, 45000.00
+-- ojo: el precio de cada línea es el de su tarifa (p1), igual que cart_item_service
+INSERT INTO cart_items (cart_id, product_id, stock_id, quantity, unit_price, price_tier)
+SELECT c.id, s.product_id, s.id, 2, pp.price, 'p1'
 FROM carts c
 JOIN (SELECT id, product_id FROM stock WHERE warehouse_id = 1 AND product_id BETWEEN 20 AND 400 AND product_id % 3 = 2 AND available >= 20 ORDER BY product_id DESC LIMIT 2) s ON TRUE
+JOIN product_prices pp ON pp.product_id = s.product_id AND pp.price_tier = 'p1'
 WHERE c.employee_id = 3 AND c.warehouse_id = 1 AND c.status = 'open'
 ON CONFLICT (cart_id, stock_id) DO NOTHING;
--- 9) IVA por producto: la mayoría al 19 %, algunos al 5 % y otros exentos (0 %), para probar los tres casos al vender
--- ojo: las tarifas son valores netos; el IVA se suma aparte al vender
-UPDATE products SET iva = 0 WHERE iva = 19 AND id % 10 = 0;
-UPDATE products SET iva = 5 WHERE iva = 19 AND id % 10 = 5;
+-- 9) el IVA por producto se fija antes de sembrar ventas (ver «IVA POR PRODUCTO» arriba)
+
+-- 10) Reservas: cada fila de stock reserva lo de los pedidos abiertos que la usan (se liberan al enviar o cancelar, como la API)
+UPDATE stock st SET reserved = COALESCE(r.qty, 0)
+FROM stock s0
+LEFT JOIN (SELECT si.stock_id, SUM(si.quantity) AS qty FROM sale_items si JOIN sales s ON s.id = si.sale_id
+           WHERE s.status = 'open' AND s.current_stage <> 'cancelled' GROUP BY si.stock_id) r ON r.stock_id = s0.id
+WHERE st.id = s0.id AND st.reserved IS DISTINCT FROM COALESCE(r.qty, 0);
+
+-- 11) Facturas: el siguiente número de cada bodega sigue a la última factura sembrada
+UPDATE doc_series d SET next_number = COALESCE((SELECT COUNT(*) FROM invoices i WHERE i.warehouse_id = d.warehouse_id AND i.kind = 'invoice'), 0) + 1
+WHERE d.doc_type = 'invoice' AND d.warehouse_id IS NOT NULL;
 
 -- Limpieza de funciones temporales de semilla
 DROP FUNCTION IF EXISTS seed_product CASCADE;

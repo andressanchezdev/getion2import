@@ -3,7 +3,7 @@
 // ojo: la API en Go toma la compañía del token; solo el superadmin (sin compañía) manda companyId
 import { apiClient, API_CONFIG, toPaginated, withCompany, type APIResponse } from '@/api'
 import { MENU_ITEMS } from '@/features/navigation'
-import { toEmployeeRole, toModulePermissions, toPermissionIds, toSimpleEmployee } from '../helpers/employees.adapter'
+import { toEmployeeRole, toModulePermissions, toPermissionIds, toSimpleEmployee, toSpecialKeys } from '../helpers/employees.adapter'
 import type { EmployeeDto, PermissionDto, RoleDto } from '../types/employees.api.types'
 import type { EmployeePermissionsResponse, EmployeeRole, ModulePermission, NewEmployeeInput, RoleInput, SimpleEmployee, UpdateCredentialsInput } from '../types/employees.types'
 
@@ -23,19 +23,19 @@ const fetchPermissionList = async (employeeId: number): Promise<PermissionDto[]>
   return data.data ?? []
 }
 
-// la matriz de permisos de un empleado (módulos del menú y sus subgestiones)
-export const fetchEmployeePermissions = async (employeeId: number): Promise<EmployeePermissionsResponse> => ({
-  branches: [],
-  modules: toModulePermissions(await fetchPermissionList(employeeId), MENU_ITEMS),
-})
+// la matriz de permisos de un empleado (módulos del menú y sus subgestiones) y sus acciones especiales
+export const fetchEmployeePermissions = async (employeeId: number): Promise<EmployeePermissionsResponse> => {
+  const list = await fetchPermissionList(employeeId)
+  return { branches: [], modules: toModulePermissions(list, MENU_ITEMS), specials: toSpecialKeys(list) }
+}
 
-// guarda la matriz: PUT /employees/:id/permissions con los ids; la API reemplaza todo, por eso se conservan los permisos que la matriz no maneja
-export const saveEmployeePermissions = async (employeeId: number, modules: ModulePermission[]): Promise<void> => {
+// guarda la matriz y las especiales: PUT /employees/:id/permissions con los ids; la API reemplaza todo, por eso se conservan los permisos que nadie maneja
+export const saveEmployeePermissions = async (employeeId: number, modules: ModulePermission[], specials?: string[]): Promise<void> => {
   const [catalog, current] = await Promise.all([
     apiClient.get<APIResponse<PermissionDto[] | null>>(EMPLOYEES.PERMISSIONS_CATALOG).then((res) => res.data.data ?? []),
     fetchPermissionList(employeeId),
   ])
-  await apiClient.put(EMPLOYEES.PERMISSIONS_OF(employeeId), { permissionIds: toPermissionIds(modules, catalog, current) })
+  await apiClient.put(EMPLOYEES.PERMISSIONS_OF(employeeId), { permissionIds: toPermissionIds(modules, catalog, current, specials) })
 }
 
 // trae los roles que se pueden dar a un empleado
@@ -74,9 +74,4 @@ export const createEmployee = async (input: NewEmployeeInput): Promise<void> => 
 // activa o desactiva un empleado
 export const setEmployeeStatus = async (employeeId: number, status: 'active' | 'inactive', reason?: string): Promise<void> => {
   await apiClient.put(EMPLOYEES.BY_ID(employeeId), status === 'inactive' ? { status, reason } : { status })
-}
-
-// desbloquea la cuenta del empleado tras intentos fallidos (POST /employees/:id/unlock)
-export const unlockEmployee = async (employeeId: number): Promise<void> => {
-  await apiClient.post(EMPLOYEES.UNLOCK(employeeId))
 }

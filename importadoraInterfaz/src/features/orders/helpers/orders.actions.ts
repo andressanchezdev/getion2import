@@ -4,7 +4,7 @@
 import type { OrderRow } from '../types/orders.types'
 
 export type AdvanceActionKey = 'pick' | 'pack' | 'invoice' | 'dispatch' | 'send'
-export type OrderActionKey = 'detail' | 'copy' | 'cancel' | AdvanceActionKey
+export type OrderActionKey = 'detail' | 'cancel' | AdvanceActionKey
 
 export interface OrderAction {
   key: OrderActionKey
@@ -27,13 +27,15 @@ const NEXT_BY_STAGE: Record<string, OrderAction & { key: AdvanceActionKey }> = {
 // la acción para pasar a la siguiente etapa, o null si el pedido espera algo más (el pago en verificación) o ya terminó
 export const nextStageAction = (order: OrderRow): (OrderAction & { key: AdvanceActionKey }) | null => NEXT_BY_STAGE[order.currentStage] ?? null
 
-// siguiente etapa solo con permiso para editar; ver detalle y copiar siempre; anular solo con permiso (el backend tiene la última palabra)
-export const getOrderActions = (order: OrderRow, canCancel: boolean, canAdvance = false): OrderAction[] => {
-  const next = canAdvance ? nextStageAction(order) : null
+// siguiente etapa solo con su permiso; ver detalle siempre; anular solo con permiso (el backend tiene la última palabra)
+// ojo: canAdvance puede decidir por etapa (facturar pide orders:invoice; alistar, empacar, despachar y entregar orders:advance_stage)
+export const getOrderActions = (order: OrderRow, canCancel: boolean, canAdvance: boolean | ((key: AdvanceActionKey) => boolean) = false): OrderAction[] => {
+  const candidate = nextStageAction(order)
+  const allowed = candidate !== null && (typeof canAdvance === 'function' ? canAdvance(candidate.key) : canAdvance)
+  const next = allowed ? candidate : null
   return [
     ...(next ? [next] : []),
     { key: 'detail', label: 'Ver detalle' },
-    { key: 'copy', label: 'Copiar número del pedido' },
     ...(canCancel ? [{ key: 'cancel' as const, label: 'Anular con motivo…', danger: true }] : []),
   ]
 }

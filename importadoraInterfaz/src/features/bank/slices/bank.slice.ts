@@ -4,7 +4,7 @@
 import { createSlice, isAnyOf, type PayloadAction } from '@reduxjs/toolkit'
 import { INITIAL_BANK_FILTERS, INITIAL_BANK_STATE } from '../constants/bank.constants'
 import { confirmBankRecordThunk, ignoreBankRecordThunk, loadBankRecordsThunk, loadPendingPaymentsThunk, uploadBankStatementThunk } from '../thunks/bank.thunks'
-import type { BankFilters } from '../types/bank.types'
+import type { BankFilters, BankRecordStatus, PendingPayment } from '../types/bank.types'
 
 const changes = [confirmBankRecordThunk, ignoreBankRecordThunk] as const
 
@@ -25,6 +25,26 @@ export const bankSlice = createSlice({
     },
     clearBankUploadResult: (state) => {
       state.upload = INITIAL_BANK_STATE.upload
+    },
+    // tiempo real (bank_record.status_changed): el movimiento cambia de estado; si ya no cumple el filtro sale de la tabla, y su pago deja de estar por verificar
+    bankRecordStatusFromEvent: (state, action: PayloadAction<{ id: number; to: BankRecordStatus; by: string; at: string; paymentId: number | null }>) => {
+      const { id, to, by, at, paymentId } = action.payload
+      const idx = state.list.items.findIndex((record) => record.id === id)
+      if (idx >= 0) {
+        const filter = state.list.filters.status
+        if (filter !== 'all' && filter !== to) state.list.items.splice(idx, 1)
+        else state.list.items[idx] = { ...state.list.items[idx], status: to, confirmedBy: by, confirmedAt: at }
+      }
+      if (paymentId !== null) state.pendingPayments.items = state.pendingPayments.items.filter((payment) => payment.id !== paymentId)
+    },
+    // tiempo real (payment.created de transferencia en revisión): entra a los pagos por verificar si la lista ya está cargada
+    pendingPaymentAddedFromEvent: (state, action: PayloadAction<PendingPayment>) => {
+      if (state.pendingPayments.status !== 'succeeded') return
+      if (!state.pendingPayments.items.some((payment) => payment.id === action.payload.id)) state.pendingPayments.items.unshift(action.payload)
+    },
+    // tiempo real (payment.status_changed): un pago que salió de revisión ya no está por verificar
+    pendingPaymentRemovedFromEvent: (state, action: PayloadAction<number>) => {
+      state.pendingPayments.items = state.pendingPayments.items.filter((payment) => payment.id !== action.payload)
     },
   },
   extraReducers: (builder) => {
@@ -80,6 +100,6 @@ export const bankSlice = createSlice({
   },
 })
 
-export const { setBankFilters, clearBankFilters, setBankPage, clearBankUploadResult } = bankSlice.actions
+export const { setBankFilters, clearBankFilters, setBankPage, clearBankUploadResult, bankRecordStatusFromEvent, pendingPaymentAddedFromEvent, pendingPaymentRemovedFromEvent } = bankSlice.actions
 export const bankReducer = bankSlice.reducer
 export default bankSlice.reducer

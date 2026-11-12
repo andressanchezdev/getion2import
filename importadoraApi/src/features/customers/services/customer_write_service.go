@@ -10,12 +10,16 @@ import (
 	"strings"
 	"time"
 
+	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/events"
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
 	authRepos "importadoraApi/src/features/auth/repositories"
 	"importadoraApi/src/features/customers/dtos"
 	"importadoraApi/src/features/customers/repositories"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // Create crea un nuevo cliente.
@@ -145,7 +149,15 @@ func (s *CustomerService) Create(ctx context.Context, actor *middlewares.ActorCo
 		Status:              status,
 	}
 
-	created, err := s.customerRepo.Create(ctx, s.pool, entity)
+	// la creación y su evento van en la misma transacción: nadie recibe el aviso de un registro que no se guardó
+	created, err := db.WithTxValue(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) (*repositories.CustomerEntity, error) {
+		row, err := s.customerRepo.Create(ctx, tx, entity)
+		if err != nil {
+			return nil, err
+		}
+		s.events.Record(ctx, events.NewEntityCreated(row.CompanyID, nil, events.EntityRef{Kind: events.KindCustomer, ID: row.ID, Version: row.UpdatedAt}, s.mapCustomerToDTO(row, nil)))
+		return row, nil
+	})
 	if err != nil {
 		return nil, utils.NormalizeDBError(err, "")
 	}
@@ -172,6 +184,8 @@ func (s *CustomerService) Update(ctx context.Context, actor *middlewares.ActorCo
 	}
 
 	current, err := s.customerRepo.FindByID(ctx, s.pool, id)
+	// foto del registro antes de editarlo: de aquí sale changedFields
+	beforeSnap := events.Snapshot(current)
 	if err != nil {
 		return nil, utils.Internal("Error al consultar cliente.", err)
 	}
@@ -207,28 +221,28 @@ func (s *CustomerService) Update(ctx context.Context, actor *middlewares.ActorCo
 		current.Name = strings.TrimSpace(*req.Name)
 	}
 	if req.LastName != nil {
-		current.LastName = req.LastName
+		current.LastName = cleanOptString(req.LastName)
 	}
 	if req.TradeName != nil {
-		current.TradeName = req.TradeName
+		current.TradeName = cleanOptString(req.TradeName)
 	}
 	if req.LegalRepresentative != nil {
-		current.LegalRepresentative = req.LegalRepresentative
+		current.LegalRepresentative = cleanOptString(req.LegalRepresentative)
 	}
 	if req.Email != nil {
-		current.Email = req.Email
+		current.Email = cleanOptString(req.Email)
 	}
 	if req.Phone != nil {
-		current.Phone = req.Phone
+		current.Phone = cleanOptString(req.Phone)
 	}
 	if req.Mobile != nil {
-		current.Mobile = req.Mobile
+		current.Mobile = cleanOptString(req.Mobile)
 	}
 	if req.Address != nil {
-		current.Address = req.Address
+		current.Address = cleanOptString(req.Address)
 	}
 	if req.City != nil {
-		current.City = req.City
+		current.City = cleanOptString(req.City)
 	}
 	updateReason := "" // motivo de lo que se inactiva o se quita (queda en la auditoría)
 	if req.VATResponsible != nil {
@@ -271,6 +285,7 @@ func (s *CustomerService) Update(ctx context.Context, actor *middlewares.ActorCo
 	if req.DocsValidityMonths != nil && *req.DocsValidityMonths > 0 {
 		current.DocsValidityMonths = *req.DocsValidityMonths
 	}
+	oldStatus := current.Status
 	if req.Status != nil {
 		// inactivar por edición también pide el motivo (si no, sería un atajo para saltarse el del borrado)
 		if *req.Status == types.CustomerInactive && current.Status != types.CustomerInactive {
@@ -282,25 +297,55 @@ func (s *CustomerService) Update(ctx context.Context, actor *middlewares.ActorCo
 		current.Status = *req.Status
 	}
 
-	updated, err := s.customerRepo.Update(ctx, s.pool, current)
+	docs, _ := s.customerRepo.ListDocuments(ctx, s.pool, current.ID)
+
+	var resp *dtos.CustomerResponse
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		updated, err := s.customerRepo.Update(ctx, tx, current)
+		if err != nil {
+			return utils.NormalizeDBError(err, "El cliente no existe.")
+		}
+
+		_ = s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
+			CompanyID: &current.CompanyID,
+			ActorType: actor.ActorType,
+			ActorID:   actor.ActorID,
+			Entity:    "customers",
+			EntityID:  &current.ID,
+			Action:    "CUSTOMER_UPDATED",
+			Reason:    utils.ReasonOrDefault(updateReason, "Actualización de datos del cliente"),
+			IPAddress: ip,
+			UserAgent: ua,
+		})
+
+		resp = s.mapCustomerToDTO(updated, docs)
+		if s.events != nil && oldStatus != updated.Status {
+			var reasonPtr *string
+			if updateReason != "" {
+				reasonPtr = &updateReason
+			}
+			ref := events.EntityRef{
+				Kind:    events.KindCustomer,
+				ID:      updated.ID,
+				Version: updated.UpdatedAt,
+			}
+			s.events.Record(ctx, events.NewEntityStatus(updated.CompanyID, nil, ref, string(oldStatus), string(updated.Status), reasonPtr, resp))
+		} else {
+			// edición sin cambio de estado: viaja la fila ya guardada para que las tablas abiertas se actualicen sin pedirla
+			ref := events.EntityRef{
+				Kind:    events.KindCustomer,
+				ID:      updated.ID,
+				Version: updated.UpdatedAt,
+			}
+			s.events.Record(ctx, events.NewEntityUpdated(updated.CompanyID, nil, ref, resp, events.ChangedFields(beforeSnap, updated)))
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, utils.NormalizeDBError(err, "El cliente no existe.")
+		return nil, err
 	}
 
-	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
-		CompanyID: &current.CompanyID,
-		ActorType: actor.ActorType,
-		ActorID:   actor.ActorID,
-		Entity:    "customers",
-		EntityID:  &current.ID,
-		Action:    "CUSTOMER_UPDATED",
-		Reason:    utils.ReasonOrDefault(updateReason, "Actualización de datos del cliente"),
-		IPAddress: ip,
-		UserAgent: ua,
-	})
-
-	docs, _ := s.customerRepo.ListDocuments(ctx, s.pool, current.ID)
-	return s.mapCustomerToDTO(updated, docs), nil
+	return resp, nil
 }
 
 // Delete retira de la operación al cliente (soft-delete).
@@ -331,34 +376,30 @@ func (s *CustomerService) Delete(ctx context.Context, actor *middlewares.ActorCo
 	if err != nil {
 		return utils.Internal("No se pudo preparar el registro del cliente para la papelera.", err)
 	}
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		return utils.Internal("No se pudo iniciar la eliminación del cliente.", err)
-	}
-	defer tx.Rollback(ctx)
-	if _, err := s.recycleBinRepo.Insert(ctx, tx, &current.CompanyID, "customers", current.ID, fmt.Sprintf("%s (%s)", current.Name, current.Document), currentBytes, string(actor.ActorType), actor.ActorID); err != nil {
-		return utils.Internal("No se pudo guardar el cliente en la papelera.", err)
-	}
-	if err := s.customerRepo.SoftDelete(ctx, tx, id); err != nil {
-		return utils.Internal("Error al eliminar cliente.", err)
-	}
-	if err := s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
-		CompanyID: &current.CompanyID,
-		ActorType: actor.ActorType,
-		ActorID:   actor.ActorID,
-		Entity:    "customers",
-		EntityID:  &current.ID,
-		Action:    "CUSTOMER_DEACTIVATED",
-		Reason:    reason,
-		IPAddress: ip,
-		UserAgent: ua,
-	}); err != nil {
-		return utils.Internal("No se pudo registrar la eliminación del cliente en auditoría.", err)
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return utils.Internal("No se pudo completar la eliminación del cliente.", err)
-	}
-	return nil
+	return db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		binID, err := s.recycleBinRepo.Insert(ctx, tx, &current.CompanyID, "customers", current.ID, fmt.Sprintf("%s (%s)", current.Name, current.Document), currentBytes, string(actor.ActorType), actor.ActorID)
+		if err != nil {
+			return utils.Internal("No se pudo guardar el cliente en la papelera.", err)
+		}
+		if err := s.customerRepo.SoftDelete(ctx, tx, id); err != nil {
+			return utils.Internal("Error al eliminar cliente.", err)
+		}
+		if err := s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
+			CompanyID: &current.CompanyID,
+			ActorType: actor.ActorType,
+			ActorID:   actor.ActorID,
+			Entity:    "customers",
+			EntityID:  &current.ID,
+			Action:    "CUSTOMER_DEACTIVATED",
+			Reason:    reason,
+			IPAddress: ip,
+			UserAgent: ua,
+		}); err != nil {
+			return utils.Internal("No se pudo registrar la eliminación del cliente en auditoría.", err)
+		}
+		s.events.Record(ctx, events.NewEntityArchived(current.CompanyID, nil, events.EntityRef{Kind: events.KindCustomer, ID: current.ID, Version: time.Now().UTC()}, reason, binID))
+		return nil
+	})
 }
 
 // mapCustomerToDTO arma la respuesta del cliente con sus documentos.
@@ -419,4 +460,12 @@ func jsonItems(raw []byte) int {
 		return 0
 	}
 	return len(items)
+}
+
+func cleanOptString(s *string) *string {
+	if s == nil || strings.TrimSpace(*s) == "" {
+		return nil
+	}
+	trimmed := strings.TrimSpace(*s)
+	return &trimmed
 }

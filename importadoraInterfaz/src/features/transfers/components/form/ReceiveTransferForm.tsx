@@ -1,6 +1,7 @@
 // ReceiveTransferForm · confirmación de aceptación del traslado (OK completo o con novedad) en el panel derecho
 // conecta con: formRegistry (lo muestra), transfers.thunks (acepta el traslado), CreateTransferForm.css (estilos compartidos del formulario) y ReceiveTransferForm.css
 import React, { useState } from 'react'
+import '@/global/components/UI/molecules/form/DrawerFormShell.css'
 import './TransferFormShell.css'
 import './ReceiveTransferForm.css'
 import { ValidatedInput } from '@/global/components/UI/molecules/form'
@@ -49,9 +50,9 @@ export const ReceiveTransferForm: React.FC<Props> = ({ transfer }) => {
   }
 
   return (
-    <div className="transfer-form">
-      <div className="transfer-form-body">
-        <div className="transfer-grid-2cols">
+    <div className="drawer-form transfer-form">
+      <div className="drawer-form-body transfer-form-body">
+        <div className="transfer-grid-2cols drawer-form-grid">
           <div>
             <small className="transfer-select-label">Bodega origen</small>
             <strong>{transfer.originWarehouse.name}</strong>
@@ -128,7 +129,7 @@ export const ReceiveTransferForm: React.FC<Props> = ({ transfer }) => {
         {errorMsg && decision === 'ok' && <div className="form-field-error-msg">{errorMsg}</div>}
       </div>
 
-      <div className="transfer-form-footer">
+      <div className="drawer-form-footer transfer-form-footer">
         <button type="button" className="btn-secondary" onClick={() => dispatch(closeDrawerForm())}>
           Cancelar
         </button>

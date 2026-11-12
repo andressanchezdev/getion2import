@@ -22,6 +22,7 @@ type CategoryEntity struct {
 	Description *string
 	IsActive    bool
 	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 type CategoryRepository struct{}
@@ -36,7 +37,7 @@ func (r *CategoryRepository) FindByID(ctx context.Context, q db.DBExecutor, id i
 	const sql = `
 		SELECT
 			c.id, c.company_id, c.parent_id, p.name,
-			c.name, c.description, c.is_active, c.created_at
+			c.name, c.description, c.is_active, c.created_at, c.updated_at
 		FROM categories c
 		LEFT JOIN categories p ON p.id = c.parent_id
 		WHERE c.id = $1
@@ -44,7 +45,7 @@ func (r *CategoryRepository) FindByID(ctx context.Context, q db.DBExecutor, id i
 	var cat CategoryEntity
 	err := q.QueryRow(ctx, sql, id).Scan(
 		&cat.ID, &cat.CompanyID, &cat.ParentID, &cat.ParentName,
-		&cat.Name, &cat.Description, &cat.IsActive, &cat.CreatedAt,
+		&cat.Name, &cat.Description, &cat.IsActive, &cat.CreatedAt, &cat.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -63,23 +64,23 @@ func (r *CategoryRepository) FindByCompanyParentAndName(ctx context.Context, q d
 
 	if parentID == nil {
 		sql = `
-			SELECT id, company_id, parent_id, NULL, name, description, is_active, created_at
+			SELECT id, company_id, parent_id, NULL, name, description, is_active, created_at, updated_at
 			FROM categories
 			WHERE company_id = $1 AND parent_id IS NULL AND LOWER(name) = LOWER($2)
 		`
 		err = q.QueryRow(ctx, sql, companyID, name).Scan(
 			&cat.ID, &cat.CompanyID, &cat.ParentID, &cat.ParentName,
-			&cat.Name, &cat.Description, &cat.IsActive, &cat.CreatedAt,
+			&cat.Name, &cat.Description, &cat.IsActive, &cat.CreatedAt, &cat.UpdatedAt,
 		)
 	} else {
 		sql = `
-			SELECT id, company_id, parent_id, NULL, name, description, is_active, created_at
+			SELECT id, company_id, parent_id, NULL, name, description, is_active, created_at, updated_at
 			FROM categories
 			WHERE company_id = $1 AND parent_id = $2 AND LOWER(name) = LOWER($3)
 		`
 		err = q.QueryRow(ctx, sql, companyID, *parentID, name).Scan(
 			&cat.ID, &cat.CompanyID, &cat.ParentID, &cat.ParentName,
-			&cat.Name, &cat.Description, &cat.IsActive, &cat.CreatedAt,
+			&cat.Name, &cat.Description, &cat.IsActive, &cat.CreatedAt, &cat.UpdatedAt,
 		)
 	}
 
@@ -97,7 +98,7 @@ func (r *CategoryRepository) ListByCompany(ctx context.Context, q db.DBExecutor,
 	sql := `
 		SELECT
 			c.id, c.company_id, c.parent_id, p.name,
-			c.name, c.description, c.is_active, c.created_at
+			c.name, c.description, c.is_active, c.created_at, c.updated_at
 		FROM categories c
 		LEFT JOIN categories p ON p.id = c.parent_id
 		WHERE c.company_id = $1
@@ -118,7 +119,7 @@ func (r *CategoryRepository) ListByCompany(ctx context.Context, q db.DBExecutor,
 		var cat CategoryEntity
 		if err := rows.Scan(
 			&cat.ID, &cat.CompanyID, &cat.ParentID, &cat.ParentName,
-			&cat.Name, &cat.Description, &cat.IsActive, &cat.CreatedAt,
+			&cat.Name, &cat.Description, &cat.IsActive, &cat.CreatedAt, &cat.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -132,11 +133,11 @@ func (r *CategoryRepository) Create(ctx context.Context, q db.DBExecutor, cat *C
 	const sql = `
 		INSERT INTO categories (company_id, parent_id, name, description, is_active)
 		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id, created_at
+		RETURNING id, created_at, updated_at
 	`
 	err := q.QueryRow(ctx, sql,
 		cat.CompanyID, cat.ParentID, cat.Name, cat.Description, cat.IsActive,
-	).Scan(&cat.ID, &cat.CreatedAt)
+	).Scan(&cat.ID, &cat.CreatedAt, &cat.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -150,22 +151,24 @@ func (r *CategoryRepository) Update(ctx context.Context, q db.DBExecutor, cat *C
 			parent_id = $1,
 			name = $2,
 			description = $3,
-			is_active = $4
+			is_active = $4,
+			updated_at = CURRENT_TIMESTAMP
 		WHERE id = $5
+		RETURNING updated_at
 	`
-	cmdTag, err := q.Exec(ctx, sql, cat.ParentID, cat.Name, cat.Description, cat.IsActive, cat.ID)
+	err := q.QueryRow(ctx, sql, cat.ParentID, cat.Name, cat.Description, cat.IsActive, cat.ID).Scan(&cat.UpdatedAt)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, errors.New("categoría no encontrada")
+		}
 		return nil, err
-	}
-	if cmdTag.RowsAffected() == 0 {
-		return nil, errors.New("categoría no encontrada")
 	}
 	return cat, nil
 }
 
 // SoftDelete marca la categoría como eliminada (borrado lógico: no se pierde el registro).
 func (r *CategoryRepository) SoftDelete(ctx context.Context, q db.DBExecutor, id int64) error {
-	const sql = `UPDATE categories SET is_active = FALSE WHERE id = $1`
+	const sql = `UPDATE categories SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP WHERE id = $1`
 	cmdTag, err := q.Exec(ctx, sql, id)
 	if err != nil {
 		return err

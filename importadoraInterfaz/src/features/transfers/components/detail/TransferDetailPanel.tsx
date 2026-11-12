@@ -2,6 +2,7 @@
 // conecta con: formRegistry (lo muestra), transfers.constants (texto del estado), format (fecha), useTransferDetail (trae el detalle si falta) y navigation (cerrar el panel)
 // ojo: el panel recibe el traslado ya cargado desde la tabla y si viene sin ítems consulta el endpoint por ID; los íconos y emojis no se usan, solo texto y los tokens de la línea
 import React from 'react'
+import '@/global/components/UI/molecules/form/DrawerFormShell.css'
 import './TransferDetailPanel.css'
 import { closeDrawerForm } from '@/features/navigation'
 import { formatDateTime } from '@/global/helpers/formatting/format'
@@ -28,8 +29,8 @@ export const TransferDetailPanel: React.FC<TransferDetailPanelProps> = ({ transf
 
   if (!detail) {
     return (
-      <div className="transfer-detail">
-        <div className="transfer-detail-body">
+      <div className="drawer-form transfer-detail">
+        <div className="drawer-form-body transfer-detail-body">
           <p className="transfer-detail-note">{loading ? 'Cargando detalle del traslado…' : 'No se encontró información del traslado.'}</p>
         </div>
       </div>
@@ -54,8 +55,8 @@ export const TransferDetailPanel: React.FC<TransferDetailPanelProps> = ({ transf
   ]
 
   return (
-    <div className="transfer-detail">
-      <div className="transfer-detail-body">
+    <div className="drawer-form transfer-detail">
+      <div className="drawer-form-body transfer-detail-body">
         {isNovelty && (
           <div className="transfer-detail-alert" role="alert">
             <strong>Novedad registrada (alta prioridad)</strong>
@@ -88,7 +89,7 @@ export const TransferDetailPanel: React.FC<TransferDetailPanelProps> = ({ transf
         {detail.notes && <p className="transfer-detail-notes">{detail.notes}</p>}
       </div>
 
-      <div className="transfer-detail-footer">
+      <div className="drawer-form-footer transfer-detail-footer">
         <button type="button" className="btn-secondary" onClick={() => dispatch(closeDrawerForm())}>
           Cerrar
         </button>

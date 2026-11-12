@@ -11,6 +11,7 @@ export interface RowAction {
   icon: string // contenido del svg (import de assets/icons con ?raw)
   tone?: 'default' | 'danger' | 'success'
   visible?: boolean // false: la acción no se muestra (el usuario no tiene permiso); por defecto se muestra
+  disabled?: boolean // true: la acción está en curso o bloqueada temporalmente
   onClick: () => void
 }
 
@@ -31,8 +32,10 @@ export const RowActions: React.FC<RowActionsProps> = ({ actions }) => {
         className={`row-actions-btn row-actions-btn-${action.tone ?? 'default'}`}
         aria-label={action.label}
         title={action.label}
+        disabled={action.disabled}
         onClick={(e) => {
           e.stopPropagation()
+          if (action.disabled) return
           action.onClick()
         }}
       >

@@ -52,13 +52,16 @@ export const useTransferRequest = (initial?: CreateTransferInitialPayload) => {
   const destWarehouseName = destWarehouse ? destWarehouse.name : destWarehouseId > 0 ? `Bodega #${destWarehouseId}` : 'Sin bodega asignada'
 
   // Producto activo pasado al abrir el drawer o seleccionado por el usuario en el buscador
-  const [focusedProduct, setFocusedProduct] = useState<CreateTransferInitialPayload['product'] | null>(() => initial?.product ?? null)
+  const [userSelectedProduct, setUserSelectedProduct] = useState<CreateTransferInitialPayload['product'] | null>(null)
+  const [lastInitialProduct, setLastInitialProduct] = useState(initial?.product)
 
-  useEffect(() => {
-    if (initial?.product) {
-      setFocusedProduct(initial.product)
-    }
-  }, [initial?.product])
+  if (initial?.product !== lastInitialProduct) {
+    setLastInitialProduct(initial?.product)
+    setUserSelectedProduct(null)
+  }
+
+  const focusedProduct = userSelectedProduct ?? initial?.product ?? null
+  const setFocusedProduct = setUserSelectedProduct
 
   // existencias reales del producto en cada bodega de la compañía (el mapa que trae la tarjeta del catálogo solo conoce la bodega activa)
   const productStock = useProductStockByWarehouse(focusedProduct ? Number(focusedProduct.id) : undefined, focusedProduct?.stockByWarehouse)
@@ -71,6 +74,7 @@ export const useTransferRequest = (initial?: CreateTransferInitialPayload) => {
   const totalRedStock = Object.values(stockByWarehouse).reduce((acc, q) => acc + (Number(q) > 0 ? Number(q) : 0), 0)
 
   const [search, setSearch] = useState('')
+  const [notes, setNotes] = useState('')
   const [isPriority, setIsPriority] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -188,7 +192,7 @@ export const useTransferRequest = (initial?: CreateTransferInitialPayload) => {
     setSubmitting(true)
     setError(null)
     try {
-      const outcome = await dispatch(createTransferRequestThunk({ destWarehouseId, lines, isPriority })).unwrap()
+      const outcome = await dispatch(createTransferRequestThunk({ destWarehouseId, lines, isPriority, notes: notes.trim() || undefined })).unwrap()
       setResults(outcome)
       const created = outcome.filter((result) => result.transfer).length
       if (created > 0) {
@@ -244,6 +248,8 @@ export const useTransferRequest = (initial?: CreateTransferInitialPayload) => {
     addFrom,
     remove,
     clear,
+    notes,
+    setNotes,
     isPriority,
     setIsPriority,
     submitting,

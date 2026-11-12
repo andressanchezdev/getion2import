@@ -1,4 +1,4 @@
-// auth.service · llamadas al backend de la sesión: iniciar (POST /auth/login), renovar (POST /auth/refresh), perfil (GET /auth/me) y cerrar (POST /auth/logout)
+// auth.service · llamadas al backend de la sesión: iniciar (POST /auth/login), renovar (POST /auth/refresh), perfil (GET y PUT /auth/me), clave (PUT /auth/me/password) y cerrar (POST /auth/logout)
 // conecta con: api/client (axios con interceptores) y api/config (endpoint), auth.adapter (convierte la respuesta); la usa auth.thunks
 // ojo: la API en Go responde con "actor" y "permissions"; aquí se convierte una sola vez a { access_token, refresh_token, user }
 import { apiClient, API_CONFIG, type APIResponse } from '@/api'
@@ -23,6 +23,20 @@ export const refreshRequest = async (refreshToken: string): Promise<AuthResponse
 export const getMeRequest = async (): Promise<AuthUser> => {
   const { data } = await apiClient.get<APIResponse<AuthMeApiResponse>>(API_CONFIG.ENDPOINTS.AUTH.ME)
   return toAuthUser(data.data)
+}
+
+// actualiza el perfil propio del actor autenticado (PUT /auth/me)
+export const updateMeRequest = async (input: { firstName: string; lastName: string; email: string; phone?: string }): Promise<AuthUser> => {
+  const { data } = await apiClient.put<APIResponse<AuthMeApiResponse>>(API_CONFIG.ENDPOINTS.AUTH.ME, input)
+  return toAuthUser(data.data)
+}
+
+// actualiza la contraseña del actor validando la actual; la API cierra las demás sesiones y deja viva esta (PUT /auth/me/password)
+export const updatePasswordRequest = async (currentPassword: string, newPassword: string): Promise<void> => {
+  await apiClient.put(API_CONFIG.ENDPOINTS.AUTH.ME_PASSWORD, {
+    currentPassword,
+    newPassword,
+  })
 }
 
 // cierra la sesión en el servidor: POST /auth/logout (sin cuerpo) y revoca los refresh tokens del usuario

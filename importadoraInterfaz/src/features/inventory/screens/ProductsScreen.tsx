@@ -16,7 +16,7 @@ import plusIcon from '@/assets/icons/plus.svg?raw'
 export const ProductsScreen: React.FC = () => {
   const dispatch = useAppDispatch()
   const { meta, status, query } = useProductsTable()
-  const canCreate = usePermissions().canPerformAction('inventory', 'products', 'create')
+  const canCreate = usePermissions().can('products:create')
 
   return (
     <div className="inv-screen">

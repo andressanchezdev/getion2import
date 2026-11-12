@@ -50,6 +50,7 @@ export const validateRequest = (lines: TransferRequestLine[], destWarehouseId: n
   if (!destWarehouseId) return 'Elige la bodega que recibe el pedido.'
   if (lines.length === 0) return 'Agrega al menos un repuesto al pedido.'
   if (lines.some((line) => line.originWarehouseId === destWarehouseId)) return 'Una bodega no puede pedirse a sí misma: quita las líneas que salen de la bodega que recibe.'
+  if (lines.some((line) => line.unavailable)) return 'Quita los repuestos o bodegas no disponibles antes de solicitar el traslado.'
   const over = lines.find((line) => line.quantity < 1 || line.quantity > line.max)
   if (over) return `La cantidad de ${over.code} debe estar entre 1 y ${over.max} (lo disponible en ${over.originWarehouseName}).`
   return null

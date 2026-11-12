@@ -21,12 +21,14 @@ export const ShopCartItem: React.FC<ShopCartItemProps> = ({ item }) => {
   const activeWarehouseId = useAppSelector((state) => state.ui.activeWarehouseId)
   // tope: lo vendible de la bodega activa según el catálogo cargado (si el producto no está en la página cargada no se limita aquí)
   const catalogProduct = useAppSelector((state) => state.products.items.find((candidate) => candidate.id === item.productId))
-  const maxQuantity = catalogProduct ? getWarehouseStock(catalogProduct, activeWarehouseId) : undefined
+  const maxQuantity = item.maxAvailable ?? (catalogProduct ? getWarehouseStock(catalogProduct, activeWarehouseId) : undefined)
   const quantity = useCartQuantity(item.cartId, item.quantity, maxQuantity)
   const title = getFullTitle(product)
+  const isUnavailable = Boolean(item.unavailable || product.status === 'inactive')
+  const exceedsStock = !isUnavailable && maxQuantity !== undefined && item.quantity > maxQuantity
 
   return (
-    <li className="shop-cart-item">
+    <li className={`shop-cart-item${isUnavailable || exceedsStock ? ' shop-cart-item--warning' : ''}`}>
       <div className="shop-cart-item-slot">
         {product.imageUrl && <img className="shop-cart-item-image" src={product.imageUrl} alt="" loading="lazy" />}
       </div>
@@ -46,6 +48,8 @@ export const ShopCartItem: React.FC<ShopCartItemProps> = ({ item }) => {
           {item.priceLevel && ` · ${item.priceLevel}`}
         </span>
         <span className="shop-cart-item-ref">{product.code}</span>
+        {isUnavailable && <span className="shop-cart-item-alert">Producto no disponible</span>}
+        {exceedsStock && <span className="shop-cart-item-alert">Quedan {maxQuantity} disponibles</span>}
 
         <div className="shop-cart-item-foot">
           <input

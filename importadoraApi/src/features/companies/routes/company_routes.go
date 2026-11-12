@@ -19,13 +19,13 @@ func RegisterRoutes(e *echo.Echo, authMiddleware *middlewares.AuthMiddleware, ct
 		group.POST("", ctrl.Create, authMiddleware.RequireActors(types.ActorSuperadmin))
 
 		// 2. GET: GET /companies (Listado paginado)
-		group.GET("", ctrl.Get)
+		group.GET("", ctrl.Get, authMiddleware.RequireActors(types.ActorSuperadmin, types.ActorAdmin))
 
 		// 3. SEARCH: GET /companies/search (Búsqueda por texto q=...)
-		group.GET("/search", ctrl.Search)
+		group.GET("/search", ctrl.Search, authMiddleware.RequireActors(types.ActorSuperadmin, types.ActorAdmin))
 
 		// 4. SEARCH BY ID: GET /companies/:id (Detalle por ID)
-		group.GET("/:id", ctrl.GetByID)
+		group.GET("/:id", ctrl.GetByID, authMiddleware.RequireAnyPermission("warehouses:view"))
 
 		// 5. PUT: PUT /companies/:id (Actualizar datos corporativos)
 		group.PUT("/:id", ctrl.Update, authMiddleware.RequireActors(types.ActorSuperadmin, types.ActorAdmin))

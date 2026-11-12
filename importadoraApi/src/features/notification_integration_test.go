@@ -6,7 +6,9 @@ package features_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
+	"time"
 
 	"importadoraApi/src/features/notifications/dtos"
 	notificationRepos "importadoraApi/src/features/notifications/repositories"
@@ -85,18 +87,19 @@ func TestNotificationsReachOnlyTheirRecipient(t *testing.T) {
 		t.Errorf("el empleado A sí debe poder marcar la suya (read_at=%v err=%v)", readAt, err)
 	}
 
-	// restauración: solo administradores de esa compañía
-	if err := repo.CreateCompanyAdminNotification(ctx, tx, adminCompany, "Registro restaurado", "prueba", "customers", 1); err != nil {
+	// restauración: solo administradores de esa compañía (se filtra por un título único para no contar notificaciones legítimas de otras pruebas o de los e2e)
+	restoreTitle := fmt.Sprintf("Registro restaurado prueba-%d", time.Now().UnixNano())
+	if err := repo.CreateCompanyAdminNotification(ctx, tx, adminCompany, restoreTitle, "prueba", "customers", 1); err != nil {
 		t.Fatalf("crear la notificación de restauración: %v", err)
 	}
 	var toEmployees, toOtherCompanies int
-	if err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM notifications WHERE kind = 'restore_record' AND employee_id IS NOT NULL`).Scan(&toEmployees); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM notifications WHERE kind = 'restore_record' AND title = $1 AND employee_id IS NOT NULL`, restoreTitle).Scan(&toEmployees); err != nil {
 		t.Fatal(err)
 	}
 	if toEmployees != 0 {
 		t.Errorf("la restauración no debe notificar a empleados, llegó a %d", toEmployees)
 	}
-	if err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM notifications n JOIN admins a ON a.id = n.admin_id WHERE n.kind = 'restore_record' AND a.company_id <> $1`, adminCompany).Scan(&toOtherCompanies); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM notifications n JOIN admins a ON a.id = n.admin_id WHERE n.kind = 'restore_record' AND n.title = $2 AND a.company_id <> $1`, adminCompany, restoreTitle).Scan(&toOtherCompanies); err != nil {
 		t.Fatal(err)
 	}
 	if toOtherCompanies != 0 {

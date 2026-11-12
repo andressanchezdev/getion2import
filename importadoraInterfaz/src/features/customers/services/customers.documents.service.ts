@@ -1,4 +1,4 @@
-// customers.documents.service · llamadas al backend de los documentos del cliente: listar, renovar y alertas de vencimiento
+// customers.documents.service · llamadas al backend de los documentos del cliente: listar, ver el archivo, renovar y alertas de vencimiento
 // conecta con: api/client y api/config (rutas), customers.documents.adapter (convierte); las usa customers.documents.thunks
 // ojo: el vencimiento lo calcula la API (fecha de subida + meses de vigencia del cliente); renovar reinicia esa vigencia y puede reemplazar el archivo
 import { apiClient, API_CONFIG, type APIResponse } from '@/api'
@@ -18,6 +18,15 @@ export const fetchCustomerDocuments = async (customerId: number): Promise<Custom
 export const fetchDocumentAlerts = async (): Promise<CustomerDocumentAlert[]> => {
   const { data } = await apiClient.get<APIResponse<CustomerDocumentAlertDto[] | null>>(CUSTOMERS.DOCUMENT_ALERTS)
   return (data.data ?? []).map(toDocumentAlert)
+}
+
+// abre el archivo del documento en otra pestaña: se pide con el token (blob) porque /uploads ya no es público
+// ojo: la URL temporal se libera al minuto; la pestaña ya cargó el archivo para entonces
+export const openCustomerDocumentFile = async (customerId: number, documentId: number): Promise<void> => {
+  const { data } = await apiClient.get<Blob>(CUSTOMERS.DOCUMENT_FILE(customerId, documentId), { responseType: 'blob' })
+  const url = URL.createObjectURL(data)
+  window.open(url, '_blank', 'noopener')
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
 }
 
 // renueva un documento: sin archivo solo reinicia la vigencia; con archivo además reemplaza el anterior

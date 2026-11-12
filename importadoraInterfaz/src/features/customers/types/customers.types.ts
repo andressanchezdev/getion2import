@@ -39,6 +39,19 @@ export interface CustomerCompany {
 export interface CustomerDetail extends Customer {
   commissionRate?: number
   company: CustomerCompany
+  documentType?: string
+  personType?: string
+  lastName: string
+  tradeName?: string
+  legalRepresentative?: string
+  mobile?: string
+  address?: string
+  city?: string
+  vatResponsible?: boolean
+  fiscalRespCodes?: string[]
+  priceTier?: string
+  discountPercent?: number
+  docsValidityMonths?: number
 }
 
 export interface Direction {

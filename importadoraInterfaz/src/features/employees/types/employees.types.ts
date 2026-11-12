@@ -33,6 +33,7 @@ export interface ModulePermission {
 export interface EmployeePermissionsResponse {
   branches?: BranchPermissionInfo[]
   modules?: ModulePermission[]
+  specials?: string[] // acciones especiales que tiene («orders:advance_stage»…); ver SPECIAL_ACTIONS
 }
 
 export interface SimpleEmployee {

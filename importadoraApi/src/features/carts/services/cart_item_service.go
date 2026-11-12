@@ -8,10 +8,15 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/events"
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
 	"importadoraApi/src/features/carts/dtos"
+	inventoryRepos "importadoraApi/src/features/inventory/repositories"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // AddItem agrega un producto al carrito resolviendo tarifa y stock vendible
@@ -25,18 +30,28 @@ func (s *CartService) AddItem(ctx context.Context, actor *middlewares.ActorConte
 		return nil, utils.NotFound("CART_NOT_FOUND", "El carrito no existe.")
 	}
 
-	if actor.ActorType != types.ActorSuperadmin {
-		if actor.CompanyID == nil || *actor.CompanyID != cart.CompanyID {
-			return nil, utils.Forbidden("FORBIDDEN_COMPANY_ACCESS", "No tienes permiso para modificar este carrito.")
-		}
+	if err := s.assertCartOwnership(ctx, actor, cart); err != nil {
+		return nil, err
 	}
 
 	if cart.Status != types.CartOpen {
 		return nil, utils.BadRequest("CART_CLOSED", "El carrito no está abierto.")
 	}
 
-	// Validar existencia de stock
-	stock, err := s.inventoryRepo.FindStockByID(ctx, s.pool, req.StockID)
+	// Validar existencia de stock o resolverlo por producto + bodega si stockId no vino
+	var stock *inventoryRepos.StockEntity
+	if req.StockID > 0 {
+		stock, err = s.inventoryRepo.FindStockByID(ctx, s.pool, req.StockID)
+	} else {
+		whID := req.WarehouseID
+		if whID <= 0 && cart.WarehouseID != nil {
+			whID = *cart.WarehouseID
+		}
+		if req.ProductID <= 0 || whID <= 0 {
+			return nil, utils.BadRequest("MISSING_STOCK_OR_PRODUCT", "Debes indicar stockId o el par productId y warehouseId.")
+		}
+		stock, err = s.inventoryRepo.FindBestStockForProduct(ctx, s.pool, cart.CompanyID, req.ProductID, whID)
+	}
 	if err != nil || stock == nil {
 		return nil, utils.NotFound("STOCK_NOT_FOUND", "El registro de stock no existe.")
 	}
@@ -49,23 +64,26 @@ func (s *CartService) AddItem(ctx context.Context, actor *middlewares.ActorConte
 		return nil, utils.BadRequest("INSUFFICIENT_STOCK", fmt.Sprintf("Stock vendible insuficiente (%d disponibles).", sellable))
 	}
 
-	// Obtener precio unitario según la tarifa del carrito si no se envía manual
-	unitPrice := 0.0
-	if req.UnitPrice != nil && *req.UnitPrice >= 0 {
-		unitPrice = *req.UnitPrice
-	} else {
-		product, err := s.productRepo.FindByID(ctx, s.pool, stock.ProductID)
-		if err != nil || product == nil {
-			return nil, utils.NotFound("PRODUCT_NOT_FOUND", "El producto asociado no existe.")
-		}
+	// Determinar tarifa del producto y calcular precio unitario estrictamente desde el catálogo
+	tier := cart.PriceTier
+	if req.PriceTier != nil && *req.PriceTier != "" {
+		tier = *req.PriceTier
+	}
 
-		var prices map[string]float64
+	product, err := s.productRepo.FindByID(ctx, s.pool, stock.ProductID)
+	if err != nil || product == nil {
+		return nil, utils.NotFound("PRODUCT_NOT_FOUND", "El producto asociado no existe.")
+	}
+
+	var prices map[string]float64
+	if len(product.Prices) > 0 {
 		_ = json.Unmarshal(product.Prices, &prices)
-		if val, exists := prices[string(cart.PriceTier)]; exists {
-			unitPrice = val
-		} else if val, exists := prices["p1"]; exists {
-			unitPrice = val
-		}
+	}
+
+	// ojo: sin respaldo a p1; la línea guarda el nivel elegido y su precio debe ser de ese mismo nivel
+	unitPrice, exists := prices[string(tier)]
+	if !exists || unitPrice <= 0 {
+		return nil, utils.BadRequest("PRICE_NOT_FOUND", fmt.Sprintf("El producto '%s' (%s) no tiene precio configurado para la tarifa %s.", product.Name, product.Code, tier))
 	}
 
 	discount := 0.0
@@ -73,18 +91,34 @@ func (s *CartService) AddItem(ctx context.Context, actor *middlewares.ActorConte
 		discount = *req.Discount
 	}
 
-	if err := s.cartRepo.UpsertItem(ctx, s.pool, cartID, stock.ProductID, stock.ID, req.Quantity, unitPrice, discount); err != nil {
-		return nil, utils.Internal("Error al agregar ítem al carrito.", err)
-	}
+	var resp *dtos.CartResponse
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		if err := s.cartRepo.UpsertItem(ctx, tx, cartID, stock.ProductID, stock.ID, req.Quantity, unitPrice, discount, string(tier)); err != nil {
+			return utils.Internal("Error al agregar ítem al carrito.", err)
+		}
 
-	_ = s.cartRepo.Touch(ctx, s.pool, cartID)
+		_ = s.cartRepo.Touch(ctx, tx, cartID)
 
-	items, err := s.cartRepo.ListItems(ctx, s.pool, cartID)
+		updatedCart, err := s.cartRepo.FindByID(ctx, tx, cartID)
+		if err != nil || updatedCart == nil {
+			updatedCart = cart
+		}
+		items, err := s.cartRepo.ListItems(ctx, tx, cartID)
+		if err != nil {
+			return utils.Internal("Error al consultar ítems del carrito.", err)
+		}
+
+		resp = s.buildResponse(updatedCart, items)
+		if s.events != nil {
+			s.events.Record(ctx, events.NewPersonal(events.CartUpdated, &updatedCart.CompanyID, string(actor.ActorType), actor.ActorID, events.CartUpdatedData{Cart: resp}))
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, utils.Internal("Error al consultar ítems del carrito.", err)
+		return nil, err
 	}
 
-	return s.buildResponse(cart, items), nil
+	return resp, nil
 }
 
 // UpdateItem modifica cantidad, precio o descuento de un ítem existente
@@ -98,10 +132,8 @@ func (s *CartService) UpdateItem(ctx context.Context, actor *middlewares.ActorCo
 		return nil, utils.NotFound("CART_NOT_FOUND", "El carrito no existe.")
 	}
 
-	if actor.ActorType != types.ActorSuperadmin {
-		if actor.CompanyID == nil || *actor.CompanyID != cart.CompanyID {
-			return nil, utils.Forbidden("FORBIDDEN_COMPANY_ACCESS", "No tienes permiso para modificar este carrito.")
-		}
+	if err := s.assertCartOwnership(ctx, actor, cart); err != nil {
+		return nil, err
 	}
 
 	item, err := s.cartRepo.FindItemByID(ctx, s.pool, itemID)
@@ -109,9 +141,26 @@ func (s *CartService) UpdateItem(ctx context.Context, actor *middlewares.ActorCo
 		return nil, utils.NotFound("ITEM_NOT_FOUND", "El ítem solicitado no pertenece a este carrito.")
 	}
 
-	unitPrice := item.UnitPrice
-	if req.UnitPrice != nil && *req.UnitPrice >= 0 {
-		unitPrice = *req.UnitPrice
+	tier := item.PriceTier
+	if req.PriceTier != nil && *req.PriceTier != "" {
+		tier = string(*req.PriceTier)
+	}
+
+	// Recalcular precio unitario según la tarifa
+	product, err := s.productRepo.FindByID(ctx, s.pool, item.ProductID)
+	if err != nil || product == nil {
+		return nil, utils.NotFound("PRODUCT_NOT_FOUND", "El producto asociado no existe.")
+	}
+
+	var prices map[string]float64
+	if len(product.Prices) > 0 {
+		_ = json.Unmarshal(product.Prices, &prices)
+	}
+
+	// ojo: se recalcula siempre con el nivel de la línea; si ese nivel no tiene precio se rechaza en vez de conservar uno viejo
+	unitPrice, exists := prices[tier]
+	if !exists || unitPrice <= 0 {
+		return nil, utils.BadRequest("PRICE_NOT_FOUND", fmt.Sprintf("El producto '%s' (%s) no tiene precio configurado para la tarifa %s.", product.Name, product.Code, tier))
 	}
 
 	discount := item.Discount
@@ -119,18 +168,34 @@ func (s *CartService) UpdateItem(ctx context.Context, actor *middlewares.ActorCo
 		discount = *req.Discount
 	}
 
-	if err := s.cartRepo.UpdateItem(ctx, s.pool, itemID, req.Quantity, unitPrice, discount); err != nil {
-		return nil, utils.Internal("Error al actualizar ítem.", err)
-	}
+	var resp *dtos.CartResponse
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		if err := s.cartRepo.UpdateItem(ctx, tx, itemID, req.Quantity, unitPrice, discount, tier); err != nil {
+			return utils.Internal("Error al actualizar ítem.", err)
+		}
 
-	_ = s.cartRepo.Touch(ctx, s.pool, cartID)
+		_ = s.cartRepo.Touch(ctx, tx, cartID)
 
-	items, err := s.cartRepo.ListItems(ctx, s.pool, cartID)
+		updatedCart, err := s.cartRepo.FindByID(ctx, tx, cartID)
+		if err != nil || updatedCart == nil {
+			updatedCart = cart
+		}
+		items, err := s.cartRepo.ListItems(ctx, tx, cartID)
+		if err != nil {
+			return utils.Internal("Error al consultar ítems del carrito.", err)
+		}
+
+		resp = s.buildResponse(updatedCart, items)
+		if s.events != nil {
+			s.events.Record(ctx, events.NewPersonal(events.CartUpdated, &updatedCart.CompanyID, string(actor.ActorType), actor.ActorID, events.CartUpdatedData{Cart: resp}))
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, utils.Internal("Error al consultar ítems del carrito.", err)
+		return nil, err
 	}
 
-	return s.buildResponse(cart, items), nil
+	return resp, nil
 }
 
 // DeleteItem elimina un ítem puntual del carrito
@@ -144,23 +209,37 @@ func (s *CartService) DeleteItem(ctx context.Context, actor *middlewares.ActorCo
 		return nil, utils.NotFound("CART_NOT_FOUND", "El carrito no existe.")
 	}
 
-	if actor.ActorType != types.ActorSuperadmin {
-		if actor.CompanyID == nil || *actor.CompanyID != cart.CompanyID {
-			return nil, utils.Forbidden("FORBIDDEN_COMPANY_ACCESS", "No tienes permiso para modificar este carrito.")
+	if err := s.assertCartOwnership(ctx, actor, cart); err != nil {
+		return nil, err
+	}
+
+	var resp *dtos.CartResponse
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		if err := s.cartRepo.DeleteItem(ctx, tx, itemID); err != nil {
+			return utils.Internal("Error al eliminar ítem.", err)
 		}
-	}
 
-	if err := s.cartRepo.DeleteItem(ctx, s.pool, itemID); err != nil {
-		return nil, utils.Internal("Error al eliminar ítem.", err)
-	}
+		_ = s.cartRepo.Touch(ctx, tx, cartID)
 
-	_ = s.cartRepo.Touch(ctx, s.pool, cartID)
+		updatedCart, err := s.cartRepo.FindByID(ctx, tx, cartID)
+		if err != nil || updatedCart == nil {
+			updatedCart = cart
+		}
+		items, err := s.cartRepo.ListItems(ctx, tx, cartID)
+		if err != nil {
+			return utils.Internal("Error al consultar ítems del carrito.", err)
+		}
 
-	items, err := s.cartRepo.ListItems(ctx, s.pool, cartID)
+		resp = s.buildResponse(updatedCart, items)
+		if s.events != nil {
+			s.events.Record(ctx, events.NewPersonal(events.CartUpdated, &updatedCart.CompanyID, string(actor.ActorType), actor.ActorID, events.CartUpdatedData{Cart: resp}))
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, utils.Internal("Error al consultar ítems del carrito.", err)
+		return nil, err
 	}
 
-	return s.buildResponse(cart, items), nil
+	return resp, nil
 }
 

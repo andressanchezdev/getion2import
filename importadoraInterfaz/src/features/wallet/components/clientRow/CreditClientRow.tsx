@@ -6,6 +6,7 @@ import { useAppDispatch } from '@/global/hooks/store/useRedux'
 import { setSelectedCustomer } from '../../slices/wallet.slice'
 import type { CreditClientRowProps } from '../../types/wallet.table.types'
 import { RowActions } from '@/global/components/UI/molecules/table/RowActions'
+import { CopyableCell } from '@/global/components/UI/molecules/table/CopyableCell'
 import eyeIcon from '@/assets/icons/eye.svg?raw'
 import './CreditClientRow.css'
 
@@ -19,7 +20,7 @@ export const CreditClientRow: React.FC<CreditClientRowProps> = ({ customer: cust
     >
       <td>
         <div className="credit-table-cust-business-name">{cust.businessName}</div>
-        <div className="credit-table-cust-document">Documento: {cust.documentId}</div>
+        <div className="credit-table-cust-document">Documento: <CopyableCell text={cust.documentId} /></div>
       </td>
       <td>
         <div className="credit-table-cust-contact">{cust.creditDays} días de plazo</div>

@@ -206,13 +206,15 @@ type CashExpenseEntity struct {
 }
 
 // InsertExpense guarda un gasto del turno (se llama dentro de la transacción del cierre).
-func (r *CashSessionRepository) InsertExpense(ctx context.Context, q db.DBExecutor, sessionID int64, e CashExpenseEntity) error {
+func (r *CashSessionRepository) InsertExpense(ctx context.Context, q db.DBExecutor, sessionID int64, e CashExpenseEntity) (int64, error) {
 	const sql = `
 		INSERT INTO cash_session_expenses (cash_session_id, receipt_number, concept, cash_amount, transfer_amount)
 		VALUES ($1, NULLIF($2, ''), $3, $4, $5)
+		RETURNING id
 	`
-	_, err := q.Exec(ctx, sql, sessionID, e.ReceiptNumber, e.Concept, e.CashAmount, e.TransferAmount)
-	return err
+	var id int64
+	err := q.QueryRow(ctx, sql, sessionID, e.ReceiptNumber, e.Concept, e.CashAmount, e.TransferAmount).Scan(&id)
+	return id, err
 }
 
 // FindWarehouseCompanyID obtiene el company_id de una bodega para asociar el turno de caja.

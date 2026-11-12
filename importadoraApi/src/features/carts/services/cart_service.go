@@ -7,6 +7,8 @@ import (
 	"context"
 
 	"importadoraApi/src/core/config"
+	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/events"
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
@@ -17,6 +19,7 @@ import (
 	inventoryRepos "importadoraApi/src/features/inventory/repositories"
 	productRepos "importadoraApi/src/features/products/repositories"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -28,6 +31,7 @@ type CartService struct {
 	inventoryRepo *inventoryRepos.InventoryRepository
 	customerRepo  *customerRepos.CustomerRepository
 	auditRepo     *authRepos.AuditRepository
+	events        *events.Recorder
 }
 
 // NewCartService crea el servicio con las piezas que necesita para funcionar.
@@ -39,7 +43,12 @@ func NewCartService(
 	inventoryRepo *inventoryRepos.InventoryRepository,
 	customerRepo *customerRepos.CustomerRepository,
 	auditRepo *authRepos.AuditRepository,
+	eventsRecorder ...*events.Recorder,
 ) *CartService {
+	var rec *events.Recorder
+	if len(eventsRecorder) > 0 {
+		rec = eventsRecorder[0]
+	}
 	return &CartService{
 		cfg:           cfg,
 		pool:          pool,
@@ -48,7 +57,52 @@ func NewCartService(
 		inventoryRepo: inventoryRepo,
 		customerRepo:  customerRepo,
 		auditRepo:     auditRepo,
+		events:        rec,
 	}
+}
+
+// resolveEmployeeID obtiene el id de empleado correspondiente al actor (su propio id si es empleado, o el ligado si es administrador)
+func (s *CartService) resolveEmployeeID(ctx context.Context, actor *middlewares.ActorContext) (int64, error) {
+	if actor == nil {
+		return 0, utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
+	}
+	switch actor.ActorType {
+	case types.ActorEmployee:
+		return actor.ActorID, nil
+	case types.ActorAdmin:
+		var empID int64
+		err := s.pool.QueryRow(ctx, `SELECT COALESCE(employee_id, 0) FROM admins WHERE id = $1`, actor.ActorID).Scan(&empID)
+		if err != nil {
+			return 0, utils.Internal("Error al resolver empleado del administrador.", err)
+		}
+		if empID <= 0 {
+			return 0, utils.BadRequest("ACTOR_WITHOUT_EMPLOYEE", "Tu cuenta de administrador no está ligada a un empleado, por eso no puede operar un carrito. Pide que la liguen a un empleado de la compañía.")
+		}
+		return empID, nil
+	default:
+		return 0, utils.Forbidden("FORBIDDEN", "Solo administradores y empleados con compañía pueden operar carritos.")
+	}
+}
+
+// assertCartOwnership valida que el actor pertenezca a la misma compañía y sea el dueño del carrito
+func (s *CartService) assertCartOwnership(ctx context.Context, actor *middlewares.ActorContext, cart *repositories.CartEntity) error {
+	if actor == nil {
+		return utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
+	}
+	if actor.ActorType == types.ActorSuperadmin {
+		return nil
+	}
+	if actor.CompanyID == nil || *actor.CompanyID != cart.CompanyID {
+		return utils.Forbidden("FORBIDDEN_COMPANY_ACCESS", "No tienes permiso para acceder a este carrito.")
+	}
+	empID, err := s.resolveEmployeeID(ctx, actor)
+	if err != nil {
+		return err
+	}
+	if cart.EmployeeID == nil || *cart.EmployeeID != empID {
+		return utils.Forbidden("FORBIDDEN_CART_ACCESS", "No tienes permiso para acceder al carrito de otro usuario.")
+	}
+	return nil
 }
 
 // GetActiveCart devuelve el carrito activo del empleado, con sus renglones y totales.
@@ -62,7 +116,12 @@ func (s *CartService) GetActiveCart(ctx context.Context, actor *middlewares.Acto
 		return nil, utils.BadRequest("MISSING_COMPANY_ID", "El usuario debe pertenecer a una compañía para operar un carrito.")
 	}
 
-	cart, err := s.cartRepo.FindActiveByEmployee(ctx, s.pool, *companyID, actor.ActorID)
+	empID, err := s.resolveEmployeeID(ctx, actor)
+	if err != nil {
+		return nil, err
+	}
+
+	cart, err := s.cartRepo.FindActiveByEmployee(ctx, s.pool, *companyID, empID)
 	if err != nil {
 		return nil, utils.Internal("Error al consultar carrito activo.", err)
 	}
@@ -71,7 +130,7 @@ func (s *CartService) GetActiveCart(ctx context.Context, actor *middlewares.Acto
 		// Crear automáticamente un carrito inicial
 		entity := &repositories.CartEntity{
 			CompanyID:  *companyID,
-			EmployeeID: &actor.ActorID,
+			EmployeeID: &empID,
 			PriceTier:  types.PriceTierP1,
 			Status:     types.CartOpen,
 		}
@@ -90,7 +149,7 @@ func (s *CartService) GetActiveCart(ctx context.Context, actor *middlewares.Acto
 	return s.buildResponse(cart, items), nil
 }
 
-// GetByID devuelve el carrito por su id, validando que sea de la compañía del usuario.
+// GetByID devuelve el carrito por su id, validando que pertenezca al usuario.
 func (s *CartService) GetByID(ctx context.Context, actor *middlewares.ActorContext, id int64) (*dtos.CartResponse, error) {
 	if actor == nil {
 		return nil, utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
@@ -104,10 +163,8 @@ func (s *CartService) GetByID(ctx context.Context, actor *middlewares.ActorConte
 		return nil, utils.NotFound("CART_NOT_FOUND", "El carrito solicitado no existe.")
 	}
 
-	if actor.ActorType != types.ActorSuperadmin {
-		if actor.CompanyID == nil || *actor.CompanyID != cart.CompanyID {
-			return nil, utils.Forbidden("FORBIDDEN_COMPANY_ACCESS", "No tienes permiso para consultar este carrito.")
-		}
+	if err := s.assertCartOwnership(ctx, actor, cart); err != nil {
+		return nil, err
 	}
 
 	items, err := s.cartRepo.ListItems(ctx, s.pool, cart.ID)
@@ -145,34 +202,46 @@ func (s *CartService) Create(ctx context.Context, actor *middlewares.ActorContex
 		}
 	}
 
-	var empID *int64
-	if actor.ActorType == types.ActorEmployee {
-		empID = &actor.ActorID
-		// Si el empleado ya tiene un carrito abierto en la compañía, reutilizarlo para evitar carritos duplicados
-		existing, err := s.cartRepo.FindActiveByEmployee(ctx, s.pool, *companyID, actor.ActorID)
-		if err == nil && existing != nil {
-			items, err := s.cartRepo.ListItems(ctx, s.pool, existing.ID)
-			if err == nil {
-				return s.buildResponse(existing, items), nil
-			}
+	empID, err := s.resolveEmployeeID(ctx, actor)
+	if err != nil {
+		return nil, err
+	}
+
+	// Si el empleado ya tiene un carrito abierto en la compañía, reutilizarlo para evitar carritos duplicados
+	existing, err := s.cartRepo.FindActiveByEmployee(ctx, s.pool, *companyID, empID)
+	if err == nil && existing != nil {
+		items, err := s.cartRepo.ListItems(ctx, s.pool, existing.ID)
+		if err == nil {
+			return s.buildResponse(existing, items), nil
 		}
 	}
 
 	entity := &repositories.CartEntity{
 		CompanyID:   *companyID,
-		EmployeeID:  empID,
+		EmployeeID:  &empID,
 		CustomerID:  req.CustomerID,
 		WarehouseID: req.WarehouseID,
 		PriceTier:   tier,
 		Status:      types.CartOpen,
 	}
 
-	created, err := s.cartRepo.Create(ctx, s.pool, entity)
+	var resp *dtos.CartResponse
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		created, err := s.cartRepo.Create(ctx, tx, entity)
+		if err != nil {
+			return utils.Internal("Error al crear carrito.", err)
+		}
+		resp = s.buildResponse(created, []dtos.CartItemResponse{})
+		if s.events != nil {
+			s.events.Record(ctx, events.NewPersonal(events.CartUpdated, &created.CompanyID, string(actor.ActorType), actor.ActorID, events.CartUpdatedData{Cart: resp}))
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, utils.Internal("Error al crear carrito.", err)
+		return nil, err
 	}
 
-	return s.buildResponse(created, []dtos.CartItemResponse{}), nil
+	return resp, nil
 }
 
 // ClearCart vacía el carrito del empleado.
@@ -186,17 +255,27 @@ func (s *CartService) ClearCart(ctx context.Context, actor *middlewares.ActorCon
 		return utils.NotFound("CART_NOT_FOUND", "El carrito no existe.")
 	}
 
-	if actor.ActorType != types.ActorSuperadmin {
-		if actor.CompanyID == nil || *actor.CompanyID != cart.CompanyID {
-			return utils.Forbidden("FORBIDDEN_COMPANY_ACCESS", "No tienes permiso para vaciar este carrito.")
+	if err := s.assertCartOwnership(ctx, actor, cart); err != nil {
+		return err
+	}
+
+	return db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		if err := s.cartRepo.ClearItems(ctx, tx, cartID); err != nil {
+			return utils.Internal("Error al vaciar carrito.", err)
 		}
-	}
-
-	if err := s.cartRepo.ClearItems(ctx, s.pool, cartID); err != nil {
-		return utils.Internal("Error al vaciar carrito.", err)
-	}
-
-	return s.cartRepo.Touch(ctx, s.pool, cartID)
+		if err := s.cartRepo.Touch(ctx, tx, cartID); err != nil {
+			return err
+		}
+		if s.events != nil {
+			updatedCart, err := s.cartRepo.FindByID(ctx, tx, cartID)
+			if err != nil || updatedCart == nil {
+				updatedCart = cart
+			}
+			resp := s.buildResponse(updatedCart, []dtos.CartItemResponse{})
+			s.events.Record(ctx, events.NewPersonal(events.CartUpdated, &updatedCart.CompanyID, string(actor.ActorType), actor.ActorID, events.CartUpdatedData{Cart: resp}))
+		}
+		return nil
+	})
 }
 
 // buildResponse arma la respuesta del carrito con sus renglones y totales.

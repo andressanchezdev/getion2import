@@ -9,10 +9,11 @@ import { RowActions } from '@/global/components/UI/molecules/table/RowActions'
 import { formatDateTime } from '@/global/helpers/formatting/format'
 import { formatBytes } from '@/global/helpers/images/imageOptimizer'
 import fileIcon from '@/assets/icons/file-text.svg?raw'
-import refreshIcon from '@/assets/icons/refresh.svg?raw'
+import historyIcon from '@/assets/icons/history.svg?raw'
 import { useBackups } from '../hooks/useBackups'
 import type { Backup } from '../types/backups.types'
 import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
+import { ActionsHeader } from '@/global/components/UI/molecules/table/ActionsHeader'
 
 const NOTE_MAX = 200 // la API acepta notas de hasta 200 caracteres
 
@@ -54,7 +55,7 @@ export const BackupsScreen: React.FC = () => {
                 <th>Creado por</th>
                 <th>Nota</th>
                 <th>Tamaño</th>
-                <th style={{ textAlign: 'center' }}>Acciones</th>
+                <ActionsHeader />
               </tr>
             </thead>
             <tbody>
@@ -86,7 +87,7 @@ export const BackupsScreen: React.FC = () => {
                       <RowActions
                         actions={[
                           { key: 'download', label: downloadingId === backup.id ? 'Descargando…' : 'Descargar respaldo', icon: fileIcon, onClick: () => void download(backup) },
-                          { key: 'restore', label: 'Restaurar este respaldo', icon: refreshIcon, tone: 'danger', onClick: () => setToRestore(backup) },
+                          { key: 'restore', label: 'Restaurar este respaldo', icon: historyIcon, tone: 'danger', onClick: () => setToRestore(backup) },
                         ]}
                       />
                     </td>

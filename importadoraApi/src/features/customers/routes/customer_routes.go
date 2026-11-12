@@ -14,18 +14,19 @@ import (
 func RegisterRoutes(e *echo.Echo, authMiddleware *middlewares.AuthMiddleware, ctrl *controllers.CustomerController) {
 	c := e.Group("/customers", authMiddleware.Authenticate())
 	{
-		c.GET("", ctrl.Get)
-		c.GET("/selector", ctrl.ListSelector)
-		c.GET("/search", ctrl.Search)
-		c.GET("/documents/alerts", ctrl.DocumentAlerts)
-		c.GET("/:id", ctrl.GetByID)
-		c.GET("/:id/credit-status", ctrl.GetCreditStatus)
+		c.GET("", ctrl.Get, authMiddleware.RequireAnyPermission("customers:view", "quotations:view", "credits:view"))
+		c.GET("/selector", ctrl.ListSelector, authMiddleware.RequireAnyPermission("customers:view", "orders:create", "quotations:create", "credits:view", "payments:create"))
+		c.GET("/search", ctrl.Search, authMiddleware.RequireAnyPermission("customers:view", "orders:create", "quotations:create", "credits:view"))
+		c.GET("/documents/alerts", ctrl.DocumentAlerts, authMiddleware.RequirePermission("customers", "view"))
+		c.GET("/:id", ctrl.GetByID, authMiddleware.RequireAnyPermission("customers:view_detail", "orders:create", "credits:view", "payments:view"))
+		c.GET("/:id/credit-status", ctrl.GetCreditStatus, authMiddleware.RequireAnyPermission("credits:view", "orders:create", "customers:view_detail"))
 		c.POST("", ctrl.Create, authMiddleware.RequirePermission("customers", "create"))
 		c.PUT("/:id", ctrl.Update, authMiddleware.RequirePermission("customers", "edit"))
 		c.DELETE("/:id", ctrl.Delete, authMiddleware.RequirePermission("customers", "delete"))
 
 		// Sub-recursos de documentos adjuntos
-		c.GET("/:id/documents", ctrl.ListDocuments)
+		c.GET("/:id/documents", ctrl.ListDocuments, authMiddleware.RequirePermission("customers", "view_detail"))
+		c.GET("/:id/documents/:docId/file", ctrl.DownloadDocument, authMiddleware.RequirePermission("customers", "view_detail"))
 		c.POST("/:id/documents", ctrl.UploadDocument, authMiddleware.RequirePermission("customers", "edit"))
 		c.POST("/:id/documents/:docId/renew", ctrl.RenewDocument, authMiddleware.RequirePermission("customers", "edit"))
 		c.DELETE("/:id/documents/:docId", ctrl.DeleteDocument, authMiddleware.RequirePermission("customers", "delete"))

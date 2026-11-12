@@ -48,10 +48,13 @@ describe('fetchActiveCart', () => {
 })
 
 describe('cambios del carrito', () => {
-  it('addCartItem: POST /carts/:id/items con { stockId, quantity, unitPrice }', async () => {
+  it('addCartItem: POST /carts/:id/items con { stockId, quantity, unitPrice } o { productId, warehouseId, quantity, unitPrice }', async () => {
     vi.mocked(apiClient.post).mockResolvedValue({ data: { success: true } })
     await addCartItem({ cartId: 9, stockId: 3, quantity: 3, price: 1500 })
     expect(apiClient.post).toHaveBeenCalledWith('/carts/9/items', { stockId: 3, quantity: 3, unitPrice: 1500 })
+
+    await addCartItem({ cartId: 9, productId: 5, warehouseId: 4, quantity: 2, price: 900 })
+    expect(apiClient.post).toHaveBeenLastCalledWith('/carts/9/items', { productId: 5, warehouseId: 4, quantity: 2, unitPrice: 900 })
   })
 
   it('updateCartItemQuantity: PUT /carts/:id/items/:itemId con { quantity }', async () => {

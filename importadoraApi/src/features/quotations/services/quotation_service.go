@@ -10,6 +10,7 @@ import (
 
 	"importadoraApi/src/core/config"
 	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/events"
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
@@ -32,6 +33,7 @@ type QuotationService struct {
 	customerRepo  *customerRepos.CustomerRepository
 	productRepo   *productRepos.ProductRepository
 	auditRepo     *authRepos.AuditRepository
+	events        *events.Recorder
 }
 
 // NewQuotationService crea el servicio con las piezas que necesita para funcionar.
@@ -43,6 +45,7 @@ func NewQuotationService(
 	customerRepo *customerRepos.CustomerRepository,
 	productRepo *productRepos.ProductRepository,
 	auditRepo *authRepos.AuditRepository,
+	recorder *events.Recorder,
 ) *QuotationService {
 	return &QuotationService{
 		cfg:           cfg,
@@ -52,6 +55,7 @@ func NewQuotationService(
 		customerRepo:  customerRepo,
 		productRepo:   productRepo,
 		auditRepo:     auditRepo,
+		events:        recorder,
 	}
 }
 
@@ -141,7 +145,7 @@ func (s *QuotationService) Create(ctx context.Context, actor *middlewares.ActorC
 
 	var createdQuo *repositories.QuotationEntity
 
-	err = db.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
 		serialCode, err := utils.NextSerialCode(ctx, tx, *companyID, nil, types.SeriesQuotation, "COT-")
 		if err != nil {
 			return err
@@ -261,6 +265,12 @@ func (s *QuotationService) Create(ctx context.Context, actor *middlewares.ActorC
 			}
 		}
 
+		// el evento lleva la misma forma que la fila del listado de cotizaciones
+		createdItems, err := s.quotationRepo.ListItems(ctx, tx, qCreated.ID)
+		if err != nil {
+			return err
+		}
+		s.events.Record(ctx, events.NewQuotationCreated(qCreated.CompanyID, s.mapQuotationToDTO(qCreated, createdItems)))
 		return nil
 	})
 
@@ -301,35 +311,62 @@ func (s *QuotationService) Update(ctx context.Context, actor *middlewares.ActorC
 		}
 	}
 
+	fromStatus := quo.Status
+	changed := make([]string, 0, 2)
 	if req.Status != nil {
 		quo.Status = *req.Status
 	}
 	if req.Notes != nil {
+		if quo.Notes == nil || *quo.Notes != *req.Notes {
+			changed = append(changed, "notes")
+		}
 		quo.Notes = req.Notes
 	}
 	if req.ValidUntil != nil && *req.ValidUntil != "" {
 		if parsed, err := time.Parse("2006-01-02", *req.ValidUntil); err == nil {
+			if quo.ValidUntil == nil || !quo.ValidUntil.Equal(parsed) {
+				changed = append(changed, "validUntil")
+			}
 			quo.ValidUntil = &parsed
 		}
 	}
 
-	if err := s.quotationRepo.Update(ctx, s.pool, quo); err != nil {
+	// el cambio, su auditoría y sus eventos van en la misma transacción
+	var items []dtos.QuotationItemResponse
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		if err := s.quotationRepo.Update(ctx, tx, quo); err != nil {
+			return err
+		}
+		_ = s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
+			CompanyID: &quo.CompanyID,
+			ActorType: actor.ActorType,
+			ActorID:   actor.ActorID,
+			Entity:    "quotations",
+			EntityID:  &quo.ID,
+			Action:    "QUOTATION_UPDATED",
+			Reason:    "Actualización de cotización",
+			IPAddress: ip,
+			UserAgent: ua,
+		})
+		list, err := s.quotationRepo.ListItems(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+		items = list
+		ref := events.EntityRef{Kind: "quotation", ID: quo.ID, Version: time.Now().UTC()}
+		if quo.Status != fromStatus {
+			s.events.Record(ctx, events.NewQuotationStatusChanged(quo.CompanyID, events.QuotationStatusChangedData{
+				Entity: ref, From: string(fromStatus), To: string(quo.Status), SaleID: quo.SaleID,
+			}))
+		}
+		if len(changed) > 0 {
+			s.events.Record(ctx, events.NewQuotationUpdated(quo.CompanyID, ref, s.mapQuotationToDTO(quo, list), changed))
+		}
+		return nil
+	})
+	if err != nil {
 		return nil, utils.Internal("Error al actualizar cotización.", err)
 	}
-
-	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
-		CompanyID: &quo.CompanyID,
-		ActorType: actor.ActorType,
-		ActorID:   actor.ActorID,
-		Entity:    "quotations",
-		EntityID:  &quo.ID,
-		Action:    "QUOTATION_UPDATED",
-		Reason:    "Actualización de cotización",
-		IPAddress: ip,
-		UserAgent: ua,
-	})
-
-	items, _ := s.quotationRepo.ListItems(ctx, s.pool, id)
 	return s.mapQuotationToDTO(quo, items), nil
 }
 

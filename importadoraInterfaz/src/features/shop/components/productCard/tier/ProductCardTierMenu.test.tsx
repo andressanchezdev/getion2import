@@ -7,7 +7,7 @@ import { ProductCardTierMenu } from './ProductCardTierMenu'
 
 const canSell = vi.hoisted(() => ({ value: true }))
 vi.mock('@/global/hooks/access/usePermissions', () => ({
-  usePermissions: () => ({ canPerformAction: () => canSell.value }),
+  usePermissions: () => ({ can: () => canSell.value }),
 }))
 
 const product = (prices: Partial<Product['prices']>): Product => ({

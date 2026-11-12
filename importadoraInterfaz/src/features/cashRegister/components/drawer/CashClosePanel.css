@@ -24,7 +24,7 @@
 .cash-close-context-label {
   font-size: var(--text-xs);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--tracking-wide);
   color: var(--color-text-secondary);
 }
 

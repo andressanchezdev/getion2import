@@ -220,22 +220,3 @@ func (c *StaffController) AssignEmployeePermissions(ctx echo.Context) error {
 	return utils.RespondOK(ctx, "Permisos actualizados exitosamente", perms)
 }
 
-// UnlockEmployee POST /employees/:id/unlock
-func (c *StaffController) UnlockEmployee(ctx echo.Context) error {
-	actor := middlewares.GetActor(ctx)
-	id, err := utils.ParamInt64(ctx, "id")
-	if err != nil {
-		return err
-	}
-
-	ip := utils.EchoClientIP(ctx)
-	ua := ctx.Request().UserAgent()
-
-	res, err := c.service.UnlockEmployee(ctx.Request().Context(), actor, id, ip, ua)
-	if err != nil {
-		return err
-	}
-
-	return utils.RespondOK(ctx, "Empleado desbloqueado exitosamente", res)
-}
-

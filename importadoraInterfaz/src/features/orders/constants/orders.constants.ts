@@ -40,6 +40,7 @@ export const INITIAL_ORDERS_STATE: OrdersState = {
   list: { items: [], status: 'idle', error: null, requestId: null, capped: false },
   openId: null,
   detail: { data: null, status: 'idle', error: null, requestId: null },
+  processingIds: [],
 }
 
 // textos de las etapas del historial

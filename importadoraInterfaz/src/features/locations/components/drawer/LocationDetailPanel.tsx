@@ -5,6 +5,7 @@ import React from 'react'
 import '@/global/components/UI/molecules/form/DrawerFormShell.css'
 import './LocationDetailPanel.css'
 import { closeDrawerForm, openDrawerForm } from '@/features/navigation'
+import { usePermissions } from '@/global/hooks/access/usePermissions'
 import { useAppDispatch } from '@/global/hooks/store/useRedux'
 import { useLocationContent } from '../../hooks/useLocationContent'
 import { locationLabel, productLabel } from '../../helpers/locations.adapter'
@@ -18,6 +19,7 @@ export interface LocationDetailPayload {
 
 export const LocationDetailPanel: React.FC<{ payload: LocationDetailPayload }> = ({ payload }) => {
   const dispatch = useAppDispatch()
+  const canRelocate = usePermissions().can('stock:relocate')
   const { location, warehouseName } = payload
   const content = useLocationContent(location.warehouseId, location.code)
 
@@ -55,7 +57,7 @@ export const LocationDetailPanel: React.FC<{ payload: LocationDetailPayload }> =
                   <button
                     type="button"
                     className="location-detail-link"
-                    disabled={item.sellable <= 0}
+                    disabled={item.sellable <= 0 || !canRelocate}
                     onClick={() =>
                       dispatch(
                         openDrawerForm({

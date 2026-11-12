@@ -4,6 +4,7 @@ import { openDrawerForm } from '@/features/navigation'
 import { ReasonPrompt } from '@/features/reasonPrompt'
 import { useAppDispatch } from '@/global/hooks/store/useRedux'
 import { Pagination } from '@/global/components/UI/molecules/table/Pagination'
+import { FilterSelect } from '@/global/components/UI/molecules/filters/FilterSelect'
 import { usePermissions } from '@/global/hooks/access/usePermissions'
 import { useInventoryCounts } from '../hooks/useInventoryCounts'
 import { InventoryCountsTable } from '../components/counts/InventoryCountsTable'
@@ -52,8 +53,8 @@ export const InventoryCountsScreen: React.FC = () => {
     )
   }, [selectedCount, dispatch])
 
-  const { canPerformAction } = usePermissions()
-  const canCreate = canPerformAction('inventory', 'products', 'create')
+  const { can } = usePermissions()
+  const canCreate = can('stock:count')
   const [createModalOpen, setCreateModalOpen] = useState(false)
 
   return (
@@ -61,25 +62,18 @@ export const InventoryCountsScreen: React.FC = () => {
       <div className="inventory-card" style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)', overflow: 'hidden' }}>
         <div className="data-toolbar">
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-            <span style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--color-text-secondary)' }}>
-              Filtrar por estado:
-            </span>
-            <select
+            <FilterSelect
+              label="Estado"
+              allLabel="Todos los estados"
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as CountStatus | '')}
-              style={{
-                padding: '6px 12px',
-                borderRadius: 'var(--radius-md)',
-                border: '1px solid var(--color-border)',
-                background: 'var(--bg-main)',
-                fontSize: 'var(--text-sm)',
-              }}
-            >
-              <option value="">Todos los estados</option>
-              <option value="pending">Pendientes de conteo</option>
-              <option value="verified">Verificados (por corroborar)</option>
-              <option value="corroborated">Corroborados (ajuste aplicado)</option>
-            </select>
+              options={[
+                { value: '', label: 'Todos los estados' },
+                { value: 'pending', label: 'Pendientes de conteo' },
+                { value: 'verified', label: 'Verificados (por corroborar)' },
+                { value: 'corroborated', label: 'Corroborados (ajuste aplicado)' },
+              ]}
+              onChange={(val) => setStatusFilter(val as CountStatus | '')}
+            />
           </div>
 
           <div className="toolbar-actions" style={{ marginLeft: 'auto', flexShrink: 0 }}>

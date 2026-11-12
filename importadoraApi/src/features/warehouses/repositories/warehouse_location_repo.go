@@ -154,8 +154,21 @@ func (r *WarehouseRepository) FindLocationByCode(ctx context.Context, q db.DBExe
 }
 
 // RenameStockLocation cambia el código de ubicación de las existencias de la bodega (cuando se renombra la ubicación, para que no queden huérfanas).
-func (r *WarehouseRepository) RenameStockLocation(ctx context.Context, q db.DBExecutor, warehouseID int64, oldCode, newCode string) error {
-	const sql = `UPDATE stock SET location = $3, updated_at = CURRENT_TIMESTAMP WHERE warehouse_id = $1 AND location = $2`
-	_, err := q.Exec(ctx, sql, warehouseID, oldCode, newCode)
-	return err
+func (r *WarehouseRepository) RenameStockLocation(ctx context.Context, q db.DBExecutor, warehouseID int64, oldCode, newCode string) ([]int64, error) {
+	const sql = `UPDATE stock SET location = $3, updated_at = CURRENT_TIMESTAMP WHERE warehouse_id = $1 AND location = $2 RETURNING id`
+	rows, err := q.Query(ctx, sql, warehouseID, oldCode, newCode)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var ids []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
 }

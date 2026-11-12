@@ -45,3 +45,14 @@
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+.shop-cart-customer--warning {
+  border-color: var(--c-ip-red-600);
+  background: var(--c-red-50);
+}
+
+.shop-cart-customer-alert {
+  color: var(--c-ip-red-600);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+}

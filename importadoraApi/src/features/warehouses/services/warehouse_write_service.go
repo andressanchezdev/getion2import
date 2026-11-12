@@ -6,8 +6,10 @@ package services
 import (
 	"context"
 	"strings"
+	"time"
 
 	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/events"
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
@@ -92,7 +94,7 @@ func (s *WarehouseService) Create(ctx context.Context, actor *middlewares.ActorC
 	var created *repositories.WarehouseEntity
 	var initialFact *repositories.FacturationEntity
 
-	err = db.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
 		w, err := s.warehouseRepo.Create(ctx, tx, entity)
 		if err != nil {
 			return err
@@ -120,7 +122,11 @@ func (s *WarehouseService) Create(ctx context.Context, actor *middlewares.ActorC
 		}
 
 		// Inicializar series numéricas estándar por defecto
-		return s.warehouseRepo.InitDefaultWarehouseSeries(ctx, tx, targetCompanyID, w.ID, code)
+		if err := s.warehouseRepo.InitDefaultWarehouseSeries(ctx, tx, targetCompanyID, w.ID, code); err != nil {
+			return err
+		}
+		s.events.Record(ctx, events.NewEntityCreated(targetCompanyID, nil, events.EntityRef{Kind: events.KindWarehouse, ID: w.ID, Version: w.UpdatedAt}, s.mapToDTO(w, initialFact)))
+		return nil
 	})
 	if err != nil {
 		return nil, utils.NormalizeDBError(err, "")
@@ -148,6 +154,8 @@ func (s *WarehouseService) Update(ctx context.Context, actor *middlewares.ActorC
 	}
 
 	current, err := s.warehouseRepo.FindByID(ctx, s.pool, id)
+	// foto del registro antes de editarlo: de aquí sale changedFields
+	beforeSnap := events.Snapshot(current)
 	if err != nil {
 		return nil, utils.Internal("Error al consultar la bodega.", err)
 	}
@@ -222,6 +230,7 @@ func (s *WarehouseService) Update(ctx context.Context, actor *middlewares.ActorC
 		}
 	}
 
+	wasActive := current.IsActive
 	updateReason, rerr := utils.ReasonOnDeactivation(current.IsActive, req.IsActive, req.Reason)
 	if rerr != nil {
 		return nil, rerr
@@ -230,25 +239,58 @@ func (s *WarehouseService) Update(ctx context.Context, actor *middlewares.ActorC
 		current.IsActive = *req.IsActive
 	}
 
-	updated, err := s.warehouseRepo.Update(ctx, s.pool, current)
+	var resp *dtos.WarehouseResponse
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		updated, err := s.warehouseRepo.Update(ctx, tx, current)
+		if err != nil {
+			return utils.NormalizeDBError(err, "La bodega no existe.")
+		}
+		if wasActive && !updated.IsActive {
+			if err := s.revokeWarehouseSessions(ctx, tx, updated.CompanyID, id); err != nil {
+				return utils.Internal("La bodega fue desactivada, pero no se pudieron cerrar las sesiones de sus empleados.", err)
+			}
+		}
+
+		_ = s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
+			CompanyID: &updated.CompanyID,
+			ActorType: actor.ActorType,
+			ActorID:   actor.ActorID,
+			Entity:    "warehouses",
+			EntityID:  &updated.ID,
+			Action:    "WAREHOUSE_UPDATED",
+			Reason:    utils.ReasonOrDefault(updateReason, "Actualización de datos de bodega"),
+			IPAddress: ip,
+			UserAgent: ua,
+		})
+
+		fact, _ := s.warehouseRepo.FindFacturationByWarehouseID(ctx, tx, id)
+		resp = s.mapToDTO(updated, fact)
+
+		if wasActive != updated.IsActive {
+			var rPtr *string
+			if updateReason != "" {
+				rPtr = &updateReason
+			}
+			s.events.Record(ctx, events.NewEntityStatus(
+				updated.CompanyID,
+				nil,
+				events.EntityRef{Kind: events.KindWarehouse, ID: updated.ID, Version: updated.UpdatedAt},
+				activeStatus(wasActive),
+				activeStatus(updated.IsActive),
+				rPtr,
+				resp,
+			))
+		} else {
+			// edición sin cambio de estado: viaja la fila ya guardada para que las tablas abiertas se actualicen sin pedirla
+			s.events.Record(ctx, events.NewEntityUpdated(updated.CompanyID, nil, events.EntityRef{Kind: events.KindWarehouse, ID: updated.ID, Version: updated.UpdatedAt}, resp, events.ChangedFields(beforeSnap, updated)))
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, utils.NormalizeDBError(err, "La bodega no existe.")
+		return nil, err
 	}
 
-	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
-		CompanyID: &updated.CompanyID,
-		ActorType: actor.ActorType,
-		ActorID:   actor.ActorID,
-		Entity:    "warehouses",
-		EntityID:  &updated.ID,
-		Action:    "WAREHOUSE_UPDATED",
-		Reason:    utils.ReasonOrDefault(updateReason, "Actualización de datos de bodega"),
-		IPAddress: ip,
-		UserAgent: ua,
-	})
-
-	fact, _ := s.warehouseRepo.FindFacturationByWarehouseID(ctx, s.pool, id)
-	return s.mapToDTO(updated, fact), nil
+	return resp, nil
 }
 
 // Deactivate desactiva operativamente una bodega.
@@ -275,26 +317,72 @@ func (s *WarehouseService) Deactivate(ctx context.Context, actor *middlewares.Ac
 		}
 	}
 
-	if err := s.warehouseRepo.Deactivate(ctx, s.pool, id); err != nil {
-		return utils.Internal("Error al desactivar la bodega.", err)
-	}
-	if err := s.authRepo.RevokeTokensByWarehouse(ctx, s.pool, id); err != nil {
-		return utils.Internal("La bodega fue desactivada, pero no se pudieron cerrar las sesiones de sus empleados.", err)
-	}
+	wasActive := current.IsActive
+	return db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		if err := s.warehouseRepo.Deactivate(ctx, tx, id); err != nil {
+			return utils.Internal("Error al desactivar la bodega.", err)
+		}
+		if err := s.revokeWarehouseSessions(ctx, tx, current.CompanyID, id); err != nil {
+			return utils.Internal("La bodega fue desactivada, pero no se pudieron cerrar las sesiones de sus empleados.", err)
+		}
 
-	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
-		CompanyID: &current.CompanyID,
-		ActorType: actor.ActorType,
-		ActorID:   actor.ActorID,
-		Entity:    "warehouses",
-		EntityID:  &id,
-		Action:    "WAREHOUSE_DEACTIVATED",
-		Reason:    reason,
-		IPAddress: ip,
-		UserAgent: ua,
+		_ = s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
+			CompanyID: &current.CompanyID,
+			ActorType: actor.ActorType,
+			ActorID:   actor.ActorID,
+			Entity:    "warehouses",
+			EntityID:  &id,
+			Action:    "WAREHOUSE_DEACTIVATED",
+			Reason:    reason,
+			IPAddress: ip,
+			UserAgent: ua,
+		})
+
+		fact, _ := s.warehouseRepo.FindFacturationByWarehouseID(ctx, tx, id)
+		now := time.Now().UTC()
+		current.IsActive = false
+		current.UpdatedAt = now
+		s.events.Record(ctx, events.NewEntityStatus(
+			current.CompanyID,
+			nil,
+			events.EntityRef{Kind: events.KindWarehouse, ID: id, Version: now},
+			activeStatus(wasActive),
+			"inactive",
+			&reason,
+			s.mapToDTO(current, fact),
+		))
+		return nil
 	})
+}
 
+func (s *WarehouseService) revokeWarehouseSessions(ctx context.Context, tx pgx.Tx, companyID, warehouseID int64) error {
+	if s.authRepo == nil {
+		return nil
+	}
+	if err := s.authRepo.RevokeTokensByWarehouse(ctx, tx, warehouseID); err != nil {
+		return err
+	}
+	empIDs, err := s.authRepo.ListWarehouseEmployeeIDs(ctx, tx, warehouseID)
+	if err != nil {
+		return err
+	}
+	for _, empID := range empIDs {
+		s.events.Record(ctx, events.NewPersonal(
+			events.SessionRevoked,
+			&companyID,
+			string(types.ActorEmployee),
+			empID,
+			events.SessionRevokedData{Reason: "warehouse_inactive"},
+		))
+	}
 	return nil
+}
+
+func activeStatus(active bool) string {
+	if active {
+		return "active"
+	}
+	return "inactive"
 }
 
 // mapToDTO convierte la bodega de la base en la respuesta que sale por la API.

@@ -23,6 +23,9 @@ import { useManagedWarehouses } from '../hooks/useManagedWarehouses'
 import { useWarehouseActions } from '../hooks/useWarehouseActions'
 import type { Warehouse } from '../types/warehouse.types'
 import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
+import { ActionsHeader } from '@/global/components/UI/molecules/table/ActionsHeader'
+import { CopyableCell } from '@/global/components/UI/molecules/table/CopyableCell'
+import { StatusSelect } from '@/global/components/UI/molecules/table/StatusSelect'
 import { Icon } from '@/global/components/UI/atoms/Icon'
 import plusIcon from '@/assets/icons/plus.svg?raw'
 
@@ -33,8 +36,8 @@ interface WarehousesTableProps {
 export const WarehousesTable: React.FC<WarehousesTableProps> = ({ onManageLocations }) => {
     const dispatch = useAppDispatch()
     const permissions = usePermissions()
-    const canCreate = permissions.canPerformAction('inventory', 'warehouses', 'create')
-    const canEdit = permissions.canPerformAction('inventory', 'warehouses', 'update')
+    const canCreate = permissions.can('warehouses:create')
+    const canEdit = permissions.can('warehouses:edit')
     const list = useManagedWarehouses()
     const actions = useWarehouseActions()
     const [toDeactivate, setToDeactivate] = useState<Warehouse | null>(null)
@@ -93,7 +96,7 @@ export const WarehousesTable: React.FC<WarehousesTableProps> = ({ onManageLocati
                             <th className="wh-num">Ubicaciones</th>
                             <th className="wh-num">SKUs con stock</th>
                             <th>Estado</th>
-                            <th>Acciones</th>
+                            <ActionsHeader />
                         </tr>
                     </thead>
                     <tbody>
@@ -116,7 +119,7 @@ export const WarehousesTable: React.FC<WarehousesTableProps> = ({ onManageLocati
                                                 {warehouse.description && <small>{warehouse.description}</small>}
                                             </div>
                                         </td>
-                                        <td>{warehouse.code || '—'}</td>
+                                        <td>{warehouse.code ? <CopyableCell text={warehouse.code} /> : '—'}</td>
                                         <td>{warehouse.city || '—'}</td>
                                         <td>{warehouse.address || '—'}</td>
                                         <td>{warehouse.managerName || <span className="wh-muted">Sin asignar</span>}</td>
@@ -125,20 +128,20 @@ export const WarehousesTable: React.FC<WarehousesTableProps> = ({ onManageLocati
                                         </td>
                                         <td className="wh-num table-amount">{warehouse.skuCount ?? 0}</td>
                                         <td>
-                                            <select
-                                                className={`inv-status-select is-${active ? 'active' : 'inactive'}`}
+                                            <StatusSelect
                                                 value={active ? 'active' : 'inactive'}
+                                                options={[
+                                                    { value: 'active', label: 'Activa' },
+                                                    { value: 'inactive', label: 'Inactiva' },
+                                                ]}
                                                 disabled={!canEdit || actions.saving}
-                                                aria-label={`Estado de ${warehouse.name}`}
+                                                ariaLabel={`Estado de ${warehouse.name}`}
                                                 title={canEdit ? 'Cambiar estado' : 'Requiere permiso para editar bodegas'}
-                                                onChange={(event) => {
-                                                    if (event.target.value === 'active') void actions.setActive(warehouse, true)
+                                                onChange={(val) => {
+                                                    if (val === 'active') void actions.setActive(warehouse, true)
                                                     else setToDeactivate(warehouse)
                                                 }}
-                                            >
-                                                <option value="active">Activa</option>
-                                                <option value="inactive">Inactiva</option>
-                                            </select>
+                                            />
                                         </td>
                                         <td>
                                             <RowActions

@@ -4,12 +4,14 @@ package services
 // conecta con: WarehouseService (mismo servicio, repartido en varios archivos por responsabilidad; la estructura y el constructor están en warehouse_service.go)
 
 import (
-	authRepos "importadoraApi/src/features/auth/repositories"
 	"context"
 	"fmt"
+	authRepos "importadoraApi/src/features/auth/repositories"
 	"strings"
+	"time"
 
 	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/events"
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
@@ -83,7 +85,15 @@ func (s *WarehouseService) CreateLocation(ctx context.Context, actor *middleware
 		Description: req.Description,
 	}
 
-	created, err := s.warehouseRepo.CreateLocation(ctx, s.pool, entity)
+	// la creación y su evento van en la misma transacción: nadie recibe el aviso de un registro que no se guardó
+	created, err := db.WithTxValue(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) (*repositories.WarehouseLocationEntity, error) {
+		row, err := s.warehouseRepo.CreateLocation(ctx, tx, entity)
+		if err != nil {
+			return nil, err
+		}
+		s.events.Record(ctx, events.NewEntityCreated(row.CompanyID, &row.WarehouseID, events.EntityRef{Kind: events.KindLocation, ID: row.ID, Version: row.UpdatedAt}, toLocationDTO(row)))
+		return row, nil
+	})
 	if err != nil {
 		return nil, utils.NormalizeDBError(err, "")
 	}
@@ -98,6 +108,8 @@ func (s *WarehouseService) UpdateLocation(ctx context.Context, actor *middleware
 	}
 
 	current, err := s.warehouseRepo.FindLocationByID(ctx, s.pool, locationID)
+	// foto del registro antes de editarlo: de aquí sale changedFields
+	beforeSnap := events.Snapshot(current)
 	if err != nil {
 		return nil, utils.Internal("Error al consultar ubicación.", err)
 	}
@@ -112,13 +124,15 @@ func (s *WarehouseService) UpdateLocation(ctx context.Context, actor *middleware
 	}
 
 	oldCode := current.Code
+	wasActive := current.IsActive
 	if req.Code != nil && strings.TrimSpace(*req.Code) != "" {
 		current.Code = strings.TrimSpace(*req.Code)
 	}
 	if req.Description != nil {
 		current.Description = req.Description
 	}
-	if _, rerr := utils.ReasonOnDeactivation(current.IsActive, req.IsActive, req.Reason); rerr != nil {
+	updateReason, rerr := utils.ReasonOnDeactivation(current.IsActive, req.IsActive, req.Reason)
+	if rerr != nil {
 		return nil, rerr
 	}
 	if req.IsActive != nil {
@@ -127,14 +141,38 @@ func (s *WarehouseService) UpdateLocation(ctx context.Context, actor *middleware
 
 	// ojo: el stock guarda el código de la ubicación; al renombrarla se mueve todo en la misma transacción para que ningún producto quede apuntando a un código que ya no existe
 	var updated *repositories.WarehouseLocationEntity
-	err = db.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
 		saved, err := s.warehouseRepo.UpdateLocation(ctx, tx, current)
 		if err != nil {
 			return err
 		}
 		updated = saved
 		if current.Code != oldCode {
-			return s.warehouseRepo.RenameStockLocation(ctx, tx, warehouseID, oldCode, current.Code)
+			stockIDs, err := s.warehouseRepo.RenameStockLocation(ctx, tx, warehouseID, oldCode, current.Code)
+			if err != nil {
+				return err
+			}
+			for _, sid := range stockIDs {
+				s.events.Stock(ctx, sid, events.CauseRelocation())
+			}
+		}
+		if wasActive != updated.IsActive {
+			var rPtr *string
+			if updateReason != "" {
+				rPtr = &updateReason
+			}
+			s.events.Record(ctx, events.NewEntityStatus(
+				updated.CompanyID,
+				&warehouseID,
+				events.EntityRef{Kind: events.KindLocation, ID: updated.ID, Version: updated.UpdatedAt},
+				activeStatus(wasActive),
+				activeStatus(updated.IsActive),
+				rPtr,
+				toLocationDTO(updated),
+			))
+		} else {
+			// edición sin cambio de estado: viaja la fila ya guardada para que las tablas abiertas se actualicen sin pedirla
+			s.events.Record(ctx, events.NewEntityUpdated(updated.CompanyID, &warehouseID, events.EntityRef{Kind: events.KindLocation, ID: updated.ID, Version: updated.UpdatedAt}, toLocationDTO(updated), events.ChangedFields(beforeSnap, updated)))
 		}
 		return nil
 	})
@@ -178,22 +216,38 @@ func (s *WarehouseService) DeleteLocation(ctx context.Context, actor *middleware
 		return utils.Conflict("LOCATION_NOT_EMPTY", fmt.Sprintf("No se puede eliminar la ubicación '%s' porque cuenta con %d unidades almacenadas. Debe reubicar los productos antes de eliminarla.", current.Code, stockCount))
 	}
 
-	if err := s.warehouseRepo.DeleteLocation(ctx, s.pool, locationID); err != nil {
-		return utils.Internal("Error al inactivar la ubicación.", err)
-	}
+	wasActive := current.IsActive
+	return db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		if err := s.warehouseRepo.DeleteLocation(ctx, tx, locationID); err != nil {
+			return utils.Internal("Error al inactivar la ubicación.", err)
+		}
 
-	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
-		CompanyID: &current.CompanyID,
-		ActorType: actor.ActorType,
-		ActorID:   actor.ActorID,
-		Entity:    "warehouse_locations",
-		EntityID:  &locationID,
-		Action:    "LOCATION_DEACTIVATED",
-		Reason:    reason,
-		IPAddress: ip,
-		UserAgent: ua,
+		_ = s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
+			CompanyID: &current.CompanyID,
+			ActorType: actor.ActorType,
+			ActorID:   actor.ActorID,
+			Entity:    "warehouse_locations",
+			EntityID:  &locationID,
+			Action:    "LOCATION_DEACTIVATED",
+			Reason:    reason,
+			IPAddress: ip,
+			UserAgent: ua,
+		})
+
+		now := time.Now().UTC()
+		current.IsActive = false
+		current.UpdatedAt = now
+		s.events.Record(ctx, events.NewEntityStatus(
+			current.CompanyID,
+			&warehouseID,
+			events.EntityRef{Kind: events.KindLocation, ID: locationID, Version: now},
+			activeStatus(wasActive),
+			"inactive",
+			&reason,
+			toLocationDTO(current),
+		))
+		return nil
 	})
-	return nil
 }
 
 // toLocationDTO arma la respuesta de una ubicación con lo que guarda.

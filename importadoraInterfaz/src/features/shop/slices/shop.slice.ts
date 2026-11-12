@@ -44,6 +44,12 @@ export const shopSlice = createSlice({
         setSelectedProductId: (state, action: PayloadAction<string | null>) => {
             state.selectedProductId = action.payload
         },
+        // tiempo real: si el cliente elegido en el carrito pasa a inactivo, se marca como no disponible
+        cartCustomerStatusFromEvent: (state, action: PayloadAction<{ customerId: number; status: string }>) => {
+            if (state.cartCustomer && state.cartCustomer.id === action.payload.customerId) {
+                state.cartCustomer.unavailable = action.payload.status !== 'active'
+            }
+        },
         // ojo: applyStockUpdate (tiempo real) se movió a shop.products.slice porque la lista de productos ya no está en este slice
     },
     extraReducers: (builder) => {
@@ -90,6 +96,7 @@ export const {
     toggleCartDrawer,
     setCartDrawerOpen,
     setSelectedProductId,
+    cartCustomerStatusFromEvent,
 } = shopSlice.actions
 
 export const shopReducer = shopSlice.reducer

@@ -1,8 +1,9 @@
 // bank.thunks · cargas y acciones de la conciliación bancaria: listar movimientos, subir el PDF, traer pagos por verificar, confirmar e ignorar
 // conecta con: bank.service (llamadas) y bank.slice (reacciona); las despachan useBankRecords, useBankUpload, usePendingPayments y useBankActions
-// ojo: la lista lleva su requestId y el slice descarta respuestas de pedidos anteriores; subir un PDF recarga la lista; confirmar e ignorar no se aceptan dos a la vez
+// ojo: la lista lleva su requestId y el slice descarta respuestas de pedidos anteriores; con el socket en vivo los cambios llegan por evento (bank.realtime) y las recargas quedan de respaldo; confirmar e ignorar no se aceptan dos a la vez
 import { createAsyncThunk } from '@reduxjs/toolkit'
 import { getErrorMessage, type Paginated } from '@/api'
+import { isRealtimeLive } from '@/features/realtime/helpers/realtime.guards'
 import { BANK_PAGE_SIZE } from '../constants/bank.constants'
 import { confirmBankRecord, fetchBankRecords, fetchPendingTransferPayments, ignoreBankRecord, uploadBankStatement } from '../services/bank.service'
 import type { BankRecord, BankState, BankUploadResult, PendingPayment } from '../types/bank.types'
@@ -19,10 +20,11 @@ export const loadBankRecordsThunk = createAsyncThunk<Paginated<BankRecord>, void
 })
 
 // sube el PDF del banco y, si se leyó bien, vuelve a cargar la lista
-export const uploadBankStatementThunk = createAsyncThunk<BankUploadResult, File, ThunkConfig>('bank/upload', async (file, { dispatch, rejectWithValue }) => {
+export const uploadBankStatementThunk = createAsyncThunk<BankUploadResult, File, ThunkConfig>('bank/upload', async (file, { dispatch, getState, rejectWithValue }) => {
   try {
     const result = await uploadBankStatement(file)
-    dispatch(loadBankRecordsThunk())
+    // en vivo, bank_statement.imported recarga la tabla (a todos); la recarga directa es solo el respaldo sin socket
+    if (!isRealtimeLive(getState())) dispatch(loadBankRecordsThunk())
     return result
   } catch (error) {
     return rejectWithValue(getErrorMessage(error, 'No se pudo leer el PDF del banco.'))
@@ -42,11 +44,13 @@ const notSaving = (_: unknown, { getState }: { getState: () => { bank: BankState
 // confirma un movimiento (con o sin pago ligado) y recarga la lista y los pagos por verificar
 export const confirmBankRecordThunk = createAsyncThunk<void, { recordId: number; paymentId?: number; notes?: string }, ThunkConfig>(
   'bank/confirm',
-  async ({ recordId, paymentId, notes }, { dispatch, rejectWithValue }) => {
+  async ({ recordId, paymentId, notes }, { dispatch, getState, rejectWithValue }) => {
     try {
       await confirmBankRecord(recordId, paymentId, notes)
-      dispatch(loadBankRecordsThunk())
-      dispatch(loadPendingPaymentsThunk())
+      if (!isRealtimeLive(getState())) {
+        dispatch(loadBankRecordsThunk())
+        dispatch(loadPendingPaymentsThunk())
+      }
     } catch (error) {
       return rejectWithValue(getErrorMessage(error, 'No se pudo confirmar el movimiento.'))
     }
@@ -57,10 +61,10 @@ export const confirmBankRecordThunk = createAsyncThunk<void, { recordId: number;
 // marca un movimiento como ignorado y recarga la lista
 export const ignoreBankRecordThunk = createAsyncThunk<void, { recordId: number; notes?: string }, ThunkConfig>(
   'bank/ignore',
-  async ({ recordId, notes }, { dispatch, rejectWithValue }) => {
+  async ({ recordId, notes }, { dispatch, getState, rejectWithValue }) => {
     try {
       await ignoreBankRecord(recordId, notes)
-      dispatch(loadBankRecordsThunk())
+      if (!isRealtimeLive(getState())) dispatch(loadBankRecordsThunk())
     } catch (error) {
       return rejectWithValue(getErrorMessage(error, 'No se pudo ignorar el movimiento.'))
     }

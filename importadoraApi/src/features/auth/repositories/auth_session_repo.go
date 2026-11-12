@@ -140,6 +140,25 @@ func (r *AuthRepository) RevokeAllActorSessions(ctx context.Context, q db.DBExec
 	return err
 }
 
+// RevokeOtherActorSessions cierra todas las sesiones del actor menos la indicada (la que hace la petición).
+// ojo: con exceptSessionID = 0 equivale a RevokeAllActorSessions, porque ningún id de sesión vale 0
+func (r *AuthRepository) RevokeOtherActorSessions(ctx context.Context, q db.DBExecutor, actorType types.ActorType, actorID, exceptSessionID int64) error {
+	var column string
+	switch actorType {
+	case types.ActorEmployee:
+		column = "employee_id"
+	case types.ActorAdmin:
+		column = "admin_id"
+	case types.ActorSuperadmin:
+		column = "superadmin_id"
+	default:
+		return nil
+	}
+	sqlQuery := `UPDATE refresh_tokens SET revoked_at = CURRENT_TIMESTAMP WHERE ` + column + ` = $1 AND id <> $2 AND revoked_at IS NULL`
+	_, err := q.Exec(ctx, sqlQuery, actorID, exceptSessionID)
+	return err
+}
+
 // IsSessionActive valida que el registro de sesión en refresh_tokens siga vigente y no revocado.
 func (r *AuthRepository) IsSessionActive(ctx context.Context, q db.DBExecutor, sessionID int64) (bool, error) {
 	const sqlQuery = `
@@ -196,4 +215,56 @@ func (r *AuthRepository) IsActorAvailable(ctx context.Context, q db.DBExecutor, 
 		return false, nil
 	}
 	return true, nil
+}
+
+// ActorRef identifica a un administrador o empleado de una compañía para notificar el cierre de sus sesiones.
+type ActorRef struct {
+	ActorType types.ActorType
+	ActorID   int64
+}
+
+// ListCompanyActors devuelve los administradores y empleados de una compañía.
+func (r *AuthRepository) ListCompanyActors(ctx context.Context, q db.DBExecutor, companyID int64) ([]ActorRef, error) {
+	const sqlQuery = `
+		SELECT 'admin'::text, id FROM admins WHERE company_id = $1
+		UNION ALL
+		SELECT 'employee'::text, id FROM employees WHERE company_id = $1 AND deleted_at IS NULL
+	`
+	rows, err := q.Query(ctx, sqlQuery, companyID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []ActorRef
+	for rows.Next() {
+		var a ActorRef
+		var kind string
+		if err := rows.Scan(&kind, &a.ActorID); err != nil {
+			return nil, err
+		}
+		a.ActorType = types.ActorType(kind)
+		out = append(out, a)
+	}
+	return out, rows.Err()
+}
+
+// ListWarehouseEmployeeIDs devuelve los ids de los empleados asignados a una bodega.
+func (r *AuthRepository) ListWarehouseEmployeeIDs(ctx context.Context, q db.DBExecutor, warehouseID int64) ([]int64, error) {
+	const sqlQuery = `SELECT id FROM employees WHERE warehouse_id = $1 AND deleted_at IS NULL`
+	rows, err := q.Query(ctx, sqlQuery, warehouseID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		out = append(out, id)
+	}
+	return out, rows.Err()
 }

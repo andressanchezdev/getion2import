@@ -14,6 +14,8 @@ import { QUOTATION_STATUS_LABEL } from '../../constants/quotations.constants'
 import { selectHasQuotationFilters, selectQuotationsError, selectQuotationsStatus, selectQuotationsTableItems } from '../../selectors/quotations.selectors'
 import { loadQuotationsThunk } from '../../thunks/quotations.thunks'
 import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
+import { ActionsHeader } from '@/global/components/UI/molecules/table/ActionsHeader'
+import { CopyableCell } from '@/global/components/UI/molecules/table/CopyableCell'
 
 const COLUMNS = 7
 
@@ -29,7 +31,7 @@ export const QuotationsTable: React.FC = () => {
   const status = useAppSelector(selectQuotationsStatus)
   const error = useAppSelector(selectQuotationsError)
   const hasFilters = useAppSelector(selectHasQuotationFilters)
-  const canSell = usePermissions().canPerformAction('shop', 'orders', 'create')
+  const canSell = usePermissions().can('orders:create')
 
   const message = (() => {
     if (status === 'failed') return error
@@ -48,7 +50,7 @@ export const QuotationsTable: React.FC = () => {
             <th>Cliente</th>
             <th>Total</th>
             <th>Estado</th>
-            <th>Acciones</th>
+            <ActionsHeader />
           </tr>
         </thead>
         <tbody>
@@ -67,7 +69,9 @@ export const QuotationsTable: React.FC = () => {
             items.map((quotation) => (
               <tr key={quotation.id} className="quotations-table-row">
                 <td data-label="Código">
-                  <span className="quotations-table-code">{quotation.serialCode}</span>
+                  <span className="quotations-table-code">
+                    <CopyableCell text={quotation.serialCode} label="Código de cotización" />
+                  </span>
                 </td>
                 <td data-label="Fecha">{formatDate(quotation.createdAt)}</td>
                 <td data-label="Hecha por">{quotation.employeeName || '—'}</td>

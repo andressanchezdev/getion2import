@@ -7,6 +7,8 @@ import (
 	"context"
 	"fmt"
 
+	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/events"
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
@@ -15,6 +17,7 @@ import (
 	"importadoraApi/src/features/wallet/dtos"
 	"importadoraApi/src/features/wallet/repositories"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -23,6 +26,7 @@ type WalletService struct {
 	walletRepo   *repositories.WalletRepository
 	customerRepo *customerrepos.CustomerRepository
 	auditRepo    *authRepos.AuditRepository
+	events       *events.Recorder
 }
 
 // NewWalletService crea el servicio con las piezas que necesita para funcionar.
@@ -31,12 +35,14 @@ func NewWalletService(
 	walletRepo *repositories.WalletRepository,
 	customerRepo *customerrepos.CustomerRepository,
 	auditRepo *authRepos.AuditRepository,
+	events *events.Recorder,
 ) *WalletService {
 	return &WalletService{
 		pool:         pool,
 		walletRepo:   walletRepo,
 		customerRepo: customerRepo,
 		auditRepo:    auditRepo,
+		events:       events,
 	}
 }
 
@@ -156,9 +162,21 @@ func (s *WalletService) CreateAdjustment(ctx context.Context, actor *middlewares
 		empID = &actor.ActorID
 	}
 
-	adjID, err := s.walletRepo.CreateAdjustment(ctx, s.pool, cust.CompanyID, cust.ID, empID, req.Amount, req.Reason)
+	var adjID int64
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		id, err := s.walletRepo.CreateAdjustment(ctx, tx, cust.CompanyID, cust.ID, empID, req.Amount, req.Reason)
+		if err != nil {
+			return utils.Internal("Error al registrar ajuste en el libro de crédito.", err)
+		}
+		adjID = id
+		s.events.CreditBalance(ctx, tx, cust.CompanyID, cust.ID, &events.CreditEntryRef{
+			Type:   "adjust",
+			Amount: req.Amount,
+		})
+		return nil
+	})
 	if err != nil {
-		return nil, utils.Internal("Error al registrar ajuste en el libro de crédito.", err)
+		return nil, err
 	}
 
 	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
@@ -175,4 +193,3 @@ func (s *WalletService) CreateAdjustment(ctx context.Context, actor *middlewares
 
 	return s.GetCustomerSummary(ctx, actor, cust.ID)
 }
-

@@ -72,6 +72,18 @@ func Load() (*Config, error) {
 		PgRestorePath:      envStr("PG_RESTORE_PATH", "pg_restore"),
 	}
 
+	ticketSec, err := envInt("REALTIME_TICKET_TTL_SEC", 30)
+	if err != nil {
+		return nil, err
+	}
+	eventsEnabled, err := envBool("REALTIME_EVENTS_ENABLED", true)
+	if err != nil {
+		return nil, err
+	}
+	cfg.RealtimeEventsEnabled = eventsEnabled
+	cfg.RealtimeTicketTTL = time.Duration(ticketSec) * time.Second
+	cfg.RealtimeWSURL = envStr("REALTIME_WS_URL", "")
+
 	if err := Validate(cfg); err != nil {
 		return nil, fmt.Errorf("error de validación en configuración: %w", err)
 	}

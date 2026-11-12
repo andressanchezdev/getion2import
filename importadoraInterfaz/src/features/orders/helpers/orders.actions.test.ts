@@ -26,13 +26,27 @@ describe('nextStageAction', () => {
 })
 
 describe('getOrderActions', () => {
+  it('empleado con solo orders:view: no ve anular ni avanzar etapa (8.4)', () => {
+    const owned = new Set(['orders:view'])
+    const canAdvance = (key: string) => owned.has(key === 'invoice' ? 'orders:invoice' : 'orders:advance_stage')
+    for (const stage of ['verification_confirmed', 'picking', 'packing', 'invoicing', 'dispatch']) {
+      expect(getOrderActions(order(stage), owned.has('orders:delete'), canAdvance).map((a) => a.key)).toEqual(['detail'])
+    }
+  })
+
+  it('facturar y avanzar etapa se deciden con llaves distintas', () => {
+    const onlyInvoice = (key: string) => key === 'invoice'
+    expect(getOrderActions(order('packing'), false, onlyInvoice).map((a) => a.key)).toEqual(['invoice', 'detail'])
+    expect(getOrderActions(order('picking'), false, onlyInvoice).map((a) => a.key)).toEqual(['detail'])
+  })
+
   it('pone la siguiente etapa primero si tiene permiso', () => {
-    expect(getOrderActions(order('packing'), false, true).map((a) => a.key)).toEqual(['invoice', 'detail', 'copy'])
+    expect(getOrderActions(order('packing'), false, true).map((a) => a.key)).toEqual(['invoice', 'detail'])
   })
   it('sin permiso de editar no ofrece avanzar', () => {
-    expect(getOrderActions(order('packing'), false, false).map((a) => a.key)).toEqual(['detail', 'copy'])
+    expect(getOrderActions(order('packing'), false, false).map((a) => a.key)).toEqual(['detail'])
   })
   it('anular solo con permiso', () => {
-    expect(getOrderActions(order('packing'), true, false).map((a) => a.key)).toEqual(['detail', 'copy', 'cancel'])
+    expect(getOrderActions(order('packing'), true, false).map((a) => a.key)).toEqual(['detail', 'cancel'])
   })
 })

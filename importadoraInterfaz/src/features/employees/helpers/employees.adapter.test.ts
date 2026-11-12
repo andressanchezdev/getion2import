@@ -13,7 +13,7 @@ const menu = [
 const perm = (id: number, module: string, action: string): PermissionDto => ({ id, module, action })
 const catalog = [
   perm(1, 'catalog', 'view'), perm(2, 'catalog', 'view_detail'), perm(3, 'orders', 'view'), perm(4, 'orders', 'view_detail'),
-  perm(5, 'orders', 'create'), perm(6, 'orders', 'edit'), perm(7, 'orders', 'change_status'), perm(8, 'orders', 'delete'),
+  perm(5, 'orders', 'create'), perm(6, 'orders', 'edit'), perm(7, 'orders', 'advance_stage'), perm(8, 'orders', 'delete'),
   perm(9, 'orders', 'take_picking'), perm(10, 'customers', 'view'), perm(11, 'customers', 'create'), perm(12, 'siigo', 'sync'),
 ]
 
@@ -54,8 +54,16 @@ describe('toPermissionIds', () => {
   const withFlags = (moduleKey: string, screenKey: string, flags: Record<string, boolean>) =>
     modules.map((m) => (m.moduleKey === moduleKey ? { ...m, screens: m.screens.map((s) => (s.screenKey === screenKey ? { ...s, ...flags } : s)) } : m))
 
-  it('"ver" enciende ver y ver detalle; "editar" enciende editar y cambiar estado', () => {
-    expect(toPermissionIds(withFlags('shop', 'orders', { canRead: true, canUpdate: true }), catalog, [])).toEqual([3, 4, 6, 7])
+  it('"ver" enciende ver y ver detalle; "editar" solo enciende editar (change_status ya no existe)', () => {
+    expect(toPermissionIds(withFlags('shop', 'orders', { canRead: true, canUpdate: true }), catalog, [])).toEqual([3, 4, 6])
+  })
+
+  it('las acciones especiales salen de su casilla: se agregan las marcadas y se quitan las desmarcadas', () => {
+    const current = [perm(7, 'orders', 'advance_stage')]
+    expect(toPermissionIds(modules, catalog, current, [])).toEqual([])
+    expect(toPermissionIds(modules, catalog, [], ['orders:advance_stage'])).toEqual([7])
+    // sin specials (pantallas que solo editan la matriz) se conservan como estaban
+    expect(toPermissionIds(modules, catalog, current)).toEqual([7])
   })
 
   it('"crear" y "anular" encienden crear y eliminar', () => {

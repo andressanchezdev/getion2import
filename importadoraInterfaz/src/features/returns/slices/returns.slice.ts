@@ -4,7 +4,7 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import { logoutThunk } from '@/features/auth'
 import { INITIAL_RETURNS_STATE } from '../constants/returns.constants'
 import { loadReturnsThunk } from '../thunks/returns.thunks'
-import type { ReturnStatusFilter } from '../types/returns.types'
+import type { ReturnDto, ReturnStatus, ReturnStatusFilter } from '../types/returns.types'
 
 export const returnsSlice = createSlice({
   name: 'returns',
@@ -23,6 +23,20 @@ export const returnsSlice = createSlice({
       state.warehouseId = null
       state.status = 'all'
       state.query = ''
+    },
+    // tiempo real (return.created): la devolución entra arriba si es de la bodega del filtro (o no hay filtro); una repetida no se duplica
+    returnCreatedFromEvent: (state, action: PayloadAction<ReturnDto>) => {
+      const created = action.payload
+      if (state.warehouseId !== null && created.warehouseId !== state.warehouseId) return
+      if (state.items.some((item) => item.id === created.id)) return
+      state.items.unshift(created)
+    },
+    // tiempo real (return.status_changed): aprobada o rechazada, con quién la resolvió
+    returnStatusFromEvent: (state, action: PayloadAction<{ id: number; to: ReturnStatus; by: string }>) => {
+      const row = state.items.find((item) => item.id === action.payload.id)
+      if (!row) return
+      row.status = action.payload.to
+      row.approvedByName = action.payload.by
     },
   },
   extraReducers: (builder) => {
@@ -43,5 +57,5 @@ export const returnsSlice = createSlice({
   },
 })
 
-export const { setReturnsWarehouse, setReturnsStatus, setReturnsQuery, clearReturnsFilters } = returnsSlice.actions
+export const { setReturnsWarehouse, setReturnsStatus, setReturnsQuery, clearReturnsFilters, returnCreatedFromEvent, returnStatusFromEvent } = returnsSlice.actions
 export const returnsReducer = returnsSlice.reducer

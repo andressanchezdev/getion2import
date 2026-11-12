@@ -2,6 +2,7 @@ package services
 
 // auth_service.go · reglas de negocio de autenticación y sesiones: valida permisos, compañía y datos, coordina las transacciones y arma las respuestas
 // conecta con: los repositories y dtos de autenticación y sesiones; los llama el controller y la conexión llega del contenedor
+// nota de seguridad: el bloqueo temporal por intentos fallidos de login (LOGIN_MAX_ATTEMPTS y LOGIN_BLOCK_MINUTES) opera de forma automática y vence únicamente por expiración de tiempo. No depende de ninguna acción manual externa.
 
 import (
 	"context"
@@ -11,6 +12,7 @@ import (
 
 	"importadoraApi/src/core/config"
 	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
 	"importadoraApi/src/features/auth/dtos"
@@ -205,7 +207,7 @@ func (s *AuthService) Refresh(ctx context.Context, req dtos.RefreshRequest, ip, 
 	expiresAt := time.Now().UTC().Add(s.cfg.JWTRefreshTTL)
 
 	var newSessionID int64
-	err = db.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
 		if err := s.authRepo.RevokeRefreshTokenByID(ctx, tx, activeRec.ID); err != nil {
 			return err
 		}
@@ -331,4 +333,74 @@ func (s *AuthService) mapActorToDTO(acc *repositories.ActorAccount) dtos.AuthAct
 		Status:           acc.Status,
 		LastLoginAt:      acc.LastLoginAt,
 	}
+}
+
+// UpdateMe actualiza los datos del perfil propio del actor (nombre, apellido, email, teléfono)
+func (s *AuthService) UpdateMe(ctx context.Context, actor *middlewares.ActorContext, req dtos.UpdateMeRequest) (*dtos.AuthMeResponse, error) {
+	if actor == nil {
+		return nil, utils.Unauthorized("UNAUTHORIZED", "Sesión no autenticada")
+	}
+
+	acc, err := s.authRepo.FindActorByID(ctx, s.pool, actor.ActorType, actor.ActorID)
+	if err != nil || acc == nil {
+		return nil, utils.NotFound("ACTOR_NOT_FOUND", "No se encontró el perfil del usuario autenticado.")
+	}
+
+	if err := s.authRepo.UpdateActorProfile(ctx, s.pool, actor.ActorType, actor.ActorID, req.FirstName, req.LastName, req.Email, req.Phone); err != nil {
+		return nil, utils.NormalizeDBError(err, "No se pudo actualizar el perfil.")
+	}
+
+	// Registrar en auditoría
+	_ = s.auditRepo.Insert(ctx, s.pool, repositories.AuditLogInput{
+		ActorType: actor.ActorType,
+		ActorID:   actor.ActorID,
+		Entity:    "auth",
+		EntityID:  &actor.ActorID,
+		Action:    "auth:update_profile",
+		Changes:   map[string]any{"firstName": req.FirstName, "lastName": req.LastName, "email": req.Email},
+	})
+
+	return s.GetMe(ctx, actor.ActorType, actor.ActorID)
+}
+
+// UpdatePassword actualiza la contraseña validando la contraseña actual y revocando otras sesiones
+func (s *AuthService) UpdatePassword(ctx context.Context, actor *middlewares.ActorContext, req dtos.UpdatePasswordRequest) error {
+	if actor == nil {
+		return utils.Unauthorized("UNAUTHORIZED", "Sesión no autenticada")
+	}
+
+	acc, err := s.authRepo.FindActorByID(ctx, s.pool, actor.ActorType, actor.ActorID)
+	if err != nil || acc == nil {
+		return utils.NotFound("ACTOR_NOT_FOUND", "No se encontró el perfil del usuario autenticado.")
+	}
+
+	// Verificar contraseña actual con bcrypt
+	if !utils.CheckPassword(acc.PasswordHash, req.CurrentPassword) {
+		return utils.BadRequest("INVALID_CURRENT_PASSWORD", "La contraseña actual es incorrecta.")
+	}
+
+	// Generar nuevo hash
+	newHash, err := utils.HashPassword(req.NewPassword)
+	if err != nil {
+		return utils.Internal("Error al encriptar la nueva contraseña.", err)
+	}
+
+	if err := s.authRepo.UpdateActorPassword(ctx, s.pool, actor.ActorType, actor.ActorID, newHash); err != nil {
+		return utils.NormalizeDBError(err, "No se pudo actualizar la contraseña.")
+	}
+
+	// Cierra las demás sesiones del actor; la actual sigue viva para no sacarlo al guardar
+	_ = s.authRepo.RevokeOtherActorSessions(ctx, s.pool, actor.ActorType, actor.ActorID, actor.SessionID)
+
+	// Registrar en auditoría
+	_ = s.auditRepo.Insert(ctx, s.pool, repositories.AuditLogInput{
+		ActorType: actor.ActorType,
+		ActorID:   actor.ActorID,
+		Entity:    "auth",
+		EntityID:  &actor.ActorID,
+		Action:    "auth:change_password",
+		Changes:   map[string]any{"status": "password_changed_sessions_revoked"},
+	})
+
+	return nil
 }

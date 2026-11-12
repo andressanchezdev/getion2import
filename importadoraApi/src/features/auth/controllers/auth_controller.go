@@ -99,3 +99,42 @@ func (c *AuthController) GetMe(ctx echo.Context) error {
 	return utils.RespondOK(ctx, "Perfil recuperado", res)
 }
 
+// UpdateMe PUT /auth/me (Requiere Authenticate middleware)
+func (c *AuthController) UpdateMe(ctx echo.Context) error {
+	actorCtx := middlewares.GetActor(ctx)
+	if actorCtx == nil {
+		return utils.Unauthorized("UNAUTHORIZED", "Sesión no autenticada")
+	}
+
+	var req dtos.UpdateMeRequest
+	if err := utils.BindJSON(ctx, &req); err != nil {
+		return err
+	}
+
+	res, err := c.authService.UpdateMe(ctx.Request().Context(), actorCtx, req)
+	if err != nil {
+		return err
+	}
+
+	return utils.RespondOK(ctx, "Perfil actualizado exitosamente", res)
+}
+
+// UpdatePassword PUT /auth/me/password (Requiere Authenticate middleware)
+func (c *AuthController) UpdatePassword(ctx echo.Context) error {
+	actorCtx := middlewares.GetActor(ctx)
+	if actorCtx == nil {
+		return utils.Unauthorized("UNAUTHORIZED", "Sesión no autenticada")
+	}
+
+	var req dtos.UpdatePasswordRequest
+	if err := utils.BindJSON(ctx, &req); err != nil {
+		return err
+	}
+
+	if err := c.authService.UpdatePassword(ctx.Request().Context(), actorCtx, req); err != nil {
+		return err
+	}
+
+	return utils.RespondOK[any](ctx, "Contraseña actualizada exitosamente. Por seguridad, se han cerrado las demás sesiones activas.", nil)
+}
+

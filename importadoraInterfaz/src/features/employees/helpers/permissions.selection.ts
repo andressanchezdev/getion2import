@@ -75,7 +75,7 @@ export const isModuleFull = (permission: ModulePermission, item: NavItem): boole
   item.subitems.length > 0 && item.subitems.every((sub) => isScreenOn(permission, sub.id))
 
 // prende o apaga todas las pantallas de un módulo
-const setModule = (permission: ModulePermission, item: NavItem, on: boolean): ModulePermission =>
+export const setModule = (permission: ModulePermission, item: NavItem, on: boolean): ModulePermission =>
   item.subitems.reduce((acc, sub) => withScreen(acc, { ...screenOf(acc, sub.id), ...fullAccess(on) }), permission)
 
 // si el módulo está completo lo apaga y si no lo prende completo

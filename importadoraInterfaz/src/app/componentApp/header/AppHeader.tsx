@@ -6,6 +6,7 @@ import { Pill } from '@/global/components/UI/atoms/Pill'
 import { CompanySelector } from './company/CompanySelector'
 import { WarehouseSelector } from './warehouse/WarehouseSelector'
 import { NotificationsPopover } from '@/features/notifications'
+import { RealtimeStatus } from '@/features/realtime'
 
 export const AppHeader: React.FC = () => {
   const { activeModule, activeSubitem, activeWarehouseId } = useAppSelector((state) => state.ui)
@@ -26,6 +27,8 @@ export const AppHeader: React.FC = () => {
           {isShiftOpen ? 'Turno abierto' : 'Turno cerrado'}
         </Pill>
       )}
+      {/* Indicador discreto de conexión en tiempo real (sección 16.7) */}
+      <RealtimeStatus />
       {/* Notificaciones del usuario */}
       <NotificationsPopover />
     </div>

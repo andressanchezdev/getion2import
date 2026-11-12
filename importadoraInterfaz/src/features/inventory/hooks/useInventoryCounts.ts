@@ -1,9 +1,11 @@
 // useInventoryCounts.ts · hook para la gestión del flujo de conteos físicos de inventario
 // conecta con: inventory.counts.service, useAppSelector (bodega activa)
 import { useState, useCallback, useEffect } from 'react'
+import { isRealtimeLive } from '@/features/realtime/helpers/realtime.guards'
 import { useAppSelector } from '@/global/hooks/store/useRedux'
 import { toast } from '@/global/helpers/feedback/toast'
 import type { PaginatorMetadata } from '@/api'
+import type { CountRealtimeEvent } from '../types/inventory.types'
 import type {
   CountStatus,
   CreateCountInput,
@@ -19,8 +21,25 @@ import {
   verifyCount as apiVerifyCount,
 } from '../services/inventory.counts.service'
 
+// aplica al detalle abierto las cantidades que alguien acaba de contar (por fila de stock)
+export const applyCountProgress = (count: InventoryCount, countId: number, items: { stockId: number; countedQty: number | null }[], by: string): InventoryCount => {
+  if (count.id !== countId || !count.items) return count
+  const byStock = new Map(items.map((item) => [item.stockId, item.countedQty]))
+  return {
+    ...count,
+    items: count.items.map((item) => {
+      if (!byStock.has(item.stockId)) return item
+      const countedQty = byStock.get(item.stockId) ?? null
+      return { ...item, countedQty, difference: countedQty === null ? null : countedQty - item.expectedQty, employeeName: by }
+    }),
+  }
+}
+
 export const useInventoryCounts = () => {
   const activeWarehouseId = useAppSelector((state) => state.ui.activeWarehouseId)
+  // con el socket en vivo los cambios llegan por evento (count.*) y no hace falta volver a pedir la lista ni el detalle
+  const live = useAppSelector(isRealtimeLive)
+  const countEvent = useAppSelector((state) => (state as { inventory?: { countEvent?: CountRealtimeEvent | null } }).inventory?.countEvent ?? null)
   const [counts, setCounts] = useState<InventoryCount[]>([])
   const [meta, setMeta] = useState<PaginatorMetadata | null>(null)
   const [page, setPage] = useState(1)
@@ -63,6 +82,36 @@ export const useInventoryCounts = () => {
     }
   }, [loadCounts])
 
+  // tiempo real: aplica el último evento count.* a la lista y al detalle abierto, sin peticiones
+  useEffect(() => {
+    if (!countEvent) return
+    let cancelled = false
+    void Promise.resolve().then(() => {
+      if (cancelled) return
+      if (countEvent.kind === 'created') {
+        const created = countEvent.count
+        const sameWarehouse = !activeWarehouseId || Number(activeWarehouseId) === created.warehouseId
+        if (sameWarehouse && page === 1 && (statusFilter === '' || statusFilter === 'pending')) {
+          setCounts((prev) => (prev.some((count) => count.id === created.id) ? prev : [created, ...prev]))
+        }
+        return
+      }
+      if (countEvent.kind === 'progress') {
+        setSelectedCount((prev) => (prev ? applyCountProgress(prev, countEvent.countId, countEvent.items, countEvent.by) : prev))
+        return
+      }
+      const patch = (count: InventoryCount): InventoryCount =>
+        count.id === countEvent.countId ? { ...count, status: countEvent.to, closedAt: countEvent.to === 'corroborated' ? countEvent.at : count.closedAt } : count
+      setCounts((prev) => prev.map(patch))
+      setSelectedCount((prev) => (prev ? patch(prev) : prev))
+    })
+    return () => {
+      cancelled = true
+    }
+    // solo reacciona a un evento nuevo: los filtros se leen como estén en ese momento
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [countEvent])
+
   const openDetail = async (countId: number) => {
     setLoadingDetail(true)
     try {
@@ -83,7 +132,7 @@ export const useInventoryCounts = () => {
     try {
       const created = await apiCreateCount(input)
       toast.success(`Conteo #${created.id} iniciado con éxito.`)
-      await loadCounts()
+      if (!live) await loadCounts()
       return created
     } catch {
       toast.error('No se pudo iniciar el conteo físico.')
@@ -95,8 +144,10 @@ export const useInventoryCounts = () => {
     try {
       await apiUpdateCountItems(countId, items)
       toast.success('Cantidades contadas registradas.')
-      await openDetail(countId)
-      await loadCounts()
+      if (!live) {
+        await openDetail(countId)
+        await loadCounts()
+      }
     } catch {
       toast.error('No se pudieron registrar las cantidades.')
       throw new Error('Error al actualizar cantidades')
@@ -107,8 +158,10 @@ export const useInventoryCounts = () => {
     try {
       await apiVerifyCount(countId)
       toast.success('Conteo físico verificado.')
-      await openDetail(countId)
-      await loadCounts()
+      if (!live) {
+        await openDetail(countId)
+        await loadCounts()
+      }
     } catch {
       toast.error('No se pudo verificar el conteo.')
     }
@@ -118,8 +171,10 @@ export const useInventoryCounts = () => {
     try {
       await apiCorroborateCount(countId)
       toast.success('Conteo corroborado. El inventario ha sido ajustado automáticamente.')
-      await openDetail(countId)
-      await loadCounts()
+      if (!live) {
+        await openDetail(countId)
+        await loadCounts()
+      }
     } catch {
       toast.error('No se pudo corroborar el conteo.')
     }

@@ -9,9 +9,11 @@ import { locationLabel, type WarehouseLocation } from '@/features/locations'
 import eyeIcon from '@/assets/icons/eye.svg?raw'
 import editIcon from '@/assets/icons/edit.svg?raw'
 import copyIcon from '@/assets/icons/copy.svg?raw'
-import refreshIcon from '@/assets/icons/refresh.svg?raw'
+import swapIcon from '@/assets/icons/swap.svg?raw'
 import trashIcon from '@/assets/icons/trash.svg?raw'
 import qrIcon from '@/assets/icons/qr-code.svg?raw'
+import { CopyableCell } from '@/global/components/UI/molecules/table/CopyableCell'
+import { StatusSelect } from '@/global/components/UI/molecules/table/StatusSelect'
 
 interface Props {
   location: WarehouseLocation
@@ -32,24 +34,24 @@ export const LocationRow: React.FC<Props> = ({ location, warehouseId, warehouseN
   const occupied = location.units > 0 || location.productCount > 0
   return (
     <tr className={location.isActive ? '' : 'wh-row-inactive'}>
-      <td><span className="inv-code wh-code">{location.code}</span></td>
+      <td>
+        <span className="inv-code wh-code">
+          <CopyableCell text={location.code} label="Ubicación" />
+        </span>
+      </td>
       <td>{location.description || '—'}</td>
       <td className="wh-num table-amount">
         <strong>{location.units}</strong> uds <small className="wh-skus">({location.productCount} skus)</small>
       </td>
       <td>{occupied ? <Pill tone="amber">Ocupada</Pill> : <Pill tone="green">Desocupada / Libre</Pill>}</td>
       <td>
-        <select
-          className={`inv-status-select is-${location.isActive ? 'active' : 'inactive'}`}
-          value={location.isActive ? 'active' : 'inactive'}
+        <StatusSelect
+          value={location.isActive}
           disabled={!canUpdate}
-          aria-label={`Estado de ${location.code}`}
+          ariaLabel={`Estado de ${location.code}`}
           title={canUpdate ? 'Cambiar estado' : 'Requiere permiso para editar'}
-          onChange={(e) => onStatus(location, e.target.value === 'active')}
-        >
-          <option value="active">Activa</option>
-          <option value="inactive">Inactiva</option>
-        </select>
+          onChange={(next) => onStatus(location, next === 'active')}
+        />
       </td>
       <td>
         <RowActions
@@ -63,7 +65,7 @@ export const LocationRow: React.FC<Props> = ({ location, warehouseId, warehouseN
               key: 'edit', label: 'Editar ubicación', icon: editIcon, visible: canUpdate,
               onClick: () => dispatch(openDrawerForm({ kind: 'locationForm', payload: { warehouseId, warehouseName, location } })),
             },
-            { key: 'relocate', label: 'Reubicar productos', icon: refreshIcon, visible: canUpdate, onClick: () => onRelocate(location) },
+            { key: 'relocate', label: 'Reubicar productos', icon: swapIcon, visible: canUpdate, onClick: () => onRelocate(location) },
             { key: 'clone', label: 'Copiar / Clonar ubicación (vacía)', icon: copyIcon, visible: canCreate, onClick: () => onClone(location) },
             { key: 'delete', label: 'Eliminar ubicación (solo si está vacía)', icon: trashIcon, tone: 'danger', visible: canDelete, onClick: () => onDelete(location) },
           ]}

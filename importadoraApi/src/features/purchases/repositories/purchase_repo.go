@@ -396,12 +396,14 @@ func (r *PurchaseRepository) FindOpenCashSession(ctx context.Context, q db.DBExe
 }
 
 // InsertReceptionExpense registra, como gasto del turno de caja, el pago de una recepción de compra (queda ligado a la orden).
-func (r *PurchaseRepository) InsertReceptionExpense(ctx context.Context, q db.DBExecutor, sessionID, purchaseID int64, receipt, concept string, cash float64) error {
-	_, err := q.Exec(ctx, `
+func (r *PurchaseRepository) InsertReceptionExpense(ctx context.Context, q db.DBExecutor, sessionID, purchaseID int64, receipt, concept string, cash float64) (int64, error) {
+	var id int64
+	err := q.QueryRow(ctx, `
 		INSERT INTO cash_session_expenses (cash_session_id, expense_type, receipt_number, concept, cash_amount, transfer_amount, purchase_id)
 		VALUES ($1, 'merchandise_arrival', NULLIF($2, ''), $3, $4, 0, $5)
-	`, sessionID, receipt, concept, cash, purchaseID)
-	return err
+		RETURNING id
+	`, sessionID, receipt, concept, cash, purchaseID).Scan(&id)
+	return id, err
 }
 
 // AddPaidTotal suma lo pagado a la orden de compra.

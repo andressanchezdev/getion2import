@@ -1,0 +1,37 @@
+/* RealtimeStatus.css · indicador de conexión en tiempo real en AppHeader (sección 16.7) · solo usa tokens de styles/tokens.css */
+.realtime-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-circle);
+  flex-shrink: 0;
+}
+
+.realtime-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-circle);
+  transition: background-color var(--motion-base);
+}
+
+.realtime-status--green .realtime-status-dot {
+  background-color: var(--c-emerald-500);
+}
+
+.realtime-status--amber .realtime-status-dot {
+  background-color: var(--c-amber-500);
+  animation: var(--motion-pulse);
+}
+
+.realtime-status--gray .realtime-status-dot {
+  background-color: var(--c-slate-400);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .realtime-status--amber .realtime-status-dot {
+    animation: none;
+  }
+}
+

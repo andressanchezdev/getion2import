@@ -3,13 +3,15 @@
 // ojo: carga y lista vacía se muestran dentro de la misma tabla para que no salte el diseño
 import React, { useState } from 'react'
 import { RowActions } from '@/global/components/UI/molecules/table/RowActions'
+import { ActionsHeader } from '@/global/components/UI/molecules/table/ActionsHeader'
+import { CopyableCell } from '@/global/components/UI/molecules/table/CopyableCell'
+import { StatusSelect } from '@/global/components/UI/molecules/table/StatusSelect'
 import { usePermissions } from '@/global/hooks/access/usePermissions'
 import eyeIcon from '@/assets/icons/eye.svg?raw'
 import editIcon from '@/assets/icons/edit.svg?raw'
-import refreshIcon from '@/assets/icons/refresh.svg?raw'
 import type { SimpleEmployee } from '../../types/employees.types'
 import { useAppDispatch } from '@/global/hooks/store/useRedux'
-import { setEmployeeStatusThunk, unlockEmployeeThunk } from '../../thunks/employees.thunks'
+import { setEmployeeStatusThunk } from '../../thunks/employees.thunks'
 import './EmployeesTable.css'
 import { usePagedList } from '@/global/hooks/data/usePagedList'
 import { ReasonPrompt } from '@/features/reasonPrompt'
@@ -27,9 +29,9 @@ const COLUMNS = 6
 
 export const EmployeesTable: React.FC<EmployeesTableProps> = ({ employees, loading, onViewPermissions, onEditPermissions }) => {
   const dispatch = useAppDispatch()
-  const { hasScreenAccess, canPerformAction } = usePermissions()
+  const { hasScreenAccess, can } = usePermissions()
   const canViewPermissions = hasScreenAccess('settings', 'rolesPermissions')
-  const canEditPermissions = canPerformAction('settings', 'rolesPermissions', 'update')
+  const canEditPermissions = can('roles:edit')
   const [togglingId, setTogglingId] = useState<number | null>(null)
   const message = loading ? 'Cargando directorio de empleados…' : employees.length === 0 ? 'No se encontraron empleados registrados.' : null
   const { pageItems, meta, setPage } = usePagedList(employees, employees.length)
@@ -42,16 +44,9 @@ export const EmployeesTable: React.FC<EmployeesTableProps> = ({ employees, loadi
     setTogglingId(null)
   }
 
-  // reactivar es directo; desactivar pide el motivo (10-100 caracteres)
-  const handleToggleEmployeeStatus = async (emp: SimpleEmployee) => {
-    if (!canEditPermissions || togglingId === emp.employeeId) return
-    if (emp.isActive) setToDeactivate(emp)
-    else await applyStatus(emp, true)
-  }
-
   return (
     <>
-    <DataTable tableId="employees-employees" className="employees-table">
+      <DataTable tableId="employees-employees" className="employees-table">
         <thead>
           <tr>
             <th>Empleado</th>
@@ -59,7 +54,7 @@ export const EmployeesTable: React.FC<EmployeesTableProps> = ({ employees, loadi
             <th>Sede</th>
             <th>Modalidad</th>
             <th>Estado</th>
-            <th>Acciones</th>
+            <ActionsHeader />
           </tr>
         </thead>
         <tbody>
@@ -76,7 +71,9 @@ export const EmployeesTable: React.FC<EmployeesTableProps> = ({ employees, loadi
                     <div className="employees-table-person">
                       <div className="employees-table-person-text">
                         <span className="employees-table-name">{fullName}</span>
-                        <span className="employees-table-contact">CC {employee.identification} · {employee.email}</span>
+                        <span className="employees-table-contact">
+                          CC <CopyableCell text={employee.identification} label="Cédula" /> · {employee.email}
+                        </span>
                       </div>
                     </div>
                   </td>
@@ -84,22 +81,20 @@ export const EmployeesTable: React.FC<EmployeesTableProps> = ({ employees, loadi
                   <td>{employee.warehouseName || `Sede #${employee.primaryWarehouseId || 'General'}`}</td>
                   <td>{employee.workModality || 'Presencial'}</td>
                   <td>
-                    <button
-                      type="button"
-                      className={`inv-status-select ${employee.isActive ? 'is-active' : 'is-inactive'}`}
-                      onClick={() => handleToggleEmployeeStatus(employee)}
+                    <StatusSelect
+                      value={employee.isActive ? 'active' : 'inactive'}
                       disabled={!canEditPermissions || togglingId === employee.employeeId}
-                      title={canEditPermissions ? 'Haz clic para cambiar estado' : undefined}
-                    >
-                      {employee.isActive ? 'Activo' : 'Inactivo'}
-                    </button>
+                      onChange={(next) => {
+                        if (next === 'inactive') setToDeactivate(employee)
+                        else void applyStatus(employee, true)
+                      }}
+                    />
                   </td>
                   <td>
                     <RowActions
                       actions={[
                         { key: 'view', label: 'Ver detalle', icon: eyeIcon, visible: canViewPermissions, onClick: () => onViewPermissions(employee) },
                         { key: 'edit', label: 'Editar permisos', icon: editIcon, visible: canEditPermissions, onClick: () => onEditPermissions(employee) },
-                        { key: 'unlock', label: 'Desbloquear cuenta', icon: refreshIcon, visible: canEditPermissions, onClick: () => dispatch(unlockEmployeeThunk(employee.employeeId)) },
                       ]}
                     />
                   </td>
@@ -109,19 +104,19 @@ export const EmployeesTable: React.FC<EmployeesTableProps> = ({ employees, loadi
           )}
         </tbody>
       </DataTable>
-    <Pagination meta={meta} label="Paginación de empleados" onPageChange={setPage} />
-    <ReasonPrompt
-      open={Boolean(toDeactivate)}
-      title="Desactivar empleado"
-      message={`¿Desactivar a "${toDeactivate?.name ?? ''}"? Se cerrarán sus sesiones.`}
-      confirmLabel="Desactivar"
-      onConfirm={async (reason) => {
-        const emp = toDeactivate
-        setToDeactivate(null)
-        if (emp) await applyStatus(emp, false, reason)
-      }}
-      onCancel={() => setToDeactivate(null)}
-    />
+      <Pagination meta={meta} label="Paginación de empleados" onPageChange={setPage} />
+      <ReasonPrompt
+        open={Boolean(toDeactivate)}
+        title="Desactivar empleado"
+        message={`¿Desactivar a "${toDeactivate?.name ?? ''}"? Se cerrarán sus sesiones.`}
+        confirmLabel="Desactivar"
+        onConfirm={async (reason) => {
+          const emp = toDeactivate
+          setToDeactivate(null)
+          if (emp) await applyStatus(emp, false, reason)
+        }}
+        onCancel={() => setToDeactivate(null)}
+      />
     </>
   )
 }

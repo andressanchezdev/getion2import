@@ -7,7 +7,7 @@ import { backupsService, type BackupItem } from '../services/backups.service'
 
 export const BackupTab: React.FC = () => {
   const [backups, setBackups] = useState<BackupItem[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [restoringId, setRestoringId] = useState<string | null>(null)
 
@@ -24,7 +24,21 @@ export const BackupTab: React.FC = () => {
   }
 
   useEffect(() => {
-    void loadBackups()
+    let active = true
+    backupsService.list().then((data) => {
+      if (active) {
+        setBackups(data)
+        setLoading(false)
+      }
+    }).catch(() => {
+      if (active) {
+        toast.error('No se pudo cargar la lista de respaldos')
+        setLoading(false)
+      }
+    })
+    return () => {
+      active = false
+    }
   }, [])
 
   const handleCreateBackup = async () => {
@@ -159,4 +173,3 @@ export const BackupTab: React.FC = () => {
     </div>
   )
 }
-

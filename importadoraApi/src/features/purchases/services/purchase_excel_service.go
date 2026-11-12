@@ -11,11 +11,14 @@ import (
 	"strconv"
 	"strings"
 
+	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/events"
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
 	"importadoraApi/src/features/purchases/dtos"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/xuri/excelize/v2"
 )
 
@@ -236,6 +239,24 @@ func (s *PurchaseService) UploadSupplierCatalogExcel(ctx context.Context, actor 
 			warnings = append(warnings, fmt.Sprintf("Fila %d: Error al vincular producto '%s': %v", rowIdx+1, pCode, err))
 		} else {
 			updated++
+		}
+	}
+
+	// la importación guarda fila por fila (una fila mala no tumba las demás); al final se avisa una vez lo que quedó vinculado
+	if updated > 0 {
+		importWarnings := warnings
+		if importWarnings == nil {
+			importWarnings = []string{}
+		}
+		if err := db.WithTx(ctx, s.pool, func(ctx context.Context, _ pgx.Tx) error {
+			s.events.Record(ctx, events.NewSupplierCatalogImported(supplier.CompanyID, events.SupplierCatalogImportedData{
+				SupplierID: supplier.ID,
+				Linked:     updated,
+				Warnings:   importWarnings,
+			}))
+			return nil
+		}); err != nil {
+			return nil, utils.Internal("Error al avisar la importación del catálogo.", err)
 		}
 	}
 

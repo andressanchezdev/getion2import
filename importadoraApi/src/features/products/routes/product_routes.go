@@ -14,21 +14,21 @@ import (
 func RegisterRoutes(e *echo.Echo, authMiddleware *middlewares.AuthMiddleware, ctrl *controllers.ProductController) {
 	p := e.Group("/products", authMiddleware.Authenticate())
 	{
-		p.GET("", ctrl.Get)
-		p.GET("/search", ctrl.Search)
-		p.GET("/thumbnails", ctrl.Thumbnails)
-		p.GET("/:id", ctrl.GetByID)
+		p.GET("", ctrl.Get, authMiddleware.RequireAnyPermission("products:view", "catalog:view", "quotations:create", "transfers:view", "transfers:create", "stock:view", "purchases:create"))
+		p.GET("/search", ctrl.Search, authMiddleware.RequireAnyPermission("products:view", "catalog:view", "quotations:create", "transfers:view", "transfers:create", "stock:view", "purchases:create"))
+		p.GET("/thumbnails", ctrl.Thumbnails, authMiddleware.RequireAnyPermission("products:view", "catalog:view", "quotations:create", "transfers:view", "transfers:create", "stock:view", "purchases:create"))
+		p.GET("/:id", ctrl.GetByID, authMiddleware.RequireAnyPermission("products:view_detail", "catalog:view"))
 		p.POST("", ctrl.Create, authMiddleware.RequirePermission("products", "create"))
 		p.PUT("/:id", ctrl.Update, authMiddleware.RequirePermission("products", "edit"))
 		p.DELETE("/:id", ctrl.Delete, authMiddleware.RequirePermission("products", "delete"))
 
 		// Sub-recursos de códigos alternos
-		p.GET("/:id/codes", ctrl.ListCodes)
+		p.GET("/:id/codes", ctrl.ListCodes, authMiddleware.RequirePermission("products", "view_detail"))
 		p.POST("/:id/codes", ctrl.CreateCode, authMiddleware.RequirePermission("products", "edit"))
 		p.DELETE("/:id/codes/:codeId", ctrl.DeleteCode, authMiddleware.RequirePermission("products", "edit"))
 
 		// Sub-recursos de proveedores asignados al producto
-		p.GET("/:id/suppliers", ctrl.ListSuppliers)
+		p.GET("/:id/suppliers", ctrl.ListSuppliers, authMiddleware.RequirePermission("products", "view_detail"))
 		p.POST("/:id/suppliers", ctrl.AssignSupplier, authMiddleware.RequirePermission("products", "edit"))
 		p.DELETE("/:id/suppliers/:supplierId", ctrl.RemoveSupplier, authMiddleware.RequirePermission("products", "edit"))
 	}

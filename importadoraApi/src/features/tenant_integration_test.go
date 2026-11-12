@@ -20,7 +20,7 @@ import (
 func newSaleService(t *testing.T) (*saleServices.SaleService, func(context.Context) error) {
 	t.Helper()
 	pool := testPool(t)
-	svc := saleServices.NewSaleService(pool, saleRepos.NewSaleRepository(), inventoryRepos.NewInventoryRepository(), authRepos.NewAuditRepository())
+	svc := saleServices.NewSaleService(pool, saleRepos.NewSaleRepository(), inventoryRepos.NewInventoryRepository(), authRepos.NewAuditRepository(), nil)
 	return svc, func(ctx context.Context) error { return pool.Ping(ctx) }
 }
 
@@ -35,7 +35,7 @@ func TestSaleAndInvoiceAreScopedByCompany(t *testing.T) {
 	if _, err := svc.FindByID(ctx, otherCompany, 1); err == nil {
 		t.Error("otra compañía NO debería ver el pedido 1")
 	}
-	if err := svc.AdvanceToVerification(ctx, otherCompany, 1, 1); err == nil {
+	if _, err := svc.AdvanceToVerification(ctx, otherCompany, 1, 1); err == nil {
 		t.Error("otra compañía NO debería poder avanzar el pedido 1")
 	}
 	if _, err := svc.FindInvoiceByID(ctx, myCompany, 1); err != nil {

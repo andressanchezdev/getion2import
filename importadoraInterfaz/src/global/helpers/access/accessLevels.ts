@@ -22,6 +22,10 @@ export const SCREEN_LEVELS: Record<string, ActorLevel[]> = {
   superadmin: ['superadmin'], // gestión superadmin: solo desarrolladores y administradores maestros globales
 }
 
+// pantallas («módulo.pantalla») que todo el personal ve aunque su matriz no las marque: Configuración aloja la cuenta propia (Fase 7)
+// ojo: dentro, cada pestaña revisa su propio permiso (Empresa pide warehouses:view, Protector screensaver:edit, Respaldos solo superadmin)
+export const OPEN_STAFF_SCREENS: ReadonlySet<string> = new Set(['settings.company'])
+
 // nombre del menú para cada nivel cuando no es el mismo: el superadmin ve «Compañías» donde el administrador ve «Sedes»
 const LEVEL_LABELS: Partial<Record<ActorLevel, Record<string, string>>> = {
   superadmin: { 'settings:warehouses': 'Compañías' },

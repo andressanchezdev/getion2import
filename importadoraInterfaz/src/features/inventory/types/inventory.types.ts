@@ -19,6 +19,7 @@ export interface InventoryStockRow {
   sellable: number // lo que realmente se puede vender (físico menos reservado)
   minStock: number
   level: StockLevel
+  version?: string // versión (ISO) de la última actualización recibida por tiempo real
 }
 
 interface TableState<T> {
@@ -44,4 +45,11 @@ export interface InventoryState {
   products: TableState<Product>
   stock: TableState<InventoryStockRow>
   productStock: ProductStockState
+  countEvent: CountRealtimeEvent | null // último evento count.* recibido: useInventoryCounts lo aplica a su lista y a su detalle
 }
+
+// un evento count.* tal como lo necesita la pantalla de conteos; n sube con cada evento para que el hook lo note aunque sea igual al anterior
+export type CountRealtimeEvent =
+  | { n: number; kind: 'created'; count: import('./inventory.counts.types').InventoryCount }
+  | { n: number; kind: 'progress'; countId: number; items: { stockId: number; countedQty: number | null }[]; by: string }
+  | { n: number; kind: 'status'; countId: number; to: import('./inventory.counts.types').CountStatus; at: string }

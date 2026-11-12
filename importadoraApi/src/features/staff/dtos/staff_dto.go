@@ -75,6 +75,7 @@ type RoleResponse struct {
 	Description *string   `json:"description,omitempty"`
 	IsActive    bool      `json:"isActive"`
 	CreatedAt   time.Time `json:"createdAt"`
+	UpdatedAt   time.Time `json:"updatedAt"`
 }
 
 type CreateRoleRequest struct {
@@ -193,10 +194,4 @@ type SalespersonResponse struct {
 	WarehouseName *string `json:"warehouseName,omitempty"`
 }
 
-type UnlockEmployeeResponse struct {
-	EmployeeID int64     `json:"employeeId"`
-	Email      string    `json:"email"`
-	Message    string    `json:"message"`
-	UnlockedAt time.Time `json:"unlockedAt"`
-}
 

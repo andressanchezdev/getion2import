@@ -19,7 +19,7 @@ export const QuotationCartDrawer: React.FC = () => {
   const lines = useAppSelector(selectDraftLines)
   const total = useAppSelector(selectDraftTotal)
   const { subtotal, tax } = splitIncludedTax(total)
-  const canQuote = usePermissions().canPerformAction('shop', 'orders', 'create')
+  const canQuote = usePermissions().can('quotations:create')
 
   const continueToCustomer = () =>
     dispatch(

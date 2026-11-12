@@ -18,8 +18,8 @@ import plusIcon from '@/assets/icons/plus.svg?raw'
 export const CustomersScreen: React.FC = () => {
   const dispatch = useAppDispatch()
   useCustomersLoader()
-  const { canPerformAction } = usePermissions()
-  const canCreate = canPerformAction('thirdParties', 'customers', 'create')
+  const { can } = usePermissions()
+  const canCreate = can('customers:create')
 
   const query = useAppSelector(selectCustomersQuery)
   const meta = useAppSelector(selectCustomersMeta)

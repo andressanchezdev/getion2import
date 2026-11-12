@@ -22,6 +22,9 @@ import { usePaymentsHistory } from '../../hooks/usePaymentsHistory'
 import { rejectPaymentThunk, reopenPaymentThunk, verifyPaymentThunk } from '../../thunks/wallet.payments.thunks'
 import type { AbonoFilters, AbonoRecord } from '../../types/wallet.types'
 import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
+import { ActionsHeader } from '@/global/components/UI/molecules/table/ActionsHeader'
+import { CopyableCell } from '@/global/components/UI/molecules/table/CopyableCell'
+import { StatusSelect } from '@/global/components/UI/molecules/table/StatusSelect'
 import { Icon } from '@/global/components/UI/atoms/Icon'
 import plusIcon from '@/assets/icons/plus.svg?raw'
 
@@ -38,7 +41,9 @@ export const AbonosTable: React.FC = () => {
   const warehouses = useAppSelector((state) => state.warehouses.items)
   const [filters, setFilters] = useState<AbonoFilters>(INITIAL_ABONO_FILTERS)
   const [toReject, setToReject] = useState<AbonoRecord | null>(null)
-  const canEditStatus = usePermissions().canPerformAction('wallet', 'paymentVerification', 'update')
+  const { can } = usePermissions()
+  const canEditStatus = can('payments:verify')
+  const canCreate = can('payments:create')
 
   // a qué estados puede pasar un abono: en revisión → verificado o rechazado; rechazado → de nuevo en revisión; lo demás no cambia
   const statusChoices = (abono: AbonoRecord): AbonoRecord['status'][] | null => (abono.status === 'pending' ? ['pending', 'verified', 'rejected'] : abono.status === 'rejected' ? ['rejected', 'pending'] : null)
@@ -69,67 +74,70 @@ export const AbonosTable: React.FC = () => {
           placeholder="Buscar por recibo, cliente, NIT, pedido o referencia…"
           className="abonos-search"
         />
-        <FilterSelect label="Bodega" emptyValue="all" value={filters.warehouse || 'all'} options={warehouseOptions} onChange={(value) => setFilter('warehouse', value || 'all')} />
+        <FilterSelect label="Bodega" allLabel="Todas las bodegas" emptyValue="all" value={filters.warehouse || 'all'} options={warehouseOptions} onChange={(value) => setFilter('warehouse', value || 'all')} />
         <FilterSelect label="Método" emptyValue="all" value={filters.method} options={ABONO_METHOD_OPTIONS} onChange={(value) => setFilter('method', value || 'all')} />
         <FilterSelect label="Estado" emptyValue="all" value={filters.status} options={ABONO_STATUS_OPTIONS} onChange={(value) => setFilter('status', value || 'all')} />
         <span className="abonos-total" title="Total recaudado con los filtros aplicados">
           Total: <strong>{formatCOP(totalAbonos(filtered))}</strong>
         </span>
-        <button type="button" className="btn-primary abonos-create" onClick={() => dispatch(openDrawerForm({ kind: 'createAbono', payload: { onDone: reload } }))}>
-          <Icon svg={plusIcon} /> Crear abono
-        </button>
+        {canCreate && (
+          <button type="button" className="btn-primary abonos-create" onClick={() => dispatch(openDrawerForm({ kind: 'createAbono', payload: { onDone: reload } }))}>
+            <Icon svg={plusIcon} /> Crear abono
+          </button>
+        )}
       </div>
 
       <DataTable tableId="wallet-abonos">
-          <thead>
+        <thead>
+          <tr>
+            <th className="col-priority-high">Recibo</th>
+            <th className="col-priority-medium">Fecha</th>
+            <th className="col-priority-high">Cliente</th>
+            <th className="col-priority-low">Identificación</th>
+            <th className="col-priority-medium">Doc. / Venta</th>
+            <th className="col-priority-high">Método</th>
+            <th className="col-priority-low">Referencia</th>
+            <th className="abonos-num col-priority-high">Monto</th>
+            <th className="col-priority-high">Estado</th>
+            <ActionsHeader className="col-actions" />
+          </tr>
+        </thead>
+        <tbody>
+          {message ? (
             <tr>
-              <th className="col-priority-high">Recibo</th>
-              <th className="col-priority-medium">Fecha</th>
-              <th className="col-priority-high">Cliente</th>
-              <th className="col-priority-low">Identificación</th>
-              <th className="col-priority-medium">Doc. / Venta</th>
-              <th className="col-priority-high">Método</th>
-              <th className="col-priority-low">Referencia</th>
-              <th className="abonos-num col-priority-high">Monto</th>
-              <th className="col-priority-high">Estado</th>
-              <th className="col-actions">Acciones</th>
+              <td colSpan={10} className="abonos-empty">{message}</td>
             </tr>
-          </thead>
-          <tbody>
-            {message ? (
-              <tr>
-                <td colSpan={10} className="abonos-empty">{message}</td>
+          ) : (
+            pageItems.map((abono) => (
+              <tr key={abono.id}>
+                <td className="col-priority-high"><CopyableCell text={abono.serialCode} /></td>
+                <td className="col-priority-medium">{abono.date}</td>
+                <td className="col-priority-high">{abono.customerName}</td>
+                <td className="col-priority-low">{abono.customerDoc ? <CopyableCell text={abono.customerDoc} /> : '—'}</td>
+                <td className="col-priority-medium">{abono.saleSerial ? <CopyableCell text={abono.saleSerial} /> : '—'}</td>
+                <td className="col-priority-high"><Pill tone={abono.method === 'cash' ? 'green' : 'blue'}>{abono.method === 'cash' ? 'Efectivo' : 'Transferencia'}</Pill></td>
+                <td className="col-priority-low">{abono.reference ? <CopyableCell text={abono.reference} /> : '—'}</td>
+                <td className="abonos-num table-amount col-priority-high">{formatCOP(abono.amount)}</td>
+                <td className="col-priority-high">
+                  {canEditStatus && statusChoices(abono) ? (
+                    <StatusSelect
+                      value={abono.status}
+                      options={statusChoices(abono)?.map((status) => ({ value: status, label: STATUS[status].label })) ?? []}
+                      ariaLabel={`Estado del recibo ${abono.serialCode}`}
+                      onChange={(val) => changeStatus(abono, val as AbonoRecord['status'])}
+                    />
+                  ) : (
+                    <Pill tone={STATUS[abono.status].tone}>{STATUS[abono.status].label}</Pill>
+                  )}
+                </td>
+                <td className="col-actions">
+                  <RowActions actions={[{ key: 'detail', label: `Ver detalle del recibo ${abono.serialCode}`, icon: eyeIcon, onClick: () => dispatch(openDrawerForm({ kind: 'abonoDetail', payload: abono })) }]} />
+                </td>
               </tr>
-            ) : (
-              pageItems.map((abono) => (
-                <tr key={abono.id}>
-                  <td className="col-priority-high"><strong>{abono.serialCode}</strong></td>
-                  <td className="col-priority-medium">{abono.date}</td>
-                  <td className="col-priority-high">{abono.customerName}</td>
-                  <td className="col-priority-low">{abono.customerDoc}</td>
-                  <td className="col-priority-medium">{abono.saleSerial || '—'}</td>
-                  <td className="col-priority-high"><Pill tone={abono.method === 'cash' ? 'green' : 'blue'}>{abono.method === 'cash' ? 'Efectivo' : 'Transferencia'}</Pill></td>
-                  <td className="col-priority-low">{abono.reference || '—'}</td>
-                  <td className="abonos-num table-amount col-priority-high">{formatCOP(abono.amount)}</td>
-                  <td className="col-priority-high">
-                    {canEditStatus && statusChoices(abono) ? (
-                      <select className={`ui-pill ui-pill-${STATUS[abono.status].tone} abonos-status-select`} value={abono.status} aria-label={`Estado del recibo ${abono.serialCode}`} onChange={(event) => changeStatus(abono, event.target.value as AbonoRecord['status'])}>
-                        {statusChoices(abono)?.map((status) => (
-                          <option key={status} value={status}>{STATUS[status].label}</option>
-                        ))}
-                      </select>
-                    ) : (
-                      <Pill tone={STATUS[abono.status].tone}>{STATUS[abono.status].label}</Pill>
-                    )}
-                  </td>
-                  <td className="col-actions">
-                    <RowActions actions={[{ key: 'detail', label: `Ver detalle del recibo ${abono.serialCode}`, icon: eyeIcon, onClick: () => dispatch(openDrawerForm({ kind: 'abonoDetail', payload: abono })) }]} />
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </DataTable>
+            ))
+          )}
+        </tbody>
+      </DataTable>
       <Pagination meta={meta} label="Paginación de abonos" onPageChange={setPage} />
       <ReasonPrompt
         open={toReject !== null}

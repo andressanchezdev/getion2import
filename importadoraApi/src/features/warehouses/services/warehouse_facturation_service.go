@@ -8,12 +8,16 @@ import (
 	"strings"
 	"time"
 
+	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/events"
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
 	authRepos "importadoraApi/src/features/auth/repositories"
 	"importadoraApi/src/features/warehouses/dtos"
 	"importadoraApi/src/features/warehouses/repositories"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // GetFacturation consulta los datos fiscales de facturación de la bodega.
@@ -62,6 +66,13 @@ func (s *WarehouseService) UpdateFacturation(ctx context.Context, actor *middlew
 	}
 
 	current, _ := s.warehouseRepo.FindFacturationByWarehouseID(ctx, s.pool, warehouseID)
+	hadExisting := current != nil
+	// foto de los datos fiscales antes de editarlos: de aquí sale changedFields
+	beforeSnap := events.Snapshot(current)
+	wasActive := true
+	if current != nil {
+		wasActive = current.IsActive
+	}
 	if current == nil {
 		current = &repositories.FacturationEntity{
 			CompanyID:       wh.CompanyID,
@@ -168,24 +179,50 @@ func (s *WarehouseService) UpdateFacturation(ctx context.Context, actor *middlew
 		current.NIT = normalizedNIT
 	}
 
-	saved, err := s.warehouseRepo.UpsertFacturation(ctx, s.pool, current)
+	var resp *dtos.WarehouseFacturationResponse
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		saved, err := s.warehouseRepo.UpsertFacturation(ctx, tx, current)
+		if err != nil {
+			return utils.Internal("Error al guardar datos fiscales de facturación.", err)
+		}
+
+		_ = s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
+			CompanyID: &wh.CompanyID,
+			ActorType: actor.ActorType,
+			ActorID:   actor.ActorID,
+			Entity:    "warehouse_facturation",
+			EntityID:  &saved.ID,
+			Action:    "FACTURATION_CONFIGURED",
+			Reason:    "Configuración fiscal de facturación de bodega",
+			IPAddress: ip,
+			UserAgent: ua,
+		})
+
+		resp = s.mapFacturationToDTO(saved)
+		if hadExisting && wasActive != saved.IsActive {
+			s.events.Record(ctx, events.NewEntityStatus(
+				wh.CompanyID,
+				nil,
+				events.EntityRef{Kind: events.KindWarehouseBilling, ID: saved.ID, Version: saved.UpdatedAt},
+				activeStatus(wasActive),
+				activeStatus(saved.IsActive),
+				nil,
+				resp,
+			))
+		} else if hadExisting {
+			// edición sin cambio de estado: viaja la fila ya guardada para que las tablas abiertas se actualicen sin pedirla
+			s.events.Record(ctx, events.NewEntityUpdated(wh.CompanyID, nil, events.EntityRef{Kind: events.KindWarehouseBilling, ID: saved.ID, Version: saved.UpdatedAt}, resp, events.ChangedFields(beforeSnap, saved)))
+		} else {
+			// la bodega no tenía datos fiscales: es una creación
+			s.events.Record(ctx, events.NewEntityCreated(wh.CompanyID, nil, events.EntityRef{Kind: events.KindWarehouseBilling, ID: saved.ID, Version: saved.UpdatedAt}, resp))
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, utils.Internal("Error al guardar datos fiscales de facturación.", err)
+		return nil, err
 	}
 
-	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
-		CompanyID: &wh.CompanyID,
-		ActorType: actor.ActorType,
-		ActorID:   actor.ActorID,
-		Entity:    "warehouse_facturation",
-		EntityID:  &saved.ID,
-		Action:    "FACTURATION_CONFIGURED",
-		Reason:    "Configuración fiscal de facturación de bodega",
-		IPAddress: ip,
-		UserAgent: ua,
-	})
-
-	return s.mapFacturationToDTO(saved), nil
+	return resp, nil
 }
 
 // ListDocSeries lista los consecutivos y series configurados para la bodega o compañía.
@@ -235,7 +272,22 @@ func (s *WarehouseService) UpdateDocSeries(ctx context.Context, actor *middlewar
 		}
 	}
 
-	updated, err := s.warehouseRepo.UpdateDocSeries(ctx, s.pool, id, req.Prefix, req.NextNumber)
+	updated, err := db.WithTxValue(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) (*repositories.DocSeriesEntity, error) {
+		row, err := s.warehouseRepo.UpdateDocSeries(ctx, tx, id, req.Prefix, req.NextNumber)
+		if err != nil {
+			return nil, err
+		}
+		changed := make([]string, 0, 2)
+		if row.Prefix != current.Prefix {
+			changed = append(changed, "prefix")
+		}
+		if row.NextNumber != current.NextNumber {
+			changed = append(changed, "nextNumber")
+		}
+		s.events.Record(ctx, events.NewEntityUpdated(row.CompanyID, nil, events.EntityRef{Kind: events.KindDocSeries, ID: row.ID, Version: time.Now().UTC()},
+			dtos.DocSeriesResponse{ID: row.ID, CompanyID: row.CompanyID, WarehouseID: row.WarehouseID, DocType: row.DocType, Prefix: row.Prefix, NextNumber: row.NextNumber}, changed))
+		return row, nil
+	})
 	if err != nil {
 		return nil, utils.Internal("Error al actualizar la serie numérica.", err)
 	}

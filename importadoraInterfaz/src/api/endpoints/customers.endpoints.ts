@@ -12,5 +12,6 @@ export const CUSTOMERS_ENDPOINTS = {
     DOCUMENTS: (id: number | string) => `/customers/${id}/documents`,
     DOCUMENT_RENEW: (id: number | string, docId: number | string) => `/customers/${id}/documents/${docId}/renew`,
     DOCUMENT_BY_ID: (id: number | string, docId: number | string) => `/customers/${id}/documents/${docId}`,
+    DOCUMENT_FILE: (id: number | string, docId: number | string) => `/customers/${id}/documents/${docId}/file`, // el archivo, con sesión (ya no hay /uploads público)
   },
 } as const

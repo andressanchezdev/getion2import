@@ -26,8 +26,8 @@ func RegisterRoutes(e *echo.Echo, authMiddleware *middlewares.AuthMiddleware, ct
 	// Grupo /roles
 	roles := e.Group("/roles", authMiddleware.Authenticate())
 	{
-		roles.GET("", ctrl.ListRoles)
-		roles.GET("/:id", ctrl.GetRoleByID)
+		roles.GET("", ctrl.ListRoles, authMiddleware.RequireAnyPermission("roles:view", "employees:view"))
+		roles.GET("/:id", ctrl.GetRoleByID, authMiddleware.RequireAnyPermission("roles:view_detail", "employees:view"))
 		roles.POST("", ctrl.CreateRole, authMiddleware.RequirePermission("roles", "create"))
 		roles.PUT("/:id", ctrl.UpdateRole, authMiddleware.RequirePermission("roles", "edit"))
 		roles.DELETE("/:id", ctrl.DeactivateRole, authMiddleware.RequirePermission("roles", "delete"))
@@ -36,31 +36,23 @@ func RegisterRoutes(e *echo.Echo, authMiddleware *middlewares.AuthMiddleware, ct
 	// Grupo /permissions
 	perms := e.Group("/permissions", authMiddleware.Authenticate())
 	{
-		perms.GET("", ctrl.ListPermissions)
+		perms.GET("", ctrl.ListPermissions, authMiddleware.RequireAnyPermission("roles:view", "employees:view"))
 	}
 
 	// Grupo /employees
 	emp := e.Group("/employees", authMiddleware.Authenticate())
 	{
 		emp.GET("", ctrl.ListEmployees, authMiddleware.RequirePermission("employees", "view"))
-		emp.GET("/salespersons", ctrl.ListSalespersons)
-		emp.GET("/:id", ctrl.GetEmployeeByID, authMiddleware.RequirePermission("employees", "view"))
+		emp.GET("/salespersons", ctrl.ListSalespersons, authMiddleware.RequireAnyPermission("employees:view", "orders:view", "quotations:view", "reports:view"))
+		emp.GET("/:id", ctrl.GetEmployeeByID, authMiddleware.RequirePermission("employees", "view_detail"))
 		emp.POST("", ctrl.CreateEmployee, authMiddleware.RequirePermission("employees", "create"))
 		emp.PUT("/:id", ctrl.UpdateEmployee, authMiddleware.RequirePermission("employees", "edit"))
 		emp.DELETE("/:id", ctrl.DeactivateEmployee, authMiddleware.RequirePermission("employees", "delete"))
 
-		// Sub-recursos de credenciales, permisos y desbloqueo
+		// Sub-recursos de credenciales y permisos
 		emp.PUT("/:id/credentials", ctrl.UpdateEmployeeCredentials, authMiddleware.RequirePermission("employees", "edit"))
-		emp.GET("/:id/permissions", ctrl.GetEmployeePermissions, authMiddleware.RequirePermission("employees", "view"))
+		emp.GET("/:id/permissions", ctrl.GetEmployeePermissions, authMiddleware.RequireAnyPermission("employees:view_detail", "roles:view"))
 		emp.PUT("/:id/permissions", ctrl.AssignEmployeePermissions, authMiddleware.RequirePermission("roles", "edit"))
-		emp.POST("/:id/unlock", ctrl.UnlockEmployee, authMiddleware.RequirePermission("employees", "edit"))
 	}
-
-	// Grupo /staff (alias para máxima compatibilidad con frontend y módulos administrativos)
-	staff := e.Group("/staff", authMiddleware.Authenticate())
-	{
-		staff.GET("", ctrl.ListEmployees)
-		staff.GET("/:id", ctrl.GetEmployeeByID)
-		staff.PUT("/:id", ctrl.UpdateEmployee, authMiddleware.RequirePermission("employees", "edit"))
-	}
+	// ojo: el alias /staff se retiró (8.2-7): exponía la lista y el detalle de empleados sin employees:view; el front nunca lo usó
 }

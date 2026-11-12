@@ -1,6 +1,7 @@
 // EditProductPanel · panel lateral para editar los datos básicos, categoría, nuevo y estado de un producto
 // conecta con: useEditProductForm (estado y guardado) y navigation (cerrar el panel)
 import React from 'react'
+import '@/global/components/UI/molecules/form/DrawerFormShell.css'
 import './EditProductPanel.css'
 import { closeDrawerForm } from '@/features/navigation'
 import { useAppDispatch } from '@/global/hooks/store/useRedux'
@@ -19,8 +20,8 @@ export const EditProductPanel: React.FC<EditProductPanelProps> = ({ product }) =
   const { saving } = form
 
   return (
-    <form className="edit-product-panel" onSubmit={form.submit}>
-      <div className="edit-product-body">
+    <form className="drawer-form edit-product-panel" onSubmit={form.submit}>
+      <div className="drawer-form-body edit-product-body">
         {form.error && <div className="form-field-error-msg">{form.error}</div>}
 
         <div className="edit-product-field">
@@ -115,7 +116,7 @@ export const EditProductPanel: React.FC<EditProductPanelProps> = ({ product }) =
         </div>
       </div>
 
-      <div className="edit-product-footer">
+      <div className="drawer-form-footer edit-product-footer">
         <button type="button" className="btn-secondary" disabled={saving} onClick={() => dispatch(closeDrawerForm())}>
           Cancelar
         </button>

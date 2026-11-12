@@ -5,15 +5,32 @@ import { createSlice, isAnyOf, type PayloadAction } from '@reduxjs/toolkit'
 import { logoutThunk } from '@/features/auth'
 import { setActiveWarehouse } from '@/features/navigation'
 import type { Product, ProductPrices } from '@/features/shop'
+import type { StockRowChange } from '@/features/realtime'
+import { isNewer } from '@/global/helpers/realtime/applyVersioned'
 import { INITIAL_INVENTORY_STATE } from '../constants/inventory.constants'
+import { stockLevelOf } from '../helpers/inventory.adapter'
 import { loadProductStockThunk, loadProductsTableThunk, loadStockTableThunk, saveProductPricesThunk } from '../thunks/inventory.thunks'
 
+import type { CountRealtimeEvent } from '../types/inventory.types'
+
 type TableKey = 'products' | 'stock'
+// quita una clave de cada variante de una unión (Omit a secas las mezcla)
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never
 
 export const inventorySlice = createSlice({
   name: 'inventory',
   initialState: INITIAL_INVENTORY_STATE,
   reducers: {
+    // tiempo real (product.prices_changed): las tarifas nuevas del producto en la tabla (la API numera p1 a p4; la app, p0 a p3)
+    productPricesFromEvent: (state, action: PayloadAction<{ productId: number; prices: { p1: number; p2: number; p3: number; p4: number } }>) => {
+      const item = state.products.items.find((p) => String(p.id) === String(action.payload.productId))
+      const { p1, p2, p3, p4 } = action.payload.prices
+      if (item) item.prices = { p0: p1, p1: p2, p2: p3, p3: p4 }
+    },
+    // tiempo real (count.*): guarda el evento para la pantalla de conteos, que tiene su lista en el hook
+    countEventReceived: (state, action: PayloadAction<DistributiveOmit<CountRealtimeEvent, 'n'>>) => {
+      state.countEvent = { ...action.payload, n: (state.countEvent?.n ?? 0) + 1 } as CountRealtimeEvent
+    },
     setInventoryQuery: (state, action: PayloadAction<{ table: TableKey; query: string }>) => {
       state[action.payload.table].query = action.payload.query
       state[action.payload.table].page = 1
@@ -32,6 +49,38 @@ export const inventorySlice = createSlice({
     updateProductLocally: (state, action: PayloadAction<Product>) => {
       const idx = state.products.items.findIndex((p) => String(p.id) === String(action.payload.id))
       if (idx !== -1) state.products.items[idx] = action.payload
+    },
+    // tiempo real (stock.changed): actualiza por stockId las filas que ya están en memoria (tabla de stock y detalle del producto); las demás se ignoran
+    stockRowsChanged: (state, action: PayloadAction<StockRowChange[]>) => {
+      for (const row of action.payload) {
+        const table = state.stock.items.find((item) => item.id === row.stockId)
+        if (table && isNewer(row.version, table.version)) {
+          table.available = row.available
+          table.reserved = row.reserved
+          table.sellable = row.sellable
+          table.minStock = row.minStock
+          table.location = row.location || table.location
+          table.level = stockLevelOf(row.sellable, row.minStock)
+          table.version = row.version
+        }
+        const detail = state.productStock.items.find((item) => item.stockId === row.stockId)
+        if (detail && isNewer(row.version, detail.version)) {
+          detail.available = row.available
+          detail.reserved = row.reserved
+          detail.sellable = row.sellable
+          detail.minStock = row.minStock
+          detail.location = row.location || detail.location
+          detail.version = row.version
+        }
+      }
+    },
+    // tiempo real (entity.status_changed kind=product): la fila del producto cambia de estado si ya está en la tabla
+    productStatusFromEvent: (state, action: PayloadAction<{ id: number; status: 'active' | 'inactive'; version: string }>) => {
+      const item = state.products.items.find((p) => String(p.id) === String(action.payload.id))
+      if (item && isNewer(action.payload.version, item.updatedAt)) {
+        item.status = action.payload.status
+        item.updatedAt = action.payload.version
+      }
     },
   },
   extraReducers: (builder) => {
@@ -90,11 +139,15 @@ export const inventorySlice = createSlice({
 })
 
 export const {
+  countEventReceived,
+  productPricesFromEvent,
   setInventoryQuery,
   setInventoryPage,
   updateProductStatusLocally,
   updateProductPricesLocally,
   updateProductLocally,
+  stockRowsChanged,
+  productStatusFromEvent,
 } = inventorySlice.actions
 export const inventoryReducer = inventorySlice.reducer
 export default inventorySlice.reducer

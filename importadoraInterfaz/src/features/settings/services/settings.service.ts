@@ -1,10 +1,10 @@
-// settings.service · llamadas al backend de configuración: la empresa (/companies/:id), la cuenta del usuario (/employees/:id) y el protector (/settings/screensaver)
-// conecta con: api/client y api/config; las usan settings.thunks
-// ojo: solo HTTP; cambiar nombre, correo o clave exige el permiso employees:edit en el backend
+// settings.service · llamadas al backend de configuración: la empresa (/companies/:id), la cuenta propia (/auth/me) y el protector (/settings/screensaver)
+// conecta con: api/client y api/config, auth.service; las usan settings.thunks
 import { apiClient, API_CONFIG, type APIResponse } from '@/api'
+import { updateMeRequest, updatePasswordRequest, type AuthUser } from '@/features/auth'
 import type { CompanyInput, CompanyProfile, ProfileInput, ScreensaverSettings } from '../types/settings.types'
 
-const { COMPANIES, EMPLOYEES, SETTINGS } = API_CONFIG.ENDPOINTS
+const { COMPANIES, SETTINGS } = API_CONFIG.ENDPOINTS
 
 export const fetchCompany = async (companyId: number): Promise<CompanyProfile> => {
   const { data } = await apiClient.get<APIResponse<CompanyProfile>>(COMPANIES.BY_ID(companyId))
@@ -16,12 +16,19 @@ export const updateCompany = async (companyId: number, input: CompanyInput): Pro
   return data.data ?? { id: companyId, ...input }
 }
 
-export const updateProfile = async (userId: number, input: ProfileInput): Promise<void> => {
-  await apiClient.put(EMPLOYEES.BY_ID(userId), input)
+export const updateProfile = async (input: ProfileInput): Promise<AuthUser> => {
+  const parts = input.name.trim().split(/\s+/)
+  const firstName = parts[0] || input.name
+  const lastName = parts.slice(1).join(' ')
+  return await updateMeRequest({
+    firstName,
+    lastName,
+    email: input.email,
+  })
 }
 
-export const updatePassword = async (userId: number, password: string): Promise<void> => {
-  await apiClient.put(EMPLOYEES.CREDENTIALS_OF(userId), { password })
+export const updatePassword = async (currentPassword: string, newPassword: string): Promise<void> => {
+  await updatePasswordRequest(currentPassword, newPassword)
 }
 
 export const fetchScreensaver = async (): Promise<ScreensaverSettings | null> => {

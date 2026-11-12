@@ -1,7 +1,7 @@
 // purchases.slice · órdenes de compra: lista de la bodega o global, detalle y guardados
 // conecta con: purchases.thunks (lo llenan) y purchases.selectors (lo leen); clave 'purchases' en rootReducer (NO se guarda en el navegador)
 // ojo: se vacía al cerrar sesión; al cambiar de compañía rootReducer lo reinicia
-import { createSlice } from '@reduxjs/toolkit'
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import { logoutThunk } from '@/features/auth'
 import { INITIAL_PURCHASES_STATE } from '../constants/purchases.constants'
 import {
@@ -12,6 +12,7 @@ import {
   receivePurchaseThunk,
   voidPurchaseThunk,
 } from '../thunks/purchases.thunks'
+import type { Purchase, PurchaseStatus } from '../types/purchases.types'
 
 export const purchasesSlice = createSlice({
   name: 'purchases',
@@ -20,6 +21,39 @@ export const purchasesSlice = createSlice({
     // abre una orden en el panel: queda marcada hasta que llegue su detalle
     openPurchase: (state, action: { payload: number }) => {
       state.detail = { id: action.payload, data: state.detail.id === action.payload ? state.detail.data : null, status: 'loading', error: null, requestId: null }
+    },
+    // tiempo real (purchase.created): la orden entra arriba de la lista cargada si es de la bodega en pantalla (o la lista es global); una repetida no se duplica
+    purchaseCreatedFromEvent: (state, action: PayloadAction<Purchase>) => {
+      const purchase = action.payload
+      if (state.status !== 'succeeded') return
+      if (state.warehouseId !== null && state.warehouseId !== purchase.warehouseId) return
+      if (state.items.some((item) => item.id === purchase.id)) return
+      state.items.unshift({ ...purchase, items: [] })
+    },
+    // tiempo real (purchase.status_changed): estado de la orden y, en el detalle abierto, lo recibido de cada renglón
+    purchaseStatusFromEvent: (state, action: PayloadAction<{ id: number; to: PurchaseStatus; lines: { productId: number; received: number }[]; at: string }>) => {
+      const { id, to, lines, at } = action.payload
+      const apply = (purchase: Purchase): void => {
+        purchase.status = to
+        if (to === 'received' && !purchase.receivedAt) purchase.receivedAt = at
+        for (const line of lines) {
+          const item = purchase.items.find((it) => it.productId === line.productId)
+          if (item) item.receivedQty = line.received
+        }
+      }
+      const row = state.items.find((item) => item.id === id)
+      if (row) apply(row)
+      if (state.detail.data?.id === id) apply(state.detail.data)
+    },
+    // tiempo real (purchase.payment_recorded): lo que la caja ya pagó de la orden
+    purchasePaymentFromEvent: (state, action: PayloadAction<{ purchaseId: number; paid: number }>) => {
+      const row = state.items.find((item) => item.id === action.payload.purchaseId)
+      if (row) row.paidTotal = action.payload.paid
+      if (state.detail.data?.id === action.payload.purchaseId) state.detail.data.paidTotal = action.payload.paid
+    },
+    // tiempo real (supplier_catalog.imported): el catálogo abierto de ese proveedor se vuelve a pedir (las filas no viajan en el evento)
+    supplierCatalogImportedFromEvent: (state, action: PayloadAction<number>) => {
+      state.catalogTicks[action.payload] = (state.catalogTicks[action.payload] ?? 0) + 1
     },
   },
   extraReducers: (builder) => {
@@ -63,7 +97,8 @@ export const purchasesSlice = createSlice({
       })
       .addCase(createPurchaseThunk.fulfilled, (state, action) => {
         state.saving = false
-        state.items.unshift({ ...action.payload, items: [] })
+        // el evento purchase.created puede llegar antes que esta respuesta: no se duplica
+        if (!state.items.some((item) => item.id === action.payload.id)) state.items.unshift({ ...action.payload, items: [] })
       })
       .addCase(createPurchaseThunk.rejected, (state) => {
         state.saving = false
@@ -108,5 +143,5 @@ export const purchasesSlice = createSlice({
   },
 })
 
-export const { openPurchase } = purchasesSlice.actions
+export const { openPurchase, purchaseCreatedFromEvent, purchaseStatusFromEvent, purchasePaymentFromEvent, supplierCatalogImportedFromEvent } = purchasesSlice.actions
 export const purchasesReducer = purchasesSlice.reducer

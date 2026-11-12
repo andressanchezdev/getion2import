@@ -21,6 +21,9 @@ import { useExternalActions } from '../hooks/useExternalActions'
 import { useExternals } from '../hooks/useExternals'
 import type { ExternalEntity, ExternalKind, ExternalStatusFilter } from '../types/externals.types'
 import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
+import { ActionsHeader } from '@/global/components/UI/molecules/table/ActionsHeader'
+import { CopyableCell } from '@/global/components/UI/molecules/table/CopyableCell'
+import { StatusSelect } from '@/global/components/UI/molecules/table/StatusSelect'
 import { Icon } from '@/global/components/UI/atoms/Icon'
 import plusIcon from '@/assets/icons/plus.svg?raw'
 
@@ -37,12 +40,12 @@ export const ExternalsTable: React.FC<{ kind: ExternalKind }> = ({ kind }) => {
   const message = list.failed
     ? list.error
     : list.loading
-    ? 'Cargando…'
-    : list.items.length === 0
-    ? list.hasFilters
-      ? `No hay ${labels.plural} con estos filtros.`
-      : `Todavía no hay ${labels.plural} registrados.`
-    : null
+      ? 'Cargando…'
+      : list.items.length === 0
+        ? list.hasFilters
+          ? `No hay ${labels.plural} con estos filtros.`
+          : `Todavía no hay ${labels.plural} registrados.`
+        : null
 
   const openForm = (item?: ExternalEntity) => dispatch(openDrawerForm({ kind: 'externalForm', payload: { kind, item } }))
 
@@ -64,26 +67,26 @@ export const ExternalsTable: React.FC<{ kind: ExternalKind }> = ({ kind }) => {
         </div>
 
         <DataTable tableId="externals-externals">
-            <thead>
+          <thead>
+            <tr>
+              <th className="col-priority-high">Razón social</th>
+              <th className="col-priority-medium">Identificación</th>
+              <th className="col-priority-low">Contacto</th>
+              <th className="col-priority-medium">Teléfono y correo</th>
+              <th className="col-priority-low">{isSupplier ? 'Ciudad y dirección' : 'Ciudad y cobertura'}</th>
+              {isSupplier && <th className="col-priority-medium">Plazo y cupo</th>}
+              <th className="col-priority-high">Estado</th>
+              <ActionsHeader className="col-actions" />
+            </tr>
+          </thead>
+          <tbody>
+            {message ? (
               <tr>
-                <th className="col-priority-high">Razón social</th>
-                <th className="col-priority-medium">Identificación</th>
-                <th className="col-priority-low">Contacto</th>
-                <th className="col-priority-medium">Teléfono y correo</th>
-                <th className="col-priority-low">{isSupplier ? 'Ciudad y dirección' : 'Ciudad y cobertura'}</th>
-                {isSupplier && <th className="col-priority-medium">Plazo y cupo</th>}
-                <th className="col-priority-high">Estado</th>
-                <th className="col-actions">Acciones</th>
+                <td colSpan={columns} className="externals-empty-td">{message}</td>
               </tr>
-            </thead>
-            <tbody>
-              {message ? (
-                <tr>
-                  <td colSpan={columns} className="externals-empty-td">{message}</td>
-                </tr>
-              ) : (
-                pageItems.map((item) => (
-                  <tr key={item.id}>
+            ) : (
+              pageItems.map((item) => (
+                <tr key={item.id}>
                   <td className="col-priority-high">
                     <div className="externals-cell">
                       <strong>{item.name}</strong>
@@ -92,7 +95,7 @@ export const ExternalsTable: React.FC<{ kind: ExternalKind }> = ({ kind }) => {
                   </td>
                   <td className="col-priority-medium">
                     <div className="externals-cell">
-                      <span>{item.document || '—'}</span>
+                      <span>{item.document ? <CopyableCell text={item.document} /> : '—'}</span>
                       <small>{item.documentType}</small>
                     </div>
                   </td>
@@ -123,32 +126,28 @@ export const ExternalsTable: React.FC<{ kind: ExternalKind }> = ({ kind }) => {
                     </td>
                   )}
                   <td className="col-priority-high">
-                    <select
-                      className={`inv-status-select is-${item.isActive ? 'active' : 'inactive'}`}
+                    <StatusSelect
                       value={item.isActive ? 'active' : 'inactive'}
                       disabled={actions.saving}
-                      aria-label={`Estado de ${item.name}`}
+                      ariaLabel={`Estado de ${item.name}`}
                       title="Cambiar estado"
-                      onChange={(event) => actions.setActive(item, event.target.value === 'active')}
-                    >
-                      <option value="active">Activo</option>
-                      <option value="inactive">Inactivo</option>
-                    </select>
+                      onChange={(val) => actions.setActive(item, val === 'active')}
+                    />
                   </td>
                   <td className="col-actions">
                     <RowActions
-                        actions={[
-                          { key: 'catalog', label: `Catálogo de productos de ${item.name}`, icon: listIcon, visible: isSupplier, onClick: () => dispatch(openDrawerForm({ kind: 'supplierCatalog', payload: { id: item.id, name: item.name } })) },
-                          { key: 'edit', label: `Editar ${labels.article}`, icon: editIcon, onClick: () => openForm(item) },
-                          { key: 'delete', label: `Eliminar ${labels.article}`, icon: trashIcon, tone: 'danger', onClick: () => setToDelete(item) },
-                        ]}
-                      />
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </DataTable>
+                      actions={[
+                        { key: 'catalog', label: `Catálogo de productos de ${item.name}`, icon: listIcon, visible: isSupplier, onClick: () => dispatch(openDrawerForm({ kind: 'supplierCatalog', payload: { id: item.id, name: item.name } })) },
+                        { key: 'edit', label: `Editar ${labels.article}`, icon: editIcon, onClick: () => openForm(item) },
+                        { key: 'delete', label: `Eliminar ${labels.article}`, icon: trashIcon, tone: 'danger', onClick: () => setToDelete(item) },
+                      ]}
+                    />
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </DataTable>
         <Pagination meta={meta} label={`Paginación de ${labels.plural}`} onPageChange={setPage} />
       </div>
 

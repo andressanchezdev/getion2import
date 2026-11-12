@@ -80,6 +80,7 @@ export const toProduct = (dto: ProductDto, warehouseId?: number, stock?: Product
         minStockAlert: stock?.minStock,
         isNew,
         createdAt: dto.createdAt || undefined,
+        updatedAt: dto.updatedAt || dto.createdAt || undefined,
         status: (dto.status as Product['status']) ?? 'active',
         iva: dto.iva ?? 0,
     }
@@ -107,8 +108,9 @@ export const toCartItem = (dto: CartItemDto, known?: Product): CartItem => ({
 })
 
 // carrito de GET /carts/active → su id, su uuid y sus renglones; known es el producto completo por id (si se conoce)
-export const toCartSnapshot = (dto: CartDto, known: Record<string, Product> = {}): CartSnapshot => ({
+export const toCartSnapshot = (dto: CartDto, known: Record<string, Product> = {}, version?: string): CartSnapshot => ({
     cartId: dto.id,
     uuid: dto.uuid,
     items: (dto.items ?? []).map((item) => toCartItem(item, known[String(item.productId)])),
+    version: version ?? dto.updatedAt,
 })

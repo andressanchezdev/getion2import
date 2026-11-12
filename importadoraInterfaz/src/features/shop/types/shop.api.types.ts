@@ -25,6 +25,7 @@ export interface ProductDto {
     iva?: number | null // porcentaje de IVA del producto (las tarifas son netas); 0 o sin valor = exento
     status?: string // 'active' | 'inactive' | ...
     createdAt?: string
+    updatedAt?: string
 }
 
 // ---- GET /stock: una fila por producto, bodega y ubicación ----

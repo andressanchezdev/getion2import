@@ -13,10 +13,13 @@ import (
 	"strings"
 	"time"
 
+	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/events"
 	"importadoraApi/src/core/utils"
 	"importadoraApi/src/features/bank_statements/dtos"
 	"importadoraApi/src/features/bank_statements/entities"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/ledongthuc/pdf"
 )
 
@@ -118,7 +121,33 @@ func (s *BankStatementService) ProcessPDFUpload(
 		return nil, utils.BadRequest("EMPTY_OR_UNPARSED", "No se encontraron transacciones legibles en el formato del extracto bancario.")
 	}
 
-	inserted, err := s.repo.InsertBatch(ctx, s.pool, parsedRecords)
+	// periodo del extracto: de la fecha más antigua a la más reciente de sus movimientos
+	from, to := parsedRecords[0].MovementDate, parsedRecords[0].MovementDate
+	for _, r := range parsedRecords {
+		if r.MovementDate.Before(from) {
+			from = r.MovementDate
+		}
+		if r.MovementDate.After(to) {
+			to = r.MovementDate
+		}
+	}
+
+	var inserted int
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		n, err := s.repo.InsertBatch(ctx, tx, parsedRecords)
+		if err != nil {
+			return err
+		}
+		inserted = n
+		// ojo: no hay tabla de extractos (solo de movimientos), por eso statementId va en 0; el front recarga la lista con este aviso
+		s.events.Record(ctx, events.NewBankStatementImported(companyID, events.BankStatementImportedData{
+			StatementID:    0,
+			Bank:           bankName,
+			RecordsCreated: n,
+			Period:         &events.Period{From: from.Format("2006-01-02"), To: to.Format("2006-01-02")},
+		}))
+		return nil
+	})
 	if err != nil {
 		return nil, utils.Internal("Error al guardar registros bancarios en la base de datos.", err)
 	}

@@ -6,8 +6,11 @@ package services
 import (
 	"context"
 	"strings"
+	"time"
 
 	"importadoraApi/src/core/config"
+	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/events"
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
@@ -15,6 +18,7 @@ import (
 	"importadoraApi/src/features/companies/dtos"
 	"importadoraApi/src/features/companies/repositories"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -24,6 +28,7 @@ type CompanyService struct {
 	companyRepo *repositories.CompanyRepository
 	auditRepo   *authRepos.AuditRepository
 	authRepo    *authRepos.AuthRepository
+	events      *events.Recorder
 }
 
 // NewCompanyService crea el servicio con las piezas que necesita para funcionar.
@@ -33,6 +38,7 @@ func NewCompanyService(
 	companyRepo *repositories.CompanyRepository,
 	auditRepo *authRepos.AuditRepository,
 	authRepo *authRepos.AuthRepository,
+	events *events.Recorder,
 ) *CompanyService {
 	return &CompanyService{
 		cfg:         cfg,
@@ -40,6 +46,7 @@ func NewCompanyService(
 		companyRepo: companyRepo,
 		auditRepo:   auditRepo,
 		authRepo:    authRepo,
+		events:      events,
 	}
 }
 
@@ -187,7 +194,15 @@ func (s *CompanyService) Create(ctx context.Context, actor *middlewares.ActorCon
 		IsActive:              isActive,
 	}
 
-	created, err := s.companyRepo.Create(ctx, s.pool, entity)
+	// la creación y su evento van en la misma transacción: nadie recibe el aviso de un registro que no se guardó
+	created, err := db.WithTxValue(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) (*repositories.CompanyEntity, error) {
+		row, err := s.companyRepo.Create(ctx, tx, entity)
+		if err != nil {
+			return nil, err
+		}
+		s.events.Record(ctx, events.NewEntityCreated(row.ID, nil, events.EntityRef{Kind: events.KindCompany, ID: row.ID, Version: row.UpdatedAt}, s.mapToDTO(row)))
+		return row, nil
+	})
 	if err != nil {
 		return nil, utils.Internal("Error al crear la compañía.", err)
 	}
@@ -222,6 +237,8 @@ func (s *CompanyService) Update(ctx context.Context, actor *middlewares.ActorCon
 	}
 
 	current, err := s.companyRepo.FindByID(ctx, s.pool, id)
+	// foto del registro antes de editarlo: de aquí sale changedFields
+	beforeSnap := events.Snapshot(current)
 	if err != nil {
 		return nil, utils.Internal("Error al consultar la compañía.", err)
 	}
@@ -292,6 +309,7 @@ func (s *CompanyService) Update(ctx context.Context, actor *middlewares.ActorCon
 	}
 
 	// Solo Superadmin puede activar o desactivar compañías
+	wasActive := current.IsActive
 	deactivationReason := ""
 	if req.IsActive != nil {
 		if actor.ActorType != types.ActorSuperadmin {
@@ -305,30 +323,57 @@ func (s *CompanyService) Update(ctx context.Context, actor *middlewares.ActorCon
 		current.IsActive = *req.IsActive
 	}
 
-	updated, err := s.companyRepo.Update(ctx, s.pool, current)
-	if err != nil {
-		return nil, utils.Internal("Error al actualizar la compañía.", err)
-	}
-	if req.IsActive != nil && !*req.IsActive {
-		if err := s.authRepo.RevokeTokensByCompany(ctx, s.pool, id); err != nil {
-			return nil, utils.Internal("La compañía fue suspendida, pero no se pudieron revocar todas las sesiones.", err)
+	var resp *dtos.CompanyResponse
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		updated, err := s.companyRepo.Update(ctx, tx, current)
+		if err != nil {
+			return utils.Internal("Error al actualizar la compañía.", err)
 		}
+		if req.IsActive != nil && !*req.IsActive {
+			if err := s.revokeCompanySessions(ctx, tx, id); err != nil {
+				return utils.Internal("La compañía fue suspendida, pero no se pudieron revocar todas las sesiones.", err)
+			}
+		}
+
+		// Registro en auditoría
+		_ = s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
+			CompanyID: &updated.ID,
+			ActorType: actor.ActorType,
+			ActorID:   actor.ActorID,
+			Entity:    "companies",
+			EntityID:  &updated.ID,
+			Action:    "COMPANY_UPDATED",
+			Reason:    utils.ReasonOrDefault(deactivationReason, "Actualización de datos corporativos"),
+			IPAddress: ip,
+			UserAgent: ua,
+		})
+
+		resp = s.mapToDTO(updated)
+		if wasActive != updated.IsActive {
+			var rPtr *string
+			if deactivationReason != "" {
+				rPtr = &deactivationReason
+			}
+			s.events.Record(ctx, events.NewEntityStatus(
+				updated.ID,
+				nil,
+				events.EntityRef{Kind: events.KindCompany, ID: updated.ID, Version: updated.UpdatedAt},
+				activeStatus(wasActive),
+				activeStatus(updated.IsActive),
+				rPtr,
+				resp,
+			))
+		} else {
+			// edición sin cambio de estado: viaja la fila ya guardada para que las tablas abiertas se actualicen sin pedirla
+			s.events.Record(ctx, events.NewEntityUpdated(updated.ID, nil, events.EntityRef{Kind: events.KindCompany, ID: updated.ID, Version: updated.UpdatedAt}, resp, events.ChangedFields(beforeSnap, updated)))
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 
-	// Registro en auditoría
-	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
-		CompanyID: &updated.ID,
-		ActorType: actor.ActorType,
-		ActorID:   actor.ActorID,
-		Entity:    "companies",
-		EntityID:  &updated.ID,
-		Action:    "COMPANY_UPDATED",
-		Reason:    utils.ReasonOrDefault(deactivationReason, "Actualización de datos corporativos"),
-		IPAddress: ip,
-		UserAgent: ua,
-	})
-
-	return s.mapToDTO(updated), nil
+	return resp, nil
 }
 
 // Delete retira la compañía de la operación (exclusivo Superadmin).
@@ -349,31 +394,73 @@ func (s *CompanyService) Delete(ctx context.Context, actor *middlewares.ActorCon
 		return utils.NotFound("COMPANY_NOT_FOUND", "La compañía no existe o ya fue eliminada.")
 	}
 
-	if err := s.companyRepo.SoftDelete(ctx, s.pool, id); err != nil {
-		return utils.Internal("Error al retirar la compañía de la operación.", err)
-	}
+	wasActive := current.IsActive
+	return db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		if err := s.companyRepo.SoftDelete(ctx, tx, id); err != nil {
+			return utils.Internal("Error al retirar la compañía de la operación.", err)
+		}
 
-	// Revocar inmediatamente todas las sesiones de administradores y empleados de esta compañía
-	if s.authRepo != nil {
-		if err := s.authRepo.RevokeTokensByCompany(ctx, s.pool, id); err != nil {
+		if err := s.revokeCompanySessions(ctx, tx, id); err != nil {
 			return utils.Internal("La compañía fue suspendida, pero no se pudieron revocar todas las sesiones.", err)
 		}
-	}
 
-	// Registro en auditoría
-	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
-		CompanyID: &id,
-		ActorType: actor.ActorType,
-		ActorID:   actor.ActorID,
-		Entity:    "companies",
-		EntityID:  &id,
-		Action:    "COMPANY_SUSPENDED",
-		Reason:    reason,
-		IPAddress: ip,
-		UserAgent: ua,
+		_ = s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
+			CompanyID: &id,
+			ActorType: actor.ActorType,
+			ActorID:   actor.ActorID,
+			Entity:    "companies",
+			EntityID:  &id,
+			Action:    "COMPANY_SUSPENDED",
+			Reason:    reason,
+			IPAddress: ip,
+			UserAgent: ua,
+		})
+
+		now := time.Now().UTC()
+		current.IsActive = false
+		current.UpdatedAt = now
+		current.DeletedAt = &now
+		s.events.Record(ctx, events.NewEntityStatus(
+			id,
+			nil,
+			events.EntityRef{Kind: events.KindCompany, ID: id, Version: now},
+			activeStatus(wasActive),
+			"inactive",
+			&reason,
+			s.mapToDTO(current),
+		))
+		return nil
 	})
+}
 
+func (s *CompanyService) revokeCompanySessions(ctx context.Context, tx pgx.Tx, companyID int64) error {
+	if s.authRepo == nil {
+		return nil
+	}
+	if err := s.authRepo.RevokeTokensByCompany(ctx, tx, companyID); err != nil {
+		return err
+	}
+	actors, err := s.authRepo.ListCompanyActors(ctx, tx, companyID)
+	if err != nil {
+		return err
+	}
+	for _, a := range actors {
+		s.events.Record(ctx, events.NewPersonal(
+			events.SessionRevoked,
+			&companyID,
+			string(a.ActorType),
+			a.ActorID,
+			events.SessionRevokedData{Reason: "company_inactive"},
+		))
+	}
 	return nil
+}
+
+func activeStatus(active bool) string {
+	if active {
+		return "active"
+	}
+	return "inactive"
 }
 
 // mapToDTO convierte la compañía de la base en la respuesta que sale por la API.

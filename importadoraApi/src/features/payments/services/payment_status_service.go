@@ -7,13 +7,19 @@ package services
 import (
 	"context"
 	"fmt"
+	"math"
+	"time"
 
+	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/events"
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
 	authRepos "importadoraApi/src/features/auth/repositories"
 	"importadoraApi/src/features/payments/dtos"
 	"importadoraApi/src/features/payments/repositories"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // loadForStatusChange trae el pago y valida que sea de la compañía de quien lo cambia.
@@ -52,19 +58,34 @@ func (s *PaymentService) Reject(ctx context.Context, actor *middlewares.ActorCon
 		return nil, aerr
 	}
 
-	tx, err := s.pool.Begin(ctx)
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		if err := s.paymentRepo.Reject(ctx, tx, id, rejecterID, reason); err != nil {
+			return utils.Internal("Error al rechazar el pago.", err)
+		}
+		if err := s.syncVerificationStage(ctx, tx, p.SaleID, rejecterID); err != nil {
+			return utils.Internal("Error al actualizar la etapa del pedido.", err)
+		}
+		s.events.Record(ctx, events.NewPaymentStatusChanged(p.CompanyID, events.PaymentStatusChangedData{
+			Entity: events.EntityRef{Kind: "payment", ID: p.ID, Version: time.Now().UTC()},
+			From:   string(types.PaymentStatusReview),
+			To:     string(types.PaymentStatusIssue),
+			Reason: &reason,
+		}))
+		s.events.CashSessionTotalsOfPayment(ctx, tx, p.ID)
+		if cov, err := s.paymentRepo.FindSaleCoverage(ctx, tx, p.SaleID); err == nil && cov != nil {
+			s.events.Record(ctx, events.NewSalePaymentChanged(p.CompanyID, cov.WarehouseID, events.SalePaymentChangedData{
+				SaleID:          p.SaleID,
+				PaidTotal:       cov.PaidTotal,
+				CreditAmount:    cov.CreditAmount,
+				Balance:         math.Max(cov.Total-cov.PaidTotal-cov.CreditAmount, 0),
+				PaymentVerified: cov.PaidTotal+cov.CreditAmount >= cov.Total-moneyTolerance && cov.ReviewCount == 0,
+				Version:         time.Now().UTC(),
+			}))
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, utils.Internal("Error al iniciar la transacción del rechazo.", err)
-	}
-	defer tx.Rollback(ctx)
-	if err := s.paymentRepo.Reject(ctx, tx, id, rejecterID, reason); err != nil {
-		return nil, utils.Internal("Error al rechazar el pago.", err)
-	}
-	if err := s.syncVerificationStage(ctx, tx, p.SaleID, rejecterID); err != nil {
-		return nil, utils.Internal("Error al actualizar la etapa del pedido.", err)
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return nil, utils.Internal("Error al confirmar el rechazo.", err)
+		return nil, err
 	}
 
 	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
@@ -84,8 +105,34 @@ func (s *PaymentService) Reopen(ctx context.Context, actor *middlewares.ActorCon
 	if p.Status != types.PaymentStatusIssue {
 		return nil, utils.BadRequest("INVALID_STATUS", fmt.Sprintf("Solo se pueden reabrir pagos rechazados. Estado actual: '%s'.", p.Status))
 	}
-	if err := s.paymentRepo.Reopen(ctx, s.pool, id); err != nil {
-		return nil, utils.Internal("Error al reabrir el pago.", err)
+	reopenerID, _ := s.requireActorEmployeeID(ctx, actor)
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		if err := s.paymentRepo.Reopen(ctx, tx, id); err != nil {
+			return utils.Internal("Error al reabrir el pago.", err)
+		}
+		if err := s.syncVerificationStage(ctx, tx, p.SaleID, reopenerID); err != nil {
+			return utils.Internal("Error al actualizar la etapa del pedido.", err)
+		}
+		s.events.Record(ctx, events.NewPaymentStatusChanged(p.CompanyID, events.PaymentStatusChangedData{
+			Entity: events.EntityRef{Kind: "payment", ID: p.ID, Version: time.Now().UTC()},
+			From:   string(types.PaymentStatusIssue),
+			To:     string(types.PaymentStatusReview),
+		}))
+		s.events.CashSessionTotalsOfPayment(ctx, tx, p.ID)
+		if cov, err := s.paymentRepo.FindSaleCoverage(ctx, tx, p.SaleID); err == nil && cov != nil {
+			s.events.Record(ctx, events.NewSalePaymentChanged(p.CompanyID, cov.WarehouseID, events.SalePaymentChangedData{
+				SaleID:          p.SaleID,
+				PaidTotal:       cov.PaidTotal,
+				CreditAmount:    cov.CreditAmount,
+				Balance:         math.Max(cov.Total-cov.PaidTotal-cov.CreditAmount, 0),
+				PaymentVerified: cov.PaidTotal+cov.CreditAmount >= cov.Total-moneyTolerance && cov.ReviewCount == 0,
+				Version:         time.Now().UTC(),
+			}))
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{

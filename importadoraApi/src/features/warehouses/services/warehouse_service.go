@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"importadoraApi/src/core/config"
+	"importadoraApi/src/core/events"
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
@@ -24,6 +25,7 @@ type WarehouseService struct {
 	warehouseRepo *repositories.WarehouseRepository
 	auditRepo     *authRepos.AuditRepository
 	authRepo      *authRepos.AuthRepository
+	events        *events.Recorder
 }
 
 // NewWarehouseService crea el servicio con las piezas que necesita para funcionar.
@@ -33,6 +35,7 @@ func NewWarehouseService(
 	warehouseRepo *repositories.WarehouseRepository,
 	auditRepo *authRepos.AuditRepository,
 	authRepo *authRepos.AuthRepository,
+	events *events.Recorder,
 ) *WarehouseService {
 	return &WarehouseService{
 		cfg:           cfg,
@@ -40,6 +43,7 @@ func NewWarehouseService(
 		warehouseRepo: warehouseRepo,
 		auditRepo:     auditRepo,
 		authRepo:      authRepo,
+		events:        events,
 	}
 }
 

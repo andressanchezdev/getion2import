@@ -1,10 +1,10 @@
-// realtime.constants · tipos de evento conocidos y tiempos de reconexión
-// conecta con: realtime.handlers (qué hacer con cada evento) y realtime.backoff (esperas)
-// ojo: CONTRATO PROVISIONAL. El Swagger del backend no documenta el websocket ni sus eventos; cuando se conozcan los reales,
-// solo hay que cambiar los nombres aquí y la forma del mensaje en helpers/realtime.adapter.ts
-export const REALTIME_EVENT_TYPES = {
-  stockUpdated: 'stock.updated', // body: { productId, warehouseId, stock }
-} as const
+// realtime.constants · tiempos de espera, reintentos y códigos de cierre del websocket
+// conecta con: realtime.service y realtime.backoff
+import { REALTIME_CLOSE_CODES } from '../types/realtime.contract'
 
-export const RECONNECT_BASE_MS = 1000 // primera espera al reconectar
-export const RECONNECT_MAX_MS = 30000 // la espera crece al doble en cada intento hasta este tope
+export const HELLO_TIMEOUT_MS = 5000 // tiempo máximo para recibir system.welcome tras abrir el socket
+export const RECONNECT_BASE_MS = 1000 // primera espera al reconectar (1 s)
+export const RECONNECT_MAX_MS = 30000 // la espera crece al doble en cada intento hasta este tope (30 s)
+export const TICKET_RETRY_LIMIT = 3 // máximo de reintentos inmediatos ante 4001 (ticket inválido) antes de aplicar espera creciente
+
+export { REALTIME_CLOSE_CODES }

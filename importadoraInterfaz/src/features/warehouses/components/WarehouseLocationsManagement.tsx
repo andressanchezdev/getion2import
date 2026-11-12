@@ -22,10 +22,10 @@ interface Props {
 }
 
 export const WarehouseLocationsManagement: React.FC<Props> = ({ warehouses, selectedWarehouseId, onSelectWarehouse }) => {
-  const { canPerformAction } = usePermissions()
-  const canCreate = canPerformAction('inventory', 'locations', 'create')
-  const canUpdate = canPerformAction('inventory', 'locations', 'update')
-  const canDelete = canPerformAction('inventory', 'locations', 'delete')
+  const { can } = usePermissions()
+  const canCreate = can('stock:edit')
+  const canUpdate = can('stock:edit')
+  const canDelete = can('stock:edit')
   const [query, setQuery] = useState('')
 
   const active = warehouses.find((w) => Number(w.id) === selectedWarehouseId) ?? warehouses[0]

@@ -14,11 +14,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: var(--text-xs, 0.75rem);
-  font-weight: var(--font-weight-bold, 600);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-bold);
   color: var(--color-text-secondary, #475569);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: var(--tracking-wide);
 }
 
 .location-quick-presets {
@@ -32,9 +32,9 @@
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-sm, 6px);
   padding: 4px 10px;
-  font-size: var(--text-xs, 0.75rem);
-  font-family: monospace;
-  font-weight: var(--font-weight-medium, 500);
+  font-size: var(--text-xs);
+  font-family: var(--font-family-mono);
+  font-weight: var(--font-weight-medium);
   color: var(--color-text-primary, #0f172a);
   cursor: pointer;
   transition: all 0.15s ease;
@@ -65,9 +65,9 @@
 }
 
 .location-builder-label {
-  font-size: 11px;
+  font-size: var(--text-11px);
   color: var(--color-text-muted, #64748b);
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
 }
 
 .location-builder-chips {
@@ -81,7 +81,7 @@
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-sm, 4px);
   padding: 2px 8px;
-  font-size: 11px;
+  font-size: var(--text-11px);
   cursor: pointer;
   transition: all 0.15s ease;
 }

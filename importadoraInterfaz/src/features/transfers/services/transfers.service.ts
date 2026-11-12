@@ -94,12 +94,13 @@ export const fetchTransferById = async (transferId: number): Promise<TrasladeIte
   return toTrasladeItem(data.data)
 }
 
-export const dispatchTransfer = async (transferId: number): Promise<void> => {
-  await apiClient.post(TRANSFERS.DISPATCH(transferId), {})
+export const dispatchTransfer = async (transferId: number): Promise<TrasladeItem | null> => {
+  const res = await apiClient.post<APIResponse<TransferDto>>(TRANSFERS.DISPATCH(transferId), {})
+  return res?.data?.data ? toTrasladeItem(res.data.data) : null
 }
 
 // recibe o acepta el traslado (OK completo o con novedades)
-export const acceptTransfer = async (transfer: TrasladeItem, noveltyNotes?: string): Promise<void> => {
+export const acceptTransfer = async (transfer: TrasladeItem, noveltyNotes?: string): Promise<TrasladeItem | null> => {
   const hasNovelty = Boolean(noveltyNotes?.trim())
   const body: ReceiveTransferBody = {
     hasNovelty,
@@ -110,17 +111,19 @@ export const acceptTransfer = async (transfer: TrasladeItem, noveltyNotes?: stri
       destinationLocation: product.destinationLocation,
     })),
   }
-  await apiClient.post(TRANSFERS.RECEIVE(transfer.id), body)
+  const res = await apiClient.post<APIResponse<TransferDto>>(TRANSFERS.RECEIVE(transfer.id), body)
+  return res?.data?.data ? toTrasladeItem(res.data.data) : null
 }
 
 // función compatible con la llamada original de receiveTransfer
-export const receiveTransfer = async (transfer: TrasladeItem): Promise<void> => {
-  await acceptTransfer(transfer)
+export const receiveTransfer = async (transfer: TrasladeItem): Promise<TrasladeItem | null> => {
+  return acceptTransfer(transfer)
 }
 
 // anula el traslado con el motivo
-export const cancelTransfer = async (transferId: number, reason: string): Promise<void> => {
-  await apiClient.post(TRANSFERS.CANCEL(transferId), { reason })
+export const cancelTransfer = async (transferId: number, reason: string): Promise<TrasladeItem | null> => {
+  const res = await apiClient.post<APIResponse<TransferDto>>(TRANSFERS.CANCEL(transferId), { reason })
+  return res?.data?.data ? toTrasladeItem(res.data.data) : null
 }
 
 // busca productos activos por texto y trae sus existencias en todas las bodegas

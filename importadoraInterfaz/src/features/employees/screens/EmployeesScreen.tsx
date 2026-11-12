@@ -9,7 +9,6 @@ import plusIcon from '@/assets/icons/plus.svg?raw'
 import { FilterSelect } from '@/global/components/UI/molecules/filters/FilterSelect'
 import { EmployeesTable } from '../components/table/EmployeesTable'
 import { useEmployeesDirectory } from '../hooks/useEmployeesDirectory'
-import { CreateEmployeeDrawer } from '../components/drawer/CreateEmployeeDrawer'
 import './EmployeesScreen.css'
 
 export const EmployeesScreen: React.FC = () => {
@@ -17,7 +16,6 @@ export const EmployeesScreen: React.FC = () => {
   const warehouses = useAppSelector((state) => state.warehouses.items)
   const [selectedWhId, setSelectedWhId] = useState<number>(0)
   const [search, setSearch] = useState('')
-  const [isCreateOpen, setIsCreateOpen] = useState(false)
   const { employees, loading: isLoading } = useEmployeesDirectory(selectedWhId || undefined)
 
   const filtered = employees.filter((emp) => {
@@ -57,7 +55,7 @@ export const EmployeesScreen: React.FC = () => {
             <button
               type="button"
               className="btn-primary"
-              onClick={() => setIsCreateOpen(true)}
+              onClick={() => dispatch(openDrawerForm({ kind: 'createEmployee' }))}
             >
               <Icon svg={plusIcon} /> Registrar Empleado
             </button>
@@ -71,8 +69,6 @@ export const EmployeesScreen: React.FC = () => {
           onEditPermissions={(employee) => dispatch(openDrawerForm({ kind: 'employeePermissions', payload: { employee, mode: 'edit' } }))}
         />
       </div>
-
-      <CreateEmployeeDrawer isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} />
     </div>
   )
 }

@@ -1,26 +1,45 @@
-// realtime.types · contratos del tiempo real: estado de la conexión, evento recibido y conexión
-// conecta con: realtime.service, realtime.adapter, realtime.handlers, realtime.slice y realtime.thunks
-export type RealtimeStatus = 'disabled' | 'connecting' | 'open' | 'closed'
+// realtime.types · estado de la conexión del websocket (máquina 16.1), respuesta del ticket y opciones del servicio
+// conecta con: realtime.service, realtime.slice, realtime.thunks y useRealtimeStatus
+import type { ClientMessage, RealtimeEvent } from './realtime.contract'
 
-// evento ya normalizado (en inglés), venga como venga del servidor
-export interface RealtimeEvent {
-  type: string
-  body: unknown
-  customerId?: string
-}
+export type RealtimeConnectionStatus =
+  | 'idle'
+  | 'connecting'
+  | 'open'
+  | 'replaying'
+  | 'resyncing'
+  | 'live'
+  | 'reconnecting'
+  | 'offline'
+
+export type RealtimeStatus = RealtimeConnectionStatus
 
 export interface RealtimeState {
   status: RealtimeStatus
-  lastEventAt: number | null
+  lastSeq: number | null
+  connectedAt: number | null
+  lastError: string | null
+  replaying: boolean
+}
+
+export interface RealtimeTicketResponse {
+  ticket: string
+  wsUrl: string
+  expiresAt: string
 }
 
 export interface RealtimeConnectionOptions {
-  url: string
+  getLastSeq: () => number | null
+  requestTicket?: () => Promise<RealtimeTicketResponse>
+  fallbackWsUrl?: string
+  createWebSocket?: (url: string) => WebSocket
+  onStatus: (status: RealtimeStatus, error?: string | null) => void
   onEvent: (event: RealtimeEvent) => void
-  onStatus: (status: RealtimeStatus) => void
+  onSessionRevoked: (reason: 'remote' | 'suspended') => void
+  onResyncRequired: (currentSeq: number) => Promise<void> | void
 }
 
 export interface RealtimeConnection {
   close: () => void
-  send: (message: unknown) => void
+  send: (message: ClientMessage) => void
 }

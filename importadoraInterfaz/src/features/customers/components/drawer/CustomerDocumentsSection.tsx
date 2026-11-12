@@ -1,9 +1,12 @@
 // CustomerDocumentsSection · documentos del cliente en su panel: tipo, vencimiento con su estado y botones para renovar
-// conecta con: useCustomerDocuments (lista y renovar), customers.documents.adapter (textos) y global Pill; la pinta CustomerDrawer
+// conecta con: useCustomerDocuments (lista y renovar), customers.documents.service (ver el archivo), customers.documents.adapter (textos), usePermissions y global Pill; la pinta CustomerDrawer
 // ojo: renovar reinicia la vigencia del documento; «Renovar con archivo» además reemplaza el archivo anterior
 import React, { useRef, useState } from 'react'
 import { Pill, type PillTone } from '@/global/components/UI/atoms/Pill'
 import { formatDate } from '@/global/helpers/formatting/format'
+import { toast } from '@/global/helpers/feedback/toast'
+import { usePermissions } from '@/global/hooks/access/usePermissions'
+import { openCustomerDocumentFile } from '../../services/customers.documents.service'
 import { useCustomerDocuments } from '../../hooks/useCustomerDocuments'
 import { documentTypeLabel, expiryLabel } from '../../helpers/customers.documents.adapter'
 import type { DocumentStatus } from '../../types/customers.types'
@@ -18,6 +21,8 @@ interface Props {
 export const CustomerDocumentsSection: React.FC<Props> = ({ customerId }) => {
   const { items, status, error, saving, renew } = useCustomerDocuments(customerId)
   const fileInput = useRef<HTMLInputElement>(null)
+  const canRenew = usePermissions().can('customers:edit') // POST /customers/:id/documents/:docId/renew
+  const viewFile = (documentId: number) => openCustomerDocumentFile(customerId, documentId).catch(() => toast.error('No se pudo abrir el archivo del documento.'))
   const [renewingId, setRenewingId] = useState<number | null>(null) // documento que espera el archivo nuevo
 
   // abre el selector de archivo para renovar ese documento
@@ -54,16 +59,19 @@ export const CustomerDocumentsSection: React.FC<Props> = ({ customerId }) => {
                 {doc.fileName} · vence el {formatDate(doc.expiresAt)}
               </span>
             </div>
-            {doc.status !== 'valid' && (
-              <div className="customer-drawer-doc-actions">
+            <div className="customer-drawer-doc-actions">
+              <button type="button" className="customer-drawer-link-btn" onClick={() => viewFile(doc.id)}>
+                Ver archivo
+              </button>
+              {doc.status !== 'valid' && canRenew && (<>
                 <button type="button" className="customer-drawer-link-btn" disabled={saving} onClick={() => renew(doc.id)}>
                   Renovar
                 </button>
                 <button type="button" className="customer-drawer-link-btn" disabled={saving} onClick={() => pickFile(doc.id)}>
                   Renovar con archivo
                 </button>
-              </div>
-            )}
+              </>)}
+            </div>
           </li>
         ))}
       </ul>

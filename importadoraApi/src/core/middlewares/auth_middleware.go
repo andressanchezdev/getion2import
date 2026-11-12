@@ -5,6 +5,7 @@ package middlewares
 
 import (
 	"context"
+	"log/slog"
 	"strings"
 
 	"importadoraApi/src/core/config"
@@ -60,6 +61,11 @@ func (m *AuthMiddleware) RequirePermission(module, action string) echo.Middlewar
 	return RequirePermission(module, action)
 }
 
+// RequireAnyPermission deja pasar a quien tenga al menos una de las llaves 'modulo:accion'.
+func (m *AuthMiddleware) RequireAnyPermission(keys ...string) echo.MiddlewareFunc {
+	return RequireAnyPermission(keys...)
+}
+
 // Authenticate verifica la cabecera 'Authorization: Bearer <token>', la firma JWT,
 // y confirma que la sesión en 'refresh_tokens' no haya sido revocada.
 func Authenticate(jwtSecret string, validator SessionValidator, db db.DBExecutor) echo.MiddlewareFunc {
@@ -101,10 +107,12 @@ func Authenticate(jwtSecret string, validator SessionValidator, db db.DBExecutor
 			permMap := make(map[string]bool)
 			if validator != nil {
 				perms, err := validator.LoadPermissionsForActor(c.Request().Context(), db, claims.ActorType, claims.ActorID)
-				if err == nil {
-					for _, p := range perms {
-						permMap[p.Module+":"+p.Action] = true
-					}
+				if err != nil {
+					// ojo: falla cerrada a propósito; sin permisos cargados el empleado queda sin acceso (el admin no los necesita)
+					slog.Warn("no se pudieron cargar los permisos del actor; se niega por defecto", "actorType", claims.ActorType, "actorID", claims.ActorID, "error", err)
+				}
+				for _, p := range perms {
+					permMap[p.Module+":"+p.Action] = true
 				}
 			}
 
@@ -120,6 +128,8 @@ func Authenticate(jwtSecret string, validator SessionValidator, db db.DBExecutor
 			}
 
 			c.Set(ActorContextKey, actorCtx)
+			// el actor también va en el context.Context de la petición: lo leen los servicios que guardan eventos del websocket
+			c.SetRequest(c.Request().WithContext(WithActor(c.Request().Context(), actorCtx)))
 			return next(c)
 		}
 	}
@@ -146,9 +156,25 @@ func RequireActors(allowed ...types.ActorType) echo.MiddlewareFunc {
 	}
 }
 
-// RequirePermission verifica dinámicamente si el actor tiene el permiso 'modulo:accion'.
+// governanceModules son los módulos que el superadministrador sí puede mutar; en los demás solo lee.
+var governanceModules = map[string]bool{"companies": true, "admins": true, "superadmin": true, "screensaver": true, "recyclebin": true, "audit": true}
+
+// actorAllows decide si el actor cumple el permiso 'modulo:accion'; RequirePermission y RequireAnyPermission la comparten.
 // Admins (dentro de su compañía) tienen acceso completo por diseño.
-// Superadmins tienen acceso de solo lectura/monitoreo general, y solo pueden mutar módulos de gobernanza.
+// Superadmins leen todo (view, view_detail) y solo mutan módulos de gobernanza.
+// Empleados necesitan la llave exacta en employee_permissions.
+func actorAllows(actor *ActorContext, module, action string) bool {
+	switch actor.ActorType {
+	case types.ActorAdmin:
+		return true
+	case types.ActorSuperadmin:
+		return action == "view" || action == "view_detail" || governanceModules[module]
+	default:
+		return actor.Permissions[module+":"+action]
+	}
+}
+
+// RequirePermission verifica dinámicamente si el actor tiene el permiso 'modulo:accion'.
 func RequirePermission(module, action string) echo.MiddlewareFunc {
 	requiredKey := module + ":" + action
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
@@ -157,31 +183,56 @@ func RequirePermission(module, action string) echo.MiddlewareFunc {
 			if actor == nil {
 				return utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
 			}
-
-			// Superadmin: lectura total en cualquier módulo.
-			// En mutación (create, edit, delete, change_status, etc.) solo puede operar en gobernanza.
-			if actor.ActorType == types.ActorSuperadmin {
-				if action == "view" || action == "view_detail" {
-					return next(c)
-				}
-				// Módulos de gobernanza permitidos para mutación por Superadmin
-				if module == "companies" || module == "admins" || module == "superadmin" || module == "screensaver" || module == "recyclebin" || module == "audit" {
-					return next(c)
-				}
-				return utils.Forbidden("SUPERADMIN_READ_ONLY", "El Superadministrador opera en modo solo lectura para módulos operativos.")
-			}
-
-			// Admin de compañía tiene acceso total en su alcance
-			if actor.ActorType == types.ActorAdmin {
+			if actorAllows(actor, module, action) {
 				return next(c)
 			}
-
-			// Para empleados se valida en la tabla employee_permissions
-			if !actor.Permissions[requiredKey] {
-				return utils.Forbidden("INSUFFICIENT_PERMISSIONS", "No tienes el permiso requerido: "+requiredKey)
+			if actor.ActorType == types.ActorSuperadmin {
+				return utils.Forbidden("SUPERADMIN_READ_ONLY", "El Superadministrador opera en modo solo lectura para módulos operativos.")
 			}
-
-			return next(c)
+			return utils.Forbidden("INSUFFICIENT_PERMISSIONS", "No tienes el permiso requerido: "+requiredKey)
 		}
 	}
+}
+
+// RequireAnyPermission deja pasar si el actor cumple al menos uno de los permisos 'modulo:accion'.
+// Sirve para lecturas que usan varios flujos: por ejemplo el selector de clientes lo pide el checkout (orders:create) y la cartera (credits:view).
+// ojo: una llave mal escrita (sin «:») hace fallar el arranque; routes_guard_test también revisa que exista en el catálogo
+func RequireAnyPermission(keys ...string) echo.MiddlewareFunc {
+	type pair struct{ module, action string }
+	pairs := make([]pair, 0, len(keys))
+	for _, k := range keys {
+		module, action, ok := strings.Cut(k, ":")
+		if !ok || module == "" || action == "" {
+			panic("RequireAnyPermission: llave inválida " + k)
+		}
+		pairs = append(pairs, pair{module, action})
+	}
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			actor := GetActor(c)
+			if actor == nil {
+				return utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
+			}
+			for _, p := range pairs {
+				if actorAllows(actor, p.module, p.action) {
+					return next(c)
+				}
+			}
+			return utils.Forbidden("INSUFFICIENT_PERMISSIONS", "No tienes ninguno de los permisos requeridos: "+strings.Join(keys, ", "))
+		}
+	}
+}
+
+// ActorCan dice si el actor cumple alguna de las llaves 'modulo:accion' con las mismas reglas de las rutas.
+// Lo usan los servicios cuando el permiso depende del contenido de la petición (por ejemplo, cambiar precios dentro de PUT /products/:id).
+func ActorCan(actor *ActorContext, keys ...string) bool {
+	if actor == nil {
+		return false
+	}
+	for _, k := range keys {
+		if module, action, ok := strings.Cut(k, ":"); ok && actorAllows(actor, module, action) {
+			return true
+		}
+	}
+	return false
 }

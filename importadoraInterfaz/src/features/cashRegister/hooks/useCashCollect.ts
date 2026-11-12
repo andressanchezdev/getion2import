@@ -7,7 +7,8 @@ import { loadOrderCountsThunk, loadOrdersThunk, type OrderRow } from '@/features
 import { formatCOP } from '@/global/helpers/formatting/format'
 import { toast } from '@/global/helpers/feedback/toast'
 import { optimizeImageFile } from '@/global/helpers/images/imageOptimizer'
-import { useAppDispatch } from '@/global/hooks/store/useRedux'
+import { isRealtimeLive } from '@/features/realtime/helpers/realtime.guards'
+import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { collectProblem, emptyLine, lineProblem, remainingOf, sumLines, toCollectInput } from '../helpers/cash.collect'
 import { collectPaymentsThunk, loadCashSessionThunk } from '../thunks/cash.thunks'
 import type { CollectLine } from '../types/cash.types'
@@ -20,6 +21,7 @@ export interface CashCollectPayload {
 export const useCashCollect = (order: OrderRow) => {
   const dispatch = useAppDispatch()
   const cash = useCashSession()
+  const live = useAppSelector(isRealtimeLive)
   const remaining = remainingOf(order)
   const [lines, setLines] = useState<CollectLine[]>(() => [emptyLine(remaining)])
   const [error, setError] = useState<string | null>(null)
@@ -62,10 +64,12 @@ export const useCashCollect = (order: OrderRow) => {
     toast.success(`Cobro de ${formatCOP(covered)} registrado`, {
       description: confirmed ? `Pedido ${order.serial}: verificación confirmada, pasa a la cola de alistamiento.` : `Pedido ${order.serial}: quedan ${formatCOP(result.payload.balance)} por cubrir o por verificar.`,
     })
-    // el pedido cambia de estado y los totales del turno suben: se vuelven a leer
-    dispatch(loadOrdersThunk())
-    dispatch(loadOrderCountsThunk())
-    if (cash.warehouseId > 0) dispatch(loadCashSessionThunk(cash.warehouseId))
+    // en vivo, el pedido y los totales del turno llegan por evento (sale.stage_changed, sale.payment_changed, cash_session.totals_changed); sin socket se vuelven a leer
+    if (!live) {
+      dispatch(loadOrdersThunk())
+      dispatch(loadOrderCountsThunk())
+      if (cash.warehouseId > 0) dispatch(loadCashSessionThunk(cash.warehouseId))
+    }
     dispatch(closeDrawerForm())
   }
 

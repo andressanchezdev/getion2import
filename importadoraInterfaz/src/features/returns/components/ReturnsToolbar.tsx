@@ -2,6 +2,7 @@
 // conecta con: ReturnsScreen; los valores y cambios vienen de useReturnsList
 import React from 'react'
 import { SearchBar } from '@/global/components/UI/molecules/filters/SearchBar'
+import { FilterSelect } from '@/global/components/UI/molecules/filters/FilterSelect'
 import { useAppSelector } from '@/global/hooks/store/useRedux'
 import { selectWarehouses } from '@/features/warehouses'
 import type { ReturnsCounts } from '../helpers/returns.helpers'
@@ -19,7 +20,7 @@ interface Props {
   onStatus: (value: ReturnStatusFilter) => void
   onWarehouse: (id: number | null) => void
   onClear: () => void
-  onCreate: () => void
+  onCreate?: () => void // sin permiso returns:create no se pasa y el botón no aparece
 }
 
 export const ReturnsToolbar: React.FC<Props> = ({ query, status, warehouseId, counts, hasFilters, onQuery, onStatus, onWarehouse, onClear, onCreate }) => {
@@ -35,31 +36,30 @@ export const ReturnsToolbar: React.FC<Props> = ({ query, status, warehouseId, co
         className="returns-search"
       />
       <div className="returns-toolbar-middle">
-        <label className="returns-toolbar-filter">
-          <span>Bodega:</span>
-          <select
-            className="returns-toolbar-select"
-            value={warehouseId ? String(warehouseId) : 'all'}
-            onChange={(e) => onWarehouse(e.target.value === 'all' ? null : Number(e.target.value))}
-          >
-            <option value="all">Todas las bodegas</option>
-            {warehouses.map((wh) => (
-              <option key={wh.id} value={String(wh.id)}>{wh.name}</option>
-            ))}
-          </select>
-        </label>
-        <label className="returns-toolbar-filter">
-          <span>Estado:</span>
-          <select className="returns-toolbar-select" value={status} onChange={(e) => onStatus(e.target.value as ReturnStatusFilter)}>
-            <option value="all">Todas ({counts.total})</option>
-            <option value="pending">Pendientes ({counts.pending})</option>
-            <option value="approved">Aprobadas ({counts.approved})</option>
-            <option value="rejected">Rechazadas ({counts.rejected})</option>
-          </select>
-        </label>
+        <FilterSelect
+          label="Bodega"
+          allLabel="Todas las bodegas"
+          emptyValue="all"
+          value={warehouseId ? String(warehouseId) : 'all'}
+          options={warehouses.map((wh) => ({ value: String(wh.id), label: wh.name }))}
+          onChange={(val) => onWarehouse(val === 'all' ? null : Number(val))}
+        />
+        <FilterSelect
+          label="Estado"
+          allLabel={`Todas (${counts.total})`}
+          emptyValue="all"
+          value={status}
+          options={[
+            { value: 'all', label: `Todas (${counts.total})` },
+            { value: 'pending', label: `Pendientes (${counts.pending})` },
+            { value: 'approved', label: `Aprobadas (${counts.approved})` },
+            { value: 'rejected', label: `Rechazadas (${counts.rejected})` },
+          ]}
+          onChange={(val) => onStatus(val as ReturnStatusFilter)}
+        />
       </div>
       <div className="returns-toolbar-actions">
-        <button type="button" className="btn-primary" onClick={onCreate}><Icon svg={plusIcon} /> Crear Devolución</button>
+        {onCreate && <button type="button" className="btn-primary" onClick={onCreate}><Icon svg={plusIcon} /> Crear Devolución</button>}
       </div>
     </div>
   )

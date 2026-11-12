@@ -1,6 +1,7 @@
 // ProductDetailPanel — panel lateral de detalle de un producto: información, QR visible, existencias y ubicación por bodega, lista de tarifas (P0..P3) y edición de precios
 // conecta con: detail/ (las secciones), useProductStock (existencias), useProductPriceEditor (tarifas), usePermissions, warehouses (bodegas) y navigation (abrir otros paneles)
 import React, { useEffect, useState } from 'react'
+import '@/global/components/UI/molecules/form/DrawerFormShell.css'
 import './ProductDetailPanel.css'
 import { closeDrawerForm, openDrawerForm } from '@/features/navigation'
 import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
@@ -22,7 +23,7 @@ interface ProductDetailPanelProps {
 
 export const ProductDetailPanel: React.FC<ProductDetailPanelProps> = ({ product: initialProduct }) => {
   const dispatch = useAppDispatch()
-  const { canEditPrices, canPerformAction } = usePermissions()
+  const { canEditPrices, can } = usePermissions()
   const warehouses = useAppSelector(selectWarehouses)
   const editor = useProductPriceEditor(initialProduct)
   const { product } = editor
@@ -30,7 +31,7 @@ export const ProductDetailPanel: React.FC<ProductDetailPanelProps> = ({ product:
   const [qrUrl, setQrUrl] = useState<string | null>(null)
 
   const isInactive = product.status === 'inactive'
-  const canEditProduct = canPerformAction('inventory', 'products', 'update') && !isInactive
+  const canEditProduct = can('products:edit') && !isInactive
 
   useEffect(() => {
     let active = true
@@ -61,8 +62,8 @@ export const ProductDetailPanel: React.FC<ProductDetailPanelProps> = ({ product:
   }
 
   return (
-    <div className="product-detail-panel">
-      <div className="product-detail-body">
+    <div className="drawer-form product-detail-panel">
+      <div className="drawer-form-body product-detail-body">
         <ProductDetailHero product={product} isInactive={isInactive} />
 
         {/* Bloque visual directo con el código QR del producto */}
@@ -89,7 +90,7 @@ export const ProductDetailPanel: React.FC<ProductDetailPanelProps> = ({ product:
         <ProductPricesSection product={product} editor={editor} canEdit={canEditPrices} />
       </div>
 
-      <div className="product-detail-footer">
+      <div className="drawer-form-footer product-detail-footer">
         <button type="button" className="btn-secondary" onClick={() => dispatch(closeDrawerForm())}>
           Cerrar
         </button>

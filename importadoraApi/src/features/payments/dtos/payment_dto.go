@@ -36,12 +36,12 @@ type PaymentResponse struct {
 }
 
 type CreatePaymentRequest struct {
-	SaleID     int64               `json:"saleId" validate:"required"`
-	Method     types.PaymentMethod `json:"method" validate:"required"`
-	Amount     float64             `json:"amount" validate:"required,gt=0"`
-	ProofURL   *string             `json:"proofUrl,omitempty"`
-	Reference  *string             `json:"reference,omitempty"`
-	Notes      *string             `json:"notes,omitempty"`
+	SaleID    int64               `json:"saleId" validate:"required"`
+	Method    types.PaymentMethod `json:"method" validate:"required"`
+	Amount    float64             `json:"amount" validate:"required,gt=0"`
+	ProofURL  *string             `json:"proofUrl,omitempty"`
+	Reference *string             `json:"reference,omitempty"`
+	Notes     *string             `json:"notes,omitempty"`
 }
 
 type VerifyPaymentRequest struct {
@@ -59,16 +59,15 @@ type VoidPaymentRequest struct {
 
 type PaymentFilterQuery struct {
 	WarehouseID *int64
-	CompanyID  *int64
-	SaleID     *int64
-	CustomerID *int64
-	Status     *types.PaymentStatus
-	Method     *types.PaymentMethod
-	Search     string
-	Page       int
-	PageSize   int
+	CompanyID   *int64
+	SaleID      *int64
+	CustomerID  *int64
+	Status      *types.PaymentStatus
+	Method      *types.PaymentMethod
+	Search      string
+	Page        int
+	PageSize    int
 }
-
 
 // PaymentLineRequest es una línea de un cobro mixto: cuánto se paga y con qué método (efectivo, transferencia o crédito).
 type PaymentLineRequest struct {

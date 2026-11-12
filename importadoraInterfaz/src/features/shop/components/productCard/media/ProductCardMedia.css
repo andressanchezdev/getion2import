@@ -35,7 +35,7 @@
 
 .product-card-emoji {
     font-size: var(--size-product-card-emoji);
-    line-height: 1;
+    line-height: var(--leading-none);
     user-select: none;
 }
 

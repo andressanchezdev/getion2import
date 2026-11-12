@@ -6,6 +6,7 @@ package config
 import (
 	"fmt"
 	"strings"
+	"time"
 )
 
 // Validate verifica que los campos obligatorios y restricciones lógicas sean coherentes.
@@ -22,6 +23,9 @@ func Validate(cfg *Config) error {
 		return err
 	}
 
+	if err := validateRealtime(cfg); err != nil {
+		return err
+	}
 	if err := validateServer(cfg); err != nil {
 		return err
 	}
@@ -72,6 +76,17 @@ func validateSecurity(cfg *Config) error {
 	return nil
 }
 
+// validateRealtime revisa la configuración del tiempo real: vida del ticket y dirección del websocket.
+func validateRealtime(cfg *Config) error {
+	if cfg.RealtimeTicketTTL < 10*time.Second || cfg.RealtimeTicketTTL > 120*time.Second {
+		return fmt.Errorf("REALTIME_TICKET_TTL_SEC debe estar entre 10 y 120 segundos")
+	}
+	if cfg.AppEnv == "production" && strings.TrimSpace(cfg.RealtimeWSURL) == "" {
+		return fmt.Errorf("REALTIME_WS_URL es obligatoria en producción (por ejemplo wss://<servicio>.up.railway.app/ws)")
+	}
+	return nil
+}
+
 // validateServer revisa que la configuración del servidor (puerto y modo) esté completa y sea válida.
 func validateServer(cfg *Config) error {
 	if strings.TrimSpace(cfg.AppPort) == "" {
@@ -85,4 +100,3 @@ func validateServer(cfg *Config) error {
 	}
 	return nil
 }
-

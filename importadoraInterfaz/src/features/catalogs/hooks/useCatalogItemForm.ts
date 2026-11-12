@@ -15,6 +15,7 @@ export const useCatalogItemForm = (payload: CatalogItemPayload) => {
   const [name, setName] = useState(payload.item?.name || '')
   const [image, setImage] = useState(payload.item?.image || '')
   const [description, setDescription] = useState(payload.item?.description || '')
+  const [parentId, setParentId] = useState<number | null>(payload.item?.parentId ?? null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -35,8 +36,9 @@ export const useCatalogItemForm = (payload: CatalogItemPayload) => {
           type: payload.type,
           id: payload.item?.id,
           name: name.trim(),
-          imageUrl: image.trim() || undefined,
-          description: description.trim() || undefined,
+          imageUrl: image.trim(),
+          description: description.trim(),
+          parentId: parentId,
         })
       ).unwrap()
       toast.success(`${singularOf(payload.noun)} ${isEdit ? 'actualizada' : 'creada'} correctamente`)
@@ -48,5 +50,5 @@ export const useCatalogItemForm = (payload: CatalogItemPayload) => {
     }
   }
 
-  return { isEdit, name, setName, image, setImage, description, setDescription, saving, error, submit }
+  return { isEdit, name, setName, image, setImage, description, setDescription, parentId, setParentId, saving, error, submit }
 }

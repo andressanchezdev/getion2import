@@ -16,7 +16,7 @@ import plusIcon from '@/assets/icons/plus.svg?raw'
 
 export const StockScreen: React.FC = () => {
   const dispatch = useAppDispatch()
-  const canAssign = usePermissions().canPerformAction('inventory', 'locations', 'update')
+  const canAssign = usePermissions().can('stock:edit')
   const stock = useStockTable()
 
   const message =

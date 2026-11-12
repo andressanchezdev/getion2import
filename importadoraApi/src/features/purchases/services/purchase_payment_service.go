@@ -7,8 +7,10 @@ package services
 import (
 	"context"
 	"fmt"
+	"math"
 
 	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/events"
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
@@ -62,11 +64,29 @@ func (s *PurchaseService) Pay(ctx context.Context, actor *middlewares.ActorConte
 	}
 	concept := fmt.Sprintf("Recepción %s · %s", purchase.SerialCode, purchase.SupplierName)
 
-	err = db.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
-		if err := s.purchaseRepo.InsertReceptionExpense(ctx, tx, sessionID, purchase.ID, receipt, concept, req.CashAmount); err != nil {
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		expenseID, err := s.purchaseRepo.InsertReceptionExpense(ctx, tx, sessionID, purchase.ID, receipt, concept, req.CashAmount)
+		if err != nil {
 			return err
 		}
-		return s.purchaseRepo.AddPaidTotal(ctx, tx, purchase.ID, req.CashAmount)
+		if err := s.purchaseRepo.AddPaidTotal(ctx, tx, purchase.ID, req.CashAmount); err != nil {
+			return err
+		}
+		// el pago de la recepción sale de la gaveta: se avisa el gasto y los totales del turno
+		refType := "purchase"
+		s.events.Record(ctx, events.NewCashExpenseRecorded(purchase.CompanyID, purchase.WarehouseID, events.CashExpense{
+			ID: expenseID, SessionID: sessionID, ExpenseType: "merchandise_arrival",
+			CashAmount: req.CashAmount, Concept: concept, ReferenceType: &refType, ReferenceID: &purchase.ID,
+		}))
+		s.events.CashSessionTotals(ctx, tx, sessionID)
+		paid := purchase.PaidTotal + req.CashAmount
+		s.events.Record(ctx, events.NewPurchasePaymentRecorded(purchase.CompanyID, purchase.WarehouseID, events.PurchasePaymentRecordedData{
+			PurchaseID: purchase.ID,
+			Paid:       paid,
+			Balance:    math.Max(purchase.Total-paid, 0),
+			CashAmount: req.CashAmount,
+		}))
+		return nil
 	})
 	if err != nil {
 		return nil, utils.Internal("Error al registrar el pago de la recepción.", err)

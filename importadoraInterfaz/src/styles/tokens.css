@@ -389,6 +389,7 @@
   --color-success-bg: var(--c-green-100);
   --color-warning: var(--c-yellow-700);
   --color-warning-bg: var(--c-yellow-50);
+  --color-highlight-bg: var(--c-yellow-50);
   --color-info: var(--c-blue-600);
   --color-info-bg: var(--c-blue-50);
   --color-accent: var(--c-violet-600);

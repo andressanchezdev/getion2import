@@ -1,21 +1,30 @@
-// usePermissions · hook de validación jerárquica de permisos (admin bypass, módulos y pantallas)
-// conecta con: auth slice (user, permissions), SideMenu (filtrado dinámico) y MainContent (guardia)
+// usePermissions · hook de validación jerárquica de permisos (admin bypass, módulos, pantallas y acciones especiales)
+// conecta con: auth slice (user, permissions), SideMenu (filtrado dinámico), MainContent y FormDrawerBody (guardias) y cada tabla o drawer (visible/disabled)
+// ojo: falla cerrada (8.2-1): un empleado sin matriz cargada (permisos vacíos, carga fallida o sesión vieja) no ve nada hasta que /auth/me los traiga
+// ojo: can('modulo:accion') lee las llaves crudas del empleado; sirve para las acciones especiales que no caben en la matriz (avanzar etapa, facturar, reubicar…)
 import { useMemo } from 'react'
 import { useAppSelector } from '../store/useRedux'
 import { MENU_ITEMS, type ERPModule, type NavItem } from '@/features/navigation'
-import { canLevelSee, getActorLevel, labelForLevel } from '../../helpers/access/accessLevels'
+import { canLevelSee, getActorLevel, labelForLevel, OPEN_STAFF_SCREENS } from '../../helpers/access/accessLevels'
+
+// módulos de la API que el superadmin sí puede mutar (igual a governanceModules del backend)
+const SUPERADMIN_GOVERNANCE = ['companies', 'admins', 'superadmin', 'screensaver', 'recyclebin', 'audit']
 
 export const usePermissions = () => {
   const { user, permissions } = useAppSelector((state) => state.auth)
   const level = getActorLevel(user?.userType)
   const isAdmin = level === 'admin' || level === 'superadmin'
+  // sin matriz no hay acceso para un empleado; admin y superadmin no usan matriz
+  const modules = permissions?.modules ?? []
+  const noMatrix = modules.length === 0
 
   // el nivel (accessLevels) manda: un módulo o pantalla de otro nivel no se ve aunque la matriz diga que sí
   const hasModuleAccess = (moduleKey: ERPModule): boolean => {
     if (!canLevelSee(level, moduleKey)) return false
     if (isAdmin) return true
-    if (!permissions?.modules || permissions.modules.length === 0) return true
-    const mod = permissions.modules.find((m) => m.moduleKey === moduleKey)
+    if ([...OPEN_STAFF_SCREENS].some((key) => key.startsWith(`${moduleKey}.`))) return true
+    if (noMatrix) return false
+    const mod = modules.find((m) => m.moduleKey === moduleKey)
     if (!mod) return false
     if (!mod.canRead) {
       const anyScreenReadable = mod.screens?.some((s) => s.canRead)
@@ -27,9 +36,10 @@ export const usePermissions = () => {
   const hasScreenAccess = (moduleKey: ERPModule, screenKey: string): boolean => {
     if (!canLevelSee(level, moduleKey, screenKey)) return false
     if (isAdmin) return true
-    if (!permissions?.modules || permissions.modules.length === 0) return true
+    if (OPEN_STAFF_SCREENS.has(`${moduleKey}.${screenKey}`)) return true
+    if (noMatrix) return false
     if (!hasModuleAccess(moduleKey)) return false
-    const mod = permissions.modules.find((m) => m.moduleKey === moduleKey)
+    const mod = modules.find((m) => m.moduleKey === moduleKey)
     if (!mod) return false
     const screen = mod.screens?.find(
       (s) => s.screenKey === screenKey || String(s.screenId) === screenKey
@@ -49,8 +59,8 @@ export const usePermissions = () => {
       return governanceModules.includes(moduleKey)
     }
     if (level === 'admin') return true
-    if (!permissions?.modules || permissions.modules.length === 0) return true
-    const mod = permissions.modules.find((m) => m.moduleKey === moduleKey)
+    if (noMatrix) return false
+    const mod = modules.find((m) => m.moduleKey === moduleKey)
     if (!mod) return false
     const screen = mod.screens?.find(
       (s) => s.screenKey === screenKey || String(s.screenId) === screenKey
@@ -62,11 +72,26 @@ export const usePermissions = () => {
     return false
   }
 
-  const canEditPrices = (level === 'admin') || canPerformAction('inventory', 'products', 'editPrices') || canPerformAction('shop', 'catalog', 'editPrices')
+  // acción especial por llave de la API ('orders:advance_stage'); con varias llaves basta una
+  // ojo: mismas reglas que la API (auth_middleware.actorAllows): admin todo, superadmin lee y muta solo gobernanza, empleado la llave exacta
+  const can = (...keys: string[]): boolean => {
+    if (level === 'admin') return true
+    if (level === 'superadmin') {
+      return keys.some((key) => {
+        const [module, action] = key.split(':')
+        return action === 'view' || action === 'view_detail' || SUPERADMIN_GOVERNANCE.includes(module)
+      })
+    }
+    const owned = user?.permissions ?? []
+    return keys.some((key) => owned.includes(key))
+  }
+
+  const canEditPrices = (level === 'admin') || can('products:edit_prices', 'catalog:edit_prices')
 
   return {
     level,
     isAdmin,
+    can,
     canEditPrices,
     hasModuleAccess,
     hasScreenAccess,

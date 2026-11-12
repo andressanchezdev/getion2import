@@ -8,7 +8,6 @@ export const EMPLOYEES_ENDPOINTS = {
     BY_ID: (id: number | string) => `/employees/${id}`,
     PERMISSIONS_OF: (id: number | string) => `/employees/${id}/permissions`,
     CREDENTIALS_OF: (id: number | string) => `/employees/${id}/credentials`,
-    UNLOCK: (id: number | string) => `/employees/${id}/unlock`,
     ROLES_LIST: '/roles',
     ROLE_BY_ID: (id: number | string) => `/roles/${id}`,
     PERMISSIONS_CATALOG: '/permissions',

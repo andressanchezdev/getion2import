@@ -26,7 +26,7 @@ describe('catalogs.service', () => {
 
   it('fetchCategories: GET /categories', async () => {
     vi.mocked(apiClient.get).mockResolvedValue({ data: { success: true, data: [{ id: 2, name: 'Frenos' }] } })
-    expect(await fetchCategories(ctx)).toEqual([{ id: 2, name: 'Frenos', description: undefined, isActive: true }])
+    expect(await fetchCategories(ctx)).toEqual([{ id: 2, name: 'Frenos', description: undefined, isActive: true, parentId: null }])
     expect(apiClient.get).toHaveBeenCalledWith('/categories', expectedConfig)
   })
 

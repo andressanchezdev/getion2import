@@ -7,12 +7,16 @@ import (
 	"context"
 	"strings"
 
+	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/events"
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
 	authRepos "importadoraApi/src/features/auth/repositories"
 	"importadoraApi/src/features/catalog/dtos"
 	"importadoraApi/src/features/catalog/repositories"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // ListModels lista los modelos de moto según los filtros y lo que el usuario puede ver.
@@ -43,6 +47,7 @@ func (s *CatalogService) ListModels(ctx context.Context, actor *middlewares.Acto
 			Description: entities[i].Description,
 			IsActive:    entities[i].IsActive,
 			CreatedAt:   entities[i].CreatedAt,
+			UpdatedAt:   entities[i].UpdatedAt,
 		})
 	}
 	return result, nil
@@ -75,6 +80,7 @@ func (s *CatalogService) GetModelByID(ctx context.Context, actor *middlewares.Ac
 		Description: entity.Description,
 		IsActive:    entity.IsActive,
 		CreatedAt:   entity.CreatedAt,
+		UpdatedAt:   entity.UpdatedAt,
 	}, nil
 }
 
@@ -117,7 +123,23 @@ func (s *CatalogService) CreateModel(ctx context.Context, actor *middlewares.Act
 		IsActive:    isActive,
 	}
 
-	created, err := s.modelRepo.Create(ctx, s.pool, entity)
+	// la creación y su evento van en la misma transacción: nadie recibe el aviso de un registro que no se guardó
+	created, err := db.WithTxValue(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) (*repositories.ModelEntity, error) {
+		row, err := s.modelRepo.Create(ctx, tx, entity)
+		if err != nil {
+			return nil, err
+		}
+		s.events.Record(ctx, events.NewEntityCreated(row.CompanyID, nil, events.EntityRef{Kind: events.KindModel, ID: row.ID, Version: row.UpdatedAt}, &dtos.ModelResponse{
+			ID:          row.ID,
+			CompanyID:   row.CompanyID,
+			Name:        row.Name,
+			Description: row.Description,
+			IsActive:    row.IsActive,
+			CreatedAt:   row.CreatedAt,
+			UpdatedAt:   row.UpdatedAt,
+		}))
+		return row, nil
+	})
 	if err != nil {
 		return nil, utils.Internal("Error al registrar modelo.", err)
 	}
@@ -141,6 +163,7 @@ func (s *CatalogService) CreateModel(ctx context.Context, actor *middlewares.Act
 		Description: created.Description,
 		IsActive:    created.IsActive,
 		CreatedAt:   created.CreatedAt,
+		UpdatedAt:   created.UpdatedAt,
 	}, nil
 }
 
@@ -151,6 +174,8 @@ func (s *CatalogService) UpdateModel(ctx context.Context, actor *middlewares.Act
 	}
 
 	current, err := s.modelRepo.FindByID(ctx, s.pool, id)
+	// foto del registro antes de editarlo: de aquí sale changedFields
+	beforeSnap := events.Snapshot(current)
 	if err != nil {
 		return nil, utils.Internal("Error al consultar modelo.", err)
 	}
@@ -179,40 +204,77 @@ func (s *CatalogService) UpdateModel(ctx context.Context, actor *middlewares.Act
 	}
 
 	if req.Description != nil {
-		current.Description = req.Description
+		if strings.TrimSpace(*req.Description) == "" {
+			current.Description = nil
+		} else {
+			trimmed := strings.TrimSpace(*req.Description)
+			current.Description = &trimmed
+		}
 	}
-	if _, rerr := utils.ReasonOnDeactivation(current.IsActive, req.IsActive, req.Reason); rerr != nil {
+	oldActive := current.IsActive
+	reason, rerr := utils.ReasonOnDeactivation(current.IsActive, req.IsActive, req.Reason)
+	if rerr != nil {
 		return nil, rerr
 	}
 	if req.IsActive != nil {
 		current.IsActive = *req.IsActive
 	}
 
-	updated, err := s.modelRepo.Update(ctx, s.pool, current)
+	var resp *dtos.ModelResponse
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		updated, err := s.modelRepo.Update(ctx, tx, current)
+		if err != nil {
+			return utils.Internal("Error al actualizar modelo.", err)
+		}
+
+		_ = s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
+			CompanyID: &current.CompanyID,
+			ActorType: actor.ActorType,
+			ActorID:   actor.ActorID,
+			Entity:    "models",
+			EntityID:  &current.ID,
+			Action:    "MODEL_UPDATED",
+			Reason:    utils.ReasonOrDefault(reason, "Actualización de modelo"),
+			IPAddress: ip,
+			UserAgent: ua,
+		})
+
+		resp = &dtos.ModelResponse{
+			ID:          updated.ID,
+			CompanyID:   updated.CompanyID,
+			Name:        updated.Name,
+			Description: updated.Description,
+			IsActive:    updated.IsActive,
+			CreatedAt:   updated.CreatedAt,
+			UpdatedAt:   updated.UpdatedAt,
+		}
+		if s.events != nil && oldActive != updated.IsActive {
+			var reasonPtr *string
+			if reason != "" {
+				reasonPtr = &reason
+			}
+			ref := events.EntityRef{
+				Kind:    events.KindModel,
+				ID:      updated.ID,
+				Version: updated.UpdatedAt,
+			}
+			s.events.Record(ctx, events.NewEntityStatus(updated.CompanyID, nil, ref, catalogActiveLabel(oldActive), catalogActiveLabel(updated.IsActive), reasonPtr, resp))
+		} else {
+			// edición sin cambio de estado: viaja la fila ya guardada para que las tablas abiertas se actualicen sin pedirla
+			ref := events.EntityRef{
+				Kind:    events.KindModel,
+				ID:      updated.ID,
+				Version: updated.UpdatedAt,
+			}
+			s.events.Record(ctx, events.NewEntityUpdated(updated.CompanyID, nil, ref, resp, events.ChangedFields(beforeSnap, updated)))
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, utils.Internal("Error al actualizar modelo.", err)
+		return nil, err
 	}
 
-	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
-		CompanyID: &current.CompanyID,
-		ActorType: actor.ActorType,
-		ActorID:   actor.ActorID,
-		Entity:    "models",
-		EntityID:  &current.ID,
-		Action:    "MODEL_UPDATED",
-		Reason:    "Actualización de modelo",
-		IPAddress: ip,
-		UserAgent: ua,
-	})
-
-	return &dtos.ModelResponse{
-		ID:          updated.ID,
-		CompanyID:   updated.CompanyID,
-		Name:        updated.Name,
-		Description: updated.Description,
-		IsActive:    updated.IsActive,
-		CreatedAt:   updated.CreatedAt,
-	}, nil
+	return resp, nil
 }
 
 // DeleteModel elimina el modelo de moto validando que sea de la compañía del usuario.
@@ -239,21 +301,46 @@ func (s *CatalogService) DeleteModel(ctx context.Context, actor *middlewares.Act
 		}
 	}
 
-	if err := s.modelRepo.SoftDelete(ctx, s.pool, id); err != nil {
-		return utils.Internal("Error al desactivar modelo.", err)
-	}
+	return db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		if err := s.modelRepo.SoftDelete(ctx, tx, id); err != nil {
+			return utils.Internal("Error al desactivar modelo.", err)
+		}
 
-	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
-		CompanyID: &current.CompanyID,
-		ActorType: actor.ActorType,
-		ActorID:   actor.ActorID,
-		Entity:    "models",
-		EntityID:  &current.ID,
-		Action:    "MODEL_DEACTIVATED",
-		Reason:    reason,
-		IPAddress: ip,
-		UserAgent: ua,
+		_ = s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
+			CompanyID: &current.CompanyID,
+			ActorType: actor.ActorType,
+			ActorID:   actor.ActorID,
+			Entity:    "models",
+			EntityID:  &current.ID,
+			Action:    "MODEL_DEACTIVATED",
+			Reason:    reason,
+			IPAddress: ip,
+			UserAgent: ua,
+		})
+
+		if s.events != nil && current.IsActive {
+			updated, err := s.modelRepo.FindByID(ctx, tx, id)
+			if err != nil {
+				return utils.Internal("Error al recargar modelo desactivado.", err)
+			}
+			if updated != nil {
+				resp := &dtos.ModelResponse{
+					ID:          updated.ID,
+					CompanyID:   updated.CompanyID,
+					Name:        updated.Name,
+					Description: updated.Description,
+					IsActive:    updated.IsActive,
+					CreatedAt:   updated.CreatedAt,
+					UpdatedAt:   updated.UpdatedAt,
+				}
+				ref := events.EntityRef{
+					Kind:    events.KindModel,
+					ID:      updated.ID,
+					Version: updated.UpdatedAt,
+				}
+				s.events.Record(ctx, events.NewEntityStatus(updated.CompanyID, nil, ref, "active", "inactive", &reason, resp))
+			}
+		}
+		return nil
 	})
-
-	return nil
 }

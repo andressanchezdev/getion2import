@@ -6,13 +6,18 @@ package services
 import (
 	"context"
 	"strings"
+	"time"
 
+	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/events"
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
 	authRepos "importadoraApi/src/features/auth/repositories"
 	"importadoraApi/src/features/staff/dtos"
 	"importadoraApi/src/features/staff/repositories"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // ListEmployees lista los empleados según los filtros y lo que el usuario puede ver.
@@ -176,7 +181,15 @@ func (s *StaffService) CreateEmployee(ctx context.Context, actor *middlewares.Ac
 		Status:           types.EmployeeActive,
 	}
 
-	created, err := s.employeeRepo.Create(ctx, s.pool, entity)
+	// la creación y su evento van en la misma transacción: nadie recibe el aviso de un registro que no se guardó
+	created, err := db.WithTxValue(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) (*repositories.EmployeeEntity, error) {
+		row, err := s.employeeRepo.Create(ctx, tx, entity)
+		if err != nil {
+			return nil, err
+		}
+		s.events.Record(ctx, events.NewEntityCreated(row.CompanyID, nil, events.EntityRef{Kind: events.KindEmployee, ID: row.ID, Version: row.UpdatedAt}, s.mapEmployeeToDTO(row, nil)))
+		return row, nil
+	})
 	if err != nil {
 		return nil, utils.NormalizeDBError(err, "")
 	}
@@ -216,6 +229,8 @@ func (s *StaffService) UpdateEmployee(ctx context.Context, actor *middlewares.Ac
 	}
 
 	current, err := s.employeeRepo.FindByID(ctx, s.pool, id)
+	// foto del registro antes de editarlo: de aquí sale changedFields
+	beforeSnap := events.Snapshot(current)
 	if err != nil {
 		return nil, utils.Internal("Error al consultar empleado.", err)
 	}
@@ -229,15 +244,18 @@ func (s *StaffService) UpdateEmployee(ctx context.Context, actor *middlewares.Ac
 		}
 	}
 
+	prevStatus := employeeEffectiveStatus(current)
 	inactivating := (req.Status != nil && *req.Status != types.EmployeeActive) ||
 		(req.EmploymentStatus != nil && *req.EmploymentStatus != types.EmploymentActive)
 	auditReason := "Actualización de datos del empleado"
+	var reasonPtr *string
 	if inactivating {
 		r, rerr := utils.ValidateReason(req.Reason)
 		if rerr != nil {
 			return nil, rerr
 		}
 		auditReason = r
+		reasonPtr = &r
 	}
 
 	if req.RoleID != nil {
@@ -286,31 +304,62 @@ func (s *StaffService) UpdateEmployee(ctx context.Context, actor *middlewares.Ac
 		current.Status = *req.Status
 	}
 
-	updated, err := s.employeeRepo.Update(ctx, s.pool, current)
-	if err != nil {
-		return nil, utils.Internal("Error al actualizar empleado.", err)
-	}
-	if (req.Status != nil && *req.Status != types.EmployeeActive) ||
-		(req.EmploymentStatus != nil && *req.EmploymentStatus != types.EmploymentActive) {
-		if err := s.authRepo.RevokeAllActorSessions(ctx, s.pool, types.ActorEmployee, current.ID); err != nil {
-			return nil, utils.Internal("El empleado fue actualizado, pero no se pudieron cerrar sus sesiones.", err)
+	var resp *dtos.EmployeeResponse
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		updated, err := s.employeeRepo.Update(ctx, tx, current)
+		if err != nil {
+			return utils.Internal("Error al actualizar empleado.", err)
 		}
+		if inactivating && s.authRepo != nil {
+			if err := s.authRepo.RevokeAllActorSessions(ctx, tx, types.ActorEmployee, current.ID); err != nil {
+				return utils.Internal("El empleado fue actualizado, pero no se pudieron cerrar sus sesiones.", err)
+			}
+			s.events.Record(ctx, events.NewPersonal(
+				events.SessionRevoked,
+				&current.CompanyID,
+				string(types.ActorEmployee),
+				current.ID,
+				events.SessionRevokedData{Reason: "account_inactive"},
+			))
+		}
+
+		_ = s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
+			CompanyID: &current.CompanyID,
+			ActorType: actor.ActorType,
+			ActorID:   actor.ActorID,
+			Entity:    "employees",
+			EntityID:  &current.ID,
+			Action:    "EMPLOYEE_UPDATED",
+			Reason:    auditReason,
+			IPAddress: ip,
+			UserAgent: ua,
+		})
+
+		perms, _ := s.permissionRepo.ListByEmployeeID(ctx, tx, current.ID)
+		resp = s.mapEmployeeToDTO(updated, perms)
+
+		newStatus := employeeEffectiveStatus(updated)
+		if prevStatus != newStatus {
+			s.events.Record(ctx, events.NewEntityStatus(
+				current.CompanyID,
+				nil,
+				events.EntityRef{Kind: events.KindEmployee, ID: updated.ID, Version: updated.UpdatedAt},
+				prevStatus,
+				newStatus,
+				reasonPtr,
+				resp,
+			))
+		} else {
+			// edición sin cambio de estado: viaja la fila ya guardada para que las tablas abiertas se actualicen sin pedirla
+			s.events.Record(ctx, events.NewEntityUpdated(current.CompanyID, nil, events.EntityRef{Kind: events.KindEmployee, ID: updated.ID, Version: updated.UpdatedAt}, resp, events.ChangedFields(beforeSnap, updated)))
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 
-	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
-		CompanyID: &current.CompanyID,
-		ActorType: actor.ActorType,
-		ActorID:   actor.ActorID,
-		Entity:    "employees",
-		EntityID:  &current.ID,
-		Action:    "EMPLOYEE_UPDATED",
-		Reason:    auditReason,
-		IPAddress: ip,
-		UserAgent: ua,
-	})
-
-	perms, _ := s.permissionRepo.ListByEmployeeID(ctx, s.pool, current.ID)
-	return s.mapEmployeeToDTO(updated, perms), nil
+	return resp, nil
 }
 
 // DeactivateEmployee desactiva el empleado sin borrar su historial.
@@ -337,24 +386,60 @@ func (s *StaffService) DeactivateEmployee(ctx context.Context, actor *middleware
 		}
 	}
 
-	if err := s.employeeRepo.SoftDelete(ctx, s.pool, id); err != nil {
-		return utils.Internal("Error al desactivar empleado.", err)
-	}
-	if err := s.authRepo.RevokeAllActorSessions(ctx, s.pool, types.ActorEmployee, id); err != nil {
-		return utils.Internal("El empleado fue desactivado, pero no se pudieron cerrar sus sesiones.", err)
-	}
+	prevStatus := employeeEffectiveStatus(current)
+	return db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		if err := s.employeeRepo.SoftDelete(ctx, tx, id); err != nil {
+			return utils.Internal("Error al desactivar empleado.", err)
+		}
+		if s.authRepo != nil {
+			if err := s.authRepo.RevokeAllActorSessions(ctx, tx, types.ActorEmployee, id); err != nil {
+				return utils.Internal("El empleado fue desactivado, pero no se pudieron cerrar sus sesiones.", err)
+			}
+			s.events.Record(ctx, events.NewPersonal(
+				events.SessionRevoked,
+				&current.CompanyID,
+				string(types.ActorEmployee),
+				id,
+				events.SessionRevokedData{Reason: "account_inactive"},
+			))
+		}
 
-	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
-		CompanyID: &current.CompanyID,
-		ActorType: actor.ActorType,
-		ActorID:   actor.ActorID,
-		Entity:    "employees",
-		EntityID:  &current.ID,
-		Action:    "EMPLOYEE_DEACTIVATED",
-		Reason:    reason,
-		IPAddress: ip,
-		UserAgent: ua,
+		_ = s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
+			CompanyID: &current.CompanyID,
+			ActorType: actor.ActorType,
+			ActorID:   actor.ActorID,
+			Entity:    "employees",
+			EntityID:  &current.ID,
+			Action:    "EMPLOYEE_DEACTIVATED",
+			Reason:    reason,
+			IPAddress: ip,
+			UserAgent: ua,
+		})
+
+		perms, _ := s.permissionRepo.ListByEmployeeID(ctx, tx, id)
+		now := time.Now().UTC()
+		current.Status = types.EmployeeInactive
+		current.EmploymentStatus = types.EmploymentRetired
+		current.UpdatedAt = now
+		s.events.Record(ctx, events.NewEntityStatus(
+			current.CompanyID,
+			nil,
+			events.EntityRef{Kind: events.KindEmployee, ID: id, Version: now},
+			prevStatus,
+			"inactive",
+			&reason,
+			s.mapEmployeeToDTO(current, perms),
+		))
+		return nil
 	})
+}
 
-	return nil
+func employeeEffectiveStatus(e *repositories.EmployeeEntity) string {
+	if e.Status != types.EmployeeActive {
+		return string(e.Status)
+	}
+	if e.EmploymentStatus != types.EmploymentActive {
+		return "inactive"
+	}
+	return "active"
 }

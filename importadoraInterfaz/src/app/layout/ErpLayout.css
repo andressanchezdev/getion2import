@@ -7,7 +7,6 @@
     overflow: hidden;
     background-color: var(--bg-app);
     color: var(--color-text-primary);
-    user-select: none;
     /* ojo: base de texto de la maqueta (14px con interlineado 1,45); va aquí y no en body porque el login depende del tamaño que hereda del navegador */
     font-size: var(--text-md);
     line-height: var(--leading-body);

@@ -6,7 +6,11 @@ package services
 import (
 	"context"
 	"fmt"
+	"math"
+	"time"
 
+	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/events"
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
@@ -15,6 +19,7 @@ import (
 	"importadoraApi/src/features/payments/repositories"
 	salerepos "importadoraApi/src/features/sales/repositories"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -23,6 +28,7 @@ type PaymentService struct {
 	paymentRepo *repositories.PaymentRepository
 	saleRepo    *salerepos.SaleRepository
 	auditRepo   *authRepos.AuditRepository
+	events      *events.Recorder
 }
 
 // NewPaymentService crea el servicio con las piezas que necesita para funcionar.
@@ -31,12 +37,14 @@ func NewPaymentService(
 	paymentRepo *repositories.PaymentRepository,
 	saleRepo *salerepos.SaleRepository,
 	auditRepo *authRepos.AuditRepository,
+	events *events.Recorder,
 ) *PaymentService {
 	return &PaymentService{
 		pool:        pool,
 		paymentRepo: paymentRepo,
 		saleRepo:    saleRepo,
 		auditRepo:   auditRepo,
+		events:      events,
 	}
 }
 
@@ -55,82 +63,84 @@ func (s *PaymentService) Create(ctx context.Context, actor *middlewares.ActorCon
 		return nil, utils.BadRequest("INVALID_METHOD", "El método de pago debe ser 'cash' (efectivo) o 'transfer' (transferencia bancaria).")
 	}
 
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		return nil, utils.Internal("Error al iniciar transacción de pago.", err)
-	}
-	defer tx.Rollback(ctx)
-
-	sale, err := s.saleRepo.FindByID(ctx, tx, req.SaleID)
-	if err != nil {
-		return nil, utils.Internal("Error al consultar venta.", err)
-	}
-	if sale == nil {
-		return nil, utils.NotFound("SALE_NOT_FOUND", "La orden o venta no existe.")
-	}
-
-	if actor.ActorType != types.ActorSuperadmin {
-		if actor.CompanyID == nil || *actor.CompanyID != sale.CompanyID {
-			return nil, utils.Forbidden("FORBIDDEN_COMPANY_ACCESS", "No tienes permiso sobre la compañía de esta venta.")
+	var createdID int64
+	err := db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		sale, err := s.saleRepo.FindByID(ctx, tx, req.SaleID)
+		if err != nil {
+			return utils.Internal("Error al consultar venta.", err)
 		}
-	}
+		if sale == nil {
+			return utils.NotFound("SALE_NOT_FOUND", "La orden o venta no existe.")
+		}
 
-	if sale.Status == types.SaleCancelled {
-		return nil, utils.BadRequest("SALE_CANCELLED", "No se pueden registrar pagos a una venta cancelada.")
-	}
-	if sale.CustomerID == nil {
-		return nil, utils.BadRequest("MISSING_CUSTOMER", "La venta no tiene un cliente asignado para registrar el recaudo.")
-	}
+		if actor.ActorType != types.ActorSuperadmin {
+			if actor.CompanyID == nil || *actor.CompanyID != sale.CompanyID {
+				return utils.Forbidden("FORBIDDEN_COMPANY_ACCESS", "No tienes permiso sobre la compañía de esta venta.")
+			}
+		}
 
-	serialCode, err := utils.NextSerialCode(ctx, tx, sale.CompanyID, &sale.WarehouseID, types.SeriesPayment, "PAG-")
-	if err != nil {
-		return nil, utils.Internal("Error al generar consecutivo de pago.", err)
-	}
+		if sale.Status == types.SaleCancelled {
+			return utils.BadRequest("SALE_CANCELLED", "No se pueden registrar pagos a una venta cancelada.")
+		}
+		if sale.CustomerID == nil {
+			return utils.BadRequest("MISSING_CUSTOMER", "La venta no tiene un cliente asignado para registrar el recaudo.")
+		}
 
-	empID, aerr := s.actorEmployeeID(ctx, actor)
-	if aerr != nil {
-		return nil, aerr
-	}
-	if empID <= 0 {
-		empID = sale.EmployeeID
-	}
+		serialCode, err := utils.NextSerialCode(ctx, tx, sale.CompanyID, &sale.WarehouseID, types.SeriesPayment, "PAG-")
+		if err != nil {
+			return utils.Internal("Error al generar consecutivo de pago.", err)
+		}
 
-	entity := &repositories.PaymentEntity{
-		CompanyID:  sale.CompanyID,
-		SerialCode: serialCode,
-		SaleID:     sale.ID,
-		CustomerID: *sale.CustomerID,
-		EmployeeID: empID,
-		Method:     req.Method,
-		Amount:     req.Amount,
-		Status:     types.PaymentStatusReview, // Nace en revisión humana
-		ProofURL:   req.ProofURL,
-		Reference:  req.Reference,
-		IssueNote:  req.Notes,
-	}
+		empID, aerr := s.actorEmployeeID(ctx, actor)
+		if aerr != nil {
+			return aerr
+		}
+		if empID <= 0 {
+			empID = sale.EmployeeID
+		}
 
-	created, err := s.paymentRepo.Create(ctx, tx, entity)
-	if err != nil {
-		return nil, utils.Internal("Error al guardar registro de pago.", err)
-	}
+		entity := &repositories.PaymentEntity{
+			CompanyID:  sale.CompanyID,
+			SerialCode: serialCode,
+			SaleID:     sale.ID,
+			CustomerID: *sale.CustomerID,
+			EmployeeID: empID,
+			Method:     req.Method,
+			Amount:     req.Amount,
+			Status:     types.PaymentStatusReview, // Nace en revisión humana
+			ProofURL:   req.ProofURL,
+			Reference:  req.Reference,
+			IssueNote:  req.Notes,
+		}
 
-	_ = s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
-		CompanyID: &sale.CompanyID,
-		ActorType: actor.ActorType,
-		ActorID:   actor.ActorID,
-		Entity:    "payments",
-		EntityID:  &created.ID,
-		Action:    "PAYMENT_SUBMITTED",
-		Reason:    fmt.Sprintf("Pago registrado por $%.2f en estado de revisión humana", req.Amount),
-		IPAddress: ip,
-		UserAgent: ua,
+		created, err := s.paymentRepo.Create(ctx, tx, entity)
+		if err != nil {
+			return utils.Internal("Error al guardar registro de pago.", err)
+		}
+		createdID = created.ID
+
+		if err := s.recordPaymentCreated(ctx, tx, created.ID); err != nil {
+			return err
+		}
+
+		_ = s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
+			CompanyID: &sale.CompanyID,
+			ActorType: actor.ActorType,
+			ActorID:   actor.ActorID,
+			Entity:    "payments",
+			EntityID:  &created.ID,
+			Action:    "PAYMENT_SUBMITTED",
+			Reason:    fmt.Sprintf("Pago registrado por $%.2f en estado de revisión humana", req.Amount),
+			IPAddress: ip,
+			UserAgent: ua,
+		})
+		return nil
 	})
-
-	if err := tx.Commit(ctx); err != nil {
-		return nil, utils.Internal("Error al confirmar registro de pago.", err)
+	if err != nil {
+		return nil, err
 	}
 
-	return s.FindByID(ctx, actor, created.ID)
+	return s.FindByID(ctx, actor, createdID)
 }
 
 // FindByID devuelve el pago por su id, validando que sea de la compañía del usuario.
@@ -186,58 +196,72 @@ func (s *PaymentService) Verify(ctx context.Context, actor *middlewares.ActorCon
 		return nil, utils.Unauthorized("UNAUTHORIZED", "Acceso no autenticado.")
 	}
 
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		return nil, utils.Internal("Error al iniciar transacción de verificación.", err)
-	}
-	defer tx.Rollback(ctx)
-
-	p, err := s.paymentRepo.FindByID(ctx, tx, id)
-	if err != nil {
-		return nil, utils.Internal("Error al consultar pago.", err)
-	}
-	if p == nil {
-		return nil, utils.NotFound("PAYMENT_NOT_FOUND", "El pago solicitado no existe.")
-	}
-
-	if actor.ActorType != types.ActorSuperadmin {
-		if actor.CompanyID == nil || *actor.CompanyID != p.CompanyID {
-			return nil, utils.Forbidden("FORBIDDEN_COMPANY_ACCESS", "No tienes permiso sobre este pago.")
+	err := db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		p, err := s.paymentRepo.FindByID(ctx, tx, id)
+		if err != nil {
+			return utils.Internal("Error al consultar pago.", err)
 		}
-	}
+		if p == nil {
+			return utils.NotFound("PAYMENT_NOT_FOUND", "El pago solicitado no existe.")
+		}
 
-	if p.Status != types.PaymentStatusReview {
-		return nil, utils.BadRequest("INVALID_STATUS", fmt.Sprintf("El pago no se puede verificar porque ya está en estado '%s'.", p.Status))
-	}
+		if actor.ActorType != types.ActorSuperadmin {
+			if actor.CompanyID == nil || *actor.CompanyID != p.CompanyID {
+				return utils.Forbidden("FORBIDDEN_COMPANY_ACCESS", "No tienes permiso sobre este pago.")
+			}
+		}
 
-	verifierID, aerr := s.requireActorEmployeeID(ctx, actor)
-	if aerr != nil {
-		return nil, aerr
-	}
-	// 1-3. verificado, suma a lo pagado de la venta y, si la venta es a crédito, abono en el libro de crédito
-	if err := s.verifyInTx(ctx, tx, p, verifierID, req.IssueNote); err != nil {
-		return nil, utils.Internal("Error al verificar el pago.", err)
-	}
-	// si con este pago el pedido queda cubierto, pasa a «verificación confirmada»
-	if err := s.syncVerificationStage(ctx, tx, p.SaleID, verifierID); err != nil {
-		return nil, utils.Internal("Error al actualizar la etapa del pedido.", err)
-	}
+		if p.Status != types.PaymentStatusReview {
+			return utils.BadRequest("INVALID_STATUS", fmt.Sprintf("El pago no se puede verificar porque ya está en estado '%s'.", p.Status))
+		}
 
-	// 4. Registro de auditoría
-	_ = s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
-		CompanyID: &p.CompanyID,
-		ActorType: actor.ActorType,
-		ActorID:   actor.ActorID,
-		Entity:    "payments",
-		EntityID:  &p.ID,
-		Action:    "PAYMENT_VERIFIED",
-		Reason:    fmt.Sprintf("Pago %s verificado exitosamente e imputado a cartera/venta", p.SerialCode),
-		IPAddress: ip,
-		UserAgent: ua,
+		verifierID, aerr := s.requireActorEmployeeID(ctx, actor)
+		if aerr != nil {
+			return aerr
+		}
+		// 1-3. verificado, suma a lo pagado de la venta y, si la venta es a crédito, abono en el libro de crédito
+		if err := s.verifyInTx(ctx, tx, p, verifierID, req.IssueNote); err != nil {
+			return utils.Internal("Error al verificar el pago.", err)
+		}
+		// si con este pago el pedido queda cubierto, pasa a «verificación confirmada»
+		if err := s.syncVerificationStage(ctx, tx, p.SaleID, verifierID); err != nil {
+			return utils.Internal("Error al actualizar la etapa del pedido.", err)
+		}
+
+		s.events.Record(ctx, events.NewPaymentStatusChanged(p.CompanyID, events.PaymentStatusChangedData{
+			Entity: events.EntityRef{Kind: "payment", ID: p.ID, Version: time.Now().UTC()},
+			From:   string(types.PaymentStatusReview),
+			To:     string(types.PaymentStatusVerified),
+		}))
+		s.events.CashSessionTotalsOfPayment(ctx, tx, p.ID)
+
+		if cov, err := s.paymentRepo.FindSaleCoverage(ctx, tx, p.SaleID); err == nil && cov != nil {
+			s.events.Record(ctx, events.NewSalePaymentChanged(p.CompanyID, cov.WarehouseID, events.SalePaymentChangedData{
+				SaleID:          p.SaleID,
+				PaidTotal:       cov.PaidTotal,
+				CreditAmount:    cov.CreditAmount,
+				Balance:         math.Max(cov.Total-cov.PaidTotal-cov.CreditAmount, 0),
+				PaymentVerified: cov.PaidTotal+cov.CreditAmount >= cov.Total-moneyTolerance && cov.ReviewCount == 0,
+				Version:         time.Now().UTC(),
+			}))
+		}
+
+		// 4. Registro de auditoría
+		_ = s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
+			CompanyID: &p.CompanyID,
+			ActorType: actor.ActorType,
+			ActorID:   actor.ActorID,
+			Entity:    "payments",
+			EntityID:  &p.ID,
+			Action:    "PAYMENT_VERIFIED",
+			Reason:    fmt.Sprintf("Pago %s verificado exitosamente e imputado a cartera/venta", p.SerialCode),
+			IPAddress: ip,
+			UserAgent: ua,
+		})
+		return nil
 	})
-
-	if err := tx.Commit(ctx); err != nil {
-		return nil, utils.Internal("Error al confirmar verificación del pago.", err)
+	if err != nil {
+		return nil, err
 	}
 
 	return s.FindByID(ctx, actor, id)
@@ -272,23 +296,38 @@ func (s *PaymentService) Void(ctx context.Context, actor *middlewares.ActorConte
 	}
 
 	// anular y reevaluar la etapa en la misma transacción: sin el pago en revisión el pedido puede quedar cubierto o no
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		return utils.Internal("Error al iniciar la transacción de anulación.", err)
-	}
-	defer tx.Rollback(ctx)
 	voiderID, aerr := s.requireActorEmployeeID(ctx, actor)
 	if aerr != nil {
 		return aerr
 	}
-	if err := s.paymentRepo.Void(ctx, tx, id, voiderID, voidReason); err != nil {
-		return utils.Internal("Error al anular pago.", err)
-	}
-	if err := s.syncVerificationStage(ctx, tx, p.SaleID, voiderID); err != nil {
-		return utils.Internal("Error al actualizar la etapa del pedido.", err)
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return utils.Internal("Error al confirmar la anulación.", err)
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		if err := s.paymentRepo.Void(ctx, tx, id, voiderID, voidReason); err != nil {
+			return utils.Internal("Error al anular pago.", err)
+		}
+		if err := s.syncVerificationStage(ctx, tx, p.SaleID, voiderID); err != nil {
+			return utils.Internal("Error al actualizar la etapa del pedido.", err)
+		}
+		s.events.Record(ctx, events.NewPaymentStatusChanged(p.CompanyID, events.PaymentStatusChangedData{
+			Entity: events.EntityRef{Kind: "payment", ID: p.ID, Version: time.Now().UTC()},
+			From:   string(types.PaymentStatusReview),
+			To:     string(types.PaymentStatusVoided),
+			Reason: &voidReason,
+		}))
+		s.events.CashSessionTotalsOfPayment(ctx, tx, p.ID)
+		if cov, err := s.paymentRepo.FindSaleCoverage(ctx, tx, p.SaleID); err == nil && cov != nil {
+			s.events.Record(ctx, events.NewSalePaymentChanged(p.CompanyID, cov.WarehouseID, events.SalePaymentChangedData{
+				SaleID:          p.SaleID,
+				PaidTotal:       cov.PaidTotal,
+				CreditAmount:    cov.CreditAmount,
+				Balance:         math.Max(cov.Total-cov.PaidTotal-cov.CreditAmount, 0),
+				PaymentVerified: cov.PaidTotal+cov.CreditAmount >= cov.Total-moneyTolerance && cov.ReviewCount == 0,
+				Version:         time.Now().UTC(),
+			}))
+		}
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
 	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
@@ -333,4 +372,19 @@ func (s *PaymentService) mapToDTO(p *repositories.PaymentEntity) *dtos.PaymentRe
 		WarehouseCode:        p.WarehouseCode,
 		WarehouseName:        p.WarehouseName,
 	}
+}
+
+// recordPaymentCreated graba payment.created con la misma fila del historial de abonos (cliente, pedido, bodega y quién lo registró), leída en la transacción.
+func (s *PaymentService) recordPaymentCreated(ctx context.Context, tx pgx.Tx, paymentID int64) error {
+	row, err := s.paymentRepo.FindByID(ctx, tx, paymentID)
+	if err != nil {
+		return err
+	}
+	if row == nil {
+		return utils.Internal("No se pudo leer el pago recién creado.", nil)
+	}
+	s.events.Record(ctx, events.NewPaymentCreated(row.CompanyID, s.mapToDTO(row)))
+	// el pago queda ligado al turno abierto de su bodega: sus totales cambian
+	s.events.CashSessionTotalsOfPayment(ctx, tx, row.ID)
+	return nil
 }

@@ -15,6 +15,8 @@ import { STATUS_LABELS } from '../../helpers/bank.adapter'
 import { useBankActions } from '../../hooks/useBankActions'
 import type { BankRecord, BankRecordStatus } from '../../types/bank.types'
 import { DataTable } from '@/global/components/UI/molecules/table/DataTable'
+import { ActionsHeader } from '@/global/components/UI/molecules/table/ActionsHeader'
+import { CopyableCell } from '@/global/components/UI/molecules/table/CopyableCell'
 
 const STATUS_TONE: Record<BankRecordStatus, PillTone> = { pending: 'amber', confirmed: 'green', ignored: 'gray' }
 
@@ -25,7 +27,7 @@ interface Props {
 
 export const BankRecordsTable: React.FC<Props> = ({ records, message }) => {
   const dispatch = useAppDispatch()
-  const canEdit = usePermissions().canPerformAction('wallet', 'bankReconciliation', 'update')
+  const canEdit = usePermissions().can('payments:reconcile')
   const actions = useBankActions()
   const [toIgnore, setToIgnore] = useState<BankRecord | null>(null)
 
@@ -46,7 +48,7 @@ export const BankRecordsTable: React.FC<Props> = ({ records, message }) => {
               <th className="col-priority-low">Referencia</th>
               <th className="bank-num col-priority-high">Valor</th>
               <th className="col-priority-high">Estado</th>
-              <th className="col-actions">Acciones</th>
+              <ActionsHeader className="col-actions" />
             </tr>
           </thead>
           <tbody>
@@ -62,7 +64,7 @@ export const BankRecordsTable: React.FC<Props> = ({ records, message }) => {
                   <td className="col-priority-medium">{record.date || '—'}</td>
                   <td className="bank-description col-priority-high">{record.description || '—'}</td>
                   <td className="col-priority-low">{record.channel || '—'}</td>
-                  <td className="col-priority-low">{record.reference || '—'}</td>
+                  <td className="col-priority-low">{record.reference ? <CopyableCell text={record.reference} /> : '—'}</td>
                   <td className="bank-num table-amount col-priority-high">
                     {record.isIncome ? '' : '−'}
                     {formatPesos(record.amount)}

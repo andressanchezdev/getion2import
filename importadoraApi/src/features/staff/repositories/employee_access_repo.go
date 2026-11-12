@@ -49,32 +49,6 @@ func (r *EmployeeRepository) AssignPermissions(ctx context.Context, q db.DBExecu
 	return nil
 }
 
-// UnlockEmployee desbloquea al empleado y reinicia sus intentos fallidos de ingreso.
-func (r *EmployeeRepository) UnlockEmployee(ctx context.Context, q db.DBExecutor, employeeID int64) error {
-	// 1. Limpiar intentos de login
-	const resetAttemptsSQL = `
-		UPDATE employee_login_attempts
-		SET failed_login_count = 0,
-		    blocked_until = NULL,
-		    updated_at = CURRENT_TIMESTAMP
-		WHERE employee_id = $1
-	`
-	_, err := q.Exec(ctx, resetAttemptsSQL, employeeID)
-	if err != nil {
-		return err
-	}
-
-	// 2. Reactivar estado en employees si estaba bloqueado
-	const activateSQL = `
-		UPDATE employees
-		SET status = 'active',
-		    updated_at = CURRENT_TIMESTAMP
-		WHERE id = $1 AND status = 'blocked' AND deleted_at IS NULL
-	`
-	_, _ = q.Exec(ctx, activateSQL, employeeID)
-	return nil
-}
-
 // ListSalespersons lista a los empleados que pueden vender, para asignarles un pedido.
 func (r *EmployeeRepository) ListSalespersons(ctx context.Context, q db.DBExecutor, companyID int64) ([]EmployeeEntity, error) {
 	const sql = `

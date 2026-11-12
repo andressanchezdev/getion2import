@@ -18,7 +18,7 @@ export const ProductCardTierMenu: React.FC<ProductCardTierMenuProps> = ({ produc
     // ojo: antes el icono se bloqueaba si el producto tenía una sola tarifa (en los datos semilla todos tienen solo P1) y no abría nunca
     const available = getAvailableLevels(product)
     // abrir y elegir la tarifa es del empleado con permiso de ventas (lo decide él, a su criterio); sin ese permiso solo ve la tarifa activa
-    const canChange = usePermissions().canPerformAction('shop', 'orders', 'create')
+    const canChange = usePermissions().can('orders:create', 'quotations:create')
     useClickOutside(wrapperRef, close, isOpen)
 
     // elige una tarifa y cierra el menú

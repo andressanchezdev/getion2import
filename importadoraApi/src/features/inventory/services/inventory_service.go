@@ -10,6 +10,7 @@ import (
 
 	"importadoraApi/src/core/config"
 	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/events"
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
@@ -30,6 +31,7 @@ type InventoryService struct {
 	productRepo   *productRepos.ProductRepository
 	warehouseRepo *warehouseRepos.WarehouseRepository
 	auditRepo     *authRepos.AuditRepository
+	events        *events.Recorder
 }
 
 // NewInventoryService crea el servicio con las piezas que necesita para funcionar.
@@ -40,6 +42,7 @@ func NewInventoryService(
 	productRepo *productRepos.ProductRepository,
 	warehouseRepo *warehouseRepos.WarehouseRepository,
 	auditRepo *authRepos.AuditRepository,
+	events *events.Recorder,
 ) *InventoryService {
 	return &InventoryService{
 		cfg:           cfg,
@@ -48,6 +51,7 @@ func NewInventoryService(
 		productRepo:   productRepo,
 		warehouseRepo: warehouseRepo,
 		auditRepo:     auditRepo,
+		events:        events,
 	}
 }
 
@@ -119,12 +123,13 @@ func (s *InventoryService) AdjustStock(ctx context.Context, actor *middlewares.A
 	newQty := req.NewQty
 
 	var updatedStock *repositories.StockEntity
-	err = db.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
 		up, err := s.inventoryRepo.SetStockAvailable(ctx, tx, req.StockID, req.NewQty)
 		if err != nil {
 			return err
 		}
 		updatedStock = up
+		s.events.Stock(ctx, up.ID, events.CauseAdjustment())
 
 		// Registrar asiento en kardex (audit_movements)
 		var empID *int64
@@ -225,17 +230,19 @@ func (s *InventoryService) RelocateStock(ctx context.Context, actor *middlewares
 		empID = &actor.ActorID
 	}
 
-	err = db.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
 		// Descontar de origen
 		if err := s.inventoryRepo.DeductStock(ctx, tx, origin.ID, req.Quantity, false); err != nil {
 			return err
 		}
+		s.events.Stock(ctx, origin.ID, events.CauseRelocation())
 
 		// Sumar o crear en destino (misma bodega, nueva ubicación)
 		destStock, err := s.inventoryRepo.UpsertStockDelta(ctx, tx, origin.CompanyID, origin.ProductID, origin.WarehouseID, destLoc, req.Quantity, 0)
 		if err != nil {
 			return err
 		}
+		s.events.Stock(ctx, destStock.ID, events.CauseRelocation())
 
 		// Movimiento kardex origen
 		prevOrigin := origin.Available

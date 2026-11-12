@@ -5,6 +5,7 @@ package controllers
 
 import (
 	"importadoraApi/src/core/middlewares"
+	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
 	"importadoraApi/src/features/screensaver/dtos"
 	"importadoraApi/src/features/screensaver/services"
@@ -43,7 +44,8 @@ func (c *ScreensaverController) Update(ctx echo.Context) error {
 		if actor.CompanyID != nil && *actor.CompanyID > 0 {
 			companyID = *actor.CompanyID
 		}
-		if actor.ActorID > 0 {
+		// ojo: updated_by apunta a employees; el id de un admin o superadmin es de otra tabla y no se guarda ahí
+		if actor.ActorType == types.ActorEmployee && actor.ActorID > 0 {
 			employeeID = &actor.ActorID
 		}
 	}

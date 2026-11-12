@@ -94,11 +94,12 @@ type SaleResponse struct {
 }
 
 type CreateSaleItemRequest struct {
-	StockID    int64    `json:"stockId" validate:"required"`
-	Quantity   int      `json:"quantity" validate:"required,min=1"`
-	UnitPrice  *float64 `json:"unitPrice"`
-	Discount   *float64 `json:"discount"`
-	IVAPercent *float64 `json:"ivaPercent"`
+	StockID    int64            `json:"stockId" validate:"required"`
+	Quantity   int              `json:"quantity" validate:"required,min=1"`
+	UnitPrice  *float64         `json:"unitPrice"`
+	Discount   *float64         `json:"discount"`
+	IVAPercent *float64         `json:"ivaPercent"`
+	PriceTier  *types.PriceTier `json:"priceTier,omitempty"`
 }
 
 type CreateSaleRequest struct {

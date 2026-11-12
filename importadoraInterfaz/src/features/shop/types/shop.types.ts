@@ -37,6 +37,7 @@ export interface Product {
     minStockAlert?: number // Límite para disparar alerta de stock bajo
     isNew?: boolean // Producto creado en los últimos 7 días
     createdAt?: string // Fecha ISO de creación
+    updatedAt?: string // Fecha ISO de última actualización (para applyVersioned)
     status?: 'active' | 'inactive' | 'draft' | 'discontinued'
     iva?: number // porcentaje de IVA (0 = exento); las tarifas de prices son valores netos y el IVA se suma aparte
 }
@@ -60,6 +61,8 @@ export interface CartItem {
     selectedPrice: number
     priceLevel: PriceLevelKey | null
     subtotal: number
+    maxAvailable?: number // tope vendible actualizado en vivo por stock.changed
+    unavailable?: boolean // true cuando el producto pasa a inactivo mientras está en el carrito
 }
 
 // cliente al que se le hace la venta (se elige en Terceros > Clientes); null = la venta va a nombre del usuario de la sesión
@@ -67,6 +70,7 @@ export interface CartCustomer {
     id: number
     name: string
     priceType?: string // nivel de precio del cliente (P0..P3)
+    unavailable?: boolean // true cuando el cliente pasa a inactivo mientras está elegido en el carrito
 }
 
 // ojo: el carrito ya no vive aquí: sus líneas llegan del backend y están en shop.cart.slice (no se guardan); aquí solo se guarda el uuid y los niveles

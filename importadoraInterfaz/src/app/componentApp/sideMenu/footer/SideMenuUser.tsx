@@ -1,12 +1,13 @@
-// SideMenuUser · tarjeta del usuario en el footer del menú (avatar con iniciales, nombre, rol, modal de perfil y botón de cerrar sesión)
-// conecta con: features/auth (usuario de la sesión, logoutThunk, UserProfileModal); las iniciales salen de global/helpers/format; la confirmación es global/.../ConfirmDialog; SideMenu le pasa si el menú está contraído
+// SideMenuUser · tarjeta del usuario en el footer del menú (avatar con iniciales, nombre, rol, perfil en el panel derecho y botón de cerrar sesión)
+// conecta con: features/auth (usuario de la sesión, logoutThunk), navigation (openDrawerForm «userProfile»); las iniciales salen de global/helpers/format; la confirmación es global/.../ConfirmDialog; SideMenu le pasa si el menú está contraído
 // ojo: antes el usuario salía del estado ui con datos fijos; ahora sale de la sesión (login)
 // ojo: con el menú contraído solo se ve el avatar (como en la maqueta)
 import React, { useState } from 'react'
 import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { getInitials } from '@/global/helpers/formatting/format'
 import { ConfirmDialog } from '@/global/components/UI/molecules/dialogs/ConfirmDialog'
-import { getDisplayName, logoutThunk, selectCurrentUser, UserProfileModal } from '@/features/auth'
+import { getDisplayName, logoutThunk, selectCurrentUser } from '@/features/auth'
+import { openDrawerForm } from '@/features/navigation'
 import logoutIcon from '@/assets/icons/logout.svg'
 import './SideMenuUser.css'
 
@@ -18,11 +19,12 @@ export const SideMenuUser: React.FC<SideMenuUserProps> = ({ isMini }) => {
     const dispatch = useAppDispatch()
     const user = useAppSelector(selectCurrentUser)
     const [showConfirm, setShowConfirm] = useState(false)
-    const [showProfile, setShowProfile] = useState(false)
 
     if (!user) return null
 
     const displayName = getDisplayName(user)
+    // ojo: el perfil se muestra en el panel derecho, no en un modal flotante
+    const openProfile = () => dispatch(openDrawerForm({ kind: 'userProfile' }))
 
     const handleConfirmLogout = () => {
         setShowConfirm(false)
@@ -38,11 +40,11 @@ export const SideMenuUser: React.FC<SideMenuUserProps> = ({ isMini }) => {
                     aria-label="Ver perfil de usuario"
                     role="button"
                     tabIndex={0}
-                    onClick={() => setShowProfile(true)}
+                    onClick={() => openProfile()}
                     onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault()
-                            setShowProfile(true)
+                            openProfile()
                         }
                     }}
                 >
@@ -54,11 +56,11 @@ export const SideMenuUser: React.FC<SideMenuUserProps> = ({ isMini }) => {
                             className="side-menu-user-info"
                             role="button"
                             tabIndex={0}
-                            onClick={() => setShowProfile(true)}
+                            onClick={() => openProfile()}
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter' || e.key === ' ') {
                                     e.preventDefault()
-                                    setShowProfile(true)
+                                    openProfile()
                                 }
                             }}
                             title="Ver perfil completo y permisos"
@@ -79,12 +81,6 @@ export const SideMenuUser: React.FC<SideMenuUserProps> = ({ isMini }) => {
                     </>
                 )}
             </div>
-
-            {/* Modal de perfil del usuario y permisos en vivo */}
-            <UserProfileModal
-                open={showProfile}
-                onClose={() => setShowProfile(false)}
-            />
 
             {/* ConfirmDialog global de cierre de sesión */}
             <ConfirmDialog

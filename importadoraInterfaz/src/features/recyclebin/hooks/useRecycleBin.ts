@@ -4,6 +4,7 @@ import type { PaginatorMetadata } from '@/api'
 import { toast } from '@/global/helpers/feedback/toast'
 import type { RecycleBinItem } from '../types/recyclebin.types'
 import { fetchRecycleBin, restoreRecycleBinItem } from '../services/recyclebin.service'
+import { onRecycleBinChanged } from '../realtime/recyclebin.realtime'
 
 export const useRecycleBin = () => {
   const [items, setItems] = useState<RecycleBinItem[]>([])
@@ -49,6 +50,9 @@ export const useRecycleBin = () => {
       cancelled = true
     }
   }, [loadItems])
+
+  // tiempo real: si alguien archiva o restaura un registro, la página abierta se vuelve a pedir
+  useEffect(() => onRecycleBinChanged(() => void loadItems()), [loadItems])
 
   const handleRestore = async (item: RecycleBinItem, reason: string) => {
     setRestoringId(item.id)

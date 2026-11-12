@@ -34,6 +34,7 @@ type CountItemEntity struct {
 	ID           int64
 	CountID      int64
 	StockID      int64
+	ProductID    int64
 	ProductCode  string
 	ProductName  string
 	Location     string
@@ -183,7 +184,7 @@ func (r *InventoryRepository) CreateCountItem(ctx context.Context, q db.DBExecut
 func (r *InventoryRepository) ListCountItems(ctx context.Context, q db.DBExecutor, countID int64) ([]CountItemEntity, error) {
 	const sql = `
 		SELECT
-			ci.id, ci.count_id, ci.stock_id,
+			ci.id, ci.count_id, ci.stock_id, s.product_id,
 			COALESCE(p.code, ''), COALESCE(p.name, ''), COALESCE(s.location, ''),
 			ci.expected_qty, ci.counted_qty,
 			ci.employee_id, emp.full_name
@@ -204,7 +205,7 @@ func (r *InventoryRepository) ListCountItems(ctx context.Context, q db.DBExecuto
 	for rows.Next() {
 		var item CountItemEntity
 		if err := rows.Scan(
-			&item.ID, &item.CountID, &item.StockID,
+			&item.ID, &item.CountID, &item.StockID, &item.ProductID,
 			&item.ProductCode, &item.ProductName, &item.Location,
 			&item.ExpectedQty, &item.CountedQty,
 			&item.EmployeeID, &item.EmployeeName,

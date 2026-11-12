@@ -9,6 +9,7 @@ import { InlineReason } from '@/global/components/UI/molecules/dialogs/InlineRea
 import { ProductLine, ProductLineList } from '@/global/components/UI/molecules/product/ProductLine'
 import { useProductImages } from '@/features/shop'
 import { formatCOP } from '@/global/helpers/formatting/format'
+import { usePermissions } from '@/global/hooks/access/usePermissions'
 import { useAppDispatch } from '@/global/hooks/store/useRedux'
 import { closeDrawerForm, openDrawerForm } from '@/features/navigation'
 import { PURCHASE_STATUS } from '../../constants/purchases.constants'
@@ -22,6 +23,7 @@ export interface PurchasePanelPayload {
 
 export const PurchaseDetailPanel: React.FC<{ payload: PurchasePanelPayload }> = ({ payload }) => {
   const dispatch = useAppDispatch()
+  const { can } = usePermissions()
   const detail = usePurchaseDetail(payload.id)
   const actions = usePurchaseActions()
   const [confirmVoid, setConfirmVoid] = useState(false)
@@ -85,8 +87,8 @@ export const PurchaseDetailPanel: React.FC<{ payload: PurchasePanelPayload }> = 
 
       <div className="drawer-form-footer">
         <button type="button" className="btn-secondary" onClick={() => actions.exportExcel(purchase)}>Bajar Excel</button>
-        {canVoid(purchase) && <button type="button" className="btn-secondary" disabled={actions.saving} onClick={() => setConfirmVoid(true)}>Anular</button>}
-        {canReceive(purchase) && <button type="button" className="btn-primary" onClick={() => dispatch(openDrawerForm({ kind: 'purchaseReceive', payload: { id: purchase.id } }))}>Recibir mercancía</button>}
+        {canVoid(purchase) && can('purchases:edit') && <button type="button" className="btn-secondary" disabled={actions.saving} onClick={() => setConfirmVoid(true)}>Anular</button>}
+        {canReceive(purchase) && can('purchases:receive') && <button type="button" className="btn-primary" onClick={() => dispatch(openDrawerForm({ kind: 'purchaseReceive', payload: { id: purchase.id } }))}>Recibir mercancía</button>}
       </div>
 
       <InlineReason open={confirmVoid} title="Anular orden de compra" message={`¿Anular la orden ${purchase.serial}? No se puede deshacer; indica el motivo.`} confirmLabel="Anular" onConfirm={doVoid} onCancel={() => setConfirmVoid(false)} />

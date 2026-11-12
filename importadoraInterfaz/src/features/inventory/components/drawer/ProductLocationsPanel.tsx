@@ -1,6 +1,7 @@
 // ProductLocationsPanel · panel lateral para ver las ubicaciones físicas y existencias por bodega de un producto
 // conecta con: ProductsTable (lo abre con openDrawerForm kind: 'productLocations'), useProductStock (existencias) y formRegistry
 import React from 'react'
+import '@/global/components/UI/molecules/form/DrawerFormShell.css'
 import './ProductLocationsPanel.css'
 import { useAppDispatch, useAppSelector } from '@/global/hooks/store/useRedux'
 import { selectWarehouses } from '@/features/warehouses'
@@ -32,8 +33,8 @@ export const ProductLocationsPanel: React.FC<ProductLocationsPanelProps> = ({ pr
   })
 
   return (
-    <div className="product-locations-panel">
-      <div className="product-locations-body">
+    <div className="drawer-form product-locations-panel">
+      <div className="drawer-form-body product-locations-body">
         {/* Cabecera con datos del producto */}
         <div className="product-locations-header-card">
           <div className="product-locations-code-badge">{product.code}</div>
@@ -98,7 +99,7 @@ export const ProductLocationsPanel: React.FC<ProductLocationsPanelProps> = ({ pr
         )}
       </div>
 
-      <div className="product-locations-footer">
+      <div className="drawer-form-footer product-locations-footer">
         <button
           type="button"
           className="btn-secondary"

@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/events"
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
@@ -18,6 +20,7 @@ import (
 	"importadoraApi/src/features/purchases/repositories"
 	warehouserepos "importadoraApi/src/features/warehouses/repositories"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -28,6 +31,7 @@ type PurchaseService struct {
 	warehouseRepo *warehouserepos.WarehouseRepository
 	inventoryRepo *inventoryrepos.InventoryRepository
 	auditRepo     *authRepos.AuditRepository
+	events        *events.Recorder
 }
 
 // NewPurchaseService crea el servicio con las piezas que necesita para funcionar.
@@ -38,6 +42,7 @@ func NewPurchaseService(
 	warehouseRepo *warehouserepos.WarehouseRepository,
 	inventoryRepo *inventoryrepos.InventoryRepository,
 	auditRepo *authRepos.AuditRepository,
+	events *events.Recorder,
 ) *PurchaseService {
 	return &PurchaseService{
 		pool:          pool,
@@ -46,6 +51,7 @@ func NewPurchaseService(
 		warehouseRepo: warehouseRepo,
 		inventoryRepo: inventoryRepo,
 		auditRepo:     auditRepo,
+		events:        events,
 	}
 }
 
@@ -71,139 +77,151 @@ func (s *PurchaseService) Create(ctx context.Context, actor *middlewares.ActorCo
 		companyID = *req.CompanyID
 	}
 
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		return nil, utils.Internal("Error al iniciar transacción de compra.", err)
-	}
-	defer tx.Rollback(ctx)
-
-	// Validar proveedor
-	supplier, err := s.externalRepo.FindByID(ctx, tx, req.SupplierID)
-	if err != nil {
-		return nil, utils.Internal("Error al consultar proveedor.", err)
-	}
-	if supplier == nil || supplier.CompanyID != companyID {
-		return nil, utils.NotFound("SUPPLIER_NOT_FOUND", "El proveedor no existe o no pertenece a la compañía.")
-	}
-
-	// Validar bodega
-	wh, err := s.warehouseRepo.FindByID(ctx, tx, req.WarehouseID)
-	if err != nil {
-		return nil, utils.Internal("Error al consultar bodega.", err)
-	}
-	if wh == nil || wh.CompanyID != companyID {
-		return nil, utils.NotFound("WAREHOUSE_NOT_FOUND", "La bodega no existe o no pertenece a la compañía.")
-	}
-
-	serialCode, err := utils.NextSerialCode(ctx, tx, companyID, &req.WarehouseID, types.SeriesPurchase, "OC-")
-	if err != nil {
-		return nil, utils.Internal("Error al generar consecutivo de orden de compra.", err)
-	}
-
-	var expectedDate *time.Time
-	if req.ExpectedDate != nil && *req.ExpectedDate != "" {
-		if t, err := time.Parse("2006-01-02", *req.ExpectedDate); err == nil {
-			expectedDate = &t
-		}
-	}
-
-	var grandSubtotal, grandIVA, grandTotal float64
-	type itemComputed struct {
-		productID  int64
-		quantity   int
-		unitCost   float64
-		ivaPercent *float64
-		subtotal   float64
-	}
-	itemsComputed := make([]itemComputed, 0, len(req.Items))
-
-	for _, it := range req.Items {
-		// el proveedor solo recibe órdenes de lo que vende (su catálogo)
-		offered, err := s.purchaseRepo.SupplierOffers(ctx, tx, req.SupplierID, it.ProductID)
+	var createdID int64
+	err := db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		// Validar proveedor
+		supplier, err := s.externalRepo.FindByID(ctx, tx, req.SupplierID)
 		if err != nil {
-			return nil, utils.Internal("Error al consultar el catálogo del proveedor.", err)
+			return utils.Internal("Error al consultar proveedor.", err)
 		}
-		if !offered {
-			return nil, utils.BadRequest("PRODUCT_NOT_OFFERED_BY_SUPPLIER", fmt.Sprintf("El producto %d no está en el catálogo de este proveedor. Agrégalo primero a su catálogo.", it.ProductID))
-		}
-		if it.Quantity <= 0 {
-			return nil, utils.BadRequest("INVALID_QUANTITY", "La cantidad debe ser mayor a 0.")
-		}
-		if it.UnitCost < 0 {
-			return nil, utils.BadRequest("INVALID_COST", "El costo unitario no puede ser negativo.")
+		if supplier == nil || supplier.CompanyID != companyID {
+			return utils.NotFound("SUPPLIER_NOT_FOUND", "El proveedor no existe o no pertenece a la compañía.")
 		}
 
-		lineSubtotal := float64(it.Quantity) * it.UnitCost
-		lineIVA := 0.0
-		if it.IVAPercent != nil && *it.IVAPercent > 0 {
-			lineIVA = lineSubtotal * (*it.IVAPercent / 100.0)
+		// Validar bodega
+		wh, err := s.warehouseRepo.FindByID(ctx, tx, req.WarehouseID)
+		if err != nil {
+			return utils.Internal("Error al consultar bodega.", err)
+		}
+		if wh == nil || wh.CompanyID != companyID {
+			return utils.NotFound("WAREHOUSE_NOT_FOUND", "La bodega no existe o no pertenece a la compañía.")
 		}
 
-		grandSubtotal += lineSubtotal
-		grandIVA += lineIVA
-		grandTotal += (lineSubtotal + lineIVA)
+		serialCode, err := utils.NextSerialCode(ctx, tx, companyID, &req.WarehouseID, types.SeriesPurchase, "OC-")
+		if err != nil {
+			return utils.Internal("Error al generar consecutivo de orden de compra.", err)
+		}
 
-		itemsComputed = append(itemsComputed, itemComputed{
-			productID:  it.ProductID,
-			quantity:   it.Quantity,
-			unitCost:   it.UnitCost,
-			ivaPercent: it.IVAPercent,
-			subtotal:   lineSubtotal,
+		var expectedDate *time.Time
+		if req.ExpectedDate != nil && *req.ExpectedDate != "" {
+			if t, err := time.Parse("2006-01-02", *req.ExpectedDate); err == nil {
+				expectedDate = &t
+			}
+		}
+
+		var grandSubtotal, grandIVA, grandTotal float64
+		type itemComputed struct {
+			productID  int64
+			quantity   int
+			unitCost   float64
+			ivaPercent *float64
+			subtotal   float64
+		}
+		itemsComputed := make([]itemComputed, 0, len(req.Items))
+
+		for _, it := range req.Items {
+			// el proveedor solo recibe órdenes de lo que vende (su catálogo)
+			offered, err := s.purchaseRepo.SupplierOffers(ctx, tx, req.SupplierID, it.ProductID)
+			if err != nil {
+				return utils.Internal("Error al consultar el catálogo del proveedor.", err)
+			}
+			if !offered {
+				return utils.BadRequest("PRODUCT_NOT_OFFERED_BY_SUPPLIER", fmt.Sprintf("El producto %d no está en el catálogo de este proveedor. Agrégalo primero a su catálogo.", it.ProductID))
+			}
+			if it.Quantity <= 0 {
+				return utils.BadRequest("INVALID_QUANTITY", "La cantidad debe ser mayor a 0.")
+			}
+			if it.UnitCost < 0 {
+				return utils.BadRequest("INVALID_COST", "El costo unitario no puede ser negativo.")
+			}
+
+			lineSubtotal := float64(it.Quantity) * it.UnitCost
+			lineIVA := 0.0
+			if it.IVAPercent != nil && *it.IVAPercent > 0 {
+				lineIVA = lineSubtotal * (*it.IVAPercent / 100.0)
+			}
+
+			grandSubtotal += lineSubtotal
+			grandIVA += lineIVA
+			grandTotal += (lineSubtotal + lineIVA)
+
+			itemsComputed = append(itemsComputed, itemComputed{
+				productID:  it.ProductID,
+				quantity:   it.Quantity,
+				unitCost:   it.UnitCost,
+				ivaPercent: it.IVAPercent,
+				subtotal:   lineSubtotal,
+			})
+		}
+
+		entity := &repositories.PurchaseEntity{
+			CompanyID:    companyID,
+			SerialCode:   serialCode,
+			SupplierID:   req.SupplierID,
+			WarehouseID:  req.WarehouseID,
+			EmployeeID:   creatorEmployeeID(actor),
+			Status:       types.PurchaseOrdered, // Nace lista para enviar a proveedor
+			SupplierRef:  req.SupplierRef,
+			ExpectedDate: expectedDate,
+			Subtotal:     grandSubtotal,
+			IVATotal:     grandIVA,
+			Total:        grandTotal,
+			Notes:        req.Notes,
+		}
+
+		created, err := s.purchaseRepo.Create(ctx, tx, entity)
+		if err != nil {
+			return utils.Internal("Error al registrar orden de compra.", err)
+		}
+		createdID = created.ID
+
+		for _, it := range itemsComputed {
+			itemEntity := &repositories.PurchaseItemEntity{
+				PurchaseID:  created.ID,
+				ProductID:   it.productID,
+				Quantity:    it.quantity,
+				ReceivedQty: 0,
+				UnitCost:    it.unitCost,
+				IVAPercent:  it.ivaPercent,
+				Subtotal:    it.subtotal,
+			}
+			if err := s.purchaseRepo.CreateItem(ctx, tx, itemEntity); err != nil {
+				return utils.Internal("Error al guardar ítem de la orden de compra.", err)
+			}
+		}
+
+		_ = s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
+			CompanyID: &companyID,
+			ActorType: actor.ActorType,
+			ActorID:   actor.ActorID,
+			Entity:    "purchases",
+			EntityID:  &created.ID,
+			Action:    "PURCHASE_CREATED",
+			Reason:    fmt.Sprintf("Orden de compra %s creada por $%.2f", serialCode, grandTotal),
+			IPAddress: ip,
+			UserAgent: ua,
 		})
-	}
 
-	entity := &repositories.PurchaseEntity{
-		CompanyID:    companyID,
-		SerialCode:   serialCode,
-		SupplierID:   req.SupplierID,
-		WarehouseID:  req.WarehouseID,
-		EmployeeID:   creatorEmployeeID(actor),
-		Status:       types.PurchaseOrdered, // Nace lista para enviar a proveedor
-		SupplierRef:  req.SupplierRef,
-		ExpectedDate: expectedDate,
-		Subtotal:     grandSubtotal,
-		IVATotal:     grandIVA,
-		Total:        grandTotal,
-		Notes:        req.Notes,
-	}
-
-	created, err := s.purchaseRepo.Create(ctx, tx, entity)
-	if err != nil {
-		return nil, utils.Internal("Error al registrar orden de compra.", err)
-	}
-
-	for _, it := range itemsComputed {
-		itemEntity := &repositories.PurchaseItemEntity{
-			PurchaseID:  created.ID,
-			ProductID:   it.productID,
-			Quantity:    it.quantity,
-			ReceivedQty: 0,
-			UnitCost:    it.unitCost,
-			IVAPercent:  it.ivaPercent,
-			Subtotal:    it.subtotal,
+		// el evento lleva la misma forma que la fila del listado de compras (con proveedor, bodega y renglones ya guardados)
+		row, err := s.purchaseRepo.FindByID(ctx, tx, created.ID)
+		if err != nil {
+			return utils.Internal("Error al leer la orden de compra recién creada.", err)
 		}
-		if err := s.purchaseRepo.CreateItem(ctx, tx, itemEntity); err != nil {
-			return nil, utils.Internal("Error al guardar ítem de la orden de compra.", err)
+		if row == nil {
+			return utils.Internal("No se pudo leer la orden de compra recién creada.", nil)
 		}
-	}
-
-	_ = s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
-		CompanyID: &companyID,
-		ActorType: actor.ActorType,
-		ActorID:   actor.ActorID,
-		Entity:    "purchases",
-		EntityID:  &created.ID,
-		Action:    "PURCHASE_CREATED",
-		Reason:    fmt.Sprintf("Orden de compra %s creada por $%.2f", serialCode, grandTotal),
-		IPAddress: ip,
-		UserAgent: ua,
+		rowItems, err := s.purchaseRepo.ListItems(ctx, tx, created.ID)
+		if err != nil {
+			return utils.Internal("Error al leer los renglones de la orden de compra.", err)
+		}
+		s.events.Record(ctx, events.NewPurchaseCreated(row.CompanyID, row.WarehouseID, s.mapToDTO(row, rowItems)))
+		return nil
 	})
-
-	if err := tx.Commit(ctx); err != nil {
-		return nil, utils.Internal("Error al confirmar orden de compra.", err)
+	if err != nil {
+		return nil, err
 	}
 
-	return s.FindByID(ctx, actor, created.ID)
+	return s.FindByID(ctx, actor, createdID)
 }
 
 // FindByID devuelve la orden de compra por su id, validando que sea de la compañía del usuario.

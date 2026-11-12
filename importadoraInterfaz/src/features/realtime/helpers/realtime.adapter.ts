@@ -1,21 +1,56 @@
-// realtime.adapter · convierte el mensaje crudo del websocket en un RealtimeEvent (en inglés)
-// conecta con: realtime.service (lo llama por cada mensaje); es el ÚNICO lugar que conoce la forma del mensaje del servidor
-// ojo: importadora-online recibía { tipo, cuerpo, idCliente }; se aceptan esos nombres y los nuevos { type, body, customerId }
-import type { RealtimeEvent } from '../types/realtime.types'
+// realtime.adapter · convierte el texto o JSON crudo del websocket en un RealtimeEvent validado contra el contrato v1
+// conecta con: realtime.contract (lista de 48 tipos y sobre) y realtime.service (lo llama en cada mensaje)
+import {
+  REALTIME_EVENT_TYPE_LIST,
+  type ActorKind,
+  type RealtimeEvent,
+} from '../types/realtime.contract'
 
-export const parseRealtimeMessage = (raw: unknown): RealtimeEvent | null => {
-  if (typeof raw !== 'string') return null
-  try {
-    const data = JSON.parse(raw) as Record<string, unknown>
-    const type = data.type ?? data.tipo
-    if (typeof type !== 'string') return null
-    const customerId = data.customerId ?? data.idCliente
-    return {
-      type,
-      body: data.body ?? data.cuerpo,
-      customerId: typeof customerId === 'string' || typeof customerId === 'number' ? String(customerId) : undefined,
+const VALID_TYPES = new Set<string>(REALTIME_EVENT_TYPE_LIST)
+const VALID_ACTOR_KINDS = new Set<ActorKind>(['employee', 'admin', 'superadmin', 'system'])
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+
+export const parseEnvelope = (raw: unknown): RealtimeEvent | null => {
+  let parsed: unknown = raw
+  if (typeof raw === 'string') {
+    try {
+      parsed = JSON.parse(raw)
+    } catch (error) {
+      if (typeof import.meta !== 'undefined' && import.meta.env?.DEV) {
+        console.warn('[realtime] JSON inválido descartado', error)
+      }
+      return null
     }
-  } catch {
+  }
+
+  if (!isPlainObject(parsed)) return null
+
+  if (parsed.v !== 1) return null
+  if (typeof parsed.type !== 'string' || !VALID_TYPES.has(parsed.type)) return null
+  if (typeof parsed.seq !== 'number' || !Number.isInteger(parsed.seq) || parsed.seq < 0) return null
+  if (typeof parsed.id !== 'string' || parsed.id.length === 0) return null
+  if (typeof parsed.occurredAt !== 'string' || parsed.occurredAt.length === 0) return null
+  if (parsed.companyId !== null && (typeof parsed.companyId !== 'number' || !Number.isInteger(parsed.companyId))) {
     return null
   }
+  if (
+    !Array.isArray(parsed.warehouseIds) ||
+    !parsed.warehouseIds.every((id) => typeof id === 'number' && Number.isInteger(id))
+  ) {
+    return null
+  }
+
+  const actor = parsed.actor
+  if (!isPlainObject(actor)) return null
+  if (typeof actor.type !== 'string' || !VALID_ACTOR_KINDS.has(actor.type as ActorKind)) return null
+  if (actor.id !== null && (typeof actor.id !== 'number' || !Number.isInteger(actor.id))) return null
+  if (typeof actor.name !== 'string') return null
+
+  if (!isPlainObject(parsed.data)) return null
+
+  return parsed as unknown as RealtimeEvent
 }
+
+export const parseRealtimeMessage = parseEnvelope

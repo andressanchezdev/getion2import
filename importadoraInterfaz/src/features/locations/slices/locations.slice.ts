@@ -1,7 +1,8 @@
 // locations.slice · estado de ubicaciones: la lista de la bodega abierta y el contenido de la ubicación seleccionada
 // conecta con: locations.thunks (lo llenan), locations.selectors (lecturas) y rootReducer (clave 'locations'; NO se guarda en el navegador)
 // ojo: al cambiar de bodega la lista se vacía para no mostrar por un instante las ubicaciones de la anterior
-import { createSlice, isAnyOf } from '@reduxjs/toolkit'
+import { applyVersionedStatus, mergeVersionedList } from '@/global/helpers/realtime/applyVersioned'
+import { createSlice, isAnyOf, type PayloadAction } from '@reduxjs/toolkit'
 import { INITIAL_LOCATIONS_STATE } from '../constants/locations.constants'
 import { createLocationThunk, deleteLocationThunk, loadLocationContentThunk, loadLocationsThunk, toggleLocationThunk, updateLocationThunk } from '../thunks/locations.thunks'
 
@@ -12,7 +13,27 @@ const contentKey = (arg: { warehouseId: number; code: string }) => `${arg.wareho
 export const locationsSlice = createSlice({
   name: 'locations',
   initialState: INITIAL_LOCATIONS_STATE,
-  reducers: {},
+  reducers: {
+    // tiempo real (entity.status_changed de ubicación): cambia el estado de la fila si es de la bodega abierta
+    locationStatusFromEvent: (state, action: PayloadAction<{ id: number; isActive: boolean; version?: string }>) => {
+      const row = state.list.items.find((item) => item.id === action.payload.id)
+      if (row) applyVersionedStatus(row, action.payload.isActive, action.payload.version)
+    },
+    // tiempo real (stock.changed): actualiza el contenido de la ubicación abierta por stockId
+    locationStockFromEvent: (
+      state,
+      action: PayloadAction<Array<{ stockId: number; available: number; reserved: number; sellable: number }>>
+    ) => {
+      for (const change of action.payload) {
+        const row = state.content.items.find((item) => item.stockId === change.stockId)
+        if (row) {
+          row.available = change.available
+          row.reserved = change.reserved
+          row.sellable = change.sellable
+        }
+      }
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(loadLocationsThunk.pending, (state, action) => {
@@ -24,7 +45,7 @@ export const locationsSlice = createSlice({
       })
       .addCase(loadLocationsThunk.fulfilled, (state, action) => {
         if (state.list.requestId !== action.meta.requestId) return
-        state.list.items = action.payload
+        state.list.items = mergeVersionedList(state.list.items, action.payload, (l) => l.id)
         state.list.status = 'succeeded'
       })
       .addCase(loadLocationsThunk.rejected, (state, action) => {
@@ -65,5 +86,6 @@ export const locationsSlice = createSlice({
   },
 })
 
+export const { locationStatusFromEvent, locationStockFromEvent } = locationsSlice.actions
 export const locationsReducer = locationsSlice.reducer
 export default locationsSlice.reducer

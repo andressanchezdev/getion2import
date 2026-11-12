@@ -3,6 +3,7 @@
 // ojo: aquí va lo de segundo nivel que no cabe en la tabla (canal, verificaciones, envío y fechas)
 import React from 'react'
 import { Pill } from '@/global/components/UI/atoms/Pill'
+import { CopyableCell } from '@/global/components/UI/molecules/table/CopyableCell'
 import { formatDateTime, formatPesos } from '@/global/helpers/formatting/format'
 import { ORDER_CHANNELS, ORDER_STAGES } from '../../../constants/orders.constants'
 import { paymentLabel } from '../../../helpers/orders.labels'
@@ -18,6 +19,9 @@ export const OrderSummarySection: React.FC<{ order: OrderDetail }> = ({ order })
 
   return (
     <Box title="Resumen">
+      <Row label="Pedido">
+        <CopyableCell text={order.serial} label="Número de pedido" />
+      </Row>
       <Row label="Etapa">
         <Pill tone="blue">{ORDER_STAGES.find((stage) => stage.key === order.stage)?.label ?? (order.stage || '—')}</Pill>
         {order.paused && <Pill tone="amber">En pausa</Pill>}

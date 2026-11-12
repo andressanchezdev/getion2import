@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"importadoraApi/src/core/config"
+	"importadoraApi/src/core/events"
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
@@ -33,6 +34,7 @@ type ProductService struct {
 	auditRepo      *authRepos.AuditRepository
 	warehouseRepo  *warehouseRepos.WarehouseRepository
 	inventoryRepo  *inventoryRepos.InventoryRepository
+	events         *events.Recorder
 }
 
 // NewProductService crea el servicio con las piezas que necesita para funcionar.
@@ -47,6 +49,7 @@ func NewProductService(
 	auditRepo *authRepos.AuditRepository,
 	warehouseRepo *warehouseRepos.WarehouseRepository,
 	inventoryRepo *inventoryRepos.InventoryRepository,
+	events *events.Recorder,
 ) *ProductService {
 	return &ProductService{
 		cfg:            cfg,
@@ -59,6 +62,7 @@ func NewProductService(
 		auditRepo:      auditRepo,
 		warehouseRepo:  warehouseRepo,
 		inventoryRepo:  inventoryRepo,
+		events:         events,
 	}
 }
 
