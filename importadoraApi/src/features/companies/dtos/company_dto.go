@@ -31,14 +31,15 @@ type CreateCompanyRequest struct {
 
 // UpdateCompanyRequest entrada de PUT /companies/:id.
 type UpdateCompanyRequest struct {
-	Name     *string `json:"name,omitempty"`
-	Email    *string `json:"email,omitempty"`
-	Phone    *string `json:"phone,omitempty"`
-	Address  *string `json:"address,omitempty"`
-	City     *string `json:"city,omitempty"`
-	LogoURL  *string `json:"logoUrl,omitempty"`
-	IsActive *bool   `json:"isActive,omitempty"`
-	Reason   string  `json:"reason,omitempty"` // obligatorio (10 a 100) si se desactiva
+	Name            *string `json:"name,omitempty"`
+	Email           *string `json:"email,omitempty"`
+	Phone           *string `json:"phone,omitempty"`
+	Address         *string `json:"address,omitempty"`
+	City            *string `json:"city,omitempty"`
+	LogoURL         *string `json:"logoUrl,omitempty"`
+	IsActive        *bool   `json:"isActive,omitempty"`
+	ExpectedVersion *string `json:"expectedVersion,omitempty"`
+	Reason          string  `json:"reason,omitempty"` // obligatorio (10 a 100) si se desactiva
 }
 
 // CompanySearchQuery parámetros de búsqueda para GET /companies/search.

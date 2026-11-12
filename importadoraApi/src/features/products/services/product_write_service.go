@@ -203,6 +203,9 @@ func (s *ProductService) Update(ctx context.Context, actor *middlewares.ActorCon
 	if current == nil {
 		return nil, utils.NotFound("PRODUCT_NOT_FOUND", "El producto solicitado no existe.")
 	}
+	if err := utils.ValidateExpectedVersion(current.UpdatedAt, req.ExpectedVersion); err != nil {
+		return nil, err
+	}
 
 	if actor.ActorType != types.ActorSuperadmin {
 		if actor.CompanyID == nil || *actor.CompanyID != current.CompanyID {

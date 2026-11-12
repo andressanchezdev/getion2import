@@ -69,14 +69,16 @@ func (c *AuthController) Logout(ctx echo.Context) error {
 		sessionID int64
 		actorType types.ActorType
 		actorID   int64
+		companyID *int64
 	)
 	if actorCtx != nil {
 		sessionID = actorCtx.SessionID
 		actorType = actorCtx.ActorType
 		actorID = actorCtx.ActorID
+		companyID = actorCtx.CompanyID
 	}
 
-	err := c.authService.Logout(ctx.Request().Context(), sessionID, actorType, actorID, req.Token(), req.AllSessions)
+	err := c.authService.Logout(ctx.Request().Context(), companyID, sessionID, actorType, actorID, req.Token(), req.AllSessions)
 	if err != nil {
 		return err
 	}

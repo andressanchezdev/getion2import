@@ -64,8 +64,13 @@ func (s *WarehouseService) UpdateFacturation(ctx context.Context, actor *middlew
 			return nil, utils.Forbidden("FORBIDDEN_WAREHOUSE_ACCESS", "No tienes permiso para configurar la facturación de esta bodega.")
 		}
 	}
-
 	current, _ := s.warehouseRepo.FindFacturationByWarehouseID(ctx, s.pool, warehouseID)
+	if current != nil {
+		if err := utils.ValidateExpectedVersion(current.UpdatedAt, req.ExpectedVersion); err != nil {
+			return nil, err
+		}
+	}
+
 	hadExisting := current != nil
 	// foto de los datos fiscales antes de editarlos: de aquí sale changedFields
 	beforeSnap := events.Snapshot(current)
@@ -270,6 +275,9 @@ func (s *WarehouseService) UpdateDocSeries(ctx context.Context, actor *middlewar
 		if actor.CompanyID == nil || *actor.CompanyID != current.CompanyID {
 			return nil, utils.Forbidden("FORBIDDEN_DOC_SERIES_ACCESS", "No tienes permiso para actualizar esta serie numérica.")
 		}
+	}
+	if err := utils.ValidateExpectedVersion(current.UpdatedAt, req.ExpectedVersion); err != nil {
+		return nil, err
 	}
 
 	updated, err := db.WithTxValue(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) (*repositories.DocSeriesEntity, error) {

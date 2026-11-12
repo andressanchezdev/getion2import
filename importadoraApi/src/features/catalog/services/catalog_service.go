@@ -228,6 +228,9 @@ func (s *CatalogService) UpdateBrand(ctx context.Context, actor *middlewares.Act
 			return nil, utils.Forbidden("FORBIDDEN_COMPANY_ACCESS", "No tienes permiso para modificar esta marca.")
 		}
 	}
+	if err := utils.ValidateExpectedVersion(current.UpdatedAt, req.ExpectedVersion); err != nil {
+		return nil, err
+	}
 
 	if req.Name != nil && strings.TrimSpace(*req.Name) != "" {
 		cleanName := strings.TrimSpace(*req.Name)

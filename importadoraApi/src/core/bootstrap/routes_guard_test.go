@@ -11,8 +11,10 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"importadoraApi/src/core/types"
+	"importadoraApi/src/core/utils"
 )
 
 // excepciones: rutas que cambian datos pero solo exigen sesión, y por qué
@@ -45,6 +47,64 @@ func TestEveryWriteRouteIsProtected(t *testing.T) {
 				t.Errorf("%s:%d cambia datos sin exigir permiso: %s", rel, i+1, strings.TrimSpace(line))
 			}
 		}
+	}
+}
+
+func TestE10OptimisticVersionContract(t *testing.T) {
+	checks := []struct {
+		filePath string
+		mustHave []string
+	}{
+		{filePath: "../../features/auth/dtos/auth_dto.go", mustHave: []string{"UpdateMeRequest", "ExpectedVersion"}},
+		{filePath: "../../features/companies/dtos/company_dto.go", mustHave: []string{"UpdateCompanyRequest", "ExpectedVersion"}},
+		{filePath: "../../features/customers/dtos/customer_dto.go", mustHave: []string{"UpdateCustomerRequest", "ExpectedVersion"}},
+		{filePath: "../../features/catalog/dtos/catalog_dto.go", mustHave: []string{"UpdateBrandRequest", "UpdateModelRequest", "UpdateCategoryRequest", "ExpectedVersion"}},
+		{filePath: "../../features/products/dtos/product_dto.go", mustHave: []string{"UpdateProductRequest", "ExpectedVersion"}},
+		{filePath: "../../features/externals/dtos/external_dto.go", mustHave: []string{"UpdateExternalRequest", "ExpectedVersion"}},
+		{filePath: "../../features/quotations/dtos/quotation_dto.go", mustHave: []string{"UpdateQuotationRequest", "ExpectedVersion"}},
+		{filePath: "../../features/staff/dtos/staff_dto.go", mustHave: []string{"UpdateAdminRequest", "UpdateRoleRequest", "UpdateEmployeeRequest", "AssignEmployeePermissionsRequest", "ExpectedVersion"}},
+		{filePath: "../../features/warehouses/dtos/warehouse_dto.go", mustHave: []string{"UpdateWarehouseRequest", "UpdateFacturationRequest", "UpdateDocSeriesRequest", "UpdateWarehouseLocationRequest", "ExpectedVersion"}},
+		{filePath: "../../features/inventory/dtos/inventory_dto.go", mustHave: []string{"UpdateCountItemsRequest", "ExpectedVersion"}},
+	}
+
+	for _, check := range checks {
+		content, err := os.ReadFile(check.filePath)
+		if err != nil {
+			t.Fatalf("no se pudo leer %s: %v", check.filePath, err)
+		}
+		text := string(content)
+		for _, want := range check.mustHave {
+			if !strings.Contains(text, want) {
+				t.Errorf("%s no incluye %q en el contrato E10", check.filePath, want)
+			}
+		}
+	}
+}
+
+func TestValidateExpectedVersion(t *testing.T) {
+	now := time.Date(2026, time.November, 12, 9, 6, 7, 0, time.UTC)
+	if err := utils.ValidateExpectedVersion(now, nil); err != nil {
+		t.Fatalf("expectedVersion nulo no debe fallar: %v", err)
+	}
+
+	matching := now.Format(time.RFC3339Nano)
+	if err := utils.ValidateExpectedVersion(now, &matching); err != nil {
+		t.Fatalf("expectedVersion coincidente no debe fallar: %v", err)
+	}
+
+	invalid := "not-a-date"
+	if err := utils.ValidateExpectedVersion(now, &invalid); err == nil {
+		t.Fatal("expectedVersion inválido debería devolver error")
+	}
+
+	stale := now.Add(2 * time.Minute).Format(time.RFC3339Nano)
+	err := utils.ValidateExpectedVersion(now, &stale)
+	appErr, ok := err.(*utils.AppError)
+	if !ok {
+		t.Fatalf("error esperado AppError, recibido %T", err)
+	}
+	if appErr.Code != "STALE_VERSION" {
+		t.Fatalf("se esperaba STALE_VERSION, se recibió %s", appErr.Code)
 	}
 }
 

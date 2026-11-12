@@ -148,6 +148,9 @@ func (s *StaffService) UpdateRole(ctx context.Context, actor *middlewares.ActorC
 	if current == nil {
 		return nil, utils.NotFound("ROLE_NOT_FOUND", "El rol solicitado no existe.")
 	}
+	if err := utils.ValidateExpectedVersion(current.UpdatedAt, req.ExpectedVersion); err != nil {
+		return nil, err
+	}
 
 	if actor.ActorType != types.ActorSuperadmin {
 		if actor.CompanyID == nil || *actor.CompanyID != current.CompanyID {

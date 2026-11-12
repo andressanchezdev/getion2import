@@ -81,31 +81,33 @@ type UpdateWarehouseRequest struct {
 	Description       *string `json:"description,omitempty"`
 	ManagerEmployeeID *int64  `json:"managerEmployeeId,omitempty"`
 	IsActive          *bool   `json:"isActive,omitempty"`
+	ExpectedVersion   *string `json:"expectedVersion,omitempty"`
 	Reason            string  `json:"reason,omitempty"` // obligatorio (10 a 100) si la bodega se inactiva
 }
 
 // UpdateFacturationRequest entrada para PUT /warehouses/:id/facturation.
 type UpdateFacturationRequest struct {
-	TypeFacturation  *types.TypeFacturation `json:"typeFacturation,omitempty"`
-	DocumentType     *types.DocumentType    `json:"documentType,omitempty"`
-	NIT              *string                `json:"nit,omitempty"`
-	LegalName        *string                `json:"legalName,omitempty"`
-	TradeName        *string                `json:"tradeName,omitempty"`
-	BillingEmail     *string                `json:"billingEmail,omitempty"`
-	BillingPhone     *string                `json:"billingPhone,omitempty"`
-	BillingAddress   *string                `json:"billingAddress,omitempty"`
-	BillingCity      *string                `json:"billingCity,omitempty"`
-	LogoURL          *string                `json:"logoUrl,omitempty"`
-	VatWithholder    *bool                  `json:"vatWithholder,omitempty"`
-	IncomeWithholder *bool                  `json:"incomeWithholder,omitempty"`
-	SelfWithholder   *bool                  `json:"selfWithholder,omitempty"`
-	InvoicePrefix    *string                `json:"invoicePrefix,omitempty"`
-	ResolutionNumber *string                `json:"resolutionNumber,omitempty"`
-	ResolutionDate   *string                `json:"resolutionDate,omitempty"` // Formato YYYY-MM-DD
+	TypeFacturation   *types.TypeFacturation `json:"typeFacturation,omitempty"`
+	DocumentType      *types.DocumentType    `json:"documentType,omitempty"`
+	NIT               *string                `json:"nit,omitempty"`
+	LegalName         *string                `json:"legalName,omitempty"`
+	TradeName         *string                `json:"tradeName,omitempty"`
+	BillingEmail      *string                `json:"billingEmail,omitempty"`
+	BillingPhone      *string                `json:"billingPhone,omitempty"`
+	BillingAddress    *string                `json:"billingAddress,omitempty"`
+	BillingCity       *string                `json:"billingCity,omitempty"`
+	LogoURL           *string                `json:"logoUrl,omitempty"`
+	VatWithholder     *bool                  `json:"vatWithholder,omitempty"`
+	IncomeWithholder  *bool                  `json:"incomeWithholder,omitempty"`
+	SelfWithholder    *bool                  `json:"selfWithholder,omitempty"`
+	InvoicePrefix     *string                `json:"invoicePrefix,omitempty"`
+	ResolutionNumber  *string                `json:"resolutionNumber,omitempty"`
+	ResolutionDate    *string                `json:"resolutionDate,omitempty"` // Formato YYYY-MM-DD
 	ResolutionValidUntil *string            `json:"resolutionValidUntil,omitempty"` // Formato YYYY-MM-DD
-	RangeFrom        *int64                 `json:"rangeFrom,omitempty"`
-	RangeTo          *int64                 `json:"rangeTo,omitempty"`
-	IsActive         *bool                  `json:"isActive,omitempty"`
+	RangeFrom         *int64                 `json:"rangeFrom,omitempty"`
+	RangeTo           *int64                 `json:"rangeTo,omitempty"`
+	IsActive          *bool                  `json:"isActive,omitempty"`
+	ExpectedVersion   *string                `json:"expectedVersion,omitempty"`
 }
 
 // DocSeriesResponse representa un registro de serie numérica.
@@ -120,8 +122,9 @@ type DocSeriesResponse struct {
 
 // UpdateDocSeriesRequest entrada para PUT /doc-series/:id.
 type UpdateDocSeriesRequest struct {
-	Prefix     *string `json:"prefix,omitempty"`
-	NextNumber *int64  `json:"nextNumber,omitempty"`
+	Prefix           *string `json:"prefix,omitempty"`
+	NextNumber       *int64  `json:"nextNumber,omitempty"`
+	ExpectedVersion  *string `json:"expectedVersion,omitempty"`
 }
 
 // WarehouseLocationResponse representa una ubicación física administrada por bodega.
@@ -146,8 +149,9 @@ type CreateWarehouseLocationRequest struct {
 }
 
 type UpdateWarehouseLocationRequest struct {
-	Code        *string `json:"code,omitempty"`
-	Description *string `json:"description,omitempty"`
-	IsActive    *bool   `json:"isActive,omitempty"`
-	Reason string `json:"reason,omitempty"` // obligatorio (10 a 100) si se desactiva
+	Code            *string `json:"code,omitempty"`
+	Description     *string `json:"description,omitempty"`
+	IsActive        *bool   `json:"isActive,omitempty"`
+	ExpectedVersion *string `json:"expectedVersion,omitempty"`
+	Reason          string  `json:"reason,omitempty"` // obligatorio (10 a 100) si se desactiva
 }

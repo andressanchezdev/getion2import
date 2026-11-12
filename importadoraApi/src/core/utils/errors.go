@@ -17,6 +17,7 @@ type AppError struct {
 	Status  int
 	Code    string
 	Message string
+	Details any
 	Err     error
 }
 
@@ -56,6 +57,11 @@ func NotFound(code, message string) *AppError {
 // Conflict crea un error 409: choca con algo que ya existe.
 func Conflict(code, message string) *AppError {
 	return &AppError{Status: http.StatusConflict, Code: code, Message: message}
+}
+
+// StaleVersion crea un error 409 de versión desactualizada para competencias optimistas.
+func StaleVersion(message string, currentVersion any) *AppError {
+	return &AppError{Status: http.StatusConflict, Code: "STALE_VERSION", Message: message, Details: map[string]any{"currentVersion": currentVersion}}
 }
 
 // Unprocessable crea un error 422: los datos llegaron bien pero el negocio no los acepta.

@@ -85,21 +85,22 @@ type CreateProductRequest struct {
 }
 
 type UpdateProductRequest struct {
-	CategoryID  *int64               `json:"categoryId"`
-	BrandID     *int64               `json:"brandId"`
-	ModelID     *int64               `json:"modelId"`
-	Code        *string              `json:"code"`
-	Name        *string              `json:"name"`
-	Description *string              `json:"description"`
-	Unit        *string              `json:"unit"`
-	IVA         *float64             `json:"iva"`
-	Prices      *ProductPrices       `json:"prices"`
-	LastCost    *float64             `json:"lastCost"`
-	IsPromotion *bool                `json:"isPromotion"`
-	IsNew       *bool                `json:"isNew"`
-	Images      []string             `json:"images"`
-	Status      *types.ProductStatus `json:"status"`
-	Reason      string               `json:"reason"` // obligatorio (10 a 100) si pasa a inactivo o descontinuado
+	CategoryID       *int64               `json:"categoryId"`
+	BrandID          *int64               `json:"brandId"`
+	ModelID          *int64               `json:"modelId"`
+	Code             *string              `json:"code"`
+	Name             *string              `json:"name"`
+	Description      *string              `json:"description"`
+	Unit             *string              `json:"unit"`
+	IVA              *float64             `json:"iva"`
+	Prices           *ProductPrices       `json:"prices"`
+	LastCost         *float64             `json:"lastCost"`
+	IsPromotion      *bool                `json:"isPromotion"`
+	IsNew            *bool                `json:"isNew"`
+	Images           []string             `json:"images"`
+	Status           *types.ProductStatus `json:"status"`
+	ExpectedVersion  *string              `json:"expectedVersion,omitempty"`
+	Reason           string               `json:"reason"` // obligatorio (10 a 100) si pasa a inactivo o descontinuado
 }
 
 type DeleteProductRequest struct {

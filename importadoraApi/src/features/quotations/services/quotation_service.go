@@ -310,6 +310,9 @@ func (s *QuotationService) Update(ctx context.Context, actor *middlewares.ActorC
 			return nil, utils.Forbidden("FORBIDDEN_COMPANY_ACCESS", "No tienes permiso para modificar esta cotización.")
 		}
 	}
+	if err := utils.ValidateExpectedVersion(quo.UpdatedAt, req.ExpectedVersion); err != nil {
+		return nil, err
+	}
 
 	fromStatus := quo.Status
 	changed := make([]string, 0, 2)

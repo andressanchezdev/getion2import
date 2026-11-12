@@ -6,12 +6,16 @@ package services
 import (
 	"context"
 
+	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/events"
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
 	authRepos "importadoraApi/src/features/auth/repositories"
 	"importadoraApi/src/features/staff/dtos"
 	"importadoraApi/src/features/staff/repositories"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // UpdateEmployeeCredentials cambia la contraseña de un empleado.
@@ -43,23 +47,40 @@ func (s *StaffService) UpdateEmployeeCredentials(ctx context.Context, actor *mid
 		return utils.Internal("Error al procesar la contraseña.", err)
 	}
 
-	if err := s.employeeRepo.UpdateCredentials(ctx, s.pool, id, hash); err != nil {
-		return utils.Internal("Error al actualizar credenciales.", err)
-	}
+	return db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		if err := s.employeeRepo.UpdateCredentials(ctx, tx, id, hash); err != nil {
+			return utils.Internal("Error al actualizar credenciales.", err)
+		}
 
-	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
-		CompanyID: &current.CompanyID,
-		ActorType: actor.ActorType,
-		ActorID:   actor.ActorID,
-		Entity:    "employees",
-		EntityID:  &current.ID,
-		Action:    "EMPLOYEE_PASSWORD_RESET",
-		Reason:    "Restablecimiento de contraseña de empleado",
-		IPAddress: ip,
-		UserAgent: ua,
+		if s.authRepo != nil {
+			_ = s.authRepo.RevokeAllActorSessions(ctx, tx, types.ActorEmployee, id)
+		}
+
+		_ = s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
+			CompanyID: &current.CompanyID,
+			ActorType: actor.ActorType,
+			ActorID:   actor.ActorID,
+			Entity:    "employees",
+			EntityID:  &current.ID,
+			Action:    "EMPLOYEE_PASSWORD_RESET",
+			Reason:    "Restablecimiento de contraseña de empleado",
+			IPAddress: ip,
+			UserAgent: ua,
+		})
+
+		if s.events != nil {
+			s.events.Record(ctx, events.NewSessionRevoked(
+				&current.CompanyID,
+				string(types.ActorEmployee),
+				id,
+				nil,
+				nil,
+				"password_changed",
+			))
+		}
+
+		return nil
 	})
-
-	return nil
 }
 
 // GetEmployeePermissions devuelve los permisos asignados a un empleado.
@@ -98,6 +119,9 @@ func (s *StaffService) AssignEmployeePermissions(ctx context.Context, actor *mid
 	if current == nil {
 		return nil, utils.NotFound("EMPLOYEE_NOT_FOUND", "El empleado solicitado no existe.")
 	}
+	if err := utils.ValidateExpectedVersion(current.UpdatedAt, req.ExpectedVersion); err != nil {
+		return nil, err
+	}
 
 	if actor.ActorType != types.ActorSuperadmin {
 		if actor.CompanyID == nil || *actor.CompanyID != current.CompanyID {
@@ -113,23 +137,50 @@ func (s *StaffService) AssignEmployeePermissions(ctx context.Context, actor *mid
 		empID = &actor.ActorID
 	}
 
-	if err := s.employeeRepo.AssignPermissions(ctx, s.pool, id, req.PermissionIDs, adminID, empID); err != nil {
-		return nil, utils.Internal("Error al asignar permisos.", err)
+	var res []dtos.PermissionResponse
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		if err := s.employeeRepo.AssignPermissions(ctx, tx, id, req.PermissionIDs, adminID, empID); err != nil {
+			return utils.Internal("Error al asignar permisos.", err)
+		}
+
+		_ = s.auditRepo.Insert(ctx, tx, authRepos.AuditLogInput{
+			CompanyID: &current.CompanyID,
+			ActorType: actor.ActorType,
+			ActorID:   actor.ActorID,
+			Entity:    "employee_permissions",
+			EntityID:  &current.ID,
+			Action:    "PERMISSIONS_ASSIGNED",
+			Reason:    "Asignación de permisos al empleado",
+			IPAddress: ip,
+			UserAgent: ua,
+		})
+
+		perms, err := s.permissionRepo.ListByEmployeeID(ctx, tx, id)
+		if err != nil {
+			return utils.Internal("Error al consultar permisos.", err)
+		}
+		res = perms
+
+		if s.events != nil {
+			permKeys := make([]string, 0, len(res))
+			for _, p := range res {
+				permKeys = append(permKeys, p.Module+":"+p.Action)
+			}
+			s.events.Record(ctx, events.NewPermissionsChanged(
+				&current.CompanyID,
+				string(types.ActorEmployee),
+				id,
+				permKeys,
+			))
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 
-	_ = s.auditRepo.Insert(ctx, s.pool, authRepos.AuditLogInput{
-		CompanyID: &current.CompanyID,
-		ActorType: actor.ActorType,
-		ActorID:   actor.ActorID,
-		Entity:    "employee_permissions",
-		EntityID:  &current.ID,
-		Action:    "PERMISSIONS_ASSIGNED",
-		Reason:    "Asignación de permisos al empleado",
-		IPAddress: ip,
-		UserAgent: ua,
-	})
-
-	return s.permissionRepo.ListByEmployeeID(ctx, s.pool, id)
+	return res, nil
 }
 
 // mapEmployeeToDTO convierte el miembro del personal de la base en la respuesta que sale por la API.

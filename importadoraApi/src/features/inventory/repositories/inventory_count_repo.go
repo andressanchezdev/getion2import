@@ -28,6 +28,7 @@ type CountEntity struct {
 	Notes         *string
 	CreatedAt     time.Time
 	ClosedAt      *time.Time
+	UpdatedAt     time.Time
 }
 
 type CountItemEntity struct {
@@ -50,7 +51,7 @@ func (r *InventoryRepository) FindCountByID(ctx context.Context, q db.DBExecutor
 		SELECT
 			c.id, c.company_id, c.warehouse_id, COALESCE(w.name, ''),
 			c.employee_id, emp.full_name,
-			c.status, c.notes, c.created_at, c.closed_at
+			c.status, c.notes, c.created_at, c.closed_at, c.updated_at
 		FROM counts c
 		LEFT JOIN warehouses w ON w.id = c.warehouse_id
 		LEFT JOIN employees emp ON emp.id = c.employee_id
@@ -60,7 +61,7 @@ func (r *InventoryRepository) FindCountByID(ctx context.Context, q db.DBExecutor
 	err := q.QueryRow(ctx, sql, id).Scan(
 		&c.ID, &c.CompanyID, &c.WarehouseID, &c.WarehouseName,
 		&c.EmployeeID, &c.EmployeeName,
-		&c.Status, &c.Notes, &c.CreatedAt, &c.ClosedAt,
+		&c.Status, &c.Notes, &c.CreatedAt, &c.ClosedAt, &c.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -120,7 +121,7 @@ func (r *InventoryRepository) ListCounts(ctx context.Context, q db.DBExecutor, f
 		SELECT
 			c.id, c.company_id, c.warehouse_id, COALESCE(w.name, ''),
 			c.employee_id, emp.full_name,
-			c.status, c.notes, c.created_at, c.closed_at
+			c.status, c.notes, c.created_at, c.closed_at, c.updated_at
 		FROM counts c
 		LEFT JOIN warehouses w ON w.id = c.warehouse_id
 		LEFT JOIN employees emp ON emp.id = c.employee_id
@@ -143,7 +144,7 @@ func (r *InventoryRepository) ListCounts(ctx context.Context, q db.DBExecutor, f
 		if err := rows.Scan(
 			&c.ID, &c.CompanyID, &c.WarehouseID, &c.WarehouseName,
 			&c.EmployeeID, &c.EmployeeName,
-			&c.Status, &c.Notes, &c.CreatedAt, &c.ClosedAt,
+			&c.Status, &c.Notes, &c.CreatedAt, &c.ClosedAt, &c.UpdatedAt,
 		); err != nil {
 			return nil, 0, err
 		}

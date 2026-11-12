@@ -200,6 +200,9 @@ func (s *StaffService) UpdateAdmin(ctx context.Context, actor *middlewares.Actor
 	if current == nil {
 		return nil, utils.NotFound("ADMIN_NOT_FOUND", "El administrador solicitado no existe.")
 	}
+	if err := utils.ValidateExpectedVersion(current.UpdatedAt, req.ExpectedVersion); err != nil {
+		return nil, err
+	}
 
 	if actor.ActorType != types.ActorSuperadmin {
 		if actor.CompanyID == nil || *actor.CompanyID != current.CompanyID {

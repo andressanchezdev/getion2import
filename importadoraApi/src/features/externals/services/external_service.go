@@ -233,6 +233,9 @@ func (s *ExternalService) Update(ctx context.Context, actor *middlewares.ActorCo
 	if current == nil {
 		return nil, utils.NotFound("EXTERNAL_NOT_FOUND", "El registro externo solicitado no existe.")
 	}
+	if err := utils.ValidateExpectedVersion(current.UpdatedAt, req.ExpectedVersion); err != nil {
+		return nil, err
+	}
 
 	if actor.ActorType != types.ActorSuperadmin {
 		if actor.CompanyID == nil || *actor.CompanyID != current.CompanyID {

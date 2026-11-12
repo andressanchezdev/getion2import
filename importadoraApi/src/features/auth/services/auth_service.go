@@ -12,6 +12,7 @@ import (
 
 	"importadoraApi/src/core/config"
 	"importadoraApi/src/core/db"
+	"importadoraApi/src/core/events"
 	"importadoraApi/src/core/middlewares"
 	"importadoraApi/src/core/types"
 	"importadoraApi/src/core/utils"
@@ -27,6 +28,7 @@ type AuthService struct {
 	pool      *pgxpool.Pool
 	authRepo  *repositories.AuthRepository
 	auditRepo *repositories.AuditRepository
+	events    *events.Recorder
 }
 
 // NewAuthService crea el servicio con las piezas que necesita para funcionar.
@@ -35,12 +37,14 @@ func NewAuthService(
 	pool *pgxpool.Pool,
 	authRepo *repositories.AuthRepository,
 	auditRepo *repositories.AuditRepository,
+	events *events.Recorder,
 ) *AuthService {
 	return &AuthService{
 		cfg:       cfg,
 		pool:      pool,
 		authRepo:  authRepo,
 		auditRepo: auditRepo,
+		events:    events,
 	}
 }
 
@@ -259,32 +263,60 @@ func (s *AuthService) Refresh(ctx context.Context, req dtos.RefreshRequest, ip, 
 	}, nil
 }
 
-// Logout invalida de inmediato la sesión en refresh_tokens.
-func (s *AuthService) Logout(ctx context.Context, sessionID int64, actorType types.ActorType, actorID int64, rawRefreshToken string, allSessions bool) error {
-	if allSessions {
-		return s.authRepo.RevokeAllActorSessions(ctx, s.pool, actorType, actorID)
-	}
+// Logout invalida de inmediato la sesión en refresh_tokens y emite session.revoked.
+func (s *AuthService) Logout(ctx context.Context, companyID *int64, sessionID int64, actorType types.ActorType, actorID int64, rawRefreshToken string, allSessions bool) error {
+	return db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		if allSessions {
+			if err := s.authRepo.RevokeAllActorSessions(ctx, tx, actorType, actorID); err != nil {
+				return err
+			}
+		} else {
+			if sessionID > 0 {
+				_ = s.authRepo.RevokeRefreshTokenByID(ctx, tx, sessionID)
+			}
+			if rawRefreshToken != "" {
+				tokenHash := utils.SHA256Hex(rawRefreshToken)
+				_ = s.authRepo.RevokeRefreshTokenByHash(ctx, tx, tokenHash)
+			}
+		}
 
-	if sessionID > 0 {
-		_ = s.authRepo.RevokeRefreshTokenByID(ctx, s.pool, sessionID)
-	}
-
-	if rawRefreshToken != "" {
-		tokenHash := utils.SHA256Hex(rawRefreshToken)
-		_ = s.authRepo.RevokeRefreshTokenByHash(ctx, s.pool, tokenHash)
-	}
-
-	return nil
+		if actorID > 0 && string(actorType) != "" {
+			if companyID == nil {
+				if acc, _ := s.authRepo.FindActorByID(ctx, tx, actorType, actorID); acc != nil {
+					companyID = acc.CompanyID
+				}
+			}
+			if s.events != nil {
+				var sessPtr *int64
+				if !allSessions && sessionID > 0 {
+					sessPtr = &sessionID
+				}
+				s.events.Record(ctx, events.NewSessionRevoked(
+					companyID,
+					string(actorType),
+					actorID,
+					sessPtr,
+					nil,
+					"logout",
+				))
+			}
+		}
+		return nil
+	})
 }
 
 // GetMe devuelve el perfil seguro completo del actor con sus permisos habilitados.
 func (s *AuthService) GetMe(ctx context.Context, actorType types.ActorType, actorID int64) (*dtos.AuthMeResponse, error) {
-	acc, err := s.authRepo.FindActorByID(ctx, s.pool, actorType, actorID)
+	return s.getMeWithExecutor(ctx, s.pool, actorType, actorID)
+}
+
+func (s *AuthService) getMeWithExecutor(ctx context.Context, q db.DBExecutor, actorType types.ActorType, actorID int64) (*dtos.AuthMeResponse, error) {
+	acc, err := s.authRepo.FindActorByID(ctx, q, actorType, actorID)
 	if err != nil {
 		return nil, utils.NotFound("ACTOR_NOT_FOUND", "No se encontró el perfil del usuario autenticado.")
 	}
 
-	permRecords, _ := s.authRepo.LoadPermissionsForActor(ctx, s.pool, acc.ActorType, acc.ID)
+	permRecords, _ := s.authRepo.LoadPermissionsForActor(ctx, q, acc.ActorType, acc.ID)
 	permsDTO := make([]dtos.PermissionDTO, 0, len(permRecords))
 	for _, p := range permRecords {
 		permsDTO = append(permsDTO, dtos.PermissionDTO{
@@ -335,6 +367,29 @@ func (s *AuthService) mapActorToDTO(acc *repositories.ActorAccount) dtos.AuthAct
 	}
 }
 
+func (s *AuthService) validateExpectedVersionForUpdate(ctx context.Context, tx pgx.Tx, actorType types.ActorType, actorID int64, expectedVersion *string) error {
+	if expectedVersion == nil || strings.TrimSpace(*expectedVersion) == "" {
+		return nil
+	}
+
+	parsed, err := time.Parse(time.RFC3339Nano, *expectedVersion)
+	if err != nil {
+		parsed, err = time.Parse(time.RFC3339, *expectedVersion)
+		if err != nil {
+			return utils.BadRequest("INVALID_EXPECTED_VERSION", "expectedVersion debe ser un ISO-8601 válido.")
+		}
+	}
+
+	current, err := s.authRepo.LoadActorForUpdate(ctx, tx, actorType, actorID)
+	if err != nil {
+		return utils.NormalizeDBError(err, "No se pudo verificar la versión actual del perfil.")
+	}
+	if !current.UpdatedAt.UTC().Equal(parsed.UTC()) {
+		return utils.StaleVersion("El registro cambió desde que se abrió para editarlo.", current.UpdatedAt.Format(time.RFC3339Nano))
+	}
+	return nil
+}
+
 // UpdateMe actualiza los datos del perfil propio del actor (nombre, apellido, email, teléfono)
 func (s *AuthService) UpdateMe(ctx context.Context, actor *middlewares.ActorContext, req dtos.UpdateMeRequest) (*dtos.AuthMeResponse, error) {
 	if actor == nil {
@@ -346,21 +401,48 @@ func (s *AuthService) UpdateMe(ctx context.Context, actor *middlewares.ActorCont
 		return nil, utils.NotFound("ACTOR_NOT_FOUND", "No se encontró el perfil del usuario autenticado.")
 	}
 
-	if err := s.authRepo.UpdateActorProfile(ctx, s.pool, actor.ActorType, actor.ActorID, req.FirstName, req.LastName, req.Email, req.Phone); err != nil {
-		return nil, utils.NormalizeDBError(err, "No se pudo actualizar el perfil.")
+	var res *dtos.AuthMeResponse
+	err = db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		if err := s.validateExpectedVersionForUpdate(ctx, tx, actor.ActorType, actor.ActorID, req.ExpectedVersion); err != nil {
+			return err
+		}
+
+		if err := s.authRepo.UpdateActorProfile(ctx, tx, actor.ActorType, actor.ActorID, req.FirstName, req.LastName, req.Email, req.Phone); err != nil {
+			return utils.NormalizeDBError(err, "No se pudo actualizar el perfil.")
+		}
+
+		// Registrar en auditoría
+		_ = s.auditRepo.Insert(ctx, tx, repositories.AuditLogInput{
+			CompanyID: acc.CompanyID,
+			ActorType: actor.ActorType,
+			ActorID:   actor.ActorID,
+			Entity:    "auth",
+			EntityID:  &actor.ActorID,
+			Action:    "auth:update_profile",
+			Changes:   map[string]any{"firstName": req.FirstName, "lastName": req.LastName, "email": req.Email},
+		})
+
+		updated, err := s.getMeWithExecutor(ctx, tx, actor.ActorType, actor.ActorID)
+		if err != nil {
+			return err
+		}
+		res = updated
+
+		if s.events != nil {
+			s.events.Record(ctx, events.NewAccountUpdated(
+				acc.CompanyID,
+				string(actor.ActorType),
+				actor.ActorID,
+				res,
+			))
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 
-	// Registrar en auditoría
-	_ = s.auditRepo.Insert(ctx, s.pool, repositories.AuditLogInput{
-		ActorType: actor.ActorType,
-		ActorID:   actor.ActorID,
-		Entity:    "auth",
-		EntityID:  &actor.ActorID,
-		Action:    "auth:update_profile",
-		Changes:   map[string]any{"firstName": req.FirstName, "lastName": req.LastName, "email": req.Email},
-	})
-
-	return s.GetMe(ctx, actor.ActorType, actor.ActorID)
+	return res, nil
 }
 
 // UpdatePassword actualiza la contraseña validando la contraseña actual y revocando otras sesiones
@@ -385,22 +467,43 @@ func (s *AuthService) UpdatePassword(ctx context.Context, actor *middlewares.Act
 		return utils.Internal("Error al encriptar la nueva contraseña.", err)
 	}
 
-	if err := s.authRepo.UpdateActorPassword(ctx, s.pool, actor.ActorType, actor.ActorID, newHash); err != nil {
-		return utils.NormalizeDBError(err, "No se pudo actualizar la contraseña.")
-	}
+	return db.WithTx(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		if err := s.authRepo.UpdateActorPassword(ctx, tx, actor.ActorType, actor.ActorID, newHash); err != nil {
+			return utils.NormalizeDBError(err, "No se pudo actualizar la contraseña.")
+		}
 
-	// Cierra las demás sesiones del actor; la actual sigue viva para no sacarlo al guardar
-	_ = s.authRepo.RevokeOtherActorSessions(ctx, s.pool, actor.ActorType, actor.ActorID, actor.SessionID)
+		// Cierra las demás sesiones del actor; la actual sigue viva para no sacarlo al guardar
+		if err := s.authRepo.RevokeOtherActorSessions(ctx, tx, actor.ActorType, actor.ActorID, actor.SessionID); err != nil {
+			return utils.Internal("Error al revocar otras sesiones.", err)
+		}
 
-	// Registrar en auditoría
-	_ = s.auditRepo.Insert(ctx, s.pool, repositories.AuditLogInput{
-		ActorType: actor.ActorType,
-		ActorID:   actor.ActorID,
-		Entity:    "auth",
-		EntityID:  &actor.ActorID,
-		Action:    "auth:change_password",
-		Changes:   map[string]any{"status": "password_changed_sessions_revoked"},
+		// Registrar en auditoría
+		_ = s.auditRepo.Insert(ctx, tx, repositories.AuditLogInput{
+			CompanyID: acc.CompanyID,
+			ActorType: actor.ActorType,
+			ActorID:   actor.ActorID,
+			Entity:    "auth",
+			EntityID:  &actor.ActorID,
+			Action:    "auth:change_password",
+			Changes:   map[string]any{"status": "password_changed_sessions_revoked"},
+		})
+
+		if s.events != nil {
+			var exceptSess *int64
+			if actor.SessionID > 0 {
+				sessID := actor.SessionID
+				exceptSess = &sessID
+			}
+			s.events.Record(ctx, events.NewSessionRevoked(
+				acc.CompanyID,
+				string(actor.ActorType),
+				actor.ActorID,
+				nil,
+				exceptSess,
+				"password_changed",
+			))
+		}
+
+		return nil
 	})
-
-	return nil
 }

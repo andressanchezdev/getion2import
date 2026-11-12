@@ -52,6 +52,7 @@ type DocSeriesEntity struct {
 	DocType     types.DocSeriesType
 	Prefix      string
 	NextNumber  int64
+	UpdatedAt   time.Time
 }
 
 // FindFacturationByWarehouseID busca la configuración de facturación de una bodega.
@@ -171,7 +172,7 @@ func (r *WarehouseRepository) ListDocSeries(ctx context.Context, q db.DBExecutor
 	}
 
 	sql := fmt.Sprintf(`
-		SELECT id, company_id, warehouse_id, doc_type, prefix, next_number
+		SELECT id, company_id, warehouse_id, doc_type, prefix, next_number, updated_at
 		FROM doc_series
 		%s
 		ORDER BY doc_type ASC, id ASC
@@ -186,7 +187,7 @@ func (r *WarehouseRepository) ListDocSeries(ctx context.Context, q db.DBExecutor
 	items := make([]DocSeriesEntity, 0, 10)
 	for rows.Next() {
 		var s DocSeriesEntity
-		if err := rows.Scan(&s.ID, &s.CompanyID, &s.WarehouseID, &s.DocType, &s.Prefix, &s.NextNumber); err != nil {
+		if err := rows.Scan(&s.ID, &s.CompanyID, &s.WarehouseID, &s.DocType, &s.Prefix, &s.NextNumber, &s.UpdatedAt); err != nil {
 			return nil, err
 		}
 		items = append(items, s)
@@ -197,13 +198,13 @@ func (r *WarehouseRepository) ListDocSeries(ctx context.Context, q db.DBExecutor
 // FindDocSeriesByID busca una serie de documentos por su id.
 func (r *WarehouseRepository) FindDocSeriesByID(ctx context.Context, q db.DBExecutor, id int64) (*DocSeriesEntity, error) {
 	const sql = `
-		SELECT id, company_id, warehouse_id, doc_type, prefix, next_number
+		SELECT id, company_id, warehouse_id, doc_type, prefix, next_number, updated_at
 		FROM doc_series
 		WHERE id = $1
 	`
 	var s DocSeriesEntity
 	err := q.QueryRow(ctx, sql, id).Scan(
-		&s.ID, &s.CompanyID, &s.WarehouseID, &s.DocType, &s.Prefix, &s.NextNumber,
+		&s.ID, &s.CompanyID, &s.WarehouseID, &s.DocType, &s.Prefix, &s.NextNumber, &s.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

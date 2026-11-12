@@ -35,6 +35,7 @@ type ErrorResponse struct {
 	Success bool   `json:"success"`
 	Message string `json:"message"`
 	Error   string `json:"error,omitempty"`
+	Details any    `json:"details,omitempty"`
 }
 
 // PageParams contiene los parámetros validados para consultas SQL con LIMIT y OFFSET.
@@ -137,6 +138,7 @@ func EchoErrorHandler(err error, c echo.Context) {
 			Success: false,
 			Message: appErr.Message,
 			Error:   detail,
+			Details: appErr.Details,
 		})
 		return
 	}

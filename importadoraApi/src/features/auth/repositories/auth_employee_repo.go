@@ -20,7 +20,7 @@ func (r *AuthRepository) FindEmployeeByEmail(ctx context.Context, q db.DBExecuto
 			e.email, e.password_hash, e.first_name, e.last_name, e.full_name,
 			e.document_type, COALESCE(e.document, ''), COALESCE(e.phone, ''),
 			COALESCE(e.address, ''), COALESCE(e.photo_url, ''),
-			e.work_modality, e.employment_status, e.status, e.last_login_at
+			e.work_modality, e.employment_status, e.status, e.last_login_at, e.updated_at
 		FROM employees e
 		JOIN companies c ON c.id = e.company_id
 		JOIN roles rl ON rl.id = e.role_id
@@ -58,6 +58,7 @@ func (r *AuthRepository) FindEmployeeByEmail(ctx context.Context, q db.DBExecuto
 		&acc.EmploymentStatus,
 		&acc.Status,
 		&acc.LastLoginAt,
+		&acc.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -80,7 +81,7 @@ func (r *AuthRepository) FindEmployeeByID(ctx context.Context, q db.DBExecutor, 
 			e.email, e.password_hash, e.first_name, e.last_name, e.full_name,
 			e.document_type, COALESCE(e.document, ''), COALESCE(e.phone, ''),
 			COALESCE(e.address, ''), COALESCE(e.photo_url, ''),
-			e.work_modality, e.employment_status, e.status, e.last_login_at
+			e.work_modality, e.employment_status, e.status, e.last_login_at, e.updated_at
 		FROM employees e
 		JOIN companies c ON c.id = e.company_id
 		JOIN roles rl ON rl.id = e.role_id
@@ -118,6 +119,7 @@ func (r *AuthRepository) FindEmployeeByID(ctx context.Context, q db.DBExecutor, 
 		&acc.EmploymentStatus,
 		&acc.Status,
 		&acc.LastLoginAt,
+		&acc.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err

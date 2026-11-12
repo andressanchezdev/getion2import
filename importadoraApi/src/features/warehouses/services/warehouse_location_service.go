@@ -116,6 +116,9 @@ func (s *WarehouseService) UpdateLocation(ctx context.Context, actor *middleware
 	if current == nil || current.WarehouseID != warehouseID {
 		return nil, utils.NotFound("LOCATION_NOT_FOUND", "La ubicación no existe en esta bodega.")
 	}
+	if err := utils.ValidateExpectedVersion(current.UpdatedAt, req.ExpectedVersion); err != nil {
+		return nil, err
+	}
 
 	if actor.ActorType != types.ActorSuperadmin {
 		if actor.CompanyID == nil || *actor.CompanyID != current.CompanyID {

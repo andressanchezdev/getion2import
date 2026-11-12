@@ -53,23 +53,24 @@ type CreateExternalRequest struct {
 }
 
 type UpdateExternalRequest struct {
-	Kind         *types.ExternalKind `json:"kind"`
-	Category     *string             `json:"category"`
-	DocumentType *types.DocumentType `json:"documentType"`
-	Document     *string             `json:"document"`
-	Name         *string             `json:"name"`
-	ContactName  *string             `json:"contactName"`
-	ContactPhone *string             `json:"contactPhone"`
-	ContactEmail *string             `json:"contactEmail"`
-	Phone        *string             `json:"phone"`
-	Email        *string             `json:"email"`
-	Address      *string             `json:"address"`
-	City         *string             `json:"city"`
-	TermsDays    *int16              `json:"termsDays"`
-	CreditLimit  *float64            `json:"creditLimit"`
-	Coverage     *string             `json:"coverage"`
-	IsActive     *bool               `json:"isActive"`
-	Reason string `json:"reason,omitempty"` // obligatorio (10 a 100) si se desactiva
+	Kind            *types.ExternalKind `json:"kind"`
+	Category        *string             `json:"category"`
+	DocumentType    *types.DocumentType `json:"documentType"`
+	Document        *string             `json:"document"`
+	Name            *string             `json:"name"`
+	ContactName     *string             `json:"contactName"`
+	ContactPhone    *string             `json:"contactPhone"`
+	ContactEmail    *string             `json:"contactEmail"`
+	Phone           *string             `json:"phone"`
+	Email           *string             `json:"email"`
+	Address         *string             `json:"address"`
+	City            *string             `json:"city"`
+	TermsDays       *int16              `json:"termsDays"`
+	CreditLimit     *float64            `json:"creditLimit"`
+	Coverage        *string             `json:"coverage"`
+	IsActive        *bool               `json:"isActive"`
+	ExpectedVersion *string             `json:"expectedVersion,omitempty"`
+	Reason          string              `json:"reason,omitempty"` // obligatorio (10 a 100) si se desactiva
 }
 
 type ExternalFilterQuery struct {

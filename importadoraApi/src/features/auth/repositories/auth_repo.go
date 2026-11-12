@@ -50,6 +50,7 @@ type ActorAccount struct {
 	Status            string
 	IsActive          bool
 	LastLoginAt       *time.Time
+	UpdatedAt         time.Time
 }
 
 type AuthRepository struct{}
@@ -64,7 +65,7 @@ func (r *AuthRepository) FindSuperadminByEmail(ctx context.Context, q db.DBExecu
 	const sqlQuery = `
 		SELECT
 			id, username, email, password_hash, first_name, last_name, full_name,
-			COALESCE(phone, ''), access_level, is_active, last_login_at
+			COALESCE(phone, ''), access_level, is_active, last_login_at, updated_at
 		FROM superadmins
 		WHERE email = $1
 	`
@@ -81,6 +82,7 @@ func (r *AuthRepository) FindSuperadminByEmail(ctx context.Context, q db.DBExecu
 		&acc.AccessLevel,
 		&acc.IsActive,
 		&acc.LastLoginAt,
+		&acc.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -98,7 +100,7 @@ func (r *AuthRepository) FindSuperadminByID(ctx context.Context, q db.DBExecutor
 	const sqlQuery = `
 		SELECT
 			id, username, email, password_hash, first_name, last_name, full_name,
-			COALESCE(phone, ''), access_level, is_active, last_login_at
+			COALESCE(phone, ''), access_level, is_active, last_login_at, updated_at
 		FROM superadmins
 		WHERE id = $1
 	`
@@ -115,6 +117,7 @@ func (r *AuthRepository) FindSuperadminByID(ctx context.Context, q db.DBExecutor
 		&acc.AccessLevel,
 		&acc.IsActive,
 		&acc.LastLoginAt,
+		&acc.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -134,7 +137,7 @@ func (r *AuthRepository) FindAdminByEmail(ctx context.Context, q db.DBExecutor, 
 			a.id, a.company_id, c.name, c.is_active, a.employee_id,
 			a.email, a.password_hash, a.first_name, a.last_name, a.full_name,
 			a.document_type, COALESCE(a.document, ''), COALESCE(a.phone, ''),
-			a.is_active, a.last_login_at
+			a.is_active, a.last_login_at, a.updated_at
 		FROM admins a
 		JOIN companies c ON c.id = a.company_id
 		WHERE a.email = $1
@@ -157,6 +160,7 @@ func (r *AuthRepository) FindAdminByEmail(ctx context.Context, q db.DBExecutor, 
 		&acc.Phone,
 		&acc.IsActive,
 		&acc.LastLoginAt,
+		&acc.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -177,7 +181,7 @@ func (r *AuthRepository) FindAdminByID(ctx context.Context, q db.DBExecutor, id 
 			a.id, a.company_id, c.name, c.is_active, a.employee_id,
 			a.email, a.password_hash, a.first_name, a.last_name, a.full_name,
 			a.document_type, COALESCE(a.document, ''), COALESCE(a.phone, ''),
-			a.is_active, a.last_login_at
+			a.is_active, a.last_login_at, a.updated_at
 		FROM admins a
 		JOIN companies c ON c.id = a.company_id
 		WHERE a.id = $1
@@ -200,6 +204,7 @@ func (r *AuthRepository) FindAdminByID(ctx context.Context, q db.DBExecutor, id 
 		&acc.Phone,
 		&acc.IsActive,
 		&acc.LastLoginAt,
+		&acc.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -246,6 +251,41 @@ func (r *AuthRepository) FindActorByID(ctx context.Context, q db.DBExecutor, act
 		return r.FindAdminByID(ctx, q, actorID)
 	case types.ActorEmployee:
 		return r.FindEmployeeByID(ctx, q, actorID)
+	default:
+		return nil, pgx.ErrNoRows
+	}
+}
+
+// LoadActorForUpdate toma el candado de la fila y devuelve la versión actual con `FOR UPDATE`.
+func (r *AuthRepository) LoadActorForUpdate(ctx context.Context, q db.DBExecutor, actorType types.ActorType, actorID int64) (*ActorAccount, error) {
+	switch actorType {
+	case types.ActorSuperadmin:
+		const superadminLock = `SELECT id, username, email, password_hash, first_name, last_name, full_name, COALESCE(phone, ''), access_level, is_active, last_login_at, updated_at FROM superadmins WHERE id = $1 FOR UPDATE`
+		acc := &ActorAccount{ActorType: types.ActorSuperadmin, CompanyIsActive: true}
+		err := q.QueryRow(ctx, superadminLock, actorID).Scan(&acc.ID, &acc.Username, &acc.Email, &acc.PasswordHash, &acc.FirstName, &acc.LastName, &acc.FullName, &acc.Phone, &acc.AccessLevel, &acc.IsActive, &acc.LastLoginAt, &acc.UpdatedAt)
+		if err != nil { return nil, err }
+		if acc.IsActive { acc.Status = "active" } else { acc.Status = "inactive" }
+		return acc, nil
+	case types.ActorAdmin:
+		const adminLock = `SELECT a.id, a.company_id, c.name, c.is_active, a.employee_id, a.email, a.password_hash, a.first_name, a.last_name, a.full_name, a.document_type, COALESCE(a.document, ''), COALESCE(a.phone, ''), a.is_active, a.last_login_at, a.updated_at FROM admins a JOIN companies c ON c.id = a.company_id WHERE a.id = $1 FOR UPDATE`
+		var companyID int64
+		acc := &ActorAccount{ActorType: types.ActorAdmin}
+		err := q.QueryRow(ctx, adminLock, actorID).Scan(&acc.ID, &companyID, &acc.CompanyName, &acc.CompanyIsActive, &acc.LinkedEmployeeID, &acc.Email, &acc.PasswordHash, &acc.FirstName, &acc.LastName, &acc.FullName, &acc.DocumentType, &acc.Document, &acc.Phone, &acc.IsActive, &acc.LastLoginAt, &acc.UpdatedAt)
+		if err != nil { return nil, err }
+		acc.CompanyID = &companyID
+		if acc.IsActive { acc.Status = "active" } else { acc.Status = "inactive" }
+		return acc, nil
+	case types.ActorEmployee:
+		const employeeLock = `SELECT e.id, e.company_id, c.name, c.is_active, e.role_id, rl.code, rl.name, e.warehouse_id, COALESCE(w.code, ''), COALESCE(w.name, ''), COALESCE(w.is_active, FALSE), e.email, e.password_hash, e.first_name, e.last_name, e.full_name, e.document_type, COALESCE(e.document, ''), COALESCE(e.phone, ''), COALESCE(e.address, ''), COALESCE(e.photo_url, ''), e.work_modality, e.employment_status, e.status, e.last_login_at, e.updated_at FROM employees e JOIN companies c ON c.id = e.company_id JOIN roles rl ON rl.id = e.role_id LEFT JOIN warehouses w ON w.id = e.warehouse_id WHERE e.id = $1 AND e.deleted_at IS NULL FOR UPDATE`
+		var companyID, roleID int64
+		acc := &ActorAccount{ActorType: types.ActorEmployee}
+		err := q.QueryRow(ctx, employeeLock, actorID).Scan(&acc.ID, &companyID, &acc.CompanyName, &acc.CompanyIsActive, &roleID, &acc.RoleCode, &acc.RoleName, &acc.WarehouseID, &acc.WarehouseCode, &acc.WarehouseName, &acc.WarehouseIsActive, &acc.Email, &acc.PasswordHash, &acc.FirstName, &acc.LastName, &acc.FullName, &acc.DocumentType, &acc.Document, &acc.Phone, &acc.Address, &acc.PhotoURL, &acc.WorkModality, &acc.EmploymentStatus, &acc.Status, &acc.LastLoginAt, &acc.UpdatedAt)
+		if err != nil { return nil, err }
+		acc.CompanyID = &companyID
+		acc.RoleID = &roleID
+		acc.LinkedEmployeeID = &acc.ID
+		acc.IsActive = acc.Status == string(types.EmployeeActive) && acc.EmploymentStatus == string(types.EmploymentActive)
+		return acc, nil
 	default:
 		return nil, pgx.ErrNoRows
 	}

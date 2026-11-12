@@ -24,10 +24,11 @@ type CreateBrandRequest struct {
 }
 
 type UpdateBrandRequest struct {
-	Name     *string `json:"name"`
-	ImageURL *string `json:"imageUrl"`
-	IsActive *bool   `json:"isActive"`
-	Reason string `json:"reason,omitempty"` // obligatorio (10 a 100) si se desactiva
+	Name            *string `json:"name"`
+	ImageURL        *string `json:"imageUrl"`
+	IsActive        *bool   `json:"isActive"`
+	ExpectedVersion *string `json:"expectedVersion,omitempty"`
+	Reason          string  `json:"reason,omitempty"` // obligatorio (10 a 100) si se desactiva
 }
 
 // ==========================================
@@ -52,10 +53,11 @@ type CreateModelRequest struct {
 }
 
 type UpdateModelRequest struct {
-	Name        *string `json:"name"`
-	Description *string `json:"description"`
-	IsActive    *bool   `json:"isActive"`
-	Reason string `json:"reason,omitempty"` // obligatorio (10 a 100) si se desactiva
+	Name            *string `json:"name"`
+	Description     *string `json:"description"`
+	IsActive        *bool   `json:"isActive"`
+	ExpectedVersion *string `json:"expectedVersion,omitempty"`
+	Reason          string  `json:"reason,omitempty"` // obligatorio (10 a 100) si se desactiva
 }
 
 // ==========================================
@@ -84,10 +86,11 @@ type CreateCategoryRequest struct {
 }
 
 type UpdateCategoryRequest struct {
-	ParentID    *int64  `json:"parentId"`
-	Name        *string `json:"name"`
-	Description *string `json:"description"`
-	IsActive    *bool   `json:"isActive"`
-	Reason string `json:"reason,omitempty"` // obligatorio (10 a 100) si se desactiva
+	ParentID        *int64  `json:"parentId"`
+	Name            *string `json:"name"`
+	Description     *string `json:"description"`
+	IsActive        *bool   `json:"isActive"`
+	ExpectedVersion *string `json:"expectedVersion,omitempty"`
+	Reason          string  `json:"reason,omitempty"` // obligatorio (10 a 100) si se desactiva
 }
 

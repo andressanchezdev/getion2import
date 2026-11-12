@@ -208,7 +208,8 @@ type UpdateCountItemRequest struct {
 }
 
 type UpdateCountItemsRequest struct {
-	Items []UpdateCountItemRequest `json:"items" validate:"required,min=1"`
+	Items           []UpdateCountItemRequest `json:"items" validate:"required,min=1"`
+	ExpectedVersion *string                 `json:"expectedVersion,omitempty"`
 }
 
 type CountFilterQuery struct {

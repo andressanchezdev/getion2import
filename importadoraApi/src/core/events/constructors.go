@@ -5,7 +5,10 @@ package events
 // ojo: hay constructores con nombre para los tipos que se emiten con reglas propias (entity.*, traslados, auditoría, personales);
 // el resto usa New(tipo, Scope, cuerpo), que aplica la misma tabla. El stock no tiene constructor: va por Recorder.Stock
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 // Scope es dónde ocurrió el cambio: la compañía, las bodegas y, si es personal, de quién es.
 type Scope struct {
@@ -268,6 +271,32 @@ func NewAuditLogged(companyID *int64, data AuditLoggedData) Event {
 		e.Platform = true
 	}
 	return e
+}
+
+// NewSessionRevoked emite la revocación de una o todas las sesiones de un actor.
+func NewSessionRevoked(companyID *int64, actorType string, actorID int64, sessionID, exceptSessionID *int64, reason string) Event {
+	return NewPersonal(SessionRevoked, companyID, actorType, actorID, SessionRevokedData{
+		SessionID:       sessionID,
+		ExceptSessionID: exceptSessionID,
+		Reason:          reason,
+	})
+}
+
+// NewPermissionsChanged emite la actualización de permisos asignados a un actor.
+func NewPermissionsChanged(companyID *int64, actorType string, actorID int64, permissions []string) Event {
+	return NewPersonal(PermissionsChanged, companyID, actorType, actorID, PermissionsChangedData{
+		ActorType:   actorType,
+		ActorID:     actorID,
+		Permissions: permissions,
+	})
+}
+
+// NewAccountUpdated emite la actualización del perfil propio del usuario autenticado.
+func NewAccountUpdated(companyID *int64, actorType string, actorID int64, user any) Event {
+	return NewPersonal(AccountUpdated, companyID, actorType, actorID, AccountUpdatedData{
+		User:    user,
+		Version: time.Now().UTC(),
+	})
 }
 
 // NewPersonal arma un evento del canal personal (carrito, notificaciones, sesión, permisos o cuenta).

@@ -245,6 +245,9 @@ func (s *CompanyService) Update(ctx context.Context, actor *middlewares.ActorCon
 	if current == nil {
 		return nil, utils.NotFound("COMPANY_NOT_FOUND", "La compañía a actualizar no existe.")
 	}
+	if err := utils.ValidateExpectedVersion(current.UpdatedAt, req.ExpectedVersion); err != nil {
+		return nil, err
+	}
 
 	if req.Name != nil {
 		newName := strings.TrimSpace(*req.Name)

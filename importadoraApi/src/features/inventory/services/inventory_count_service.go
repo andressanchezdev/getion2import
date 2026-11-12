@@ -191,6 +191,9 @@ func (s *InventoryService) UpdateCountItems(ctx context.Context, actor *middlewa
 	if count.Status == types.CountCorroborated {
 		return utils.BadRequest("ALREADY_CLOSED", "No se pueden modificar ítems de un conteo ya cerrado y corroborado.")
 	}
+	if err := utils.ValidateExpectedVersion(count.UpdatedAt, req.ExpectedVersion); err != nil {
+		return err
+	}
 
 	var empID *int64
 	if actor.ActorType == types.ActorEmployee {

@@ -62,9 +62,10 @@ type CreateQuotationRequest struct {
 }
 
 type UpdateQuotationRequest struct {
-	ValidUntil *string                `json:"validUntil"`
-	Status     *types.QuotationStatus `json:"status"`
-	Notes      *string                `json:"notes"`
+	ValidUntil      *string                `json:"validUntil"`
+	Status          *types.QuotationStatus `json:"status"`
+	Notes           *string                `json:"notes"`
+	ExpectedVersion *string                `json:"expectedVersion,omitempty"`
 }
 
 type QuotationFilterQuery struct {

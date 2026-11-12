@@ -161,11 +161,11 @@ func NewContainer(cfg *config.Config, database *db.Database) *AppContainer {
 	healthService := healthServices.NewHealthService(cfg, database)
 	healthCtrl := healthControllers.NewHealthController(healthService)
 
-	authService := authServices.NewAuthService(cfg, database.Pool, authRepo, auditRepo)
-	authCtrl := authControllers.NewAuthController(authService)
-
 	// Tiempo real: eventos del websocket (outbox)
 	eventsRecorder := events.NewRecorder(cfg.RealtimeEventsEnabled, cfg.AppEnv == "development")
+
+	authService := authServices.NewAuthService(cfg, database.Pool, authRepo, auditRepo, eventsRecorder)
+	authCtrl := authControllers.NewAuthController(authService)
 
 	// Companies & Warehouses
 	companyRepo := companyRepos.NewCompanyRepository()

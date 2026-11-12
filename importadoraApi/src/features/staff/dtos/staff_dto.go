@@ -45,14 +45,15 @@ type CreateAdminRequest struct {
 }
 
 type UpdateAdminRequest struct {
-	FirstName    *string             `json:"firstName"`
-	LastName     *string             `json:"lastName"`
-	DocumentType *types.DocumentType `json:"documentType"`
-	Document     *string             `json:"document"`
-	Phone        *string             `json:"phone"`
-	IsActive     *bool               `json:"isActive"`
-	Reason       string              `json:"reason"` // obligatorio (10 a 100) si se desactiva
-	Password     *string             `json:"password"`
+	FirstName       *string             `json:"firstName"`
+	LastName        *string             `json:"lastName"`
+	DocumentType    *types.DocumentType `json:"documentType"`
+	Document        *string             `json:"document"`
+	Phone           *string             `json:"phone"`
+	IsActive        *bool               `json:"isActive"`
+	ExpectedVersion *string             `json:"expectedVersion,omitempty"`
+	Reason          string              `json:"reason"` // obligatorio (10 a 100) si se desactiva
+	Password        *string             `json:"password"`
 }
 
 type AdminFilterQuery struct {
@@ -86,10 +87,11 @@ type CreateRoleRequest struct {
 }
 
 type UpdateRoleRequest struct {
-	Name        *string `json:"name"`
-	Description *string `json:"description"`
-	IsActive    *bool   `json:"isActive"`
-	Reason string `json:"reason,omitempty"` // obligatorio (10 a 100) si se desactiva
+	Name            *string `json:"name"`
+	Description     *string `json:"description"`
+	IsActive        *bool   `json:"isActive"`
+	ExpectedVersion *string `json:"expectedVersion,omitempty"`
+	Reason          string  `json:"reason,omitempty"` // obligatorio (10 a 100) si se desactiva
 }
 
 // ==========================================
@@ -104,7 +106,8 @@ type PermissionResponse struct {
 }
 
 type AssignEmployeePermissionsRequest struct {
-	PermissionIDs []int64 `json:"permissionIds" validate:"required"`
+	PermissionIDs   []int64 `json:"permissionIds" validate:"required"`
+	ExpectedVersion *string `json:"expectedVersion,omitempty"`
 }
 
 // ==========================================
@@ -167,6 +170,7 @@ type UpdateEmployeeRequest struct {
 	WorkModality     *types.WorkModality     `json:"workModality"`
 	EmploymentStatus *types.EmploymentStatus `json:"employmentStatus"`
 	Status           *types.EmployeeStatus   `json:"status"`
+	ExpectedVersion  *string                 `json:"expectedVersion,omitempty"`
 	Reason           string                  `json:"reason"` // obligatorio (10-100) al inactivar
 }
 
